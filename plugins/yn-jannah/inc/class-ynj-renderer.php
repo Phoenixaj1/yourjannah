@@ -144,19 +144,29 @@ class YNJ_Renderer {
                 fetch(`${API_BASE}/mosques/nearest?lat=${latitude}&lng=${longitude}`)
                     .then(r => r.json())
                     .then(data => {
-                        if (data && data.slug) {
+                        if (data && data.ok && data.mosques && data.mosques.length) {
+                            const m = data.mosques[0];
+                            mosqueSlug = m.slug;
+                            document.getElementById('mosque-name').textContent = m.name || 'Your Mosque';
+                            updateNavLinks(mosqueSlug);
+                            if (m.prayer_times && m.prayer_times.fajr) {
+                                setPrayerTimes(m.prayer_times);
+                            } else {
+                                // Fallback: fetch from Aladhan client-side
+                                fetchAladhanClient(m.latitude || latitude, m.longitude || longitude);
+                            }
+                        } else if (data && data.slug) {
                             mosqueSlug = data.slug;
                             document.getElementById('mosque-name').textContent = data.name || 'Your Mosque';
                             updateNavLinks(mosqueSlug);
-                            if (data.prayer_times) {
+                            if (data.prayer_times && data.prayer_times.fajr) {
                                 setPrayerTimes(data.prayer_times);
+                            } else {
+                                fetchAladhanClient(latitude, longitude);
                             }
-                            if (data.jumuah_time) {
-                                showJumuah(data.jumuah_time);
-                            }
-                            if (data.distance_km !== undefined) {
-                                showTravel(data.distance_km);
-                            }
+                        } else {
+                            // No mosque found — still show prayer times for location
+                            fetchAladhanClient(latitude, longitude);
                         }
                     })
                     .catch(() => {
@@ -166,6 +176,23 @@ class YNJ_Renderer {
 
             function onGeoError() {
                 document.getElementById('mosque-name').textContent = 'Enable location for your mosque';
+            }
+
+            /* ---- Client-side Aladhan fallback ---- */
+            function fetchAladhanClient(lat, lng) {
+                const ts = Math.floor(Date.now() / 1000);
+                fetch(`https://api.aladhan.com/v1/timings/${ts}?latitude=${lat}&longitude=${lng}&method=2`)
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d && d.data && d.data.timings) {
+                            const t = d.data.timings;
+                            setPrayerTimes({
+                                fajr: t.Fajr, sunrise: t.Sunrise, dhuhr: t.Dhuhr,
+                                asr: t.Asr, maghrib: t.Maghrib, isha: t.Isha
+                            });
+                        }
+                    })
+                    .catch(() => {});
             }
 
             /* ---- Prayer Times ---- */
