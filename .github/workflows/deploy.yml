@@ -1,0 +1,73 @@
+# ============================================================
+# YourJannah — Auto-Deploy on Push to Main
+#
+# Deploys plugin to Cloudways via SSH/rsync.
+# Same server as YourNiyyah, different application path.
+#
+# Required GitHub Secrets (set in repo Settings > Secrets):
+#   SSH_PRIVATE_KEY  — base64-encoded private key (same as yourniyyah)
+#   SSH_HOST         — same server host
+#   SSH_USER         — same SSH user
+#   SSH_PORT         — same port (usually 22)
+#   WP_PATH          — path to yourjannah app (different from yourniyyah)
+# ============================================================
+
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'plugins/**'
+      - '.github/workflows/deploy.yml'
+
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Cloudways
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" | base64 -d > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Test SSH connection
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'SSH OK'"
+
+      - name: Deploy yn-jannah plugin
+        run: |
+          echo "📦 Deploying yn-jannah plugin..."
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='.DS_Store' \
+            --exclude='node_modules' \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
+            ./plugins/yn-jannah/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.WP_PATH }}/wp-content/plugins/yn-jannah/
+
+      - name: Clear caches
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
+          cd ${{ secrets.WP_PATH }}
+          wp cache flush 2>/dev/null || true
+          wp transient delete --all 2>/dev/null || true
+          wp breeze purge --all 2>/dev/null || true
+          rm -rf wp-content/cache/* 2>/dev/null || true
+          echo "🧹 Caches cleared"
+          ENDSSH
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
