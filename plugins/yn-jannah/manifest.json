@@ -1,0 +1,25 @@
+{
+    "name": "YourJannah \u2014 Mosque Community",
+    "short_name": "YourJannah",
+    "description": "Prayer times, announcements, events and more from your local mosque",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#FAFAF8",
+    "theme_color": "#287e61",
+    "orientation": "portrait",
+    "categories": ["lifestyle", "social"],
+    "icons": [
+        {
+            "src": "/wp-content/plugins/yn-jannah/assets/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/wp-content/plugins/yn-jannah/assets/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
