@@ -60,12 +60,14 @@ class YNJ_Prayer {
         );
 
         $response = wp_remote_get( $url, [
-            'timeout' => 10,
-            'headers' => [ 'Accept' => 'application/json' ],
+            'timeout'   => 15,
+            'sslverify' => false,
+            'headers'   => [ 'Accept' => 'application/json' ],
         ] );
 
         if ( is_wp_error( $response ) ) {
-            return new WP_Error( 'api_error', 'Failed to fetch prayer times from Aladhan.', [ 'status' => 502 ] );
+            error_log( '[YNJ] Aladhan fetch failed: ' . $response->get_error_message() . ' URL: ' . $url );
+            return new WP_Error( 'api_error', 'Failed to fetch prayer times: ' . $response->get_error_message(), [ 'status' => 502 ] );
         }
 
         $code = wp_remote_retrieve_response_code( $response );
