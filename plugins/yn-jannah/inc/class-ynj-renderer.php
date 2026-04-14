@@ -14,13 +14,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class YNJ_Renderer {
 
-    /** Brand colours. */
-    const COLOR_PRIMARY    = '#1c4644';
-    const COLOR_ACCENT     = '#287e61';
-    const COLOR_BG         = '#FAFAF8';
+    /** Brand colours — Jannah (heaven) theme: light cyan blues, ethereal, clouds. */
+    const COLOR_PRIMARY    = '#0a1628';
+    const COLOR_ACCENT     = '#00ADEF';
+    const COLOR_BG         = '#e8f4f8';
     const COLOR_SURFACE    = '#FFFFFF';
-    const COLOR_TEXT       = '#1a1a1a';
-    const COLOR_TEXT_MUTED = '#6b7280';
+    const COLOR_TEXT       = '#0a1628';
+    const COLOR_TEXT_MUTED = '#6b8fa3';
 
     /* ================================================================== */
     /*  PAGE: Home                                                        */
@@ -779,10 +779,11 @@ body{
     font-size:15px;
     line-height:1.55;
     color:<?php echo self::COLOR_TEXT; ?>;
-    background:<?php echo self::COLOR_BG; ?>;
+    background:linear-gradient(180deg,#e8f4f8 0%,#d4eef6 30%,#c5e8f4 60%,#e0f2f8 100%);
+    background-attachment:fixed;
     min-height:100vh;
     min-height:100dvh;
-    padding-bottom:72px; /* bottom nav */
+    padding-bottom:72px;
     -webkit-font-smoothing:antialiased;
 }
 a{color:<?php echo self::COLOR_ACCENT; ?>;text-decoration:none;}
@@ -797,7 +798,7 @@ img,svg{display:block;max-width:100%;}
 
 /* ---- Header ---- */
 .ynj-header{
-    background:<?php echo self::COLOR_PRIMARY; ?>;
+    background:linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#00ADEF 100%);
     color:#fff;
     position:sticky;
     top:0;
@@ -844,17 +845,40 @@ img,svg{display:block;max-width:100%;}
 
 /* ---- Cards ---- */
 .ynj-card{
-    background:<?php echo self::COLOR_SURFACE; ?>;
-    border-radius:14px;
+    background:rgba(255,255,255,.85);
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    border-radius:18px;
     padding:20px;
-    margin-bottom:12px;
-    box-shadow:0 1px 3px rgba(0,0,0,.06);
+    margin-bottom:14px;
+    box-shadow:0 2px 12px rgba(0,173,239,.08);
+    border:1px solid rgba(255,255,255,.6);
 }
 .ynj-card--hero{
-    background:linear-gradient(135deg,<?php echo self::COLOR_PRIMARY; ?>,<?php echo self::COLOR_ACCENT; ?>);
+    background:linear-gradient(180deg,#0a1628 0%,#1a3a5c 40%,#00ADEF 80%,#7dd3fc 100%);
     color:#fff;
     text-align:center;
-    padding:28px 20px;
+    padding:32px 20px;
+    border-radius:18px;
+    position:relative;
+    overflow:hidden;
+}
+.ynj-card--hero::before{
+    content:'';
+    position:absolute;
+    top:40%;left:-20%;width:140%;height:60%;
+    background:radial-gradient(ellipse,rgba(255,255,255,.15) 0%,transparent 70%);
+    animation:clouds 8s ease-in-out infinite alternate;
+}
+.ynj-card--hero::after{
+    content:'';
+    position:absolute;
+    bottom:0;left:0;width:100%;height:30%;
+    background:linear-gradient(to top,rgba(255,255,255,.1),transparent);
+}
+@keyframes clouds{
+    0%{transform:translateX(-5%) translateY(0)}
+    100%{transform:translateX(5%) translateY(-8px)}
 }
 .ynj-card--hero .ynj-label{font-size:12px;text-transform:uppercase;letter-spacing:1px;opacity:.8;}
 .ynj-card--hero .ynj-countdown{font-size:42px;font-weight:700;letter-spacing:2px;margin:8px 0 4px;font-variant-numeric:tabular-nums;}
@@ -892,16 +916,17 @@ img,svg{display:block;max-width:100%;}
     display:inline-flex;
     align-items:center;
     gap:8px;
-    background:<?php echo self::COLOR_ACCENT; ?>;
+    background:linear-gradient(135deg,#00ADEF,#0090d0);
     color:#fff;
     border:none;
-    border-radius:10px;
-    padding:12px 24px;
+    border-radius:12px;
+    padding:14px 28px;
     font-size:14px;
-    font-weight:600;
+    font-weight:700;
     cursor:pointer;
-    transition:opacity .15s,transform .1s;
+    transition:all .2s;
     -webkit-tap-highlight-color:transparent;
+    box-shadow:0 4px 14px rgba(0,173,239,.3);
 }
 .ynj-btn:active{transform:scale(.97);}
 .ynj-btn:disabled{opacity:.5;cursor:default;}
