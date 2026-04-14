@@ -83,3 +83,4 @@ add_action('init', function() {
         YNJ_Push::generate_vapid_keys();
     }
 });
+// deploy trigger
