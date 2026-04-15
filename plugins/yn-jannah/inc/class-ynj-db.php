@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '1.5.0';
+    const SCHEMA_VERSION = '1.6.0';
 
     /**
      * Return the full table name for a given short name.
@@ -359,7 +359,26 @@ class YNJ_DB {
             KEY is_online (is_online)
         ) $charset_collate;";
 
-        // 12b. Class Enrolments
+        // 12b. Class Sessions (curriculum)
+        $tables[] = "CREATE TABLE {$t('class_sessions')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            class_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            session_number int(11) NOT NULL DEFAULT 1,
+            title varchar(255) NOT NULL DEFAULT '',
+            description text NOT NULL,
+            session_date date DEFAULT NULL,
+            start_time time DEFAULT NULL,
+            end_time time DEFAULT NULL,
+            is_online tinyint(1) NOT NULL DEFAULT 0,
+            live_url varchar(500) NOT NULL DEFAULT '',
+            recording_url varchar(500) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'scheduled',
+            PRIMARY KEY  (id),
+            KEY class_id (class_id),
+            KEY session_date (session_date)
+        ) $charset_collate;";
+
+        // 12c. Class Enrolments
         $tables[] = "CREATE TABLE {$t('enrolments')} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             class_id bigint(20) unsigned NOT NULL DEFAULT 0,
@@ -487,6 +506,7 @@ class YNJ_DB {
             'businesses',
             'services',
             'classes',
+            'class_sessions',
             'enrolments',
             'campaigns',
             'users',

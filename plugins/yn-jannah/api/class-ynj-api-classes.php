@@ -25,6 +25,20 @@ class YNJ_API_Classes {
             'methods' => 'POST', 'callback' => [ __CLASS__, 'enrol' ], 'permission_callback' => '__return_true',
         ] );
 
+        // Sessions
+        register_rest_route( self::NS, '/classes/(?P<id>\d+)/sessions', [
+            'methods' => 'GET', 'callback' => [ __CLASS__, 'list_sessions' ], 'permission_callback' => '__return_true',
+        ] );
+        register_rest_route( self::NS, '/admin/classes/(?P<class_id>\d+)/sessions', [
+            'methods' => 'POST', 'callback' => [ __CLASS__, 'add_session' ], 'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
+        ] );
+        register_rest_route( self::NS, '/admin/sessions/(?P<id>\d+)', [
+            'methods' => 'PUT', 'callback' => [ __CLASS__, 'update_session' ], 'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
+        ] );
+        register_rest_route( self::NS, '/admin/sessions/(?P<id>\d+)', [
+            'methods' => 'DELETE', 'callback' => [ __CLASS__, 'delete_session' ], 'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
+        ] );
+
         // Admin
         register_rest_route( self::NS, '/admin/classes', [
             'methods' => 'POST', 'callback' => [ __CLASS__, 'create' ], 'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
@@ -80,6 +94,22 @@ class YNJ_API_Classes {
         $f['mosque_name'] = $row->mosque_name;
         $f['mosque_slug'] = $row->mosque_slug;
         $f['spots_remaining'] = $row->max_capacity > 0 ? max( 0, $row->max_capacity - $row->enrolled_count ) : null;
+
+        // Include sessions/curriculum
+        $sessions = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM " . YNJ_DB::table( 'class_sessions' ) . " WHERE class_id = %d ORDER BY session_number ASC",
+            $row->id
+        ) );
+        $f['sessions'] = array_map( function( $s ) {
+            return [
+                'id' => (int) $s->id, 'session_number' => (int) $s->session_number,
+                'title' => $s->title, 'description' => $s->description,
+                'session_date' => $s->session_date, 'start_time' => $s->start_time,
+                'end_time' => $s->end_time, 'status' => $s->status,
+                'recording_url' => $s->recording_url,
+            ];
+        }, $sessions );
+
         return new \WP_REST_Response( [ 'ok' => true, 'class' => $f ] );
     }
 
@@ -296,6 +326,107 @@ class YNJ_API_Classes {
             return [ 'id' => (int) $r->id, 'class_title' => $r->class_title, 'user_name' => $r->user_name, 'user_email' => $r->user_email, 'user_phone' => $r->user_phone, 'amount_paid_pence' => (int) $r->amount_paid_pence, 'status' => $r->status, 'enrolled_at' => $r->enrolled_at ];
         }, $rows );
         return new \WP_REST_Response( [ 'ok' => true, 'enrolments' => $enrolments ] );
+    }
+
+    // ── Sessions ──
+
+    public static function list_sessions( \WP_REST_Request $r ) {
+        global $wpdb;
+        $t = YNJ_DB::table( 'class_sessions' );
+        $rows = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM $t WHERE class_id = %d ORDER BY session_number ASC",
+            absint( $r->get_param( 'id' ) )
+        ) );
+        $sessions = array_map( function( $s ) {
+            return [
+                'id'             => (int) $s->id,
+                'session_number' => (int) $s->session_number,
+                'title'          => $s->title,
+                'description'    => $s->description,
+                'session_date'   => $s->session_date,
+                'start_time'     => $s->start_time,
+                'end_time'       => $s->end_time,
+                'is_online'      => (bool) $s->is_online,
+                'live_url'       => $s->live_url,
+                'recording_url'  => $s->recording_url,
+                'status'         => $s->status,
+            ];
+        }, $rows );
+        return new \WP_REST_Response( [ 'ok' => true, 'sessions' => $sessions ] );
+    }
+
+    public static function add_session( \WP_REST_Request $r ) {
+        $mosque = $r->get_param( '_ynj_mosque' );
+        $class_id = absint( $r->get_param( 'class_id' ) );
+        $d = $r->get_json_params();
+
+        global $wpdb;
+        // Verify class belongs to mosque
+        $cls = $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM " . YNJ_DB::table( 'classes' ) . " WHERE id = %d AND mosque_id = %d",
+            $class_id, (int) $mosque->id
+        ) );
+        if ( ! $cls ) return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Class not found.' ], 404 );
+
+        // Auto-increment session number
+        $next = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COALESCE(MAX(session_number),0)+1 FROM " . YNJ_DB::table( 'class_sessions' ) . " WHERE class_id = %d",
+            $class_id
+        ) );
+
+        $wpdb->insert( YNJ_DB::table( 'class_sessions' ), [
+            'class_id'       => $class_id,
+            'session_number' => absint( $d['session_number'] ?? $next ),
+            'title'          => sanitize_text_field( $d['title'] ?? "Session $next" ),
+            'description'    => sanitize_textarea_field( $d['description'] ?? '' ),
+            'session_date'   => sanitize_text_field( $d['session_date'] ?? '' ),
+            'start_time'     => sanitize_text_field( $d['start_time'] ?? '' ),
+            'end_time'       => sanitize_text_field( $d['end_time'] ?? '' ),
+            'is_online'      => absint( $d['is_online'] ?? 0 ),
+            'live_url'       => esc_url_raw( $d['live_url'] ?? '' ),
+            'status'         => 'scheduled',
+        ] );
+
+        // Update total_sessions on the class
+        $count = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM " . YNJ_DB::table( 'class_sessions' ) . " WHERE class_id = %d", $class_id
+        ) );
+        $wpdb->update( YNJ_DB::table( 'classes' ), [ 'total_sessions' => $count ], [ 'id' => $class_id ] );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'id' => (int) $wpdb->insert_id ], 201 );
+    }
+
+    public static function update_session( \WP_REST_Request $r ) {
+        $id = absint( $r->get_param( 'id' ) );
+        $d  = $r->get_json_params();
+        global $wpdb;
+        $t = YNJ_DB::table( 'class_sessions' );
+        $update = [];
+        if ( isset( $d['title'] ) )          $update['title']         = sanitize_text_field( $d['title'] );
+        if ( isset( $d['description'] ) )    $update['description']   = sanitize_textarea_field( $d['description'] );
+        if ( isset( $d['session_date'] ) )   $update['session_date']  = sanitize_text_field( $d['session_date'] );
+        if ( isset( $d['start_time'] ) )     $update['start_time']    = sanitize_text_field( $d['start_time'] );
+        if ( isset( $d['end_time'] ) )       $update['end_time']      = sanitize_text_field( $d['end_time'] );
+        if ( isset( $d['live_url'] ) )       $update['live_url']      = esc_url_raw( $d['live_url'] );
+        if ( isset( $d['recording_url'] ) )  $update['recording_url'] = esc_url_raw( $d['recording_url'] );
+        if ( isset( $d['status'] ) )         $update['status']        = sanitize_text_field( $d['status'] );
+        if ( $update ) $wpdb->update( $t, $update, [ 'id' => $id ] );
+        return new \WP_REST_Response( [ 'ok' => true ] );
+    }
+
+    public static function delete_session( \WP_REST_Request $r ) {
+        global $wpdb;
+        $t = YNJ_DB::table( 'class_sessions' );
+        $session = $wpdb->get_row( $wpdb->prepare( "SELECT class_id FROM $t WHERE id = %d", absint( $r->get_param( 'id' ) ) ) );
+        $wpdb->delete( $t, [ 'id' => absint( $r->get_param( 'id' ) ) ] );
+        // Update total_sessions
+        if ( $session ) {
+            $count = (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(*) FROM $t WHERE class_id = %d", $session->class_id
+            ) );
+            $wpdb->update( YNJ_DB::table( 'classes' ), [ 'total_sessions' => $count ], [ 'id' => $session->class_id ] );
+        }
+        return new \WP_REST_Response( [ 'ok' => true ] );
     }
 
     private static function fmt( $r ) {

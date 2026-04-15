@@ -121,6 +121,11 @@ class YNJ_Renderer {
                 </div>
             </section>
 
+            <!-- Today's Prayer Overview -->
+            <section class="ynj-card ynj-card--compact" id="prayer-overview" style="display:none;padding:14px 18px;">
+                <div class="ynj-prayer-overview" id="prayer-overview-grid"></div>
+            </section>
+
             <!-- Hadith motivation -->
             <p class="ynj-hadith" id="hadith-line">
                 <em>&ldquo;Prayer in congregation is twenty-seven times more virtuous than prayer offered alone.&rdquo;</em>
@@ -439,12 +444,12 @@ class YNJ_Renderer {
                 prayerTimes = {};
                 ['fajr','sunrise','dhuhr','asr','maghrib','isha'].forEach(p => {
                     if (times[p]) {
-                        // Normalize to HH:MM
                         prayerTimes[p] = String(times[p]).replace(/:\d{2}$/,'').replace(/\s*\(.*\)/,'');
                     }
                 });
                 updateCountdown();
                 setInterval(updateCountdown, 1000);
+                renderPrayerOverview();
             }
 
             function updateCountdown() {
@@ -849,6 +854,46 @@ class YNJ_Renderer {
                 });
             }
 
+            /* ---- Prayer Overview ---- */
+            function renderPrayerOverview() {
+                if (!prayerTimes) return;
+                const now = new Date();
+                const prayers = ['fajr','dhuhr','asr','maghrib','isha'];
+                const labels = {fajr:'Fajr',dhuhr:'Dhuhr',asr:'Asr',maghrib:'Maghrib',isha:'Isha'};
+                let foundNext = false;
+
+                const html = prayers.map(p => {
+                    if (!prayerTimes[p]) return '';
+                    const adhan = prayerTimes[p];
+                    const jamat = jamatTimes[p+'_jamat'] || '';
+                    const [h,m] = adhan.split(':').map(Number);
+                    const t = new Date(now); t.setHours(h,m,0,0);
+                    const isPast = t <= now;
+                    const isNext = !isPast && !foundNext;
+                    if (isNext) foundNext = true;
+
+                    let leaveText = '';
+                    if (!isPast && travelMinutes) {
+                        const target = jamat || adhan;
+                        const [th,tm] = target.split(':').map(Number);
+                        const tt = new Date(now); tt.setHours(th,tm,0,0);
+                        const leave = new Date(tt.getTime() - (travelMinutes + bufferMinutes) * 60000);
+                        leaveText = `Leave ${String(leave.getHours()).padStart(2,'0')}:${String(leave.getMinutes()).padStart(2,'0')}`;
+                    }
+
+                    const cls = isNext ? ' ynj-po--next' : (isPast ? ' ynj-po--past' : '');
+                    return `<div class="ynj-po${cls}">
+                        <div class="ynj-po__name">${labels[p]}</div>
+                        <div class="ynj-po__time">${adhan}</div>
+                        ${jamat ? `<div class="ynj-po__jamat">Jam ${jamat}</div>` : ''}
+                        ${leaveText ? `<div class="ynj-po__leave">${leaveText}</div>` : ''}
+                    </div>`;
+                }).join('');
+
+                document.getElementById('prayer-overview-grid').innerHTML = html;
+                document.getElementById('prayer-overview').style.display = '';
+            }
+
             /* ---- Travel Calculation ---- */
             let travelMode = localStorage.getItem('ynj_travel_mode') || 'walk';
             let bufferMinutes = parseInt(localStorage.getItem('ynj_buffer_min') || '10');
@@ -872,13 +917,13 @@ class YNJ_Renderer {
                 document.getElementById('hero-travel').style.display = '';
                 document.getElementById('travel-settings').style.display = '';
 
-                // Sync dropdowns
                 const modeEl = document.getElementById('mode-select');
                 const bufEl = document.getElementById('buffer-select');
                 if (modeEl) modeEl.value = travelMode;
                 if (bufEl) bufEl.value = bufferMinutes;
 
                 updateLeaveBy();
+                renderPrayerOverview();
             }
 
             window.onModeChange = function() {
@@ -1420,8 +1465,6 @@ class YNJ_Renderer {
                 <p class="ynj-text-muted" style="margin-bottom:8px;">Are you a professional? Get found by your community.</p>
                 <a href="/mosque/<?php echo esc_attr( $slug ); ?>/services/join" class="ynj-btn ynj-btn--outline">List Your Service — £10/mo</a>
             </div>
-        </main>
-        <?php self::render_bottom_nav( 'services', $slug ); ?>
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
@@ -2693,12 +2736,32 @@ class YNJ_Renderer {
                 <p class="ynj-text-muted" style="padding:20px;text-align:center;">Loading classes...</p>
             </div>
         </main>
-        <?php self::render_bottom_nav( 'services', $slug ); ?>
+            <!-- Teach a Course CTA -->
+            <div class="ynj-card" style="text-align:center;padding:24px 20px;margin-top:8px;">
+                <h3 style="font-size:16px;font-weight:700;margin-bottom:6px;">🎓 Want to teach a course?</h3>
+                <p class="ynj-text-muted" style="margin-bottom:14px;">Share your knowledge with the community. Contact the masjid to propose your class.</p>
+                <a id="whatsapp-teach" href="#" target="_blank" rel="noopener" class="ynj-btn" style="background:#25D366;width:100%;justify-content:center;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492l4.637-1.467A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75c-2.09 0-4.034-.656-5.634-1.775l-.403-.262-2.75.87.913-2.684-.287-.442A9.715 9.715 0 012.25 12c0-5.385 4.365-9.75 9.75-9.75S21.75 6.615 21.75 12s-4.365 9.75-9.75 9.75z"/></svg>
+                    Contact Masjid on WhatsApp
+                </a>
+                <p class="ynj-text-muted" style="margin-top:8px;font-size:11px;">All courses require masjid approval before listing.</p>
+            </div>
+        </main>
+        <?php self::render_bottom_nav( 'explore', $slug ); ?>
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
             const API = '/wp-json/ynj/v1';
             document.querySelectorAll('[data-nav-mosque]').forEach(el => el.href = el.dataset.navMosque.replace('{slug}', slug));
+
+            // Set WhatsApp link from mosque phone
+            fetch(`${API}/mosques/${slug}`).then(r=>r.json()).then(resp => {
+                const m = resp.mosque || resp;
+                if (m.phone) {
+                    const phone = m.phone.replace(/[^0-9+]/g,'').replace(/^0/,'+44');
+                    document.getElementById('whatsapp-teach').href = `https://wa.me/${phone}?text=${encodeURIComponent('Assalamu alaikum, I would like to teach a course at your masjid. Can we discuss?')}`;
+                }
+            }).catch(()=>{});
 
             const catIcons = {Quran:'📖',Arabic:'📚',Tajweed:'🎙️','Islamic Studies':'🕌',Fiqh:'⚖️',Seerah:'📜',Business:'💼',SEO:'🔍',Marketing:'📱',Finance:'💰',Health:'🏥',Fitness:'💪',Cooking:'🍳',Parenting:'👪',Youth:'👦',Sisters:'👩'};
 
@@ -3510,6 +3573,20 @@ img,svg{display:block;max-width:100%;}
 }
 .ynj-donate-btn:active{transform:scale(.97);}
 .ynj-donate-btn svg{display:inline;}
+
+/* Prayer Overview */
+.ynj-card--compact{margin-bottom:10px;}
+.ynj-prayer-overview{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;text-align:center;}
+.ynj-po{padding:6px 2px;border-radius:8px;font-size:11px;line-height:1.3;}
+.ynj-po__name{font-weight:600;color:<?php echo self::COLOR_TEXT; ?>;margin-bottom:2px;}
+.ynj-po__time{font-weight:700;font-size:12px;color:<?php echo self::COLOR_PRIMARY; ?>;font-variant-numeric:tabular-nums;}
+.ynj-po__jamat{font-size:10px;color:<?php echo self::COLOR_ACCENT; ?>;}
+.ynj-po__leave{font-size:9px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;margin-top:2px;}
+.ynj-po--next{background:<?php echo self::COLOR_ACCENT; ?>;border-radius:8px;}
+.ynj-po--next .ynj-po__name,.ynj-po--next .ynj-po__time{color:#fff;}
+.ynj-po--next .ynj-po__jamat{color:rgba(255,255,255,.8);}
+.ynj-po--next .ynj-po__leave{color:rgba(255,255,255,.7);}
+.ynj-po--past{opacity:.4;}
 
 /* Hadith */
 .ynj-hadith{text-align:center;padding:8px 16px;font-size:12px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;line-height:1.5;margin-bottom:10px;}
