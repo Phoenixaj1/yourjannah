@@ -4981,9 +4981,10 @@ img,svg{display:block;max-width:100%;}
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
                     </button>
                     <?php else : ?>
-                    <button class="ynj-gps-btn" id="gps-btn" type="button" title="Detect my location" onclick="if('geolocation' in navigator){navigator.geolocation.getCurrentPosition(function(p){var s=localStorage.getItem('ynj_mosque_slug');if(s)return;fetch('/wp-json/ynj/v1/mosques/nearest?lat='+p.coords.latitude+'&lng='+p.coords.longitude+'&limit=1').then(function(r){return r.json()}).then(function(d){if(d.ok&&d.mosques&&d.mosques[0]){localStorage.setItem('ynj_mosque_slug',d.mosques[0].slug);location.reload()}})},null,{timeout:8000})}">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
-                    </button>
+                    <a href="/mosque/<?php echo esc_attr( $slug ); ?>" class="ynj-mosque-selector" id="mosque-name-label" style="text-decoration:none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:.7;"><path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 21v-4h6v4"/></svg>
+                        <span id="mosque-name-text"><?php echo $slug ? esc_html( $slug ) : 'Select Mosque'; ?></span>
+                    </a>
                     <?php endif; ?>
                 </div>
             </div>
@@ -4998,13 +4999,32 @@ img,svg{display:block;max-width:100%;}
         </div>
         <?php endif; ?>
         <script>
-        // Wire mosque slug into nav links on sub-pages
+        // Wire mosque slug into nav links + show mosque name
         (function(){
             var slug = <?php echo wp_json_encode( $slug ); ?> || localStorage.getItem('ynj_mosque_slug') || '';
             if (!slug) return;
             document.querySelectorAll('[data-nav-mosque]').forEach(function(el) {
                 el.href = el.dataset.navMosque.replace('{slug}', slug);
             });
+            // Show mosque name in header (sub-pages)
+            var nameEl = document.getElementById('mosque-name-text');
+            var linkEl = document.getElementById('mosque-name-label');
+            if (nameEl && slug) {
+                // Try cached name first
+                var cached = localStorage.getItem('ynj_mosque_name');
+                if (cached) nameEl.textContent = cached;
+                if (linkEl) linkEl.href = '/mosque/' + slug;
+                // Fetch fresh name
+                fetch('/wp-json/ynj/v1/mosques/' + slug)
+                    .then(function(r){ return r.json(); })
+                    .then(function(resp){
+                        var m = resp.mosque || resp;
+                        if (m && m.name) {
+                            nameEl.textContent = m.name;
+                            localStorage.setItem('ynj_mosque_name', m.name);
+                        }
+                    }).catch(function(){});
+            }
         })();
         </script>
         <?php
