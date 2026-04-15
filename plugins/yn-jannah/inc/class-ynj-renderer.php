@@ -1839,13 +1839,13 @@ class YNJ_Renderer {
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="display:inline;vertical-align:-3px;margin-right:6px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     Your Masjid Sponsors
                 </h2>
-                <div id="local-biz-list"><p class="ynj-text-muted">Loading&hellip;</p></div>
+                <div id="local-biz-list" class="ynj-sponsors-grid"><p class="ynj-text-muted">Loading&hellip;</p></div>
             </section>
 
             <!-- Wider Community (hidden until search) -->
             <section class="ynj-card" id="community-sponsors" style="display:none;">
                 <h2 class="ynj-card__title" id="community-biz-title">Nearby Businesses</h2>
-                <div id="community-biz-list"></div>
+                <div id="community-biz-list" class="ynj-sponsors-grid"></div>
             </section>
 
             <div style="text-align:center;padding:16px 0;">
@@ -3861,17 +3861,22 @@ img,svg{display:block;max-width:100%;}
 .ynj-svc-card__body p{margin-bottom:6px;}
 .ynj-svc-card__phone{font-weight:600;font-size:13px;color:<?php echo self::COLOR_ACCENT; ?>;}
 
-/* Sponsor Leaderboard */
+/* Sponsor Cards */
+.ynj-sponsors-grid{display:flex;flex-direction:column;gap:12px;}
+@media(min-width:900px){.ynj-sponsors-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}}
 .ynj-sponsor{
-    display:flex;gap:14px;padding:16px 0;border-bottom:1px solid #f0f0ec;align-items:flex-start;
+    display:flex;gap:14px;padding:16px;align-items:flex-start;
+    background:#fff;border-radius:14px;border:1px solid #eef4f7;
 }
-.ynj-sponsor:last-child{border-bottom:none;}
 .ynj-sponsor__rank{
     flex-shrink:0;width:40px;text-align:center;font-size:18px;font-weight:700;
     color:<?php echo self::COLOR_TEXT_MUTED; ?>;padding-top:2px;
 }
+.ynj-sponsor--gold{border:2px solid #f59e0b;box-shadow:0 2px 12px rgba(245,158,11,.15);}
 .ynj-sponsor--gold .ynj-sponsor__rank{font-size:24px;}
+.ynj-sponsor--silver{border:2px solid #9ca3af;}
 .ynj-sponsor--silver .ynj-sponsor__rank{font-size:22px;}
+.ynj-sponsor--bronze{border:2px solid #d97706;}
 .ynj-sponsor--bronze .ynj-sponsor__rank{font-size:20px;}
 .ynj-sponsor__body{flex:1;min-width:0;}
 .ynj-sponsor__body h4{font-size:15px;font-weight:600;margin-bottom:4px;}
@@ -3989,8 +3994,10 @@ img,svg{display:block;max-width:100%;}
     body{padding-bottom:0;}
     /* Desktop top nav inside header */
     .ynj-header__nav{display:flex !important;align-items:center;gap:4px;margin-left:24px;}
-    .ynj-header__nav a{color:rgba(255,255,255,.7);font-size:12px;font-weight:600;text-decoration:none;padding:6px 12px;border-radius:8px;transition:all .15s;white-space:nowrap;}
+    .ynj-header__nav a{color:rgba(255,255,255,.7);font-size:12px;font-weight:600;text-decoration:none;padding:6px 10px;border-radius:8px;transition:all .15s;white-space:nowrap;}
     .ynj-header__nav a:hover,.ynj-header__nav a.ynj-hn--active{color:#fff;background:rgba(255,255,255,.15);}
+    /* Sub-page header: hide page title text, show logo instead */
+    .ynj-logo span{font-size:14px;}
     .ynj-feed-card{padding:16px 20px;}
     .ynj-svc-card{padding:16px 20px;}
 }
@@ -4004,8 +4011,8 @@ img,svg{display:block;max-width:100%;}
 /* Sub-page desktop layouts */
 @media(min-width:900px){
     /* Campaigns: 2-column grid */
-    .ynj-campaign{display:inline-block;width:calc(50% - 8px);vertical-align:top;margin-right:12px;}
-    .ynj-campaign:nth-child(2n){margin-right:0;}
+    #campaigns-list{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+    .ynj-campaign{margin-bottom:0;}
     /* Services: wider cards */
     .ynj-svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
     /* Sponsors: wider layout */
