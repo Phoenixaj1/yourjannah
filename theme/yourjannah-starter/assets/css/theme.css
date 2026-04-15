@@ -366,15 +366,15 @@ img,svg{display:block;max-width:100%;}
 /* Service Cards */
 .ynj-svc-grid{display:flex;flex-direction:column;gap:12px;}
 .ynj-svc-card{
-    display:flex;gap:14px;padding:14px;background:#f8fbfc;border-radius:14px;
-    border:1px solid #eef4f7;
+    display:flex;gap:16px;padding:18px 20px;background:rgba(255,255,255,.92);border-radius:14px;
+    border:1px solid rgba(0,0,0,.06);margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);
 }
-.ynj-svc-card__icon{font-size:28px;flex-shrink:0;width:44px;text-align:center;line-height:44px;}
+.ynj-svc-card__icon{font-size:32px;flex-shrink:0;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#f0f8fc;border-radius:12px;}
 .ynj-svc-card__body{flex:1;min-width:0;}
-.ynj-svc-card__body h4{font-size:14px;font-weight:600;margin-bottom:4px;}
-.ynj-svc-card__body .ynj-badge{margin-bottom:6px;}
-.ynj-svc-card__body p{margin-bottom:6px;}
-.ynj-svc-card__phone{font-weight:600;font-size:13px;color:#00ADEF;}
+.ynj-svc-card__body h4{font-size:15px;font-weight:700;margin-bottom:5px;}
+.ynj-svc-card__body .ynj-badge{margin-bottom:8px;}
+.ynj-svc-card__body p{margin-bottom:8px;line-height:1.5;}
+.ynj-svc-card__phone{font-weight:600;font-size:14px;color:#00ADEF;display:inline-block;margin-top:4px;}
 
 /* Sponsor Cards */
 .ynj-sponsors-grid{display:grid;grid-template-columns:1fr;gap:14px;}

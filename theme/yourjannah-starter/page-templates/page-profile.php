@@ -8,7 +8,7 @@
 get_header();
 ?>
 <main class="ynj-main" id="profile-main">
-    <p class="ynj-text-muted" style="text-align:center;padding:40px 0;"><?php esc_html_e( 'Loading...', 'yourjannah' ); ?></p>
+    <p class="ynj-text-muted" style="text-align:center;padding:40px 0;" id="profile-loading"><?php esc_html_e( 'Loading...', 'yourjannah' ); ?></p>
 </main>
 
 <script>
@@ -16,13 +16,17 @@ get_header();
     const API = ynjData.restUrl;
     const token = localStorage.getItem('ynj_user_token');
 
-    if (!token) { window.location.href = '<?php echo esc_js( home_url( '/login' ) ); ?>'; return; }
+    if (!token) {
+        document.getElementById('profile-main').innerHTML = '<section class="ynj-card" style="text-align:center;padding:40px 20px;"><div style="font-size:48px;margin-bottom:12px;">🔒</div><h2><?php echo esc_js( __( 'Not Signed In', 'yourjannah' ) ); ?></h2><p class="ynj-text-muted" style="margin-bottom:16px;"><?php echo esc_js( __( 'Sign in to see your profile, bookings, and prayer preferences.', 'yourjannah' ) ); ?></p><a href="<?php echo esc_js( home_url( '/login' ) ); ?>" class="ynj-btn" style="justify-content:center;"><?php echo esc_js( __( 'Sign In', 'yourjannah' ) ); ?></a><p style="margin-top:12px;font-size:13px;"><?php echo esc_js( __( "Don't have an account?", 'yourjannah' ) ); ?> <a href="<?php echo esc_js( home_url( '/register' ) ); ?>" style="font-weight:700;"><?php echo esc_js( __( 'Create one', 'yourjannah' ) ); ?></a></p></section>';
+        return;
+    }
 
     const headers = {'Content-Type':'application/json','Authorization':'Bearer '+token, 'X-WP-Nonce': ynjData.nonce};
 
     async function load() {
         const main = document.getElementById('profile-main');
 
+        try {
         // Fetch profile
         const profileResp = await fetch(API + 'auth/me', {headers}).then(r=>r.json()).catch(()=>({ok:false}));
         if (!profileResp.ok) { localStorage.removeItem('ynj_user_token'); window.location.href = '<?php echo esc_js( home_url( '/login' ) ); ?>'; return; }
@@ -168,7 +172,10 @@ get_header();
         loadSubscriptions();
     };
 
-    load();
+    load().catch(function(err) {
+        console.error('Profile load error:', err);
+        document.getElementById('profile-main').innerHTML = '<section class="ynj-card" style="text-align:center;padding:40px 20px;"><div style="font-size:48px;margin-bottom:12px;">😕</div><h2>Could Not Load Profile</h2><p class="ynj-text-muted">Please try again or <a href="<?php echo esc_js( home_url( '/login' ) ); ?>">sign in again</a>.</p></section>';
+    });
 })();
 </script>
 <?php
