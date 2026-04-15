@@ -224,30 +224,46 @@ class YNJ_API_User {
             sin( $dLng / 2 ) * sin( $dLng / 2 );
         $distance_m = $earth_r * 2 * atan2( sqrt( $a ), sqrt( 1 - $a ) );
 
-        // Must be within 500 metres
-        if ( $distance_m > 500 ) {
+        $distance_km = $distance_m / 1000;
+        $distance_mi = $distance_km * 0.621;
+
+        // Verification tiers based on distance
+        // Within 10 miles = verified local congregation
+        // Within 50 miles = verified regional
+        // Beyond 50 miles = not verified (too far to be a regular attendee)
+        $verified_level = 0;
+        if ( $distance_mi <= 10 ) {
+            $verified_level = 2; // confirmed local
+        } elseif ( $distance_mi <= 50 ) {
+            $verified_level = 1; // regional
+        }
+
+        if ( $verified_level === 0 ) {
             return new \WP_REST_Response( [
                 'ok'       => false,
-                'error'    => 'You need to be at the mosque to verify. You are ' . round( $distance_m ) . 'm away.',
-                'distance' => round( $distance_m ),
+                'error'    => 'You appear to be ' . round( $distance_mi ) . ' miles away. Congregation verification requires being within 10 miles of the mosque.',
+                'distance_miles' => round( $distance_mi, 1 ),
             ], 400 );
         }
 
         // Mark as verified
         $users_table = YNJ_DB::table( 'users' );
         $wpdb->update( $users_table, [
-            'verified_congregation' => 1,
+            'verified_congregation' => $verified_level,
             'verified_at'           => current_time( 'mysql', true ),
             'verified_lat'          => $lat,
             'verified_lng'          => $lng,
         ], [ 'id' => $user->id ] );
 
+        $level_label = $verified_level === 2 ? 'Local congregation member' : 'Regional member';
+
         return new \WP_REST_Response( [
-            'ok'       => true,
-            'verified' => true,
-            'mosque'   => $mosque->name,
-            'distance' => round( $distance_m ),
-            'message'  => 'Verified as congregation member of ' . $mosque->name,
+            'ok'             => true,
+            'verified'       => true,
+            'verified_level' => $verified_level,
+            'mosque'         => $mosque->name,
+            'distance_miles' => round( $distance_mi, 1 ),
+            'message'        => "Verified as $level_label of " . $mosque->name,
         ] );
     }
 
