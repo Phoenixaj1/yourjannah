@@ -594,15 +594,50 @@ class YNJ_API_Admin {
             }
         }
 
-        if ( empty( $update ) ) {
+        if ( empty( $update ) && empty( $data['reply'] ) ) {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => 'No fields to update.' ], 400 );
         }
 
-        $wpdb->update( $table, $update, [ 'id' => $id ] );
+        if ( $update ) {
+            $wpdb->update( $table, $update, [ 'id' => $id ] );
+        }
+
+        // Send reply email if provided
+        $reply = sanitize_textarea_field( $data['reply'] ?? '' );
+        if ( $reply ) {
+            $enquiry = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $id ) );
+            if ( $enquiry && is_email( $enquiry->email ) ) {
+                $mosque_name = $wpdb->get_var( $wpdb->prepare(
+                    "SELECT name FROM " . YNJ_DB::table( 'mosques' ) . " WHERE id = %d",
+                    $mosque->id
+                ) ) ?: 'Your Mosque';
+
+                $html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Inter,system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px;">'
+                    . '<div style="background:linear-gradient(135deg,#0a1628,#00ADEF);color:#fff;padding:20px;border-radius:12px 12px 0 0;text-align:center;">'
+                    . '<h2 style="margin:0;">YourJannah</h2>'
+                    . '<p style="margin:4px 0 0;opacity:.8;font-size:13px;">' . esc_html( $mosque_name ) . '</p></div>'
+                    . '<div style="background:#fff;border:1px solid #e5e5e5;border-top:none;padding:24px;border-radius:0 0 12px 12px;">'
+                    . '<h3>Reply to Your Enquiry</h3>'
+                    . '<p>Assalamu Alaikum ' . esc_html( $enquiry->name ) . ',</p>'
+                    . '<p>Thank you for your enquiry about "' . esc_html( $enquiry->subject ) . '". Here is our reply:</p>'
+                    . '<div style="background:#f0f9ff;border-left:4px solid #00ADEF;padding:16px;border-radius:0 8px 8px 0;margin:16px 0;font-size:14px;">'
+                    . nl2br( esc_html( $reply ) )
+                    . '</div>'
+                    . '<p style="font-size:13px;color:#666;">JazakAllahu Khairan,<br>' . esc_html( $mosque_name ) . '</p>'
+                    . '</div></body></html>';
+
+                add_filter( 'wp_mail_content_type', function() { return 'text/html'; } );
+                wp_mail( $enquiry->email, 'Re: ' . $enquiry->subject . ' — ' . $mosque_name, $html );
+                remove_filter( 'wp_mail_content_type', function() { return 'text/html'; } );
+
+                // Mark as replied
+                $wpdb->update( $table, [ 'status' => 'replied', 'replied_at' => current_time( 'mysql' ) ], [ 'id' => $id ] );
+            }
+        }
 
         return new \WP_REST_Response( [
             'ok'      => true,
-            'message' => 'Enquiry updated.',
+            'message' => $reply ? 'Reply sent to ' . ( $enquiry->email ?? 'guest' ) . '.' : 'Enquiry updated.',
         ] );
     }
 

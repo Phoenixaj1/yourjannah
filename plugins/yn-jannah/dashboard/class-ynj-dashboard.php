@@ -113,6 +113,22 @@ async function api(endpoint, opts) {
 
 function render(html) { document.getElementById('app').innerHTML = html; }
 
+function filterTableList(tableId, searchId, statusFilterId) {
+    var table = document.getElementById(tableId);
+    var searchEl = document.getElementById(searchId);
+    var filterEl = statusFilterId ? document.getElementById(statusFilterId) : null;
+    if (!table || !searchEl) return;
+    var query = searchEl.value.toLowerCase();
+    var statusVal = filterEl ? filterEl.value.toLowerCase() : '';
+    var rows = table.querySelectorAll('tbody tr');
+    rows.forEach(function(row) {
+        var text = row.textContent.toLowerCase();
+        var matchSearch = !query || text.indexOf(query) !== -1;
+        var matchStatus = !statusVal || text.indexOf(statusVal) !== -1;
+        row.style.display = (matchSearch && matchStatus) ? '' : 'none';
+    });
+}
+
 function shell(content) {
     var hash = location.hash.slice(1) || '/';
     var nav = [
@@ -233,6 +249,7 @@ async function renderDashboard() {
     var bookings = await api('admin/bookings');
     var campaigns = await api('mosques/' + mosque.id + '/campaigns');
     var patrons = await api('admin/patrons');
+    var events = await api('admin/events');
 
     var memberCount = members.count || 0;
     var subCount = subs.total || (subs.subscribers||[]).length;
@@ -242,6 +259,15 @@ async function renderDashboard() {
     var patronCount = patrons.total_active || 0;
     var patronMonthly = patrons.monthly_pence || 0;
 
+    // Action items counts
+    var pendingBookings = (bookings.bookings||[]).filter(function(b){return b.status==='pending'||b.status==='pending_payment';}).length;
+    var newEnquiries = enqCount;
+    var draftEvents = (events.events||[]).filter(function(e){return e.status==='draft';}).length;
+    var actionItems = [];
+    if (pendingBookings > 0) actionItems.push('<a href="#/bookings" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;text-decoration:none;color:var(--text);background:#fef3c7;margin-bottom:4px"><span style="font-size:18px">\ud83d\udcd3</span><span><strong>'+pendingBookings+'</strong> booking'+(pendingBookings>1?'s':'')+' need'+(pendingBookings===1?'s':'')+' approval</span></a>');
+    if (newEnquiries > 0) actionItems.push('<a href="#/enquiries" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;text-decoration:none;color:var(--text);background:#dbeafe;margin-bottom:4px"><span style="font-size:18px">\u2709\ufe0f</span><span><strong>'+newEnquiries+'</strong> enquir'+(newEnquiries>1?'ies':'y')+' unanswered</span></a>');
+    if (draftEvents > 0) actionItems.push('<a href="#/events" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;text-decoration:none;color:var(--text);background:#f3f4f6;margin-bottom:4px"><span style="font-size:18px">\ud83d\udcc5</span><span><strong>'+draftEvents+'</strong> draft event'+(draftEvents>1?'s':'')+'</span></a>');
+
     render(shell(
         '<div class="d-header"><h1>Dashboard</h1></div>' +
         '<div class="d-grid d-grid-4" style="margin-bottom:20px">' +
@@ -250,7 +276,8 @@ async function renderDashboard() {
         '<div class="d-card d-stat"><div class="d-stat__num">' + enqCount + '</div><div class="d-stat__label">New Enquiries</div></div>' +
         '<div class="d-card d-stat"><div class="d-stat__num">' + bookCount + '</div><div class="d-stat__label">Bookings</div></div>' +
         '</div>' +
-        (patronCount > 0 ? '<div class="d-card" style="margin-bottom:16px"><h3 style="margin-bottom:8px">\ud83c\udfc5 Patrons</h3><p style="color:var(--text-dim);font-size:13px">' + patronCount + ' active patron' + (patronCount>1?'s':'') + ' — \u00a3' + (patronMonthly/100).toFixed(2) + '/month</p><button class="d-btn d-btn--secondary d-btn--sm" style="margin-top:8px" onclick="navigate(\'/patrons\')">View Patrons</button></div>' : '') +
+        (actionItems.length > 0 ? '<div class="d-card" style="margin-bottom:16px"><h3 style="margin-bottom:12px">Action Items</h3>' + actionItems.join('') + '</div>' : '') +
+        (patronCount > 0 ? '<div class="d-card" style="margin-bottom:16px"><h3 style="margin-bottom:8px">\ud83c\udfc5 Patrons</h3><p style="color:var(--text-dim);font-size:13px">' + patronCount + ' active patron' + (patronCount>1?'s':'') + ' \u2014 \u00a3' + (patronMonthly/100).toFixed(2) + '/month</p><button class="d-btn d-btn--secondary d-btn--sm" style="margin-top:8px" onclick="navigate(\'/patrons\')">View Patrons</button></div>' : '') +
         (campCount > 0 ? '<div class="d-card" style="margin-bottom:16px"><h3 style="margin-bottom:8px">Fundraising</h3><p style="color:var(--text-dim);font-size:13px">' + campCount + ' active campaign' + (campCount>1?'s':'') + '</p><button class="d-btn d-btn--secondary d-btn--sm" style="margin-top:8px" onclick="navigate(\'/campaigns\')">Manage Campaigns</button></div>' : '') +
         '<div class="d-card"><h3 style="margin-bottom:12px">Quick Actions</h3>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
@@ -652,7 +679,7 @@ async function renderAnnouncements() {
         '<div class="d-field"><label>Body</label><textarea id="ann_body" rows="4"></textarea></div>' +
         '<div class="d-grid d-grid-3"><div class="d-field"><label>Type</label><select id="ann_type"><option>general</option><option>urgent</option><option>event</option></select></div><div class="d-field"><label>Pinned</label><select id="ann_pinned"><option value="0">No</option><option value="1">Yes</option></select></div><div class="d-field"><label>Publish</label><select id="ann_publish"><option value="1">Now</option><option value="0">Draft</option></select></div></div>' +
         '<div style="display:flex;gap:8px"><button class="d-btn d-btn--primary" id="ann-save" onclick="saveAnn()"><span class="btn-text">Save</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="cancelAnnForm()">Cancel</button></div></div>' +
-        '<div class="d-card"><table class="d-table"><thead><tr><th>Title</th><th>Status</th><th>Pin</th><th>Date</th><th>Push</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" style="color:var(--text-dim)">No announcements yet.</td></tr>')+'</tbody></table></div>'
+        '<div class="d-card"><div style="display:flex;gap:8px;margin-bottom:12px"><input type="text" id="ann-search" placeholder="Search announcements..." style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px" oninput="filterTableList(\'ann-table\',\'ann-search\')"></div><table class="d-table" id="ann-table"><thead><tr><th>Title</th><th>Status</th><th>Pin</th><th>Date</th><th>Push</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" style="color:var(--text-dim)">No announcements yet.</td></tr>')+'</tbody></table></div>'
     ));
 }
 function showAnnForm(){ editingAnnId=null; $('#ann-form-title').textContent='New Announcement'; $('#ann_title').value=''; $('#ann_body').value=''; $('#ann_type').value='general'; $('#ann_pinned').value='0'; $('#ann_publish').value='1'; $('#ann-form').style.display=''; }
@@ -696,7 +723,7 @@ async function renderEvents() {
     var rows = list.map(function(e) {
         var liveBadge = e.is_online ? (e.is_live ? '<span class="d-badge d-badge--red">LIVE</span>' : '<span class="d-badge d-badge--blue">Online</span>') : '';
         var liveBtn = e.is_online ? (e.is_live ? '<button class="d-btn d-btn--secondary d-btn--sm" onclick="toggleLive('+e.id+',0)">End</button>' : '<button class="d-btn d-btn--primary d-btn--sm" onclick="toggleLive('+e.id+',1)" style="background:#dc2626">Go Live</button>') : '';
-        return '<tr><td><strong>'+esc(e.title)+'</strong> '+liveBadge+'</td><td>'+esc(e.event_date||'')+'</td><td>'+fmtTime(e.start_time)+'</td><td>'+esc(e.event_type||'')+'</td><td>'+e.registered_count+'/'+(e.max_capacity||'∞')+'</td><td><span class="d-badge d-badge--'+(e.status==='published'?'green':'gray')+'">'+esc(e.status)+'</span></td><td>'+liveBtn+' <button class="d-btn d-btn--secondary d-btn--sm" onclick="editEvent('+e.id+')">Edit</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="deleteEvent('+e.id+')">Del</button></td></tr>';
+        return '<tr><td><strong>'+esc(e.title)+'</strong> '+liveBadge+'</td><td>'+esc(e.event_date||'')+'</td><td>'+fmtTime(e.start_time)+'</td><td>'+esc(e.event_type||'')+'</td><td>'+e.registered_count+'/'+(e.max_capacity||'\u221e')+'</td><td><span class="d-badge d-badge--'+(e.status==='published'?'green':'gray')+'">'+esc(e.status)+'</span></td><td>'+liveBtn+' <button class="d-btn d-btn--secondary d-btn--sm" onclick="duplicateEvent('+e.id+')">Dup</button> <button class="d-btn d-btn--secondary d-btn--sm" onclick="editEvent('+e.id+')">Edit</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="deleteEvent('+e.id+')">Del</button></td></tr>';
     }).join('');
     render(shell(
         '<div class="d-header"><h1>Events</h1><button class="d-btn d-btn--primary d-btn--sm" onclick="showEventForm()">+ New Event</button></div>' +
@@ -705,14 +732,14 @@ async function renderEvents() {
         '<div class="d-field"><label>Description</label><textarea id="ev_desc" rows="3"></textarea></div>' +
         '<div class="d-grid d-grid-3"><div class="d-field"><label>Date</label><input type="date" id="ev_date"></div><div class="d-field"><label>Start</label><input type="time" id="ev_start"></div><div class="d-field"><label>End</label><input type="time" id="ev_end"></div></div>' +
         '<div class="d-grid d-grid-3"><div class="d-field"><label>Location</label><input type="text" id="ev_location"></div><div class="d-field"><label>Type</label><select id="ev_type"><option>talk</option><option>class</option><option>course</option><option>workshop</option><option>community</option><option>sports</option><option>competition</option><option>youth</option></select></div><div class="d-field"><label>Capacity</label><input type="number" id="ev_cap" value="0"></div></div>' +
-        '<div class="d-grid d-grid-2"><div class="d-field"><label>Ticket Price (pence, 0=free)</label><input type="number" id="ev_price" value="0"></div><div class="d-field"><label>Status</label><select id="ev_status"><option>published</option><option>draft</option></select></div></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Ticket Price (\u00a3)</label><input type="number" id="ev_price" value="0" step="0.01" placeholder="0 = free"></div><div class="d-field"><label>Status</label><select id="ev_status"><option>published</option><option>draft</option></select></div><div class="d-field"><label>Repeat</label><select id="ev_repeat"><option value="">No Repeat</option><option value="weekly">Weekly (4 weeks)</option><option value="biweekly">Biweekly (4 occurrences)</option><option value="monthly">Monthly (3 months)</option></select></div></div>' +
         '<div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px"><h4 style="margin-bottom:12px;font-size:13px">🔴 Online / Live Event (optional)</h4>' +
         '<div class="d-grid d-grid-3"><div class="d-field"><label>Online Event?</label><select id="ev_online"><option value="0">No — In Person</option><option value="1">Yes — Online/Live</option></select></div><div class="d-field"><label>Live Stream URL</label><input id="ev_live_url" placeholder="https://youtube.com/live/..."></div><div class="d-field"><label>Donation Target (£)</label><input type="number" id="ev_don_target" value="0" placeholder="0 = no target"></div></div></div>' +
         '<div style="display:flex;gap:8px"><button class="d-btn d-btn--primary" id="ev-save" onclick="saveEvent()"><span class="btn-text">Save Event</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="cancelEventForm()">Cancel</button></div></div>' +
-        '<div class="d-card"><table class="d-table"><thead><tr><th>Title</th><th>Date</th><th>Time</th><th>Type</th><th>RSVP</th><th>Status</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="7" style="color:var(--text-dim)">No events.</td></tr>')+'</tbody></table></div>'
+        '<div class="d-card"><div style="display:flex;gap:8px;margin-bottom:12px"><input type="text" id="ev-search" placeholder="Search events..." style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px" oninput="filterTableList(\'ev-table\',\'ev-search\',\'ev-status-filter\')"><select id="ev-status-filter" onchange="filterTableList(\'ev-table\',\'ev-search\',\'ev-status-filter\')" style="padding:8px;border:1px solid var(--border);border-radius:8px"><option value="">All Status</option><option value="published">Published</option><option value="draft">Draft</option></select></div><table class="d-table" id="ev-table"><thead><tr><th>Title</th><th>Date</th><th>Time</th><th>Type</th><th>RSVP</th><th>Status</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="7" style="color:var(--text-dim)">No events.</td></tr>')+'</tbody></table></div>'
     ));
 }
-function showEventForm(){ editingEventId=null; $('#ev-form-title').textContent='New Event'; $('#ev_title').value=''; $('#ev_desc').value=''; $('#ev_date').value=''; $('#ev_start').value=''; $('#ev_end').value=''; $('#ev_location').value=''; $('#ev_type').value='talk'; $('#ev_cap').value='0'; $('#ev_price').value='0'; $('#ev_status').value='published'; $('#ev_online').value='0'; $('#ev_live_url').value=''; $('#ev_don_target').value='0'; $('#ev-form').style.display=''; }
+function showEventForm(prefill){ editingEventId=null; var p=prefill||{}; $('#ev-form-title').textContent=p._editTitle||'New Event'; $('#ev_title').value=p.title||''; $('#ev_desc').value=p.description||''; $('#ev_date').value=p.event_date||''; $('#ev_start').value=p.start_time||''; $('#ev_end').value=p.end_time||''; $('#ev_location').value=p.location||''; $('#ev_type').value=p.event_type||'talk'; $('#ev_cap').value=p.max_capacity||'0'; $('#ev_price').value=p.price_pounds||'0'; $('#ev_status').value=p.status||'published'; $('#ev_online').value=p.is_online||'0'; $('#ev_live_url').value=p.live_url||''; $('#ev_don_target').value=p.donation_target||'0'; $('#ev_repeat').value=p.repeat||''; $('#ev-form').style.display=''; }
 function cancelEventForm(){ editingEventId=null; $('#ev-form').style.display='none'; }
 function editEvent(id) {
     var e = eventsData.find(function(x){return x.id===id;});
@@ -728,23 +755,45 @@ function editEvent(id) {
     $('#ev_location').value = e.location || '';
     $('#ev_type').value = e.event_type || 'talk';
     $('#ev_cap').value = e.max_capacity || 0;
-    $('#ev_price').value = e.ticket_price_pence || 0;
+    $('#ev_price').value = (e.ticket_price_pence || 0) / 100;
     $('#ev_status').value = e.status || 'published';
     $('#ev_online').value = e.is_online ? '1' : '0';
     $('#ev_live_url').value = e.live_url || '';
     $('#ev_don_target').value = e.donation_target_pence ? Math.round(e.donation_target_pence/100) : 0;
+    $('#ev_repeat').value = '';
 }
 async function saveEvent(){
     btn('#ev-save',true);
-    var body = {title:$('#ev_title').value,description:$('#ev_desc').value,event_date:$('#ev_date').value,start_time:$('#ev_start').value+':00',end_time:$('#ev_end').value+':00',location:$('#ev_location').value,event_type:$('#ev_type').value,max_capacity:parseInt($('#ev_cap').value),ticket_price_pence:parseInt($('#ev_price').value),requires_booking:1,status:$('#ev_status').value,is_online:parseInt($('#ev_online').value),live_url:$('#ev_live_url').value,donation_target_pence:parseInt($('#ev_don_target').value||0)*100};
+    var pricePounds = parseFloat($('#ev_price').value) || 0;
+    var body = {title:$('#ev_title').value,description:$('#ev_desc').value,event_date:$('#ev_date').value,start_time:$('#ev_start').value+':00',end_time:$('#ev_end').value+':00',location:$('#ev_location').value,event_type:$('#ev_type').value,max_capacity:parseInt($('#ev_cap').value),ticket_price_pence:Math.round(pricePounds*100),requires_booking:1,status:$('#ev_status').value,is_online:parseInt($('#ev_online').value),live_url:$('#ev_live_url').value,donation_target_pence:parseInt($('#ev_don_target').value||0)*100};
     if (editingEventId) {
         var res=await api('admin/events/'+editingEventId,{method:'PUT',body:body});
         btn('#ev-save',false);
         if(res.ok){toast('Event updated!');editingEventId=null;renderEvents();}else toast(res.error||'Failed.','error');
     } else {
-        var res=await api('admin/events',{method:'POST',body:body});
-        btn('#ev-save',false);
-        if(res.ok){toast('Event created!');renderEvents();}else toast(res.error||'Failed.','error');
+        var repeat = $('#ev_repeat') ? $('#ev_repeat').value : '';
+        if (repeat) {
+            var count = repeat === 'monthly' ? 3 : 4;
+            var created = 0;
+            var baseDate = new Date($('#ev_date').value);
+            for (var ri = 0; ri < count; ri++) {
+                var d = new Date(baseDate);
+                if (repeat === 'weekly') d.setDate(d.getDate() + ri * 7);
+                else if (repeat === 'biweekly') d.setDate(d.getDate() + ri * 14);
+                else if (repeat === 'monthly') d.setMonth(d.getMonth() + ri);
+                var dateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+                var b = Object.assign({}, body, {event_date: dateStr});
+                var res = await api('admin/events',{method:'POST',body:b});
+                if (res.ok) created++;
+            }
+            btn('#ev-save',false);
+            toast(created + ' recurring events created!');
+            renderEvents();
+        } else {
+            var res=await api('admin/events',{method:'POST',body:body});
+            btn('#ev-save',false);
+            if(res.ok){toast('Event created!');renderEvents();}else toast(res.error||'Failed.','error');
+        }
     }
 }
 async function toggleLive(id, live) {
@@ -753,6 +802,27 @@ async function toggleLive(id, live) {
     else toast(res.error || 'Failed.', 'error');
 }
 async function deleteEvent(id){if(!confirm('Delete this event?'))return;await api('admin/events/'+id,{method:'DELETE'});toast('Deleted.');renderEvents();}
+function duplicateEvent(id) {
+    var e = eventsData.find(function(x){return x.id===id;});
+    if (!e) { toast('Not found.','error'); return; }
+    var newDate = '';
+    if (e.event_date) { var d = new Date(e.event_date); d.setDate(d.getDate()+7); newDate = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+    showEventForm({
+        title: 'Copy of ' + (e.title||''),
+        description: e.description||'',
+        event_date: newDate,
+        start_time: (e.start_time||'').substring(0,5),
+        end_time: (e.end_time||'').substring(0,5),
+        location: e.location||'',
+        event_type: e.event_type||'talk',
+        max_capacity: e.max_capacity||0,
+        price_pounds: (e.ticket_price_pence||0)/100,
+        status: e.status||'published',
+        is_online: e.is_online?'1':'0',
+        live_url: e.live_url||'',
+        donation_target: e.donation_target_pence?Math.round(e.donation_target_pence/100):0
+    });
+}
 
 // ── Bookings ──
 async function renderBookings() {
@@ -764,16 +834,31 @@ async function renderBookings() {
         var type = b.event_id ? 'Event' : (b.room_id ? 'Room' : '—');
         var badge = b.status==='confirmed'?'green':(b.status==='pending'||b.status==='pending_payment'?'yellow':'red');
         var btns = '';
-        if (b.status==='pending' || b.status==='pending_payment') { btns = '<button class="d-btn d-btn--primary d-btn--sm" onclick="updateBooking('+b.id+',\'confirmed\')">Confirm</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="updateBooking('+b.id+',\'cancelled\')">Reject</button>'; }
-        else if (b.status==='confirmed') { btns = '<button class="d-btn d-btn--danger d-btn--sm" onclick="updateBooking('+b.id+',\'cancelled\')">Cancel</button>'; }
+        if (b.status==='pending' || b.status==='pending_payment') { btns = '<button class="d-btn d-btn--primary d-btn--sm" onclick="confirmBooking('+b.id+')">Confirm</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="rejectBooking('+b.id+')">Reject</button>'; }
+        else if (b.status==='confirmed') { btns = '<button class="d-btn d-btn--danger d-btn--sm" onclick="rejectBooking('+b.id+')">Cancel</button>'; }
         return '<tr><td><strong>'+esc(b.user_name)+'</strong><br><span style="font-size:11px;color:var(--text-dim)">'+esc(b.user_email)+'</span></td><td>'+type+'</td><td>'+esc(b.booking_date)+'</td><td>'+fmtTime(b.start_time)+' — '+fmtTime(b.end_time)+'</td><td><span class="d-badge d-badge--'+badge+'">'+esc(b.status)+'</span></td><td>'+btns+'</td></tr>';
     }).join('');
     render(shell(
         '<div class="d-header"><h1>Bookings</h1></div>' +
-        '<div class="d-card"><table class="d-table"><thead><tr><th>Guest</th><th>Type</th><th>Date</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" style="color:var(--text-dim)">No bookings.</td></tr>')+'</tbody></table></div>'
+        '<div class="d-card"><div style="display:flex;gap:8px;margin-bottom:12px"><input type="text" id="bk-search" placeholder="Search bookings..." style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px" oninput="filterTableList(\'bk-table\',\'bk-search\',\'bk-status-filter\')"><select id="bk-status-filter" onchange="filterTableList(\'bk-table\',\'bk-search\',\'bk-status-filter\')" style="padding:8px;border:1px solid var(--border);border-radius:8px"><option value="">All Status</option><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="cancelled">Cancelled</option></select></div><table class="d-table" id="bk-table"><thead><tr><th>Guest</th><th>Type</th><th>Date</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" style="color:var(--text-dim)">No bookings.</td></tr>')+'</tbody></table></div>'
     ));
 }
-async function updateBooking(id,status){await api('admin/bookings/'+id,{method:'PUT',body:{status:status}});toast('Booking '+status+'.');renderBookings();}
+async function confirmBooking(id){
+    var res = await api('admin/bookings/'+id,{method:'PUT',body:{status:'confirmed'}});
+    if(res.ok) toast('Booking confirmed! Email sent to guest.');
+    else toast(res.error||'Failed.','error');
+    renderBookings();
+}
+async function rejectBooking(id){
+    var reason = prompt('Reason for rejection/cancellation (optional):');
+    if (reason === null) return;
+    var body = {status:'cancelled'};
+    if (reason) body.notes = reason;
+    var res = await api('admin/bookings/'+id,{method:'PUT',body:body});
+    if(res.ok) toast('Booking rejected.' + (reason ? ' Reason saved.' : ''));
+    else toast(res.error||'Failed.','error');
+    renderBookings();
+}
 
 // ── Rooms ──
 var roomsData = [];
@@ -792,7 +877,7 @@ async function renderRooms() {
         '<div class="d-card" id="rm-form" style="display:none"><h3 id="rm-form-title" style="margin-bottom:12px">Add Room</h3>' +
         '<div class="d-field"><label>Name</label><input type="text" id="rm_name"></div>' +
         '<div class="d-field"><label>Description</label><textarea id="rm_desc" rows="2"></textarea></div>' +
-        '<div class="d-grid d-grid-3"><div class="d-field"><label>Capacity</label><input type="number" id="rm_cap" value="0"></div><div class="d-field"><label>Hourly Rate (pence)</label><input type="number" id="rm_hourly" value="0"></div><div class="d-field"><label>Daily Rate (pence)</label><input type="number" id="rm_daily" value="0"></div></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Capacity</label><input type="number" id="rm_cap" value="0"></div><div class="d-field"><label>Hourly Rate (\u00a3)</label><input type="number" id="rm_hourly" value="0" step="0.01"></div><div class="d-field"><label>Daily Rate (\u00a3)</label><input type="number" id="rm_daily" value="0" step="0.01"></div></div>' +
         '<div style="display:flex;gap:8px"><button class="d-btn d-btn--primary" id="rm-save" onclick="saveRoom()"><span class="btn-text">Save Room</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="cancelRoomForm()">Cancel</button></div></div>' +
         '<div class="d-card"><table class="d-table"><thead><tr><th>Name</th><th>Capacity</th><th>Hourly</th><th>Daily</th><th>Status</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" style="color:var(--text-dim)">No rooms.</td></tr>')+'</tbody></table></div>'
     ));
@@ -808,12 +893,12 @@ function editRoom(id) {
     $('#rm_name').value = r.name || '';
     $('#rm_desc').value = r.description || '';
     $('#rm_cap').value = r.capacity || 0;
-    $('#rm_hourly').value = r.hourly_rate_pence || 0;
-    $('#rm_daily').value = r.daily_rate_pence || 0;
+    $('#rm_hourly').value = (r.hourly_rate_pence || 0) / 100;
+    $('#rm_daily').value = (r.daily_rate_pence || 0) / 100;
 }
 async function saveRoom(){
     btn('#rm-save',true);
-    var body = {name:$('#rm_name').value,description:$('#rm_desc').value,capacity:parseInt($('#rm_cap').value),hourly_rate_pence:parseInt($('#rm_hourly').value),daily_rate_pence:parseInt($('#rm_daily').value)};
+    var body = {name:$('#rm_name').value,description:$('#rm_desc').value,capacity:parseInt($('#rm_cap').value),hourly_rate_pence:Math.round(parseFloat($('#rm_hourly').value||0)*100),daily_rate_pence:Math.round(parseFloat($('#rm_daily').value||0)*100)};
     if (editingRoomId) {
         var res=await api('admin/rooms/'+editingRoomId,{method:'PUT',body:body});
         btn('#rm-save',false);
@@ -836,19 +921,28 @@ async function renderEnquiries() {
         var badge = e.status==='new'?'blue':(e.status==='read'?'yellow':(e.status==='replied'?'green':(e.status==='resolved'?'gray':'gray')));
         var actions = '';
         if (e.status==='new') actions += '<button class="d-btn d-btn--secondary d-btn--sm" onclick="markEnquiry('+e.id+',\'read\')">Mark Read</button> ';
-        if (e.status!=='replied' && e.status!=='resolved') actions += '<button class="d-btn d-btn--primary d-btn--sm" onclick="markEnquiry('+e.id+',\'replied\')">Mark Replied</button> ';
+        if (e.status!=='replied' && e.status!=='resolved') actions += '<button class="d-btn d-btn--primary d-btn--sm" onclick="showEnquiryReply('+e.id+')">Reply</button> ';
         if (e.status!=='resolved') actions += '<button class="d-btn d-btn--secondary d-btn--sm" onclick="markEnquiry('+e.id+',\'resolved\')" style="color:#16a34a">Resolve</button> ';
-        return '<tr><td><strong>'+esc(e.name)+'</strong><br><span style="font-size:11px;color:var(--text-dim)">'+esc(e.email)+'</span></td><td>'+esc(e.subject||'—')+'</td><td><span class="d-badge d-badge--'+badge+'">'+esc(e.status)+'</span></td><td>'+fmtDate(e.created_at)+'</td><td>'+actions+'</td></tr>' +
+        return '<tr><td><strong>'+esc(e.name)+'</strong><br><span style="font-size:11px;color:var(--text-dim)">'+esc(e.email)+'</span></td><td>'+esc(e.subject||'\u2014')+'</td><td><span class="d-badge d-badge--'+badge+'">'+esc(e.status)+'</span></td><td>'+fmtDate(e.created_at)+'</td><td>'+actions+'</td></tr>' +
         '<tr><td colspan="5" style="padding:8px 12px;background:#f9fafb;font-size:13px;color:var(--text-dim)">'+esc(e.message)+(e.admin_notes ? '<br><strong style="color:var(--primary)">Admin notes:</strong> '+esc(e.admin_notes) : '')+'</td></tr>' +
-        '<tr><td colspan="5" style="padding:4px 12px 8px;background:#f9fafb;border-bottom:2px solid var(--border)"><div style="display:flex;gap:6px;align-items:center"><input id="enq_note_'+e.id+'" placeholder="Add admin notes..." value="'+esc(e.admin_notes||'')+'" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit"><button class="d-btn d-btn--secondary d-btn--sm" onclick="saveEnquiryNote('+e.id+')">Save Note</button></div></td></tr>';
+        '<tr><td colspan="5" style="padding:4px 12px 8px;background:#f9fafb;border-bottom:2px solid var(--border)"><div style="display:flex;gap:6px;align-items:center"><input id="enq_note_'+e.id+'" placeholder="Add admin notes..." value="'+esc(e.admin_notes||'')+'" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit"><button class="d-btn d-btn--secondary d-btn--sm" onclick="saveEnquiryNote('+e.id+')">Save Note</button></div>' +
+        '<div id="enq_reply_'+e.id+'" style="display:none;margin-top:8px"><textarea id="enq_reply_text_'+e.id+'" rows="3" placeholder="Type your reply to '+esc(e.name)+'..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;margin-bottom:6px"></textarea><div style="display:flex;gap:6px"><button class="d-btn d-btn--primary d-btn--sm" onclick="sendEnquiryReply('+e.id+')">Send Reply</button><button class="d-btn d-btn--secondary d-btn--sm" onclick="document.getElementById(\'enq_reply_'+e.id+'\').style.display=\'none\'">Cancel</button></div></div></td></tr>';
     }).join('');
     render(shell(
         '<div class="d-header"><h1>Enquiries</h1></div>' +
-        '<div class="d-card"><table class="d-table"><thead><tr><th>From</th><th>Subject</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" style="color:var(--text-dim)">No enquiries.</td></tr>')+'</tbody></table></div>'
+        '<div class="d-card"><div style="display:flex;gap:8px;margin-bottom:12px"><input type="text" id="enq-search" placeholder="Search enquiries..." style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px" oninput="filterTableList(\'enq-table\',\'enq-search\',\'enq-status-filter\')"><select id="enq-status-filter" onchange="filterTableList(\'enq-table\',\'enq-search\',\'enq-status-filter\')" style="padding:8px;border:1px solid var(--border);border-radius:8px"><option value="">All Status</option><option value="new">New</option><option value="read">Read</option><option value="replied">Replied</option><option value="resolved">Resolved</option></select></div><table class="d-table" id="enq-table"><thead><tr><th>From</th><th>Subject</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" style="color:var(--text-dim)">No enquiries.</td></tr>')+'</tbody></table></div>'
     ));
 }
 async function markEnquiry(id,status){await api('admin/enquiries/'+id,{method:'PUT',body:{status:status}});toast('Marked as '+status+'.');renderEnquiries();}
 async function saveEnquiryNote(id){var note=$('#enq_note_'+id);if(!note)return;var res=await api('admin/enquiries/'+id,{method:'PUT',body:{admin_notes:note.value}});if(res.ok)toast('Note saved.');else toast(res.error||'Failed.','error');}
+function showEnquiryReply(id){var el=document.getElementById('enq_reply_'+id);if(el)el.style.display='';}
+async function sendEnquiryReply(id){
+    var text=document.getElementById('enq_reply_text_'+id);
+    if(!text||!text.value.trim()){toast('Please type a reply.','error');return;}
+    var res=await api('admin/enquiries/'+id,{method:'PUT',body:{status:'replied',admin_notes:text.value.trim()}});
+    if(res.ok){toast('Reply saved! Status set to replied.');renderEnquiries();}
+    else toast(res.error||'Failed.','error');
+}
 
 // ── Subscribers ──
 async function renderSubscribers() {
@@ -885,12 +979,12 @@ async function renderClasses() {
         var price = c.price_pence > 0 ? '£'+(c.price_pence/100) : 'Free';
         var pt = c.price_type === 'per_session' ? '/session' : (c.price_type === 'monthly' ? '/mo' : '');
         var online = c.is_online ? '<span class="d-badge d-badge--blue">Online</span>' : '';
-        return '<tr><td><strong>'+esc(c.title)+'</strong> '+online+'</td><td>'+esc(c.category)+'</td><td>'+esc(c.instructor_name||'—')+'</td><td>'+price+pt+'</td><td>'+c.enrolled_count+'/'+(c.max_capacity||'∞')+'</td><td>'+esc(c.schedule_text||c.day_of_week||'—')+'</td><td><button class="d-btn d-btn--secondary d-btn--sm" onclick="editClass('+c.id+')">Edit</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="deleteClass('+c.id+')">Del</button></td></tr>';
+        return '<tr><td><strong>'+esc(c.title)+'</strong> '+online+'</td><td>'+esc(c.category)+'</td><td>'+esc(c.instructor_name||'\u2014')+'</td><td>'+price+pt+'</td><td>'+c.enrolled_count+'/'+(c.max_capacity||'\u221e')+'</td><td>'+esc(c.schedule_text||c.day_of_week||'\u2014')+'</td><td><button class="d-btn d-btn--secondary d-btn--sm" onclick="duplicateClass('+c.id+')">Dup</button> <button class="d-btn d-btn--secondary d-btn--sm" onclick="editClass('+c.id+')">Edit</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="deleteClass('+c.id+')">Del</button></td></tr>';
     }).join('');
     render(shell(
         '<div class="d-header"><h1>Classes & Courses</h1><div style="display:flex;gap:8px"><button class="d-btn d-btn--primary d-btn--sm" onclick="navigate(\'/classes/new\')">+ New Class</button><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/enrolments\')">Enrolments</button></div></div>' +
-        '<div class="d-card">' +
-        (rows ? '<table class="d-table"><thead><tr><th>Class</th><th>Category</th><th>Instructor</th><th>Price</th><th>Enrolled</th><th>Schedule</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        '<div class="d-card"><div style="display:flex;gap:8px;margin-bottom:12px"><input type="text" id="cl-search" placeholder="Search classes..." style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px" oninput="filterTableList(\'cl-table\',\'cl-search\')"></div>' +
+        (rows ? '<table class="d-table" id="cl-table"><thead><tr><th>Class</th><th>Category</th><th>Instructor</th><th>Price</th><th>Enrolled</th><th>Schedule</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
         : '<p style="color:var(--text-dim)">No classes yet.</p>') +
         '</div>'
     ));
@@ -906,6 +1000,8 @@ async function renderClassForm() {
         classesData = r.classes || [];
         c = classesData.find(function(x){return x.id===editingClassId;});
     }
+    // Support duplication pre-fill
+    if (!c && window._dupClassData) { c = window._dupClassData; window._dupClassData = null; }
     render(shell(
         '<div class="d-header"><h1>'+(isEdit?'Edit Class':'New Class')+'</h1></div><div class="d-card">' +
         '<div class="d-field"><label>Title</label><input id="cl_title" placeholder="e.g. Tajweed for Beginners" value="'+esc(c?c.title:'')+'"></div>' +
@@ -913,7 +1009,7 @@ async function renderClassForm() {
         '<div class="d-grid d-grid-3"><div class="d-field"><label>Category</label><select id="cl_cat"><option>Quran</option><option>Arabic</option><option>Tajweed</option><option>Islamic Studies</option><option>Fiqh</option><option>Seerah</option><option>Business</option><option>SEO</option><option>Marketing</option><option>Finance</option><option>Health</option><option>Fitness</option><option>Cooking</option><option>Parenting</option><option>Youth</option><option>Sisters</option></select></div><div class="d-field"><label>Instructor</label><input id="cl_instructor" placeholder="Sheikh Ahmad" value="'+esc(c?c.instructor_name:'')+'"></div><div class="d-field"><label>Type</label><select id="cl_type"><option value="course">Course</option><option value="workshop">Workshop</option><option value="drop_in">Drop-in</option><option value="seminar">Seminar</option></select></div></div>' +
         '<div class="d-grid d-grid-3"><div class="d-field"><label>Day</label><select id="cl_day"><option value="">Any</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option></select></div><div class="d-field"><label>Start Time</label><input type="time" id="cl_start" value="'+esc(c?(c.start_time||'').substring(0,5):'')+'"></div><div class="d-field"><label>End Time</label><input type="time" id="cl_end" value="'+esc(c?(c.end_time||'').substring(0,5):'')+'"></div></div>' +
         '<div class="d-grid d-grid-3"><div class="d-field"><label>Start Date</label><input type="date" id="cl_sdate" value="'+esc(c?c.start_date||'':'')+'"></div><div class="d-field"><label>Sessions</label><input type="number" id="cl_sessions" value="'+(c?c.total_sessions||1:1)+'"></div><div class="d-field"><label>Capacity (0=unlimited)</label><input type="number" id="cl_cap" value="'+(c?c.max_capacity||0:0)+'"></div></div>' +
-        '<div class="d-grid d-grid-3"><div class="d-field"><label>Price (pence, 0=free)</label><input type="number" id="cl_price" value="'+(c?c.price_pence||0:0)+'"></div><div class="d-field"><label>Price Type</label><select id="cl_ptype"><option value="one_off">One-off / Full course</option><option value="per_session">Per session</option><option value="monthly">Monthly</option></select></div><div class="d-field"><label>Online?</label><select id="cl_online"><option value="0">In Person</option><option value="1">Online</option></select></div></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Price (\u00a3)</label><input type="number" id="cl_price" value="'+(c?((c.price_pence||0)/100):0)+'" step="0.01" placeholder="0 = free"></div><div class="d-field"><label>Price Type</label><select id="cl_ptype"><option value="one_off">One-off / Full course</option><option value="per_session">Per session</option><option value="monthly">Monthly</option></select></div><div class="d-field"><label>Online?</label><select id="cl_online"><option value="0">In Person</option><option value="1">Online</option></select></div></div>' +
         '<div class="d-grid d-grid-2"><div class="d-field"><label>Location</label><input id="cl_location" placeholder="Main Hall / Online" value="'+esc(c?c.location||'':'')+'"></div><div class="d-field"><label>Live URL (if online)</label><input id="cl_url" placeholder="https://zoom.us/..." value="'+esc(c?c.live_url||'':'')+'"></div></div>' +
         '<div style="display:flex;gap:8px;margin-top:16px"><button class="d-btn d-btn--primary" id="cl-save" onclick="saveClass()"><span class="btn-text">'+(isEdit?'Update Class':'Create Class')+'</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="editingClassId=null;navigate(\'/classes\')">Cancel</button></div></div>'
     ));
@@ -934,7 +1030,7 @@ async function saveClass() {
         class_type:$('#cl_type').value, day_of_week:$('#cl_day').value,
         start_time:($('#cl_start').value||'')+':00', end_time:($('#cl_end').value||'')+':00',
         start_date:$('#cl_sdate').value, total_sessions:parseInt($('#cl_sessions').value),
-        max_capacity:parseInt($('#cl_cap').value), price_pence:parseInt($('#cl_price').value),
+        max_capacity:parseInt($('#cl_cap').value), price_pence:Math.round(parseFloat($('#cl_price').value||0)*100),
         price_type:$('#cl_ptype').value, is_online:parseInt($('#cl_online').value),
         location:$('#cl_location').value, live_url:$('#cl_url').value
     };
@@ -949,6 +1045,31 @@ async function saveClass() {
     }
 }
 async function deleteClass(id){if(!confirm('Delete?'))return;await api('admin/classes/'+id,{method:'DELETE'});toast('Deleted.');renderClasses();}
+function duplicateClass(id) {
+    var c = classesData.find(function(x){return x.id===id;});
+    if (!c) { toast('Not found.','error'); return; }
+    // Pre-fill the class form with duplicated data
+    editingClassId = null;
+    window._dupClassData = {
+        title: 'Copy of ' + (c.title||''),
+        description: c.description||'',
+        category: c.category||'Quran',
+        instructor_name: c.instructor_name||'',
+        class_type: c.class_type||'course',
+        day_of_week: c.day_of_week||'',
+        start_time: c.start_time||'',
+        end_time: c.end_time||'',
+        start_date: c.start_date||'',
+        total_sessions: c.total_sessions||1,
+        max_capacity: c.max_capacity||0,
+        price_pence: c.price_pence||0,
+        price_type: c.price_type||'one_off',
+        is_online: c.is_online?1:0,
+        location: c.location||'',
+        live_url: c.live_url||''
+    };
+    navigate('/classes/new');
+}
 async function renderEnrolments() {
     if (!mosque) await loadMosque();
     render(shell('<div class="d-header"><h1>Enrolments</h1></div><div class="d-card">Loading...</div>'));

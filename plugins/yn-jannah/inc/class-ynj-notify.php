@@ -107,6 +107,60 @@ class YNJ_Notify {
     }
 
     /**
+     * Booking status changed — notify the GUEST.
+     * do_action( 'ynj_booking_status_changed', $mosque_id, $booking_data )
+     */
+    public static function on_booking_status_changed( $mosque_id, $data ) {
+        $guest_email = $data['user_email'] ?? '';
+        if ( ! $guest_email || ! is_email( $guest_email ) ) return;
+
+        $name    = esc_html( $data['user_name'] ?? 'Guest' );
+        $status  = $data['status'] ?? '';
+        $notes   = esc_html( $data['notes'] ?? '' );
+        $date    = esc_html( $data['booking_date'] ?? '' );
+
+        $mosque_name = self::get_mosque_name( $mosque_id );
+
+        if ( $status === 'confirmed' ) {
+            $subject = "Booking Confirmed — {$mosque_name}";
+            $body_html = "
+                <h3 style='margin:0 0 12px;color:#16a34a;'>Booking Confirmed ✅</h3>
+                <p>Assalamu Alaikum {$name},</p>
+                <p>Your booking at <strong>{$mosque_name}</strong> has been confirmed.</p>
+                <table style='font-size:14px;width:100%;'>
+                    <tr><td style='padding:6px 0;color:#666;'>Date:</td><td><strong>{$date}</strong></td></tr>
+                    " . ( $notes ? "<tr><td style='padding:6px 0;color:#666;'>Notes:</td><td>{$notes}</td></tr>" : '' ) . "
+                </table>
+                <p style='margin-top:16px;font-size:13px;color:#666;'>JazakAllahu Khairan for using YourJannah.</p>
+            ";
+        } elseif ( $status === 'cancelled' ) {
+            $subject = "Booking Update — {$mosque_name}";
+            $body_html = "
+                <h3 style='margin:0 0 12px;color:#dc2626;'>Booking Not Approved</h3>
+                <p>Assalamu Alaikum {$name},</p>
+                <p>Unfortunately your booking at <strong>{$mosque_name}</strong> for {$date} could not be approved.</p>
+                " . ( $notes ? "<p style='margin-top:8px;'><strong>Reason:</strong> {$notes}</p>" : '' ) . "
+                <p style='margin-top:16px;font-size:13px;color:#666;'>Please contact the mosque for more information.</p>
+            ";
+        } else {
+            return;
+        }
+
+        // Send to guest
+        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Inter,system-ui,sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;padding:20px;">'
+            . '<div style="background:linear-gradient(135deg,#0a1628,#00ADEF);color:#fff;padding:20px;border-radius:12px 12px 0 0;text-align:center;">'
+            . '<h2 style="margin:0;font-size:18px;">🕌 YourJannah</h2>'
+            . '<p style="margin:4px 0 0;opacity:.8;font-size:13px;">' . esc_html( $mosque_name ) . '</p></div>'
+            . '<div style="background:#fff;border:1px solid #e5e5e5;border-top:none;padding:24px;border-radius:0 0 12px 12px;">'
+            . $body_html
+            . '</div></body></html>';
+
+        add_filter( 'wp_mail_content_type', function() { return 'text/html'; } );
+        wp_mail( $guest_email, $subject, $html );
+        remove_filter( 'wp_mail_content_type', function() { return 'text/html'; } );
+    }
+
+    /**
      * New business sponsor signed up.
      * do_action( 'ynj_new_sponsor', $mosque_id, $business_data )
      */

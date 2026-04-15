@@ -135,6 +135,7 @@ add_action('ynj_new_sponsor', ['YNJ_Notify', 'on_sponsor'], 10, 2);
 add_action('ynj_new_service_listing', ['YNJ_Notify', 'on_service_listing'], 10, 2);
 add_action('ynj_payment_received', ['YNJ_Notify', 'on_payment'], 10, 3);
 add_action('ynj_new_patron', ['YNJ_Notify', 'on_patron'], 10, 2);
+add_action('ynj_booking_status_changed', ['YNJ_Notify', 'on_booking_status_changed'], 10, 2);
 
 // Push notifications to subscribed users on new content
 add_action('ynj_new_announcement', function($mosque_id, $data) {

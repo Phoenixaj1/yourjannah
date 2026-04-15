@@ -268,9 +268,26 @@ class YNJ_API_Bookings {
             ) );
         }
 
+        // Also update notes if provided
+        $notes = sanitize_textarea_field( $data['notes'] ?? '' );
+        if ( $notes ) {
+            $wpdb->update( $table, [ 'notes' => $notes ], [ 'id' => $id ] );
+        }
+
+        // Send email notification to guest on status change
+        do_action( 'ynj_booking_status_changed', (int) $mosque->id, [
+            'user_name'    => $existing->user_name,
+            'user_email'   => $existing->user_email,
+            'booking_date' => $existing->booking_date,
+            'start_time'   => $existing->start_time,
+            'end_time'     => $existing->end_time,
+            'status'       => $new_status,
+            'notes'        => $notes ?: $existing->notes,
+        ] );
+
         return new \WP_REST_Response( [
             'ok'      => true,
-            'message' => 'Booking status updated to ' . $new_status . '.',
+            'message' => 'Booking ' . $new_status . '. Email sent to guest.',
         ] );
     }
 
