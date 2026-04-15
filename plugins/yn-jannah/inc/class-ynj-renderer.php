@@ -592,6 +592,8 @@ class YNJ_Renderer {
                 const meta = [];
                 if (item.type === 'live') {
                     if (item.time) meta.push(`<span>🕐 ${item.time}</span>`);
+                    if (item.ticket_price) meta.push(`<span style="font-weight:700;color:#0a1628;">🎟️ ${item.ticket_price}</span>`);
+                    if (item.donation_target) meta.push(`<span>❤️ ${item.donation_target} target</span>`);
                     if (item.live_url) meta.push(`<a href="/live" style="color:#dc2626;font-weight:600;">Watch Live →</a>`);
                 } else if (item.type === 'class') {
                     if (item.day_of_week) meta.push(`<span>📅 ${item.day_of_week}s</span>`);
@@ -599,10 +601,15 @@ class YNJ_Renderer {
                     if (item.instructor) meta.push(`<span>👤 ${item.instructor}</span>`);
                     if (item.mosque_slug) meta.push(`<a href="/mosque/${item.mosque_slug}/classes" style="color:#00ADEF;font-weight:600;">Book →</a>`);
                 } else if (item.type === 'event') {
-                    if (item.date) meta.push(`<span>📅 ${item.date}</span>`);
                     if (item.time) meta.push(`<span>🕐 ${item.time}</span>`);
                     if (item.location) meta.push(`<span>📍 ${item.location}</span>`);
-                    if (item.event_id && item.mosque_slug) meta.push(`<a href="/mosque/${item.mosque_slug}/events/${item.event_id}" style="color:#00ADEF;font-weight:600;">RSVP →</a>`);
+                    if (item.ticket_price) {
+                        meta.push(`<span style="font-weight:700;color:#0a1628;">🎟️ ${item.ticket_price}</span>`);
+                    }
+                    if (item.event_id && item.mosque_slug) {
+                        const label = item.ticket_price ? `Buy Ticket ${item.ticket_price} →` : 'RSVP Free →';
+                        meta.push(`<a href="/mosque/${item.mosque_slug}/events/${item.event_id}" style="color:#00ADEF;font-weight:600;">${label}</a>`);
+                    }
                 } else {
                     if (item.date) meta.push(`<span>${timeAgo(item.date)}</span>`);
                 }
@@ -655,12 +662,15 @@ class YNJ_Renderer {
                     (eData.events || []).forEach(e => {
                         const time = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
                         const isLive = e.is_live && e.is_online;
+                        const ticketPrice = e.ticket_price_pence > 0 ? '£'+(e.ticket_price_pence/100).toFixed(e.ticket_price_pence%100?2:0) : '';
                         allLocalItems.push({
                             type: isLive ? 'live' : 'event',
                             title: e.title, body:e.description||'', date:e.event_date||'', time:time,
                             location:e.location||'', event_id:e.id, mosque_slug:slug,
                             event_type: isLive ? 'live' : (e.event_type||''),
-                            live_url: e.live_url||''
+                            live_url: e.live_url||'',
+                            ticket_price: ticketPrice,
+                            donation_target: e.donation_target_pence > 0 ? '£'+(e.donation_target_pence/100).toLocaleString() : ''
                         });
                     });
                     (cData.classes || []).forEach(c => {
@@ -801,12 +811,15 @@ class YNJ_Renderer {
                     }
 
                     const isLive = e.is_live && e.is_online;
+                    const ticketPrice = e.ticket_price_pence > 0 ? '£'+(e.ticket_price_pence/100).toFixed(e.ticket_price_pence%100?2:0) : '';
                     return renderFeedCard({
                         type: isLive ? 'live' : 'event',
                         title:e.title, body:e.description||'', date:e.event_date||'',
                         time:time, location:e.location||'', event_id:e.id, mosque_slug:e.mosque_slug,
                         event_type: isLive ? 'live' : (e.event_type||''),
-                        live_url: e.live_url||'', mosque_name: mosqueName
+                        live_url: e.live_url||'', mosque_name: mosqueName,
+                        ticket_price: ticketPrice,
+                        donation_target: e.donation_target_pence > 0 ? '£'+(e.donation_target_pence/100).toLocaleString() : ''
                     });
                 }).join('') + '</div>';
             }
