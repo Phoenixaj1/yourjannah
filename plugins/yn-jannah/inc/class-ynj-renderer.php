@@ -2084,7 +2084,7 @@ class YNJ_Renderer {
                 <div id="ev-nearby-feed" style="display:grid;grid-template-columns:1fr;gap:14px;"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Tap to discover events at nearby mosques</p></div>
             </div>
         </main>
-        <?php self::render_bottom_nav( 'more', $slug ); ?>
+        <?php self::render_bottom_nav( 'rooms', $slug ); ?>
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
@@ -2302,7 +2302,7 @@ class YNJ_Renderer {
                 </div>
             </section>
         </main>
-        <?php self::render_bottom_nav( 'donate', $slug ); ?>
+        <?php self::render_bottom_nav( 'fundraising', $slug ); ?>
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
@@ -2386,7 +2386,7 @@ class YNJ_Renderer {
                 </div>
             </section>
         </main>
-        <?php self::render_bottom_nav( 'more', $slug ); ?>
+        <?php self::render_bottom_nav( 'rooms', $slug ); ?>
         </body></html>
         <?php
         exit;
@@ -2571,7 +2571,7 @@ class YNJ_Renderer {
                 <p class="ynj-text-muted" style="text-align:center;" id="service-error"></p>
             <?php endif; ?>
         </main>
-        <?php self::render_bottom_nav( 'services', $slug ); ?>
+        <?php self::render_bottom_nav( 'people', $slug ); ?>
         <?php if ( ! isset( $_GET['payment'] ) ) : ?>
         <script>
         document.getElementById('submit-service').addEventListener('click', async function() {
@@ -2720,7 +2720,7 @@ class YNJ_Renderer {
             </div>
             <?php endif; ?>
         </main>
-        <?php self::render_bottom_nav( 'more', $slug ); ?>
+        <?php self::render_bottom_nav( 'rooms', $slug ); ?>
         <?php if ( ! isset( $_GET['payment'] ) ) : ?>
         <script>
         (function(){
@@ -2940,7 +2940,7 @@ class YNJ_Renderer {
                 <p class="ynj-text-muted" id="rsvp-success-msg">See you there.</p>
             </section>
         </main>
-        <?php self::render_bottom_nav( 'more', $slug ); ?>
+        <?php self::render_bottom_nav( 'rooms', $slug ); ?>
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
@@ -3111,7 +3111,7 @@ class YNJ_Renderer {
                 <a href="/mosque/<?php echo esc_attr( $slug ); ?>" class="ynj-btn" style="margin-top:20px;">Back to Mosque</a>
             </section>
         </main>
-        <?php self::render_bottom_nav( 'more', $slug ); ?>
+        <?php self::render_bottom_nav( 'rooms', $slug ); ?>
         <script>
         document.getElementById('submit-contact').addEventListener('click', async function() {
             const btn = this; const form = document.getElementById('contact-form');
@@ -3234,7 +3234,7 @@ class YNJ_Renderer {
                 </div>
             </div>
         </main>
-        <?php self::render_bottom_nav( 'explore', $slug ); ?>
+        <?php self::render_bottom_nav( 'rooms', $slug ); ?>
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
@@ -3402,7 +3402,7 @@ class YNJ_Renderer {
                 <p class="ynj-text-muted" style="padding:20px;text-align:center;">Loading classes...</p>
             </div>
         </main>
-        <?php self::render_bottom_nav( 'services' ); ?>
+        <?php self::render_bottom_nav( 'people' ); ?>
         <script>
         (function(){
             const API = '/wp-json/ynj/v1';
@@ -3736,7 +3736,7 @@ class YNJ_Renderer {
         <main class="ynj-main" id="profile-main">
             <p class="ynj-text-muted" style="text-align:center;padding:40px 0;">Loading...</p>
         </main>
-        <?php self::render_bottom_nav( 'more' ); ?>
+        <?php self::render_bottom_nav( 'rooms' ); ?>
         <script>
         (function(){
             const API = '/wp-json/ynj/v1';
@@ -3984,7 +3984,7 @@ class YNJ_Renderer {
                 </div>
             </div>
         </main>
-        <?php self::render_bottom_nav( 'madrassah', $slug ); ?>
+        <?php self::render_bottom_nav( 'rooms', $slug ); ?>
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
@@ -4217,7 +4217,7 @@ class YNJ_Renderer {
                 <div id="patron-list"></div>
             </div>
         </main>
-        <?php self::render_bottom_nav( 'patron', $slug ); ?>
+        <?php self::render_bottom_nav( 'home', $slug ); ?>
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
