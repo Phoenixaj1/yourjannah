@@ -135,7 +135,7 @@ class YNJ_Stripe {
         }
 
         try {
-            $session = \Stripe\Checkout\Session::create( [
+            $params = [
                 'mode'        => 'subscription',
                 'currency'    => 'gbp',
                 'line_items'  => [ [
@@ -153,7 +153,13 @@ class YNJ_Stripe {
                 ], $metadata ),
                 'success_url' => $success,
                 'cancel_url'  => $cancel,
-            ] );
+            ];
+
+            // Revenue note: 80% goes to mosque, 20% platform fee.
+            // Currently all payments go to YourJannah Stripe account.
+            // Mosque share paid out manually until Stripe Connect is set up.
+
+            $session = \Stripe\Checkout\Session::create( $params );
 
             return $session;
         } catch ( \Stripe\Exception\ApiErrorException $e ) {
