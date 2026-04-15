@@ -166,7 +166,7 @@ $slug = ynj_mosque_slug();
             }
         }
         if (!filtered.length) {
-            feed.innerHTML = '<div class="ynj-ev-empty"><div>📅</div><h3>No Events Found</h3><p class="ynj-text-muted">' + (currentFilter === 'all' ? 'No upcoming events. Check back soon!' : 'No events match this filter. Try "All".') + '</p></div>';
+            feed.innerHTML = '<div class="ynj-ev-empty"><div>📅</div><h3>No Events Found</h3><p class="ynj-text-muted">' + (currentFilter === 'all' ? 'No upcoming events at this mosque yet. Try widening the radius in the header or check back soon.' : 'No events match this filter. Try "All".') + '</p></div>';
             return;
         }
         feed.innerHTML = filtered.map(e => {
