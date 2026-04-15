@@ -117,6 +117,19 @@ class YNJ_API_Admin {
             'callback'            => [ __CLASS__, 'list_rooms' ],
             'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ]);
+
+        // --- Eid management (bearer) ---
+        register_rest_route( self::NS, '/admin/eid', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'add_eid' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
+        ]);
+
+        register_rest_route( self::NS, '/admin/eid/(?P<id>\d+)', [
+            'methods'             => 'DELETE',
+            'callback'            => [ __CLASS__, 'delete_eid' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
+        ]);
     }
 
     // ================================================================
@@ -701,6 +714,46 @@ class YNJ_API_Admin {
             'ok'    => true,
             'rooms' => $rooms,
         ] );
+    }
+
+    // ================================================================
+    // EID HANDLERS
+    // ================================================================
+
+    public static function add_eid( \WP_REST_Request $request ) {
+        $mosque = $request->get_param( '_ynj_mosque' );
+        $data   = $request->get_json_params();
+
+        global $wpdb;
+        $table = YNJ_DB::table( 'eid_times' );
+
+        $wpdb->insert( $table, [
+            'mosque_id'      => (int) $mosque->id,
+            'eid_type'       => sanitize_text_field( $data['eid_type'] ?? 'eid_ul_fitr' ),
+            'year'           => absint( $data['year'] ?? date( 'Y' ) ),
+            'slot_name'      => sanitize_text_field( $data['slot_name'] ?? '' ),
+            'salah_time'     => sanitize_text_field( $data['salah_time'] ?? '' ),
+            'location_notes' => sanitize_text_field( $data['location_notes'] ?? '' ),
+        ] );
+
+        $id = (int) $wpdb->insert_id;
+        if ( ! $id ) return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Failed.' ], 500 );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'id' => $id, 'message' => 'Eid slot added.' ], 201 );
+    }
+
+    public static function delete_eid( \WP_REST_Request $request ) {
+        $mosque = $request->get_param( '_ynj_mosque' );
+        $id     = absint( $request->get_param( 'id' ) );
+
+        global $wpdb;
+        $deleted = $wpdb->delete( YNJ_DB::table( 'eid_times' ), [
+            'id'        => $id,
+            'mosque_id' => (int) $mosque->id,
+        ] );
+
+        if ( ! $deleted ) return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Not found.' ], 404 );
+        return new \WP_REST_Response( [ 'ok' => true, 'message' => 'Eid slot deleted.' ] );
     }
 
     // ================================================================

@@ -234,20 +234,75 @@ async function renderPrayers() {
     var rows = Object.entries(labels).map(function(e) {
         var k=e[0],v=e[1]; return '<tr><td><strong>'+v+'</strong></td><td>'+fmtTime(times[k])+'</td><td><input type="time" id="jt_'+k+'" value="'+(times[k+'_jamat']?times[k+'_jamat'].substring(0,5):'')+'" style="width:120px"></td></tr>';
     }).join('');
+
+    // Jumu'ah
+    var jRes = await api('mosques/' + mosque.id + '/jumuah');
+    var jSlots = (jRes.slots||[]);
+    var jRows = jSlots.map(function(s) {
+        return '<tr><td>'+esc(s.slot_name)+'</td><td>'+fmtTime(s.khutbah_time)+'</td><td>'+fmtTime(s.salah_time)+'</td><td>'+esc(s.language)+'</td><td><button class="d-btn d-btn--danger d-btn--sm" onclick="deleteJumuah('+s.id+')">Del</button></td></tr>';
+    }).join('');
+
+    // Eid
+    var eRes = await api('mosques/' + mosque.id + '/eid?year=' + new Date().getFullYear());
+    var eSlots = (eRes.eid_times||[]);
+    var eRows = eSlots.map(function(e) {
+        var label = e.eid_type === 'eid_ul_fitr' ? 'Fitr' : 'Adha';
+        return '<tr><td><span class="d-badge d-badge--green">'+label+'</span></td><td>'+esc(e.slot_name)+'</td><td>'+fmtTime(e.salah_time)+'</td><td>'+esc(e.location_notes||'')+'</td></tr>';
+    }).join('');
+
     render(shell(
-        '<div class="d-header"><h1>Prayer Times</h1><span class="d-badge d-badge--blue">'+today+'</span></div>' +
-        '<div class="d-card"><h3 style="margin-bottom:12px">Jamat Time Overrides</h3><p style="margin-bottom:16px;color:var(--text-dim);font-size:13px">Adhan times are from Aladhan API. Set your jamat (congregation) times below.</p>' +
+        '<div class="d-header"><h1>Prayer Times</h1></div>' +
+
+        // Jamat overrides
+        '<div class="d-card"><h3 style="margin-bottom:12px">Jamat Time Overrides</h3><p style="margin-bottom:16px;color:var(--text-dim);font-size:13px">Set jamat times for a specific date. Adhan times are calculated automatically.</p>' +
         '<table class="d-table"><thead><tr><th>Prayer</th><th>Adhan</th><th>Jamat Time</th></tr></thead><tbody>'+rows+'</tbody></table>' +
-        '<div class="d-field" style="margin-top:16px"><label>Date</label><input type="date" id="pt_date" value="'+today+'"></div>' +
-        '<button class="d-btn d-btn--primary" id="pt-save" onclick="savePrayers()"><span class="btn-text">Save Jamat Times</span><span class="spinner"></span></button></div>'
+        '<div class="d-grid d-grid-2" style="margin-top:16px"><div class="d-field"><label>Date</label><input type="date" id="pt_date" value="'+today+'"></div><div style="display:flex;align-items:end;gap:8px"><button class="d-btn d-btn--primary" id="pt-save" onclick="savePrayers()"><span class="btn-text">Save for Date</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="bulkApply()">Apply to All Month</button></div></div></div>' +
+
+        // Jumu'ah
+        '<div class="d-card"><h3 style="margin-bottom:12px">Jumu\'ah Slots</h3>' +
+        (jRows ? '<table class="d-table"><thead><tr><th>Slot</th><th>Khutbah</th><th>Salah</th><th>Language</th><th></th></tr></thead><tbody>'+jRows+'</tbody></table>' : '<p style="color:var(--text-dim)">No Jumu\'ah slots.</p>') +
+        '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px"><h4 style="margin-bottom:8px;font-size:13px">Add Jumu\'ah Slot</h4>' +
+        '<div class="d-grid d-grid-4"><div class="d-field"><label>Slot Name</label><input id="jm_name" placeholder="First Jumu\'ah"></div><div class="d-field"><label>Khutbah</label><input type="time" id="jm_khutbah"></div><div class="d-field"><label>Salah</label><input type="time" id="jm_salah"></div><div class="d-field"><label>Language</label><select id="jm_lang"><option>English</option><option>Arabic</option><option>Urdu</option><option>Bilingual</option></select></div></div>' +
+        '<button class="d-btn d-btn--primary d-btn--sm" onclick="addJumuah()">Add Slot</button></div></div>' +
+
+        // Eid
+        '<div class="d-card"><h3 style="margin-bottom:12px">Eid Times — ' + new Date().getFullYear() + '</h3>' +
+        (eRows ? '<table class="d-table"><thead><tr><th>Eid</th><th>Slot</th><th>Time</th><th>Location</th></tr></thead><tbody>'+eRows+'</tbody></table>' : '<p style="color:var(--text-dim)">No Eid times set.</p>') +
+        '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px"><h4 style="margin-bottom:8px;font-size:13px">Add Eid Slot</h4>' +
+        '<div class="d-grid d-grid-4"><div class="d-field"><label>Type</label><select id="eid_type"><option value="eid_ul_fitr">Eid ul-Fitr</option><option value="eid_ul_adha">Eid ul-Adha</option></select></div><div class="d-field"><label>Slot Name</label><input id="eid_name" placeholder="First Prayer"></div><div class="d-field"><label>Time</label><input type="time" id="eid_time"></div><div class="d-field"><label>Location</label><input id="eid_loc" placeholder="Main Hall"></div></div>' +
+        '<button class="d-btn d-btn--primary d-btn--sm" onclick="addEid()">Add Eid Slot</button></div></div>'
     ));
 }
+
 async function savePrayers() {
     btn('#pt-save',true);
     var times={};['fajr','dhuhr','asr','maghrib','isha'].forEach(function(k){var v=$('#jt_'+k);if(v&&v.value)times[k+'_jamat']=v.value+':00';});
     var res=await api('admin/prayers',{method:'PUT',body:{date:$('#pt_date').value,times:times}});
     btn('#pt-save',false);
     if(res.ok)toast('Jamat times saved!');else toast(res.error||'Failed.','error');
+}
+
+async function bulkApply() {
+    if(!confirm('Apply current jamat times to every day this month?'))return;
+    var times={};['fajr','dhuhr','asr','maghrib','isha'].forEach(function(k){var v=$('#jt_'+k);if(v&&v.value)times[k+'_jamat']=v.value+':00';});
+    var dt=$('#pt_date').value;var ym=dt.substring(0,7);
+    var daysInMonth=new Date(parseInt(ym.split('-')[0]),parseInt(ym.split('-')[1]),0).getDate();
+    var dates=[];for(var d=1;d<=daysInMonth;d++){dates.push({date:ym+'-'+String(d).padStart(2,'0'),times:times});}
+    var res=await api('admin/prayers/bulk',{method:'PUT',body:{dates:dates}});
+    if(res.ok)toast(res.message||'Month updated!');else toast(res.error||'Failed.','error');
+}
+
+async function addJumuah() {
+    var res=await api('admin/jumuah',{method:'POST',body:{slot_name:$('#jm_name').value,khutbah_time:$('#jm_khutbah').value+':00',salah_time:$('#jm_salah').value+':00',language:$('#jm_lang').value}});
+    if(res.ok){toast('Jumu\'ah slot added!');renderPrayers();}else toast(res.error||'Failed.','error');
+}
+async function deleteJumuah(id){if(!confirm('Delete this slot?'))return;await api('admin/jumuah/'+id,{method:'DELETE'});toast('Deleted.');renderPrayers();}
+
+async function addEid() {
+    // Eid uses a direct DB insert via admin endpoint — we need to add this
+    // For now, use the existing admin API pattern
+    var res=await api('admin/eid',{method:'POST',body:{eid_type:$('#eid_type').value,year:new Date().getFullYear(),slot_name:$('#eid_name').value,salah_time:$('#eid_time').value+':00',location_notes:$('#eid_loc').value}});
+    if(res.ok){toast('Eid slot added!');renderPrayers();}else toast(res.error||'Failed.','error');
 }
 
 // ── Announcements ──
