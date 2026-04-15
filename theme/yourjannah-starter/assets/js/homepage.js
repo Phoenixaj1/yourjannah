@@ -642,6 +642,8 @@
                 const dd = document.getElementById('mosque-dropdown');
                 const search = document.getElementById('mosque-search');
 
+                if (!btn || !dd) return; // Elements only exist on homepage
+
                 btn.addEventListener('click', () => {
                     const visible = dd.style.display !== 'none';
                     dd.style.display = visible ? 'none' : '';
@@ -709,6 +711,7 @@
             (function initLocationBar() {
                 const saved = localStorage.getItem('ynj_user_postcode');
                 const input = document.getElementById('location-postcode');
+                if (!input) return; // Only exists on homepage
                 if (saved) input.value = saved;
                 if (userLat) {
                     // GPS active — show as detected

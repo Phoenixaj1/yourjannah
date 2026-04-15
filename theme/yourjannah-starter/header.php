@@ -45,13 +45,10 @@
             $mosque = ynj_get_mosque( $mosque_slug );
             $mosque_name = $mosque ? $mosque->name : '';
             ?>
-            <a href="<?php echo $mosque_slug ? esc_url( home_url( '/mosque/' . $mosque_slug ) ) : '#'; ?>"
-               class="ynj-mosque-selector" id="mosque-name-label">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:.7;">
-                    <path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 21v-4h6v4"/>
-                </svg>
-                <span id="mosque-name-text"><?php echo esc_html( $mosque_name ?: __( 'Select Mosque', 'yourjannah' ) ); ?></span>
-            </a>
+            <button class="ynj-mosque-selector" id="mosque-selector" type="button">
+                <span id="mosque-name"><?php echo esc_html( $mosque_name ?: __( 'Finding mosque...', 'yourjannah' ) ); ?></span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
         </div>
     </div>
 </header>

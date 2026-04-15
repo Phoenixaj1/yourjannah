@@ -11,7 +11,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YNJ_THEME_VERSION', '1.0.0' );
+define( 'YNJ_THEME_VERSION', '1.0.2' );
 define( 'YNJ_THEME_DIR', get_stylesheet_directory() );
 define( 'YNJ_THEME_URI', get_stylesheet_directory_uri() );
 
@@ -120,7 +120,10 @@ add_action( 'wp_enqueue_scripts', function() {
     ] );
 
     // Homepage script (prayer card, feed, mosque selector, GPS)
-    if ( is_front_page() ) {
+    // Only load on actual homepage (not sub-pages with custom rewrite rules)
+    $page_type = get_query_var( 'ynj_page_type' );
+    $mosque_slug = get_query_var( 'ynj_mosque_slug' );
+    if ( is_front_page() || ( ! $page_type && ! $mosque_slug ) ) {
         wp_enqueue_script(
             'ynj-homepage',
             YNJ_THEME_URI . '/assets/js/homepage.js',
