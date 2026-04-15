@@ -1512,8 +1512,13 @@ class YNJ_Renderer {
                         const pct = c.percentage || 0;
                         const donors = c.donor_count || 0;
                         const snippet = (c.description||'').length > 120 ? c.description.slice(0,120)+'...' : (c.description||'');
-                        const donateUrl = c.dfm_link || '#';
-                        const donateTarget = c.dfm_link ? ' target="_blank" rel="noopener"' : '';
+                        // Build donate URL: DFM link with campaign ref for tracking
+                        const campaignRef = c.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                        let donateUrl = c.dfm_link || `https://donationformasjid.com/${slug}`;
+                        // Append fund parameter so DFM can track which campaign this is for
+                        const separator = donateUrl.includes('?') ? '&' : '?';
+                        donateUrl += `${separator}fund=${encodeURIComponent(c.category)}&campaign_ref=${encodeURIComponent(campaignRef)}&campaign_id=${c.id}`;
+                        const donateTarget = ' target="_blank" rel="noopener"';
 
                         const isRecurring = c.recurring || ['welfare','general'].includes(c.category);
                         const recurBadge = isRecurring

@@ -256,6 +256,7 @@ class YNJ_Admin {
             update_option('ynj_stripe_public_key', sanitize_text_field($_POST['stripe_pk'] ?? ''));
             update_option('ynj_stripe_webhook_secret', sanitize_text_field($_POST['stripe_wh'] ?? ''));
             update_option('ynj_dfm_domain', sanitize_text_field($_POST['dfm_domain'] ?? 'donationformasjid.com'));
+            update_option('ynj_dfm_webhook_secret', sanitize_text_field($_POST['dfm_wh_secret'] ?? ''));
             update_option('ynj_aladhan_method', sanitize_text_field($_POST['aladhan_method'] ?? '2'));
             echo '<div class="notice notice-success"><p>Settings saved.</p></div>';
         }
@@ -296,6 +297,8 @@ class YNJ_Admin {
                 <h2>DonationForMasjid Integration</h2>
                 <table class="form-table">
                     <tr><th>DFM Domain</th><td><input type="text" name="dfm_domain" value="<?php echo esc_attr(get_option('ynj_dfm_domain', 'donationformasjid.com')); ?>" class="regular-text"></td></tr>
+                    <tr><th>DFM Webhook Secret</th><td><input type="password" name="dfm_wh_secret" value="<?php echo esc_attr(get_option('ynj_dfm_webhook_secret', '')); ?>" class="regular-text" placeholder="Shared secret for auto-sync">
+                    <p class="description">Webhook URL: <code><?php echo home_url('/wp-json/ynj/v1/dfm/webhook'); ?></code><br>Set the same secret in DFM to auto-update fundraising progress.</p></td></tr>
                 </table>
 
                 <h2>Push Notifications (VAPID)</h2>
