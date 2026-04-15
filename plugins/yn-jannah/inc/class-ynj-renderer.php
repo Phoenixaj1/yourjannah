@@ -4444,10 +4444,11 @@ img,svg{display:block;max-width:100%;}
 /* GPS Button */
 .ynj-gps-btn{
     display:flex;align-items:center;justify-content:center;
-    width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.25);
-    background:rgba(255,255,255,.15);color:#fff;cursor:pointer;transition:all .2s;
-    flex-shrink:0;
+    width:40px;height:40px;border-radius:50%;border:none;
+    background:rgba(255,255,255,.2);color:#fff;cursor:pointer;transition:all .2s;
+    flex-shrink:0;backdrop-filter:blur(4px);
 }
+.ynj-gps-btn:hover{background:rgba(255,255,255,.35);}
 .ynj-gps-btn:active{background:rgba(255,255,255,.3);transform:scale(.95);}
 .ynj-gps-btn.ynj-gps-btn--loading{animation:gpsPulse 1.2s ease-in-out infinite;}
 .ynj-gps-btn svg{display:block;}
@@ -4456,10 +4457,12 @@ img,svg{display:block;max-width:100%;}
 /* Mosque Selector */
 .ynj-mosque-selector{
     display:flex;align-items:center;gap:6px;
-    background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
-    border-radius:10px;padding:6px 12px;color:#fff;font-size:13px;font-weight:500;
-    cursor:pointer;max-width:55%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+    border-radius:20px;padding:8px 14px;color:#fff;font-size:13px;font-weight:600;
+    cursor:pointer;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    backdrop-filter:blur(4px);transition:all .15s;
 }
+.ynj-mosque-selector:hover{background:rgba(255,255,255,.25);}
 .ynj-mosque-selector svg{flex-shrink:0;opacity:.7;}
 .ynj-dropdown{
     position:fixed;top:56px;left:0;right:0;z-index:150;
