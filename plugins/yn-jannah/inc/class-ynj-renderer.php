@@ -4432,8 +4432,8 @@ img,svg{display:block;max-width:100%;}
     color:#fff;position:sticky;top:0;z-index:100;
     padding:0 16px;padding-top:env(safe-area-inset-top,0);
 }
-.ynj-header__inner{max-width:500px;margin:0 auto;display:flex;align-items:center;gap:12px;min-height:56px;}
-.ynj-logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;white-space:nowrap;text-decoration:none;color:#fff;}
+.ynj-header__inner{max-width:500px;margin:0 auto;display:flex;align-items:center;gap:14px;min-height:72px;}
+.ynj-logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:19px;white-space:nowrap;text-decoration:none;color:#fff;}
 .ynj-header__nav{display:none;}
 .ynj-back{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;transition:background .15s;}
 .ynj-back:active{background:rgba(255,255,255,.15);}
@@ -4955,7 +4955,7 @@ img,svg{display:block;max-width:100%;}
         <header class="ynj-header">
             <div class="ynj-header__inner">
                 <a href="/" class="ynj-logo">
-                    <img src="<?php echo YNJ_URL; ?>assets/icons/logo.png" alt="YourJannah" style="width:32px;height:32px;border-radius:6px;object-fit:cover;">
+                    <img src="<?php echo YNJ_URL; ?>assets/icons/logo.png" alt="YourJannah" style="width:48px;height:48px;border-radius:8px;object-fit:contain;">
                     <span>YourJannah</span>
                 </a>
                 <nav class="ynj-header__nav" id="desktop-nav">
