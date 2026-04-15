@@ -16,6 +16,18 @@ define( 'YNJ_THEME_DIR', get_stylesheet_directory() );
 define( 'YNJ_THEME_URI', get_stylesheet_directory_uri() );
 
 // ================================================================
+// INCLUDES
+// ================================================================
+
+require_once YNJ_THEME_DIR . '/inc/class-ynj-theme-admin.php';
+require_once YNJ_THEME_DIR . '/inc/template-tags.php';
+
+// Register admin settings page
+if ( is_admin() ) {
+    YNJ_Theme_Admin::register();
+}
+
+// ================================================================
 // THEME SETUP
 // ================================================================
 
