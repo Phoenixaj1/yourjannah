@@ -4955,25 +4955,7 @@ img,svg{display:block;max-width:100%;}
         <header class="ynj-header">
             <div class="ynj-header__inner">
                 <a href="/" class="ynj-logo">
-                    <svg width="32" height="28" viewBox="0 0 64 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <!-- Cloud -->
-                        <ellipse cx="30" cy="40" rx="26" ry="14" fill="#5BC0EB"/>
-                        <ellipse cx="22" cy="36" rx="16" ry="12" fill="#5BC0EB"/>
-                        <ellipse cx="38" cy="34" rx="14" ry="10" fill="#5BC0EB"/>
-                        <path d="M22 36c-2-1-4-3-3-5s3-3 5-2" fill="#3DADD6"/>
-                        <!-- Minaret -->
-                        <rect x="34" y="14" width="6" height="22" rx="1" fill="#fff"/>
-                        <rect x="35.5" y="20" width="3" height="4" rx=".5" fill="#2C3E6B" opacity=".5"/>
-                        <rect x="35.5" y="26" width="3" height="4" rx=".5" fill="#2C3E6B" opacity=".5"/>
-                        <path d="M37 14l-2 0 2-5 2 5-2 0z" fill="#fff"/>
-                        <!-- Dome top -->
-                        <ellipse cx="37" cy="14" rx="4" ry="2" fill="#fff"/>
-                        <!-- Crescent -->
-                        <circle cx="37" cy="6" r="2.5" fill="#fff"/>
-                        <circle cx="38" cy="5.5" r="2" fill="#2C3E6B"/>
-                        <!-- Crescent spike -->
-                        <line x1="37" y1="2" x2="37" y2="0" stroke="#fff" stroke-width="1"/>
-                    </svg>
+                    <img src="<?php echo YNJ_URL; ?>assets/icons/logo.jpg" alt="YourJannah" style="width:32px;height:32px;border-radius:6px;object-fit:cover;">
                     <span>YourJannah</span>
                 </a>
                 <nav class="ynj-header__nav" id="desktop-nav">
