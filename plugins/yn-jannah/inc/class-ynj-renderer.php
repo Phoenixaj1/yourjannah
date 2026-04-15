@@ -99,13 +99,25 @@ class YNJ_Renderer {
             <section id="feed-section">
                 <div class="ynj-feed-tabs">
                     <button class="ynj-feed-tab ynj-feed-tab--active" id="tab-local" onclick="switchFeedTab('local')">Your Mosque</button>
-                    <button class="ynj-feed-tab" id="tab-wider" onclick="switchFeedTab('wider')">Nearby</button>
+                    <button class="ynj-feed-tab" id="tab-wider" onclick="switchFeedTab('wider')">Nearby Events</button>
                 </div>
                 <div id="feed-local">
                     <p class="ynj-text-muted" style="padding:16px;text-align:center;">Loading&hellip;</p>
                 </div>
                 <div id="feed-wider" style="display:none;">
-                    <p class="ynj-text-muted" style="padding:16px;text-align:center;">Loading nearby events&hellip;</p>
+                    <div class="ynj-filter-chips" id="event-filters">
+                        <button class="ynj-chip ynj-chip--active" data-filter="all" onclick="filterEvents('all')">All</button>
+                        <button class="ynj-chip" data-filter="talk" onclick="filterEvents('talk')">🎤 Talks</button>
+                        <button class="ynj-chip" data-filter="class,course,halaqa" onclick="filterEvents('class,course,halaqa')">📖 Classes</button>
+                        <button class="ynj-chip" data-filter="youth,kids,children" onclick="filterEvents('youth,kids,children')">👦 Youth</button>
+                        <button class="ynj-chip" data-filter="sisters" onclick="filterEvents('sisters')">👩 Sisters</button>
+                        <button class="ynj-chip" data-filter="sports,competition" onclick="filterEvents('sports,competition')">⚽ Sports</button>
+                        <button class="ynj-chip" data-filter="community,iftar,fundraiser" onclick="filterEvents('community,iftar,fundraiser')">🤝 Community</button>
+                        <button class="ynj-chip" data-filter="workshop" onclick="filterEvents('workshop')">🛠️ Workshop</button>
+                    </div>
+                    <div id="wider-events-list">
+                        <p class="ynj-text-muted" style="padding:16px;text-align:center;">Tap "Nearby Events" to discover what's happening.</p>
+                    </div>
                 </div>
             </section>
 
@@ -429,26 +441,41 @@ class YNJ_Renderer {
                 if (tab==='wider' && !widerFeedLoaded) loadWiderFeed();
             };
 
+            const eventTypeIcons = {
+                'talk':'🎤','class':'📖','course':'🎓','workshop':'🛠️','community':'🤝',
+                'sports':'⚽','competition':'🏆','youth':'👦','kids':'🧒','children':'🧒',
+                'sisters':'👩','fundraiser':'💰','iftar':'🍽️','eid':'🌙','quran':'📖',
+                'halaqa':'📚','nikah':'💍','janazah':'🕊️','other':'📌'
+            };
+
             function renderFeedCard(item) {
                 const cardClass = item.pinned ? 'ynj-feed-card--pinned' : (item.type==='event' ? 'ynj-feed-card--event' : 'ynj-feed-card--announcement');
-                const badge = item.type === 'event'
-                    ? '<span class="ynj-badge ynj-badge--event">Event</span>'
-                    : (item.pinned ? '<span class="ynj-badge ynj-badge--pinned">Pinned</span>' : '<span class="ynj-badge">Update</span>');
+
+                let badge;
+                if (item.type === 'event') {
+                    const et = (item.event_type||'').toLowerCase();
+                    const icon = eventTypeIcons[et] || '📅';
+                    const label = (item.event_type||'Event').charAt(0).toUpperCase() + (item.event_type||'event').slice(1);
+                    badge = `<span class="ynj-badge ynj-badge--event">${icon} ${label}</span>`;
+                } else {
+                    badge = item.pinned ? '<span class="ynj-badge ynj-badge--pinned">📌 Pinned</span>' : '<span class="ynj-badge">📢 Update</span>';
+                }
+
                 const snippet = (item.body||'').length > 80 ? item.body.slice(0,80)+'...' : (item.body||'');
                 const meta = [];
                 if (item.type === 'event') {
-                    if (item.date) meta.push('📅 ' + item.date);
-                    if (item.time) meta.push('🕐 ' + item.time);
-                    if (item.location) meta.push('📍 ' + item.location);
+                    if (item.date) meta.push(`<span>📅 ${item.date}</span>`);
+                    if (item.time) meta.push(`<span>🕐 ${item.time}</span>`);
+                    if (item.location) meta.push(`<span>📍 ${item.location}</span>`);
                     if (item.event_id && item.mosque_slug) meta.push(`<a href="/mosque/${item.mosque_slug}/events/${item.event_id}" style="color:#00ADEF;font-weight:600;">RSVP →</a>`);
                 } else {
-                    if (item.date) meta.push(timeAgo(item.date));
+                    if (item.date) meta.push(`<span>${timeAgo(item.date)}</span>`);
                 }
                 const mosqueTag = item.mosque_name ? `<div class="ynj-feed-card__mosque">🕌 ${item.mosque_name}</div>` : '';
                 return `<div class="ynj-feed-card ${cardClass}">
                     <div class="ynj-feed-card__top">${badge}<h4>${item.title}</h4></div>
                     ${snippet ? `<div class="ynj-feed-card__body">${snippet}</div>` : ''}
-                    <div class="ynj-feed-card__meta">${meta.join('')}</div>
+                    <div class="ynj-feed-card__meta">${meta.join(' ')}</div>
                     ${mosqueTag}
                 </div>`;
             }
@@ -472,22 +499,24 @@ class YNJ_Renderer {
                 });
             }
 
+            let allWiderEvents = [];
+
             function loadWiderFeed() {
                 widerFeedLoaded = true;
-                const el = document.getElementById('feed-wider');
+                const el = document.getElementById('wider-events-list');
                 const lat = userLat || mosqueLat;
                 const lng = userLng || mosqueLng;
                 if (!lat) { el.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">Location needed to find nearby events.</p>'; return; }
 
-                // Search for events at nearby mosques
+                el.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">Finding events near you...</p>';
+
                 fetch(`${API}/mosques/nearest?lat=${lat}&lng=${lng}&limit=10`)
                     .then(r => r.json())
                     .then(data => {
                         const mosques = (data.mosques||[]).filter(m => m.slug !== mosqueSlug);
                         if (!mosques.length) { el.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">No nearby mosques found.</p>'; return; }
 
-                        // Fetch events from up to 5 nearby mosques
-                        const fetches = mosques.slice(0,5).map(m =>
+                        const fetches = mosques.slice(0,8).map(m =>
                             fetch(`${API}/mosques/${m.slug}/events?upcoming=1`).then(r=>r.json())
                                 .then(d => (d.events||[]).map(e => ({...e, mosque_name:m.name, mosque_slug:m.slug, distance:m.distance})))
                                 .catch(() => [])
@@ -496,22 +525,45 @@ class YNJ_Renderer {
                     })
                     .then(results => {
                         if (!results) return;
-                        const allEvents = results.flat().sort((a,b) => (a.event_date||'').localeCompare(b.event_date||''));
-                        if (!allEvents.length) {
-                            el.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">No upcoming events at nearby mosques.</p>';
-                            return;
-                        }
-                        el.innerHTML = '<div class="ynj-feed">' + allEvents.map(e => {
-                            const time = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
-                            return renderFeedCard({
-                                type:'event', title:e.title, body:e.description||'', date:e.event_date||'',
-                                time:time, location:e.location||'', event_id:e.id, mosque_slug:e.mosque_slug,
-                                mosque_name: e.mosque_name + (e.distance ? ` · ${e.distance < 1.6 ? (e.distance*0.621).toFixed(1)+'mi' : Math.round(e.distance*0.621)+'mi'}` : '')
-                            });
-                        }).join('') + '</div>';
+                        allWiderEvents = results.flat().sort((a,b) => (a.event_date||'').localeCompare(b.event_date||''));
+                        renderWiderEvents('all');
                     })
                     .catch(() => { el.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">Could not load.</p>'; });
             }
+
+            function renderWiderEvents(filter) {
+                const el = document.getElementById('wider-events-list');
+                let events = allWiderEvents;
+
+                if (filter && filter !== 'all') {
+                    const types = filter.split(',');
+                    events = events.filter(e => types.includes((e.event_type||'').toLowerCase()));
+                }
+
+                if (!events.length) {
+                    el.innerHTML = filter === 'all'
+                        ? '<p class="ynj-text-muted" style="padding:16px;text-align:center;">No upcoming events at nearby mosques.</p>'
+                        : '<p class="ynj-text-muted" style="padding:16px;text-align:center;">No events matching this filter. Try "All".</p>';
+                    return;
+                }
+
+                el.innerHTML = '<div class="ynj-feed">' + events.map(e => {
+                    const time = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
+                    return renderFeedCard({
+                        type:'event', title:e.title, body:e.description||'', date:e.event_date||'',
+                        time:time, location:e.location||'', event_id:e.id, mosque_slug:e.mosque_slug,
+                        event_type: e.event_type||'',
+                        mosque_name: e.mosque_name + (e.distance ? ` · ${e.distance < 1.6 ? (e.distance*0.621).toFixed(1)+'mi' : Math.round(e.distance*0.621)+'mi'}` : '')
+                    });
+                }).join('') + '</div>';
+            }
+
+            window.filterEvents = function(filter) {
+                document.querySelectorAll('#event-filters .ynj-chip').forEach(c => {
+                    c.classList.toggle('ynj-chip--active', c.dataset.filter === filter);
+                });
+                renderWiderEvents(filter);
+            };
 
             function timeAgo(dateStr) {
                 if (!dateStr) return '';
@@ -2667,6 +2719,17 @@ img,svg{display:block;max-width:100%;}
 }
 .ynj-badge--event{background:#fef3c7;color:#92400e;}
 .ynj-badge--pinned{background:#dcfce7;color:#166534;}
+
+/* Filter Chips */
+.ynj-filter-chips{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0 12px;scrollbar-width:none;}
+.ynj-filter-chips::-webkit-scrollbar{display:none;}
+.ynj-chip{
+    white-space:nowrap;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;
+    border:1px solid #e0e8ed;background:#fff;color:<?php echo self::COLOR_TEXT; ?>;
+    cursor:pointer;font-family:inherit;transition:all .15s;flex-shrink:0;
+}
+.ynj-chip--active{background:<?php echo self::COLOR_ACCENT; ?>;color:#fff;border-color:<?php echo self::COLOR_ACCENT; ?>;}
+.ynj-chip:active{transform:scale(.95);}
 
 /* Feed Tabs */
 .ynj-feed-tabs{display:flex;gap:0;margin-bottom:12px;background:rgba(255,255,255,.6);border-radius:12px;padding:3px;border:1px solid rgba(0,173,239,.1);}
