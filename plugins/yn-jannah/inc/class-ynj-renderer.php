@@ -38,10 +38,15 @@ class YNJ_Renderer {
                     <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
                     <span>YourJannah</span>
                 </div>
-                <button class="ynj-mosque-selector" id="mosque-selector" type="button">
-                    <span id="mosque-name">Finding your mosque&hellip;</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-                </button>
+                <div class="ynj-header__right">
+                    <button class="ynj-gps-btn" id="gps-btn" type="button" title="Detect my location">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+                    </button>
+                    <button class="ynj-mosque-selector" id="mosque-selector" type="button">
+                        <span id="mosque-name">Finding mosque&hellip;</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -118,20 +123,50 @@ class YNJ_Renderer {
 
             /* ---- Init ---- */
             function init() {
-                if ('geolocation' in navigator) {
-                    navigator.geolocation.getCurrentPosition(onGeo, onGeoError, {
-                        enableHighAccuracy: false, timeout: 8000, maximumAge: 300000
-                    });
-                } else if (mosqueSlug) {
-                    loadMosque(mosqueSlug);
-                    loadFeed(mosqueSlug);
-                    updateNavLinks(mosqueSlug);
-                    document.getElementById('timetable-link').href = `/mosque/${mosqueSlug}/prayers`;
-                } else {
-                    document.getElementById('mosque-name').textContent = 'Tap to select mosque';
-                }
                 registerSW();
                 setupMosqueSelector();
+                setupGpsButton();
+
+                // Try GPS automatically
+                requestGps();
+            }
+
+            function requestGps() {
+                if (!('geolocation' in navigator)) {
+                    if (mosqueSlug) loadSavedMosque();
+                    else showSearchPrompt();
+                    return;
+                }
+
+                const gpsBtn = document.getElementById('gps-btn');
+                gpsBtn.classList.add('ynj-gps-btn--loading');
+                document.getElementById('mosque-name').textContent = 'Locating...';
+
+                navigator.geolocation.getCurrentPosition(
+                    pos => { gpsBtn.classList.remove('ynj-gps-btn--loading'); onGeo(pos); },
+                    () => { gpsBtn.classList.remove('ynj-gps-btn--loading'); onGeoError(); },
+                    { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+                );
+            }
+
+            function loadSavedMosque() {
+                loadMosque(mosqueSlug);
+                loadFeed(mosqueSlug);
+                updateNavLinks(mosqueSlug);
+                document.getElementById('timetable-link').href = `/mosque/${mosqueSlug}/prayers`;
+            }
+
+            function showSearchPrompt() {
+                document.getElementById('mosque-name').textContent = 'Search mosque';
+                // Open the dropdown so user can search
+                document.getElementById('mosque-dropdown').style.display = '';
+                document.getElementById('mosque-search').focus();
+            }
+
+            function setupGpsButton() {
+                document.getElementById('gps-btn').addEventListener('click', () => {
+                    requestGps();
+                });
             }
 
             /* ---- GPS ---- */
@@ -162,12 +197,9 @@ class YNJ_Renderer {
 
             function onGeoError() {
                 if (mosqueSlug) {
-                    loadMosque(mosqueSlug);
-                    loadFeed(mosqueSlug);
-                    updateNavLinks(mosqueSlug);
-                    document.getElementById('timetable-link').href = `/mosque/${mosqueSlug}/prayers`;
+                    loadSavedMosque();
                 } else {
-                    document.getElementById('mosque-name').textContent = 'Enable location or search';
+                    showSearchPrompt();
                 }
             }
 
@@ -1115,9 +1147,24 @@ img,svg{display:block;max-width:100%;}
 .ynj-back{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;transition:background .15s;}
 .ynj-back:active{background:rgba(255,255,255,.15);}
 
+/* Header right group */
+.ynj-header__right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+
+/* GPS Button */
+.ynj-gps-btn{
+    display:flex;align-items:center;justify-content:center;
+    width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.25);
+    background:rgba(255,255,255,.15);color:#fff;cursor:pointer;transition:all .2s;
+    flex-shrink:0;
+}
+.ynj-gps-btn:active{background:rgba(255,255,255,.3);transform:scale(.95);}
+.ynj-gps-btn.ynj-gps-btn--loading{animation:gpsPulse 1.2s ease-in-out infinite;}
+.ynj-gps-btn svg{display:block;}
+@keyframes gpsPulse{0%,100%{opacity:1}50%{opacity:.4}}
+
 /* Mosque Selector */
 .ynj-mosque-selector{
-    margin-left:auto;display:flex;align-items:center;gap:6px;
+    display:flex;align-items:center;gap:6px;
     background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
     border-radius:10px;padding:6px 12px;color:#fff;font-size:13px;font-weight:500;
     cursor:pointer;max-width:55%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
@@ -1330,12 +1377,6 @@ img,svg{display:block;max-width:100%;}
                 'label' => 'Services',
                 'href'  => '/mosque/{slug}/services',
                 'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a4 4 0 00-8 0v2"/></svg>',
-                'mosque' => true,
-            ],
-            'donate' => [
-                'label' => 'Donate',
-                'href'  => '/mosque/{slug}/donate',
-                'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>',
                 'mosque' => true,
             ],
             'sponsors' => [
