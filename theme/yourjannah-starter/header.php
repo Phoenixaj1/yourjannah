@@ -11,12 +11,7 @@
 <header class="ynj-header">
     <div class="ynj-header__inner">
         <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="ynj-logo">
-            <?php if ( has_custom_logo() ) : ?>
-                <?php the_custom_logo(); ?>
-            <?php else : ?>
-                <img src="<?php echo esc_url( YNJ_THEME_URI . '/assets/icons/logo.png' ); ?>" alt="<?php bloginfo( 'name' ); ?>" width="48" height="48">
-            <?php endif; ?>
-            <span><?php bloginfo( 'name' ); ?></span>
+            <img src="<?php echo esc_url( YNJ_THEME_URI . '/assets/icons/logo2.png' ); ?>" alt="<?php bloginfo( 'name' ); ?>" style="height:36px;width:auto;">
         </a>
 
         <?php if ( has_nav_menu( 'primary' ) ) : ?>
