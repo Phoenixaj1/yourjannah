@@ -102,7 +102,19 @@ class YNJ_Renderer {
                     <button class="ynj-feed-tab" id="tab-wider" onclick="switchFeedTab('wider')">Nearby Events</button>
                 </div>
                 <div id="feed-local">
-                    <p class="ynj-text-muted" style="padding:16px;text-align:center;">Loading&hellip;</p>
+                    <div class="ynj-filter-chips" id="local-filters">
+                        <button class="ynj-chip ynj-chip--active" data-filter="all" onclick="filterLocal('all')">All</button>
+                        <button class="ynj-chip" data-filter="announcements" onclick="filterLocal('announcements')">📢 Updates</button>
+                        <button class="ynj-chip" data-filter="talk" onclick="filterLocal('talk')">🎤 Talks</button>
+                        <button class="ynj-chip" data-filter="class,course,halaqa" onclick="filterLocal('class,course,halaqa')">📖 Classes</button>
+                        <button class="ynj-chip" data-filter="youth,kids,children" onclick="filterLocal('youth,kids,children')">👦 Youth</button>
+                        <button class="ynj-chip" data-filter="sisters" onclick="filterLocal('sisters')">👩 Sisters</button>
+                        <button class="ynj-chip" data-filter="sports,competition" onclick="filterLocal('sports,competition')">⚽ Sports</button>
+                        <button class="ynj-chip" data-filter="community,iftar,fundraiser" onclick="filterLocal('community,iftar,fundraiser')">🤝 Community</button>
+                    </div>
+                    <div id="local-feed-list">
+                        <p class="ynj-text-muted" style="padding:16px;text-align:center;">Loading&hellip;</p>
+                    </div>
                 </div>
                 <div id="feed-wider" style="display:none;">
                     <div class="ynj-filter-chips" id="event-filters">
@@ -480,24 +492,52 @@ class YNJ_Renderer {
                 </div>`;
             }
 
+            let allLocalItems = [];
+
             function loadFeed(slug) {
-                const el = document.getElementById('feed-local');
                 Promise.all([
                     fetch(`${API}/mosques/${slug}/announcements`).then(r => r.json()).catch(() => ({announcements:[]})),
                     fetch(`${API}/mosques/${slug}/events?upcoming=1`).then(r => r.json()).catch(() => ({events:[]}))
                 ]).then(([aData, eData]) => {
-                    const items = [];
+                    allLocalItems = [];
                     (aData.announcements || []).forEach(a => {
-                        items.push({ type:'announcement', title:a.title, body:a.body, date:a.published_at||'', pinned:a.pinned });
+                        allLocalItems.push({ type:'announcement', title:a.title, body:a.body, date:a.published_at||'', pinned:a.pinned });
                     });
                     (eData.events || []).forEach(e => {
                         const time = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
-                        items.push({ type:'event', title:e.title, body:e.description||'', date:e.event_date||'', time:time, location:e.location||'', event_id:e.id, mosque_slug:slug });
+                        allLocalItems.push({ type:'event', title:e.title, body:e.description||'', date:e.event_date||'', time:time, location:e.location||'', event_id:e.id, mosque_slug:slug, event_type:e.event_type||'' });
                     });
-                    items.sort((a,b) => { if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1; return (b.date||'').localeCompare(a.date||''); });
-                    el.innerHTML = items.length ? '<div class="ynj-feed">'+items.map(renderFeedCard).join('')+'</div>' : '<p class="ynj-text-muted" style="padding:16px;text-align:center;">No announcements or events yet.</p>';
+                    allLocalItems.sort((a,b) => { if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1; return (b.date||'').localeCompare(a.date||''); });
+                    renderLocalFeed('all');
                 });
             }
+
+            function renderLocalFeed(filter) {
+                const el = document.getElementById('local-feed-list');
+                let items = allLocalItems;
+
+                if (filter === 'announcements') {
+                    items = items.filter(i => i.type === 'announcement');
+                } else if (filter && filter !== 'all') {
+                    const types = filter.split(',');
+                    items = items.filter(i => i.type === 'event' && types.includes((i.event_type||'').toLowerCase()));
+                }
+
+                if (!items.length) {
+                    el.innerHTML = filter === 'all'
+                        ? '<p class="ynj-text-muted" style="padding:12px;text-align:center;">No announcements or events yet.</p>'
+                        : '<p class="ynj-text-muted" style="padding:12px;text-align:center;">Nothing matching this filter.</p>';
+                    return;
+                }
+                el.innerHTML = '<div class="ynj-feed">' + items.map(renderFeedCard).join('') + '</div>';
+            }
+
+            window.filterLocal = function(filter) {
+                document.querySelectorAll('#local-filters .ynj-chip').forEach(c => {
+                    c.classList.toggle('ynj-chip--active', c.dataset.filter === filter);
+                });
+                renderLocalFeed(filter);
+            };
 
             let allWiderEvents = [];
 
