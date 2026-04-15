@@ -51,8 +51,13 @@ class YNJ_API_Subscribe {
         $mosque_id = absint( $data['mosque_id'] ?? 0 );
         $email     = sanitize_email( $data['email'] ?? '' );
 
+        // Accept mosque_slug as alternative to mosque_id
+        if ( ! $mosque_id && ! empty( $data['mosque_slug'] ) ) {
+            $mosque_id = (int) YNJ_DB::resolve_slug( $data['mosque_slug'] );
+        }
+
         if ( ! $mosque_id ) {
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'mosque_id is required.' ], 400 );
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'mosque_id or mosque_slug is required.' ], 400 );
         }
 
         if ( ! is_email( $email ) ) {

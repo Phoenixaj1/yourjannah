@@ -24,6 +24,13 @@ class YNJ_API_Events {
             'permission_callback' => '__return_true',
         ]);
 
+        // GET /mosques/{slug}/events — slug-based convenience route
+        register_rest_route( self::NS, '/mosques/(?P<slug>[a-zA-Z][a-zA-Z0-9_-]*)/events', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'list_by_slug' ],
+            'permission_callback' => '__return_true',
+        ]);
+
         // POST /admin/events
         register_rest_route( self::NS, '/admin/events', [
             'methods'             => 'POST',
@@ -49,6 +56,22 @@ class YNJ_API_Events {
     // ================================================================
     // HANDLERS
     // ================================================================
+
+    /**
+     * GET /mosques/{slug}/events — Resolve slug to ID and delegate.
+     */
+    public static function list_by_slug( \WP_REST_Request $request ) {
+        $slug      = sanitize_text_field( $request->get_param( 'slug' ) );
+        $mosque_id = YNJ_DB::resolve_slug( $slug );
+
+        if ( ! $mosque_id ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Mosque not found.' ], 404 );
+        }
+
+        $request->set_param( 'id', $mosque_id );
+
+        return self::list_public( $request );
+    }
 
     /**
      * GET /mosques/{id}/events — Public event listing.

@@ -17,6 +17,13 @@ class YNJ_API_Directory {
      */
     public static function register() {
 
+        // GET /mosques/{slug}/directory — combined businesses + services by slug
+        register_rest_route( self::NS, '/mosques/(?P<slug>[a-zA-Z][a-zA-Z0-9_-]*)/directory', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'directory_by_slug' ],
+            'permission_callback' => '__return_true',
+        ]);
+
         // GET /mosques/{id}/businesses?category=&page=1
         register_rest_route( self::NS, '/mosques/(?P<id>\d+)/businesses', [
             'methods'             => 'GET',
@@ -63,6 +70,32 @@ class YNJ_API_Directory {
     // ================================================================
     // PUBLIC HANDLERS
     // ================================================================
+
+    /**
+     * GET /mosques/{slug}/directory — Combined businesses + services by slug.
+     */
+    public static function directory_by_slug( \WP_REST_Request $request ) {
+        $slug      = sanitize_text_field( $request->get_param( 'slug' ) );
+        $mosque_id = YNJ_DB::resolve_slug( $slug );
+
+        if ( ! $mosque_id ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Mosque not found.' ], 404 );
+        }
+
+        $request->set_param( 'id', $mosque_id );
+
+        $biz_response = self::list_businesses( $request );
+        $svc_response = self::list_services( $request );
+
+        $biz_data = $biz_response->get_data();
+        $svc_data = $svc_response->get_data();
+
+        return new \WP_REST_Response( [
+            'ok'         => true,
+            'businesses' => $biz_data['businesses'] ?? [],
+            'services'   => $svc_data['services'] ?? [],
+        ] );
+    }
 
     /**
      * GET /mosques/{id}/businesses — Public business listing.

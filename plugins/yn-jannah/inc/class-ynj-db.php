@@ -338,6 +338,22 @@ class YNJ_DB {
     }
 
     /**
+     * Resolve a mosque slug to its ID.
+     *
+     * @param  string   $slug  Mosque slug.
+     * @return int|null         Mosque ID or null if not found.
+     */
+    public static function resolve_slug( $slug ) {
+        global $wpdb;
+        $table = self::table( 'mosques' );
+
+        return $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM $table WHERE slug = %s AND status = 'active' LIMIT 1",
+            sanitize_text_field( $slug )
+        ) );
+    }
+
+    /**
      * Drop all plugin tables.
      *
      * Only used during full uninstall.

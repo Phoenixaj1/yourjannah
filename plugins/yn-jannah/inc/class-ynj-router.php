@@ -157,7 +157,7 @@ class YNJ_Router {
      * Service-Worker-Allowed header.
      */
     private static function serve_service_worker(): void {
-        $file = YNJ_PLUGIN_DIR . 'assets/js/sw.js';
+        $file = YNJ_DIR . 'assets/js/sw.js';
 
         if ( ! file_exists( $file ) ) {
             status_header( 404 );
@@ -177,7 +177,7 @@ class YNJ_Router {
      * Serve the PWA manifest with the correct MIME type.
      */
     private static function serve_manifest(): void {
-        $file = YNJ_PLUGIN_DIR . 'manifest.json';
+        $file = YNJ_DIR . 'manifest.json';
 
         if ( ! file_exists( $file ) ) {
             status_header( 404 );

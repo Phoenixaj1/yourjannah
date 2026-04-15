@@ -186,9 +186,11 @@ class YNJ_Renderer {
                     .then(d => {
                         if (d && d.data && d.data.timings) {
                             const t = d.data.timings;
+                            // Strip timezone suffix e.g. "05:30 (BST)" → "05:30"
+                            const strip = s => (s || '').replace(/\s*\(.*\)/, '');
                             setPrayerTimes({
-                                fajr: t.Fajr, sunrise: t.Sunrise, dhuhr: t.Dhuhr,
-                                asr: t.Asr, maghrib: t.Maghrib, isha: t.Isha
+                                fajr: strip(t.Fajr), sunrise: strip(t.Sunrise), dhuhr: strip(t.Dhuhr),
+                                asr: strip(t.Asr), maghrib: strip(t.Maghrib), isha: strip(t.Isha)
                             });
                         }
                     })
@@ -202,7 +204,9 @@ class YNJ_Renderer {
                 prayers.forEach(p => {
                     const row = document.querySelector(`[data-prayer="${p}"]`);
                     if (row && times[p]) {
-                        row.querySelector('.ynj-prayer-row__time').textContent = times[p];
+                        // Display as HH:MM (strip seconds and timezone).
+                        const display = String(times[p]).replace(/:\d{2}$/, '').replace(/\s*\(.*\)/, '');
+                        row.querySelector('.ynj-prayer-row__time').textContent = display;
                         row.classList.remove('ynj-prayer-row--placeholder');
                     }
                 });
@@ -398,49 +402,65 @@ class YNJ_Renderer {
             </section>
         </main>
 
-        <?php self::render_bottom_nav( 'home' ); ?>
+        <?php self::render_bottom_nav( 'home', $slug ); ?>
 
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
-            fetch(`/wp-json/ynj/v1/mosque/${slug}`)
+
+            // Update nav links immediately (slug is known from URL).
+            document.querySelectorAll('[data-nav-mosque]').forEach(el => {
+                el.href = el.dataset.navMosque.replace('{slug}', slug);
+            });
+
+            // Fetch mosque profile.
+            fetch(`/wp-json/ynj/v1/mosques/${slug}`)
                 .then(r => r.json())
-                .then(data => {
+                .then(resp => {
+                    const data = resp.mosque || resp;
                     if (!data) return;
                     document.getElementById('mp-name').textContent = data.name || slug;
                     document.getElementById('mp-address').textContent = data.address || '';
 
-                    if (data.prayer_times) {
+                    if (data.prayer_times && !data.prayer_times.error) {
                         const grid = document.getElementById('mp-prayer-grid');
                         grid.innerHTML = '';
                         ['fajr','sunrise','dhuhr','asr','maghrib','isha'].forEach(p => {
                             if (!data.prayer_times[p]) return;
-                            grid.innerHTML += `<div class="ynj-prayer-row"><span class="ynj-prayer-row__name">${p.charAt(0).toUpperCase()+p.slice(1)}</span><span class="ynj-prayer-row__time">${data.prayer_times[p]}</span></div>`;
+                            const t = String(data.prayer_times[p]).replace(/:\d{2}$/, '').replace(/\s*\(.*\)/, '');
+                            grid.innerHTML += `<div class="ynj-prayer-row"><span class="ynj-prayer-row__name">${p.charAt(0).toUpperCase()+p.slice(1)}</span><span class="ynj-prayer-row__time">${t}</span></div>`;
                         });
                     }
-
-                    if (data.announcements && data.announcements.length) {
-                        const feed = document.getElementById('mp-feed');
-                        feed.innerHTML = data.announcements.map(a =>
-                            `<div class="ynj-feed-item"><h4>${a.title}</h4><p>${a.body}</p><time>${a.date}</time></div>`
-                        ).join('');
-                    }
-
-                    if (data.events && data.events.length) {
-                        const el = document.getElementById('mp-events-list');
-                        el.innerHTML = data.events.map(e =>
-                            `<div class="ynj-feed-item"><h4>${e.title}</h4><p>${e.date} · ${e.time}</p></div>`
-                        ).join('');
-                    }
-
-                    // Update nav links.
-                    document.querySelectorAll('[data-nav-mosque]').forEach(el => {
-                        el.href = el.dataset.navMosque.replace('{slug}', slug);
-                    });
                 })
                 .catch(err => {
                     document.getElementById('mp-name').textContent = 'Mosque not found';
                 });
+
+            // Fetch announcements.
+            fetch(`/wp-json/ynj/v1/mosques/${slug}/announcements`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.announcements && data.announcements.length) {
+                        const feed = document.getElementById('mp-feed');
+                        feed.innerHTML = data.announcements.map(a =>
+                            `<div class="ynj-feed-item"><h4>${a.title}</h4><p>${a.body}</p><time>${a.published_at || ''}</time></div>`
+                        ).join('');
+                    }
+                })
+                .catch(() => {});
+
+            // Fetch events.
+            fetch(`/wp-json/ynj/v1/mosques/${slug}/events?upcoming=1`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.events && data.events.length) {
+                        const el = document.getElementById('mp-events-list');
+                        el.innerHTML = data.events.map(e =>
+                            `<div class="ynj-feed-item"><h4>${e.title}</h4><p>${e.event_date || ''} · ${e.start_time || ''}</p></div>`
+                        ).join('');
+                    }
+                })
+                .catch(() => {});
         })();
         </script>
 
@@ -479,28 +499,55 @@ class YNJ_Renderer {
             </section>
         </main>
 
-        <?php self::render_bottom_nav( 'prayers' ); ?>
+        <?php self::render_bottom_nav( 'prayers', $slug ); ?>
 
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
-            fetch(`/wp-json/ynj/v1/mosque/${slug}`)
+
+            // Update nav links immediately.
+            document.querySelectorAll('[data-nav-mosque]').forEach(el => {
+                el.href = el.dataset.navMosque.replace('{slug}', slug);
+            });
+
+            // Fetch mosque profile for name + prayer times.
+            fetch(`/wp-json/ynj/v1/mosques/${slug}`)
                 .then(r => r.json())
-                .then(data => {
+                .then(resp => {
+                    const data = resp.mosque || resp;
                     document.getElementById('pt-mosque-name').textContent = data.name || slug;
-                    if (data.prayer_times) {
+                    if (data.prayer_times && !data.prayer_times.error) {
                         const grid = document.getElementById('pt-grid');
                         grid.innerHTML = '';
                         const labels = {fajr:'Fajr',sunrise:'Sunrise',dhuhr:'Dhuhr',asr:'Asr',maghrib:'Maghrib',isha:'Isha'};
                         Object.entries(labels).forEach(([k,v]) => {
                             if (!data.prayer_times[k]) return;
+                            const t = String(data.prayer_times[k]).replace(/:\d{2}$/, '').replace(/\s*\(.*\)/, '');
                             const jamat = data.prayer_times[k+'_jamat'] || '';
-                            grid.innerHTML += `<div class="ynj-prayer-row"><span class="ynj-prayer-row__name">${v}</span><span class="ynj-prayer-row__time">${data.prayer_times[k]}${jamat ? ' <small>Jam: '+jamat+'</small>' : ''}</span></div>`;
+                            const jt = jamat ? String(jamat).replace(/:\d{2}$/, '').replace(/\s*\(.*\)/, '') : '';
+                            grid.innerHTML += `<div class="ynj-prayer-row"><span class="ynj-prayer-row__name">${v}</span><span class="ynj-prayer-row__time">${t}${jt ? ' <small>Jam: '+jt+'</small>' : ''}</span></div>`;
                         });
+                    } else {
+                        // Fallback: fetch from Aladhan client-side.
+                        if (data.latitude && data.longitude) {
+                            const ts = Math.floor(Date.now() / 1000);
+                            fetch(`https://api.aladhan.com/v1/timings/${ts}?latitude=${data.latitude}&longitude=${data.longitude}&method=2`)
+                                .then(r => r.json())
+                                .then(d => {
+                                    if (d && d.data && d.data.timings) {
+                                        const grid = document.getElementById('pt-grid');
+                                        grid.innerHTML = '';
+                                        const labels = {Fajr:'Fajr',Sunrise:'Sunrise',Dhuhr:'Dhuhr',Asr:'Asr',Maghrib:'Maghrib',Isha:'Isha'};
+                                        Object.entries(labels).forEach(([ak,v]) => {
+                                            const raw = d.data.timings[ak] || '';
+                                            const t = raw.replace(/\s*\(.*\)/, '');
+                                            grid.innerHTML += `<div class="ynj-prayer-row"><span class="ynj-prayer-row__name">${v}</span><span class="ynj-prayer-row__time">${t}</span></div>`;
+                                        });
+                                    }
+                                })
+                                .catch(() => {});
+                        }
                     }
-                    document.querySelectorAll('[data-nav-mosque]').forEach(el => {
-                        el.href = el.dataset.navMosque.replace('{slug}', slug);
-                    });
                 });
         })();
         </script>
@@ -535,30 +582,42 @@ class YNJ_Renderer {
             </section>
         </main>
 
-        <?php self::render_bottom_nav( 'events' ); ?>
+        <?php self::render_bottom_nav( 'events', $slug ); ?>
 
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
-            fetch(`/wp-json/ynj/v1/mosque/${slug}/events`)
+
+            // Update nav links immediately.
+            document.querySelectorAll('[data-nav-mosque]').forEach(el => {
+                el.href = el.dataset.navMosque.replace('{slug}', slug);
+            });
+
+            // Fetch mosque name.
+            fetch(`/wp-json/ynj/v1/mosques/${slug}`)
+                .then(r => r.json())
+                .then(resp => {
+                    const m = resp.mosque || resp;
+                    document.getElementById('ev-mosque-name').textContent = m.name || slug;
+                })
+                .catch(() => {});
+
+            // Fetch events.
+            fetch(`/wp-json/ynj/v1/mosques/${slug}/events?upcoming=1`)
                 .then(r => r.json())
                 .then(data => {
-                    document.getElementById('ev-mosque-name').textContent = data.mosque_name || slug;
                     const feed = document.getElementById('ev-feed');
                     if (data.events && data.events.length) {
                         feed.innerHTML = data.events.map(e =>
                             `<div class="ynj-feed-item">
                                 <h4>${e.title}</h4>
-                                <p class="ynj-text-muted">${e.date} · ${e.time}</p>
+                                <p class="ynj-text-muted">${e.event_date || ''} · ${e.start_time || ''}</p>
                                 ${e.description ? `<p>${e.description}</p>` : ''}
                             </div>`
                         ).join('');
                     } else {
                         feed.innerHTML = '<p class="ynj-text-muted">No upcoming events.</p>';
                     }
-                    document.querySelectorAll('[data-nav-mosque]').forEach(el => {
-                        el.href = el.dataset.navMosque.replace('{slug}', slug);
-                    });
                 })
                 .catch(() => {
                     document.getElementById('ev-feed').innerHTML = '<p class="ynj-text-muted">Could not load events.</p>';
@@ -606,14 +665,21 @@ class YNJ_Renderer {
             </section>
         </main>
 
-        <?php self::render_bottom_nav( 'donate' ); ?>
+        <?php self::render_bottom_nav( 'donate', $slug ); ?>
 
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
-            fetch(`/wp-json/ynj/v1/mosque/${slug}`)
+
+            // Update nav links immediately.
+            document.querySelectorAll('[data-nav-mosque]').forEach(el => {
+                el.href = el.dataset.navMosque.replace('{slug}', slug);
+            });
+
+            fetch(`/wp-json/ynj/v1/mosques/${slug}`)
                 .then(r => r.json())
-                .then(data => {
+                .then(resp => {
+                    const data = resp.mosque || resp;
                     document.getElementById('dn-mosque-name').textContent = data.name || 'Your Masjid';
                     const dfmSlug = data.dfm_slug || slug;
                     const wrap = document.getElementById('dn-iframe-wrap');
@@ -631,10 +697,6 @@ class YNJ_Renderer {
                         // Fallback link.
                         wrap.innerHTML = `<a href="https://donationformasjid.com/${dfmSlug}" target="_blank" rel="noopener" class="ynj-btn" style="display:block;text-align:center;margin:40px auto;">Donate on DonationForMasjid</a>`;
                     }
-
-                    document.querySelectorAll('[data-nav-mosque]').forEach(el => {
-                        el.href = el.dataset.navMosque.replace('{slug}', slug);
-                    });
                 })
                 .catch(() => {
                     document.getElementById('dn-iframe-wrap').innerHTML = '<p class="ynj-text-muted" style="text-align:center;">Could not load donation page.</p>';
@@ -673,30 +735,48 @@ class YNJ_Renderer {
             </section>
         </main>
 
-        <?php self::render_bottom_nav( 'more' ); ?>
+        <?php self::render_bottom_nav( 'more', $slug ); ?>
 
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
-            fetch(`/wp-json/ynj/v1/mosque/${slug}/directory`)
+
+            // Update nav links immediately.
+            document.querySelectorAll('[data-nav-mosque]').forEach(el => {
+                el.href = el.dataset.navMosque.replace('{slug}', slug);
+            });
+
+            fetch(`/wp-json/ynj/v1/mosques/${slug}/directory`)
                 .then(r => r.json())
                 .then(data => {
                     const list = document.getElementById('dir-list');
+                    const items = [];
+
                     if (data.businesses && data.businesses.length) {
-                        list.innerHTML = data.businesses.map(b =>
-                            `<div class="ynj-feed-item ynj-dir-item">
-                                <h4>${b.name}</h4>
+                        data.businesses.forEach(b => {
+                            items.push(`<div class="ynj-feed-item ynj-dir-item">
+                                <h4>${b.business_name}</h4>
                                 <p class="ynj-text-muted">${b.category}</p>
                                 ${b.phone ? `<p><a href="tel:${b.phone}">${b.phone}</a></p>` : ''}
                                 ${b.address ? `<p class="ynj-text-muted">${b.address}</p>` : ''}
-                            </div>`
-                        ).join('');
-                    } else {
-                        list.innerHTML = '<p class="ynj-text-muted">No directory listings yet. Check back soon.</p>';
+                            </div>`);
+                        });
                     }
-                    document.querySelectorAll('[data-nav-mosque]').forEach(el => {
-                        el.href = el.dataset.navMosque.replace('{slug}', slug);
-                    });
+
+                    if (data.services && data.services.length) {
+                        data.services.forEach(s => {
+                            items.push(`<div class="ynj-feed-item ynj-dir-item">
+                                <h4>${s.provider_name}</h4>
+                                <p class="ynj-text-muted">${s.service_type}</p>
+                                ${s.phone ? `<p><a href="tel:${s.phone}">${s.phone}</a></p>` : ''}
+                                ${s.area_covered ? `<p class="ynj-text-muted">${s.area_covered}</p>` : ''}
+                            </div>`);
+                        });
+                    }
+
+                    list.innerHTML = items.length
+                        ? items.join('')
+                        : '<p class="ynj-text-muted">No directory listings yet. Check back soon.</p>';
                 })
                 .catch(() => {
                     document.getElementById('dir-list').innerHTML = '<p class="ynj-text-muted">Could not load directory.</p>';
@@ -992,7 +1072,7 @@ img,svg{display:block;max-width:100%;}
      *
      * @param string $active Active tab key: home|prayers|donate|events|more.
      */
-    public static function render_bottom_nav( string $active = 'home' ): void {
+    public static function render_bottom_nav( string $active = 'home', string $slug = '' ): void {
         $tabs = [
             'home' => [
                 'label' => 'Home',
@@ -1035,8 +1115,13 @@ img,svg{display:block;max-width:100%;}
 
             if ( ! empty( $tab['mosque'] ) ) {
                 $attrs = ' data-nav-mosque="' . esc_attr( $href ) . '"';
-                // Default href until JS updates it.
-                $href = '#';
+                if ( $slug ) {
+                    // Pre-populate href from PHP — no JS needed.
+                    $href = str_replace( '{slug}', esc_attr( $slug ), $href );
+                } else {
+                    // Default href until JS updates it.
+                    $href = '#';
+                }
             }
 
             printf(
