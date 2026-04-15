@@ -1304,7 +1304,7 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>Prayer Times</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main">
@@ -1501,7 +1501,7 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>Services</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main">
@@ -1702,10 +1702,11 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span id="fr-header">Fundraising</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main">
+            <h2 id="fundraising-title" style="font-size:18px;font-weight:700;margin-bottom:14px;">Masjid Fundraising</h2>
             <div id="campaigns-list">
                 <p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading campaigns...</p>
             </div>
@@ -1729,7 +1730,8 @@ class YNJ_Renderer {
                 .then(r => r.json())
                 .then(resp => {
                     const m = resp.mosque || resp;
-                    document.getElementById('fr-header').textContent = (m.name || 'Your Masjid') + ' Fundraising';
+                    const ftEl = document.getElementById('fundraising-title');
+                    if (ftEl) ftEl.textContent = (m.name || 'Your Masjid') + ' Fundraising';
                 })
                 .catch(() => {});
 
@@ -1807,7 +1809,7 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>Sponsors</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main">
@@ -1959,7 +1961,7 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>Events</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main">
@@ -2011,7 +2013,7 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>Donate</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main">
@@ -2074,7 +2076,7 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>More</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main">
@@ -2139,7 +2141,7 @@ class YNJ_Renderer {
                 <a href="/mosque/<?php echo esc_attr( $slug ); ?>/sponsors" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>Become a Sponsor</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main">
@@ -2276,7 +2278,7 @@ class YNJ_Renderer {
                 <a href="/mosque/<?php echo esc_attr( $slug ); ?>/services" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>List Your Service</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main">
@@ -2365,7 +2367,7 @@ class YNJ_Renderer {
                 <a href="/mosque/<?php echo esc_attr( $slug ); ?>/directory" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>Room Booking</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main">
@@ -2529,7 +2531,7 @@ class YNJ_Renderer {
                 <a href="/mosque/<?php echo esc_attr( $slug ); ?>/events" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>Event</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main">
@@ -2697,7 +2699,7 @@ class YNJ_Renderer {
                 <a href="/mosque/<?php echo esc_attr( $slug ); ?>/directory" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>Contact Mosque</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main">
@@ -2789,7 +2791,7 @@ class YNJ_Renderer {
         <header class="ynj-header">
             <div class="ynj-header__inner">
                 <a href="/" class="ynj-back" aria-label="Back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></a>
-                <div class="ynj-logo"><span>Classes & Courses</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main">
@@ -3009,7 +3011,7 @@ class YNJ_Renderer {
         <header class="ynj-header">
             <div class="ynj-header__inner">
                 <a href="/" class="ynj-back" aria-label="Back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></a>
-                <div class="ynj-logo"><span>Browse Classes</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main">
@@ -3135,7 +3137,7 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>Live Events</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main">
@@ -3268,7 +3270,7 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>Sign In</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main" style="padding-top:24px;">
@@ -3328,7 +3330,7 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>Create Account</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main" style="padding-top:24px;">
@@ -3391,7 +3393,7 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>My Account</span></div>
+                <div class="ynj-logo"><span>YourJannah</span></div>
             </div>
         </header>
         <main class="ynj-main" id="profile-main">
