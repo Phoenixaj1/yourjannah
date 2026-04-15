@@ -41,6 +41,8 @@ spl_autoload_register(function($class) {
         'YNJ_API_Campaigns'   => 'api/class-ynj-api-campaigns.php',
         'YNJ_API_DFM_Webhook' => 'api/class-ynj-api-dfm-webhook.php',
         'YNJ_API_Classes'     => 'api/class-ynj-api-classes.php',
+        'YNJ_API_Patrons'     => 'api/class-ynj-api-patrons.php',
+        'YNJ_API_Madrassah'   => 'api/class-ynj-api-madrassah.php',
     ];
     if (isset($map[$class])) {
         require_once YNJ_DIR . $map[$class];
@@ -75,6 +77,8 @@ add_action('rest_api_init', function() {
     YNJ_API_Campaigns::register();
     YNJ_API_DFM_Webhook::register();
     YNJ_API_Classes::register();
+    YNJ_API_Patrons::register();
+    YNJ_API_Madrassah::register();
 });
 
 // Admin menu
@@ -111,4 +115,5 @@ add_action('ynj_new_booking', ['YNJ_Notify', 'on_booking'], 10, 2);
 add_action('ynj_new_sponsor', ['YNJ_Notify', 'on_sponsor'], 10, 2);
 add_action('ynj_new_service_listing', ['YNJ_Notify', 'on_service_listing'], 10, 2);
 add_action('ynj_payment_received', ['YNJ_Notify', 'on_payment'], 10, 3);
+add_action('ynj_new_patron', ['YNJ_Notify', 'on_patron'], 10, 2);
 // deploy trigger

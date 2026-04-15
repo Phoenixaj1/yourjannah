@@ -169,6 +169,60 @@ class YNJ_Stripe {
     }
 
     /**
+     * Create a patron membership subscription checkout.
+     *
+     * @param int    $patron_id  Patron record ID
+     * @param int    $amount     Monthly amount in pence
+     * @param string $tier       Tier label (supporter/guardian/champion)
+     * @param string $mosque     Mosque name for line item
+     * @param string $success    Success redirect URL
+     * @param string $cancel     Cancel redirect URL
+     * @param array  $metadata   Extra metadata
+     * @return \Stripe\Checkout\Session|WP_Error
+     */
+    public static function create_patron_subscription( $patron_id, $amount, $tier, $mosque, $success, $cancel, $metadata = [] ) {
+        self::init();
+
+        if ( ! self::is_configured() ) {
+            return new WP_Error( 'stripe_not_configured', 'Stripe is not configured.' );
+        }
+
+        $tier_labels = [
+            'supporter' => 'Supporter',
+            'guardian'  => 'Guardian',
+            'champion'  => 'Champion',
+        ];
+        $label = ( $tier_labels[ $tier ] ?? ucfirst( $tier ) ) . ' Patron — ' . $mosque;
+
+        try {
+            $session = \Stripe\Checkout\Session::create( [
+                'mode'        => 'subscription',
+                'currency'    => 'gbp',
+                'line_items'  => [ [
+                    'price_data' => [
+                        'currency'     => 'gbp',
+                        'unit_amount'  => (int) $amount,
+                        'product_data' => [ 'name' => $label ],
+                        'recurring'    => [ 'interval' => 'month' ],
+                    ],
+                    'quantity' => 1,
+                ] ],
+                'metadata'    => array_merge( [
+                    'type'      => 'patron_membership',
+                    'item_id'   => $patron_id,
+                ], $metadata ),
+                'success_url' => $success,
+                'cancel_url'  => $cancel,
+            ] );
+
+            return $session;
+        } catch ( \Stripe\Exception\ApiErrorException $e ) {
+            error_log( '[YNJ Stripe] Patron subscription error: ' . $e->getMessage() );
+            return new WP_Error( 'stripe_error', $e->getMessage() );
+        }
+    }
+
+    /**
      * Cancel a subscription.
      *
      * @param string $subscription_id  Stripe subscription ID

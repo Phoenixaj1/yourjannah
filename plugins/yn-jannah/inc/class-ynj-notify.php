@@ -148,6 +148,25 @@ class YNJ_Notify {
     }
 
     /**
+     * New patron membership activated.
+     * do_action( 'ynj_new_patron', $mosque_id, $patron_data )
+     */
+    public static function on_patron( $mosque_id, $data ) {
+        $name = esc_html( $data['user_name'] ?? 'Someone' );
+        $tier = esc_html( ucfirst( $data['tier'] ?? 'supporter' ) );
+        $amount = isset( $data['amount_pence'] ) ? '£' . number_format( $data['amount_pence'] / 100 ) . '/mo' : '';
+
+        self::send( $mosque_id, "New patron: {$name}", "
+            <h3 style='margin:0 0 12px;'>New Patron! 🏅</h3>
+            <p style='font-size:14px;'><strong>{$name}</strong> has become a <strong>{$tier}</strong> patron of your masjid.</p>
+            <table style='font-size:14px;width:100%;margin-top:12px;'>
+                <tr><td style='padding:6px 0;color:#666;width:100px;'>Tier:</td><td><strong>{$tier}</strong> ({$amount})</td></tr>
+            </table>
+            <a href='https://yourjannah.com/dashboard#/patrons' style='display:inline-block;background:#00ADEF;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;margin-top:16px;'>View Patrons</a>
+        " );
+    }
+
+    /**
      * Payment received via Stripe.
      * do_action( 'ynj_payment_received', $mosque_id, $type, $item_id )
      */

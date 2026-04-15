@@ -150,7 +150,7 @@ class YNJ_User_Auth {
      * Format a user for API response (no sensitive fields).
      */
     public static function format_user( $user ) {
-        return [
+        $data = [
             'id'                   => (int) $user->id,
             'name'                 => $user->name,
             'email'                => $user->email,
@@ -163,5 +163,23 @@ class YNJ_User_Auth {
             'verified_at'           => $user->verified_at ?? null,
             'created_at'            => $user->created_at,
         ];
+
+        // Attach patron status if user has an active membership
+        global $wpdb;
+        $patron_table = YNJ_DB::table( 'patrons' );
+        $patron = $wpdb->get_row( $wpdb->prepare(
+            "SELECT tier, amount_pence, started_at, mosque_id FROM $patron_table WHERE user_id = %d AND status = 'active' ORDER BY amount_pence DESC LIMIT 1",
+            $user->id
+        ) );
+        if ( $patron ) {
+            $data['patron'] = [
+                'tier'         => $patron->tier,
+                'amount_pence' => (int) $patron->amount_pence,
+                'mosque_id'    => (int) $patron->mosque_id,
+                'started_at'   => $patron->started_at,
+            ];
+        }
+
+        return $data;
     }
 }

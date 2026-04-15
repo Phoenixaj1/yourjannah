@@ -1186,7 +1186,10 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
 
@@ -1304,7 +1307,10 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main">
@@ -1501,7 +1507,10 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main">
@@ -1702,7 +1711,10 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main">
@@ -1809,7 +1821,10 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main">
@@ -1873,20 +1888,35 @@ class YNJ_Renderer {
             }
 
             function renderBiz(b, rank, showMosque) {
-                const dist = b.distance_km != null && b.distance_km < 9000 ? `📍 ${b.distance_km < 1.6 ? (b.distance_km*0.621).toFixed(1)+' mi' : Math.round(b.distance_km*0.621)+' mi'}` : '';
-                const mosque = showMosque && b.mosque_name ? `🕌 ${b.mosque_name}` : '';
-                const medal = rank && rank <= 3 ? ['🥇','🥈','🥉'][rank-1] : (rank ? '#'+rank : '');
-                return `<div class="ynj-sponsor${rank<=3?' ynj-sponsor--'+(rank===1?'gold':rank===2?'silver':'bronze'):''}">
-                    ${medal ? `<div class="ynj-sponsor__rank">${medal}</div>` : ''}
-                    <div class="ynj-sponsor__body">
-                        <h4>${b.business_name}</h4>
-                        <span class="ynj-badge">${b.category}</span>
-                        ${b.description ? `<p class="ynj-text-muted" style="margin-top:4px;">${b.description.length>100?b.description.slice(0,100)+'...':b.description}</p>` : ''}
-                        <div class="ynj-sponsor__actions">
-                            ${b.phone ? `<a href="tel:${b.phone}">${b.phone}</a>` : ''}
-                            ${b.website ? `<a href="${b.website}" target="_blank" rel="noopener">Website</a>` : ''}
+                const dist = b.distance_km != null && b.distance_km < 9000 ? `${b.distance_km < 1.6 ? (b.distance_km*0.621).toFixed(1)+' mi' : Math.round(b.distance_km*0.621)+' mi'}` : '';
+                const mosque = showMosque && b.mosque_name ? b.mosque_name : '';
+                const medal = rank && rank <= 3 ? ['🥇','🥈','🥉'][rank-1] : '';
+                const tierClass = rank <= 3 ? ' ynj-biz--'+(rank===1?'premium':rank===2?'featured':'standard') : '';
+                const tierLabel = rank && rank <= 3 ? ['Premium','Featured','Standard'][rank-1] : '';
+                const initial = (b.business_name||'?')[0].toUpperCase();
+                const hasLogo = b.logo_url && b.logo_url.length > 5;
+
+                return `<div class="ynj-biz-card${tierClass}">
+                    ${tierLabel ? `<div class="ynj-biz-tier">${medal} ${tierLabel} Sponsor</div>` : ''}
+                    <div class="ynj-biz-header">
+                        <div class="ynj-biz-logo">${hasLogo ? `<img src="${b.logo_url}" alt="${b.business_name}" onerror="this.parentNode.innerHTML='${initial}'">` : initial}</div>
+                        <div class="ynj-biz-info">
+                            <h3 class="ynj-biz-name">${b.business_name}</h3>
+                            <span class="ynj-biz-cat">${b.category}</span>
                         </div>
-                        ${dist||mosque ? `<div style="display:flex;gap:12px;margin-top:6px;font-size:11px;color:#6b8fa3;">${dist ? `<span>${dist}</span>` : ''}${mosque ? `<span>${mosque}</span>` : ''}</div>` : ''}
+                    </div>
+                    ${b.description ? `<p class="ynj-biz-desc">${b.description.length>180?b.description.slice(0,180)+'...':b.description}</p>` : ''}
+                    <div class="ynj-biz-details">
+                        ${b.address || b.postcode ? `<div class="ynj-biz-detail"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 2C7.6 2 4 5.4 4 9.5 4 14.3 12 22 12 22s8-7.7 8-12.5C20 5.4 16.4 2 12 2z"/></svg><span>${[b.address, b.postcode].filter(Boolean).join(', ')}</span></div>` : ''}
+                        ${b.phone ? `<div class="ynj-biz-detail"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg><a href="tel:${b.phone}">${b.phone}</a></div>` : ''}
+                        ${b.email ? `<div class="ynj-biz-detail"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><a href="mailto:${b.email}">${b.email}</a></div>` : ''}
+                        ${dist ? `<div class="ynj-biz-detail"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>${dist} away</span></div>` : ''}
+                        ${mosque ? `<div class="ynj-biz-detail"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 21v-4h6v4"/></svg><span>${mosque}</span></div>` : ''}
+                    </div>
+                    <div class="ynj-biz-actions">
+                        ${b.phone ? `<a href="tel:${b.phone}" class="ynj-biz-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg> Call</a>` : ''}
+                        ${b.website ? `<a href="${b.website}" target="_blank" rel="noopener" class="ynj-biz-btn ynj-biz-btn--outline"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg> Website</a>` : ''}
+                        ${b.email ? `<a href="mailto:${b.email}" class="ynj-biz-btn ynj-biz-btn--outline"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Email</a>` : ''}
                     </div>
                 </div>`;
             }
@@ -1961,7 +1991,10 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main">
@@ -2013,7 +2046,10 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main">
@@ -2076,7 +2112,10 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main">
@@ -2141,7 +2180,10 @@ class YNJ_Renderer {
                 <a href="/mosque/<?php echo esc_attr( $slug ); ?>/sponsors" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main">
@@ -2278,7 +2320,10 @@ class YNJ_Renderer {
                 <a href="/mosque/<?php echo esc_attr( $slug ); ?>/services" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main">
@@ -2367,7 +2412,10 @@ class YNJ_Renderer {
                 <a href="/mosque/<?php echo esc_attr( $slug ); ?>/directory" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main">
@@ -2531,7 +2579,10 @@ class YNJ_Renderer {
                 <a href="/mosque/<?php echo esc_attr( $slug ); ?>/events" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main">
@@ -2699,7 +2750,10 @@ class YNJ_Renderer {
                 <a href="/mosque/<?php echo esc_attr( $slug ); ?>/directory" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main">
@@ -2791,7 +2845,10 @@ class YNJ_Renderer {
         <header class="ynj-header">
             <div class="ynj-header__inner">
                 <a href="/" class="ynj-back" aria-label="Back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main">
@@ -3011,7 +3068,10 @@ class YNJ_Renderer {
         <header class="ynj-header">
             <div class="ynj-header__inner">
                 <a href="/" class="ynj-back" aria-label="Back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main">
@@ -3137,7 +3197,10 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main">
@@ -3270,7 +3333,10 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main" style="padding-top:24px;">
@@ -3330,7 +3396,10 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main" style="padding-top:24px;">
@@ -3393,7 +3462,10 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>YourJannah</span></div>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
             </div>
         </header>
         <main class="ynj-main" id="profile-main">
@@ -3502,6 +3574,489 @@ class YNJ_Renderer {
             }
 
             load();
+        })();
+        </script>
+        </body></html>
+        <?php
+        exit;
+    }
+
+    /* ================================================================== */
+    /*  PAGE: Madrassah (parent portal + public info)                     */
+    /* ================================================================== */
+
+    public static function render_madrassah( string $slug ): void {
+        self::page_head( 'Madrassah — YourJannah', 'Islamic school: enrol your child, view attendance, reports and pay fees.' );
+        ?>
+        <style>
+        .ynj-mad-hero{text-align:center;padding:30px 20px 16px;}
+        .ynj-mad-hero h2{font-size:20px;font-weight:800;margin-bottom:6px;}
+        .ynj-mad-hero p{font-size:13px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;line-height:1.5;}
+        .ynj-mad-card{background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-radius:14px;padding:18px;margin-bottom:12px;border:1px solid rgba(255,255,255,.6);}
+        .ynj-mad-card h3{font-size:15px;font-weight:700;margin-bottom:8px;}
+        .ynj-mad-stat{display:flex;gap:10px;justify-content:center;margin-bottom:14px;}
+        .ynj-mad-stat div{text-align:center;background:rgba(255,255,255,.85);border-radius:10px;padding:12px 16px;flex:1;max-width:100px;}
+        .ynj-mad-stat strong{display:block;font-size:18px;font-weight:800;color:<?php echo self::COLOR_ACCENT; ?>;}
+        .ynj-mad-stat span{font-size:10px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;text-transform:uppercase;font-weight:600;}
+        .ynj-child-card{background:#fff;border-radius:12px;padding:16px;margin-bottom:10px;border:1px solid #e5e7eb;}
+        .ynj-child-card h4{font-size:14px;font-weight:700;margin-bottom:4px;}
+        .ynj-child-meta{font-size:12px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}
+        .ynj-att-bar{height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin-top:6px;}
+        .ynj-att-bar div{height:100%;border-radius:4px;background:linear-gradient(90deg,#00ADEF,#16a34a);}
+        .ynj-fee-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0f0;}
+        .ynj-fee-item:last-child{border-bottom:none;}
+        .ynj-fee-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;}
+        .ynj-fee-badge--unpaid{background:#fef3c7;color:#92400e;}
+        .ynj-fee-badge--paid{background:#dcfce7;color:#166534;}
+        .ynj-mad-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:10px;background:<?php echo self::COLOR_ACCENT; ?>;color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;}
+        .ynj-report-card{background:#f9fafb;border-radius:10px;padding:14px;margin-bottom:8px;}
+        .ynj-report-card h4{font-size:13px;font-weight:700;margin-bottom:4px;}
+        </style>
+        <header class="ynj-header">
+            <div class="ynj-header__inner">
+                <a href="/mosque/<?php echo esc_attr( $slug ); ?>" class="ynj-back" aria-label="Back">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                </a>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
+            </div>
+        </header>
+        <main class="ynj-main">
+            <div class="ynj-mad-hero">
+                <div style="font-size:36px;margin-bottom:6px;">📚</div>
+                <h2 id="mad-title">Madrassah</h2>
+                <p>Islamic school for children. View your child's attendance, reports and pay fees.</p>
+            </div>
+
+            <!-- Public info (always shown) -->
+            <div id="mad-public">
+                <div class="ynj-mad-stat" id="mad-stats" style="display:none;">
+                    <div><strong id="ms-students">0</strong><span>Students</span></div>
+                    <div><strong id="ms-term">—</strong><span>Current Term</span></div>
+                </div>
+            </div>
+
+            <!-- Parent section (shown when logged in with children) -->
+            <div id="parent-section" style="display:none;">
+                <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;">Your Children</h3>
+                <div id="children-list"></div>
+
+                <h3 style="font-size:15px;font-weight:700;margin:16px 0 10px;">Outstanding Fees</h3>
+                <div id="fees-list"></div>
+            </div>
+
+            <!-- Not logged in prompt -->
+            <div id="login-section" style="display:none;">
+                <div class="ynj-mad-card" style="text-align:center;">
+                    <h3>Parent Portal</h3>
+                    <p style="font-size:13px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;margin-bottom:12px;">Sign in to view your child's attendance, reports and pay fees.</p>
+                    <a href="/login" class="ynj-mad-btn">Sign In</a>
+                </div>
+            </div>
+
+            <!-- Enrol prompt -->
+            <div class="ynj-mad-card" id="enrol-section" style="display:none;">
+                <h3>Enrol Your Child</h3>
+                <div style="margin-top:10px;">
+                    <input id="en_child" placeholder="Child's name" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;margin-bottom:8px;font-size:14px;">
+                    <div style="display:flex;gap:8px;">
+                        <input type="date" id="en_dob" placeholder="Date of birth" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+                        <select id="en_year" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+                            <option value="">Year group</option>
+                            <option>Reception</option><option>Year 1</option><option>Year 2</option><option>Year 3</option>
+                            <option>Year 4</option><option>Year 5</option><option>Year 6</option>
+                        </select>
+                    </div>
+                    <button class="ynj-mad-btn" style="width:100%;justify-content:center;margin-top:10px;" onclick="enrolChild()">Enrol Child</button>
+                </div>
+            </div>
+        </main>
+        <?php self::render_bottom_nav( 'madrassah', $slug ); ?>
+        <script>
+        (function(){
+            const slug = <?php echo wp_json_encode( $slug ); ?>;
+            const token = localStorage.getItem('ynj_user_token') || '';
+            let mosqueId = 0;
+
+            document.querySelectorAll('[data-nav-mosque]').forEach(el => {
+                el.href = el.dataset.navMosque.replace('{slug}', slug);
+            });
+
+            // Load public info
+            fetch(`/wp-json/ynj/v1/mosques/${slug}/madrassah`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.student_count > 0) {
+                        document.getElementById('mad-stats').style.display = 'flex';
+                        document.getElementById('ms-students').textContent = data.student_count;
+                        if (data.terms && data.terms.length) {
+                            document.getElementById('ms-term').textContent = data.terms[0].name;
+                        }
+                    }
+                }).catch(() => {});
+
+            fetch(`/wp-json/ynj/v1/mosques/${slug}`)
+                .then(r => r.json())
+                .then(resp => {
+                    const m = resp.mosque || resp;
+                    mosqueId = m.id;
+                    document.getElementById('mad-title').textContent = (m.name || 'Masjid') + ' Madrassah';
+                }).catch(() => {});
+
+            if (!token) {
+                document.getElementById('login-section').style.display = 'block';
+                return;
+            }
+
+            // Parent: load children
+            document.getElementById('parent-section').style.display = 'block';
+            document.getElementById('enrol-section').style.display = 'block';
+
+            fetch('/wp-json/ynj/v1/madrassah/children', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            }).then(r => r.json()).then(data => {
+                const kids = data.children || [];
+                const el = document.getElementById('children-list');
+                if (!kids.length) {
+                    el.innerHTML = '<p style="font-size:13px;color:#999;">No children enrolled yet. Use the form below to enrol.</p>';
+                    return;
+                }
+                el.innerHTML = kids.filter(k => k.mosque_slug === slug).map(k => {
+                    return `<div class="ynj-child-card">
+                        <h4>${k.child_name}</h4>
+                        <div class="ynj-child-meta">${k.year_group || 'No year group'} · Enrolled ${new Date(k.enrolled_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>
+                    </div>`;
+                }).join('') || '<p style="font-size:13px;color:#999;">No children enrolled at this mosque.</p>';
+            }).catch(() => {});
+
+            // Parent: load fees
+            fetch('/wp-json/ynj/v1/madrassah/fees', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            }).then(r => r.json()).then(data => {
+                const fees = (data.fees || []).filter(f => f.status === 'unpaid');
+                const el = document.getElementById('fees-list');
+                if (!fees.length) {
+                    el.innerHTML = '<p style="font-size:13px;color:#999;">No outstanding fees.</p>';
+                    return;
+                }
+                el.innerHTML = fees.map(f => {
+                    return `<div class="ynj-fee-item">
+                        <div><strong style="font-size:13px;">${f.child_name}</strong><br><span style="font-size:11px;color:#999;">${f.term_name || 'Term'}</span></div>
+                        <div style="text-align:right">
+                            <strong>\u00a3${(f.amount_pence/100).toFixed(2)}</strong>
+                            <button class="ynj-mad-btn" style="padding:6px 14px;font-size:12px;margin-left:8px;" onclick="payFee(${f.id})">Pay</button>
+                        </div>
+                    </div>`;
+                }).join('');
+            }).catch(() => {});
+
+            window.payFee = async function(feeId) {
+                try {
+                    const res = await fetch('/wp-json/ynj/v1/madrassah/fees/' + feeId + '/pay', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+                    });
+                    const data = await res.json();
+                    if (data.ok && data.checkout_url) window.location.href = data.checkout_url;
+                    else alert(data.error || 'Payment error.');
+                } catch(e) { alert('Network error.'); }
+            };
+
+            window.enrolChild = async function() {
+                const name = document.getElementById('en_child').value;
+                if (!name) { alert('Enter child name.'); return; }
+                try {
+                    const res = await fetch('/wp-json/ynj/v1/madrassah/enrol', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({
+                            mosque_slug: slug, child_name: name,
+                            child_dob: document.getElementById('en_dob').value || null,
+                            year_group: document.getElementById('en_year').value
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.ok) { alert('Enrolled! Welcome to the madrassah.'); location.reload(); }
+                    else alert(data.error || 'Enrolment failed.');
+                } catch(e) { alert('Network error.'); }
+            };
+
+            // Payment success message
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('payment') === 'success') {
+                const hero = document.querySelector('.ynj-mad-hero');
+                if (hero) hero.innerHTML = '<div style="font-size:36px;margin-bottom:6px;">✅</div><h2>Fee Paid!</h2><p>JazakAllahu Khairan. Your payment has been received.</p>';
+            }
+        })();
+        </script>
+        </body></html>
+        <?php
+        exit;
+    }
+
+    /* ================================================================== */
+    /*  PAGE: Become a Patron                                             */
+    /* ================================================================== */
+
+    public static function render_patron( string $slug ): void {
+        self::page_head( 'Become a Patron — YourJannah', 'Support your masjid with a monthly membership.' );
+        ?>
+        <style>
+        .ynj-patron-hero{text-align:center;padding:30px 20px 20px;}
+        .ynj-patron-hero h2{font-size:22px;font-weight:800;margin-bottom:6px;}
+        .ynj-patron-hero p{font-size:14px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;line-height:1.5;}
+        .ynj-tier{background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-radius:16px;padding:24px 20px;margin-bottom:12px;border:2px solid transparent;transition:all .2s;cursor:pointer;position:relative;}
+        .ynj-tier:hover,.ynj-tier.selected{border-color:<?php echo self::COLOR_ACCENT; ?>;box-shadow:0 4px 20px rgba(0,173,239,.15);}
+        .ynj-tier.selected::after{content:'✓';position:absolute;top:12px;right:14px;width:24px;height:24px;border-radius:50%;background:<?php echo self::COLOR_ACCENT; ?>;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
+        .ynj-tier__badge{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 10px;border-radius:6px;margin-bottom:10px;}
+        .ynj-tier__badge--supporter{background:#f0f9ff;color:#0369a1;}
+        .ynj-tier__badge--guardian{background:#eff6ff;color:#1e40af;}
+        .ynj-tier__badge--champion{background:#f0fdf4;color:#166534;}
+        .ynj-tier h3{font-size:18px;font-weight:700;margin-bottom:4px;}
+        .ynj-tier .ynj-tier__price{font-size:26px;font-weight:800;color:<?php echo self::COLOR_ACCENT; ?>;}
+        .ynj-tier .ynj-tier__price span{font-size:14px;font-weight:500;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}
+        .ynj-tier ul{list-style:none;margin:12px 0 0;padding:0;font-size:13px;color:#444;}
+        .ynj-tier li{padding:4px 0;display:flex;align-items:center;gap:6px;}
+        .ynj-tier li::before{content:'✓';color:#16a34a;font-weight:700;font-size:12px;}
+        .ynj-patron-cta{margin-top:16px;text-align:center;}
+        .ynj-patron-btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:12px;background:<?php echo self::COLOR_ACCENT; ?>;color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;transition:all .15s;box-shadow:0 4px 16px rgba(0,173,239,.25);}
+        .ynj-patron-btn:hover{background:#0096d0;box-shadow:0 6px 24px rgba(0,173,239,.35);}
+        .ynj-patron-btn:disabled{opacity:.6;cursor:not-allowed;}
+        .ynj-patron-wall{margin-top:20px;}
+        .ynj-patron-wall h3{font-size:15px;font-weight:700;margin-bottom:10px;}
+        .ynj-pw-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.06);}
+        .ynj-pw-item:last-child{border-bottom:none;}
+        .ynj-pw-avatar{width:36px;height:36px;border-radius:50%;background:<?php echo self::COLOR_ACCENT; ?>;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;}
+        .ynj-pw-name{font-size:14px;font-weight:600;flex:1;}
+        .ynj-pw-tier{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}
+        .ynj-patron-stats{display:flex;gap:12px;justify-content:center;margin-bottom:16px;}
+        .ynj-patron-stats div{text-align:center;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-radius:12px;padding:14px 20px;flex:1;max-width:140px;}
+        .ynj-patron-stats strong{display:block;font-size:22px;font-weight:800;color:<?php echo self::COLOR_ACCENT; ?>;}
+        .ynj-patron-stats span{font-size:11px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+        .ynj-login-prompt{background:rgba(255,255,255,.85);border-radius:12px;padding:16px;text-align:center;margin-top:12px;font-size:13px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}
+        .ynj-login-prompt a{color:<?php echo self::COLOR_ACCENT; ?>;font-weight:700;text-decoration:none;}
+        .ynj-status-card{background:rgba(0,173,239,.08);border:1px solid rgba(0,173,239,.2);border-radius:12px;padding:16px;margin-bottom:16px;text-align:center;}
+        .ynj-status-card h3{font-size:15px;font-weight:700;color:#0369a1;margin-bottom:4px;}
+        .ynj-status-card p{font-size:13px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}
+        .ynj-cancel-link{display:inline-block;margin-top:8px;font-size:12px;color:#dc2626;cursor:pointer;text-decoration:underline;}
+        </style>
+        <header class="ynj-header">
+            <div class="ynj-header__inner">
+                <a href="/mosque/<?php echo esc_attr( $slug ); ?>" class="ynj-back" aria-label="Back">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                </a>
+                <div class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </div>
+            </div>
+        </header>
+        <main class="ynj-main">
+            <div class="ynj-patron-hero">
+                <div style="font-size:42px;margin-bottom:8px;">🏅</div>
+                <h2 id="patron-title">Become a Patron</h2>
+                <p>Support your masjid with a monthly membership. Patrons receive a badge on their profile and help keep the masjid running.</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="ynj-patron-stats" id="patron-stats" style="display:none;">
+                <div><strong id="stat-patrons">0</strong><span>Patrons</span></div>
+                <div><strong id="stat-monthly">£0</strong><span>Monthly</span></div>
+            </div>
+
+            <!-- Active patron status (shown if already patron) -->
+            <div id="active-status" style="display:none;"></div>
+
+            <!-- Tier cards -->
+            <div id="tier-cards">
+                <div class="ynj-tier selected" data-tier="supporter" onclick="selectTier('supporter')">
+                    <span class="ynj-tier__badge ynj-tier__badge--supporter">Supporter</span>
+                    <div class="ynj-tier__price">£5 <span>/month</span></div>
+                    <ul>
+                        <li>Patron badge on your profile</li>
+                        <li>Name on mosque patron wall</li>
+                        <li>Support masjid running costs</li>
+                    </ul>
+                </div>
+                <div class="ynj-tier" data-tier="guardian" onclick="selectTier('guardian')">
+                    <span class="ynj-tier__badge ynj-tier__badge--guardian">Guardian</span>
+                    <div class="ynj-tier__price">£10 <span>/month</span></div>
+                    <ul>
+                        <li>Everything in Supporter</li>
+                        <li>Guardian tier badge</li>
+                        <li>Priority event booking</li>
+                    </ul>
+                </div>
+                <div class="ynj-tier" data-tier="champion" onclick="selectTier('champion')">
+                    <span class="ynj-tier__badge ynj-tier__badge--champion">Champion</span>
+                    <div class="ynj-tier__price">£20 <span>/month</span></div>
+                    <ul>
+                        <li>Everything in Guardian</li>
+                        <li>Champion tier badge</li>
+                        <li>Featured on patron wall</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="ynj-patron-cta" id="patron-cta">
+                <button class="ynj-patron-btn" id="patron-btn" onclick="becomePerson()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                    Become a Patron — £5/mo
+                </button>
+                <div class="ynj-login-prompt" id="login-prompt" style="display:none;">
+                    <a href="/login">Sign in</a> or <a href="/register">create an account</a> to become a patron.
+                </div>
+            </div>
+
+            <!-- Patron wall -->
+            <div class="ynj-patron-wall" id="patron-wall" style="display:none;">
+                <h3>🏅 Patron Wall</h3>
+                <div id="patron-list"></div>
+            </div>
+        </main>
+        <?php self::render_bottom_nav( 'patron', $slug ); ?>
+        <script>
+        (function(){
+            const slug = <?php echo wp_json_encode( $slug ); ?>;
+            const token = localStorage.getItem('ynj_user_token') || '';
+            let selectedTier = 'supporter';
+            let mosqueId = 0;
+
+            const tierPrices = { supporter: 5, guardian: 10, champion: 20 };
+
+            // Wire bottom nav
+            document.querySelectorAll('[data-nav-mosque]').forEach(el => {
+                el.href = el.dataset.navMosque.replace('{slug}', slug);
+            });
+
+            function selectTier(tier) {
+                selectedTier = tier;
+                document.querySelectorAll('.ynj-tier').forEach(el => {
+                    el.classList.toggle('selected', el.dataset.tier === tier);
+                });
+                const btn = document.getElementById('patron-btn');
+                if (btn) btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg> Become a Patron — £' + tierPrices[tier] + '/mo';
+            }
+            window.selectTier = selectTier;
+
+            async function becomePerson() {
+                if (!token) {
+                    window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+                const btn = document.getElementById('patron-btn');
+                btn.disabled = true;
+                btn.textContent = 'Redirecting to checkout...';
+
+                try {
+                    const res = await fetch('/wp-json/ynj/v1/patrons/checkout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({ mosque_slug: slug, tier: selectedTier })
+                    });
+                    const data = await res.json();
+                    if (data.ok && data.checkout_url) {
+                        window.location.href = data.checkout_url;
+                    } else {
+                        alert(data.error || 'Something went wrong.');
+                        btn.disabled = false;
+                        selectTier(selectedTier);
+                    }
+                } catch (e) {
+                    alert('Network error. Please try again.');
+                    btn.disabled = false;
+                    selectTier(selectedTier);
+                }
+            }
+            window.becomePerson = becomePerson;
+
+            async function cancelPatron() {
+                if (!confirm('Cancel your patron membership? You can re-join anytime.')) return;
+                try {
+                    const res = await fetch('/wp-json/ynj/v1/patrons/cancel', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({ mosque_id: mosqueId })
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        location.reload();
+                    } else {
+                        alert(data.error || 'Could not cancel.');
+                    }
+                } catch(e) { alert('Network error.'); }
+            }
+            window.cancelPatron = cancelPatron;
+
+            // Get mosque info
+            fetch(`/wp-json/ynj/v1/mosques/${slug}`)
+                .then(r => r.json())
+                .then(resp => {
+                    const m = resp.mosque || resp;
+                    mosqueId = m.id;
+                    const title = document.getElementById('patron-title');
+                    if (title) title.textContent = 'Become a ' + (m.name || 'Masjid') + ' Patron';
+
+                    // Load patron wall
+                    return fetch(`/wp-json/ynj/v1/mosques/${m.id}/patrons`);
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.total_patrons > 0) {
+                        document.getElementById('patron-stats').style.display = 'flex';
+                        document.getElementById('stat-patrons').textContent = data.total_patrons;
+                        document.getElementById('stat-monthly').textContent = '\u00a3' + (data.monthly_pence / 100).toFixed(0);
+                    }
+
+                    if (data.patrons && data.patrons.length) {
+                        const tierEmoji = { champion: '🏆', guardian: '🛡️', supporter: '⭐' };
+                        document.getElementById('patron-wall').style.display = 'block';
+                        document.getElementById('patron-list').innerHTML = data.patrons.map(p => {
+                            const initial = (p.name || '?')[0].toUpperCase();
+                            return `<div class="ynj-pw-item">
+                                <div class="ynj-pw-avatar">${initial}</div>
+                                <div class="ynj-pw-name">${p.name} ${tierEmoji[p.tier] || ''}</div>
+                                <div class="ynj-pw-tier">${p.tier}</div>
+                            </div>`;
+                        }).join('');
+                    }
+                })
+                .catch(() => {});
+
+            // Check if user is already a patron
+            if (token) {
+                fetch('/wp-json/ynj/v1/patrons/me', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.patrons) return;
+                    const active = data.patrons.find(p => p.mosque_slug === slug && p.status === 'active');
+                    if (active) {
+                        const tierLabel = { supporter: 'Supporter', guardian: 'Guardian', champion: 'Champion' };
+                        document.getElementById('active-status').style.display = 'block';
+                        document.getElementById('active-status').innerHTML = '<div class="ynj-status-card"><h3>🏅 You are a ' + (tierLabel[active.tier] || active.tier) + ' Patron</h3><p>Thank you for supporting this masjid! Your monthly contribution of £' + (active.amount_pence/100).toFixed(0) + ' makes a difference.</p><span class="ynj-cancel-link" onclick="cancelPatron()">Cancel membership</span></div>';
+                        document.getElementById('tier-cards').style.display = 'none';
+                        document.getElementById('patron-cta').style.display = 'none';
+                    }
+                })
+                .catch(() => {});
+            } else {
+                // Show login prompt
+                document.getElementById('patron-btn').style.display = 'none';
+                document.getElementById('login-prompt').style.display = 'block';
+            }
+
+            // Check for payment success
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('payment') === 'success') {
+                const hero = document.querySelector('.ynj-patron-hero');
+                if (hero) hero.innerHTML = '<div style="font-size:42px;margin-bottom:8px;">🎉</div><h2>Welcome, Patron!</h2><p>Your monthly membership is now active. JazakAllahu Khairan for supporting your masjid.</p>';
+                document.getElementById('tier-cards').style.display = 'none';
+                document.getElementById('patron-cta').style.display = 'none';
+            }
         })();
         </script>
         </body></html>
@@ -3866,24 +4421,53 @@ img,svg{display:block;max-width:100%;}
 /* Sponsor Cards */
 .ynj-sponsors-grid{display:flex;flex-direction:column;gap:12px;}
 @media(min-width:900px){.ynj-sponsors-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}}
-.ynj-sponsor{
-    display:flex;gap:14px;padding:16px;align-items:flex-start;
-    background:#fff;border-radius:14px;border:1px solid #eef4f7;
+/* Business listing cards */
+.ynj-biz-card{
+    background:rgba(255,255,255,.92);backdrop-filter:blur(8px);
+    border-radius:16px;border:1px solid rgba(255,255,255,.6);
+    padding:0;margin-bottom:14px;overflow:hidden;
+    box-shadow:0 2px 12px rgba(0,0,0,.04);
+    transition:transform .15s, box-shadow .15s;
 }
-.ynj-sponsor__rank{
-    flex-shrink:0;width:40px;text-align:center;font-size:18px;font-weight:700;
-    color:<?php echo self::COLOR_TEXT_MUTED; ?>;padding-top:2px;
+.ynj-biz-card:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,0,0,.08);}
+.ynj-biz--premium{border:2px solid #f59e0b;box-shadow:0 4px 20px rgba(245,158,11,.12);}
+.ynj-biz--featured{border:2px solid <?php echo self::COLOR_ACCENT; ?>;box-shadow:0 4px 20px rgba(0,173,239,.1);}
+.ynj-biz--standard{border:2px solid #d4d4d8;}
+.ynj-biz-tier{
+    padding:6px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
 }
-.ynj-sponsor--gold{border:2px solid #f59e0b;box-shadow:0 2px 12px rgba(245,158,11,.15);}
-.ynj-sponsor--gold .ynj-sponsor__rank{font-size:24px;}
-.ynj-sponsor--silver{border:2px solid #9ca3af;}
-.ynj-sponsor--silver .ynj-sponsor__rank{font-size:22px;}
-.ynj-sponsor--bronze{border:2px solid #d97706;}
-.ynj-sponsor--bronze .ynj-sponsor__rank{font-size:20px;}
-.ynj-sponsor__body{flex:1;min-width:0;}
-.ynj-sponsor__body h4{font-size:15px;font-weight:600;margin-bottom:4px;}
-.ynj-sponsor__actions{display:flex;gap:16px;margin-top:8px;font-size:13px;font-weight:500;}
-.ynj-sponsor__actions a{color:<?php echo self::COLOR_ACCENT; ?>;}
+.ynj-biz--premium .ynj-biz-tier{background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;}
+.ynj-biz--featured .ynj-biz-tier{background:linear-gradient(135deg,#e0f2fe,#bae6fd);color:#0369a1;}
+.ynj-biz--standard .ynj-biz-tier{background:#f4f4f5;color:#71717a;}
+.ynj-biz-header{display:flex;gap:14px;padding:16px 16px 0;align-items:center;}
+.ynj-biz-logo{
+    width:56px;height:56px;border-radius:12px;flex-shrink:0;
+    background:linear-gradient(135deg,<?php echo self::COLOR_ACCENT; ?>,#0369a1);
+    color:#fff;display:flex;align-items:center;justify-content:center;
+    font-size:22px;font-weight:800;overflow:hidden;
+}
+.ynj-biz-logo img{width:100%;height:100%;object-fit:cover;}
+.ynj-biz-info{flex:1;min-width:0;}
+.ynj-biz-name{font-size:16px;font-weight:700;line-height:1.3;margin-bottom:3px;}
+.ynj-biz-cat{
+    display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+    padding:2px 8px;border-radius:6px;background:#e8f4f8;color:<?php echo self::COLOR_ACCENT; ?>;
+}
+.ynj-biz-desc{padding:10px 16px 0;font-size:13px;color:#555;line-height:1.5;}
+.ynj-biz-details{padding:12px 16px 0;display:flex;flex-direction:column;gap:6px;}
+.ynj-biz-detail{display:flex;align-items:center;gap:8px;font-size:13px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}
+.ynj-biz-detail svg{flex-shrink:0;color:<?php echo self::COLOR_ACCENT; ?>;}
+.ynj-biz-detail a{color:<?php echo self::COLOR_ACCENT; ?>;font-weight:500;}
+.ynj-biz-actions{display:flex;gap:8px;padding:14px 16px;flex-wrap:wrap;}
+.ynj-biz-btn{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;
+    text-decoration:none;transition:all .15s;cursor:pointer;border:none;
+    background:<?php echo self::COLOR_ACCENT; ?>;color:#fff;
+}
+.ynj-biz-btn:hover{opacity:.9;}
+.ynj-biz-btn--outline{background:transparent;border:1px solid #ddd;color:<?php echo self::COLOR_TEXT; ?>;}
+.ynj-biz-btn--outline:hover{background:#f8f8f8;}
 
 /* More page grid */
 .ynj-more-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}

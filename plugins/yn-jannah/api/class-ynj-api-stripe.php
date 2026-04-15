@@ -47,6 +47,13 @@ class YNJ_API_Stripe {
             'callback'            => [ __CLASS__, 'checkout_event' ],
             'permission_callback' => '__return_true',
         ] );
+
+        // POST /stripe/checkout/class — Create class enrolment checkout
+        register_rest_route( self::NS, '/stripe/checkout/class', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'checkout_class' ],
+            'permission_callback' => '__return_true',
+        ] );
     }
 
     // ================================================================
@@ -168,6 +175,35 @@ class YNJ_API_Stripe {
                 ) );
                 error_log( "[YNJ Webhook] Event #$item_id donation: +£" . number_format( $amount / 100, 2 ) );
                 break;
+
+            case 'madrassah_fee':
+                $ft = YNJ_DB::table( 'madrassah_fees' );
+                $wpdb->update( $ft, [
+                    'status'                => 'paid',
+                    'paid_at'               => current_time( 'mysql', true ),
+                    'stripe_payment_intent' => $session->payment_intent ?? '',
+                ], [ 'id' => $item_id ] );
+                error_log( "[YNJ Webhook] Madrassah fee #$item_id paid." );
+                break;
+
+            case 'patron_membership':
+                $pt = YNJ_DB::table( 'patrons' );
+                $wpdb->update( $pt, [
+                    'status'                 => 'active',
+                    'stripe_customer_id'     => $session->customer ?? '',
+                    'stripe_subscription_id' => $session->subscription ?? '',
+                    'started_at'             => current_time( 'mysql', true ),
+                ], [ 'id' => $item_id ] );
+                error_log( "[YNJ Webhook] Patron #$item_id activated." );
+                $patron = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $pt WHERE id = %d", $item_id ) );
+                if ( $patron ) {
+                    do_action( 'ynj_new_patron', (int) $patron->mosque_id, [
+                        'user_name'    => $patron->user_name,
+                        'tier'         => $patron->tier,
+                        'amount_pence' => (int) $patron->amount_pence,
+                    ] );
+                }
+                break;
         }
     }
 
@@ -197,6 +233,16 @@ class YNJ_API_Stripe {
         ) );
         if ( $svc ) {
             $wpdb->update( $svc_table, [ 'status' => 'active' ], [ 'id' => $svc->id ] );
+            return;
+        }
+
+        // Check patrons
+        $patron_table = YNJ_DB::table( 'patrons' );
+        $patron = $wpdb->get_row( $wpdb->prepare(
+            "SELECT id FROM $patron_table WHERE stripe_subscription_id = %s", $sub_id
+        ) );
+        if ( $patron ) {
+            $wpdb->update( $patron_table, [ 'status' => 'active' ], [ 'id' => $patron->id ] );
         }
     }
 
@@ -218,6 +264,11 @@ class YNJ_API_Stripe {
         $wpdb->query( $wpdb->prepare(
             "UPDATE $svc_table SET status = 'payment_failed' WHERE stripe_subscription_id = %s", $sub_id
         ) );
+
+        $patron_table = YNJ_DB::table( 'patrons' );
+        $wpdb->query( $wpdb->prepare(
+            "UPDATE $patron_table SET status = 'payment_failed' WHERE stripe_subscription_id = %s", $sub_id
+        ) );
     }
 
     /**
@@ -237,6 +288,12 @@ class YNJ_API_Stripe {
         $svc_table = YNJ_DB::table( 'services' );
         $wpdb->query( $wpdb->prepare(
             "UPDATE $svc_table SET status = 'expired' WHERE stripe_subscription_id = %s", $sub_id
+        ) );
+
+        $patron_table = YNJ_DB::table( 'patrons' );
+        $wpdb->query( $wpdb->prepare(
+            "UPDATE $patron_table SET status = 'cancelled', cancelled_at = %s WHERE stripe_subscription_id = %s",
+            current_time( 'mysql', true ), $sub_id
         ) );
     }
 

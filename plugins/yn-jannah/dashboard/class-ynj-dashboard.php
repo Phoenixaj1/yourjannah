@@ -126,6 +126,8 @@ function shell(content) {
         { path: '/subscribers', icon: '\ud83d\udc65', label: 'Subscribers' },
         { path: '/classes', icon: '\ud83c\udf93', label: 'Classes' },
         { path: '/campaigns', icon: '\u2764\ufe0f', label: 'Fundraising' },
+        { path: '/madrassah', icon: '\ud83d\udcda', label: 'Madrassah' },
+        { path: '/patrons', icon: '\ud83c\udfc5', label: 'Patrons' },
         { path: '/settings', icon: '\u2699\ufe0f', label: 'Settings' },
     ];
     var isActive = function(p) { return p === '/' ? hash === '/' : hash.startsWith(p); };
@@ -175,6 +177,16 @@ function route() {
         '/enrolments': renderEnrolments,
         '/campaigns': renderCampaigns,
         '/campaigns/new': renderCampaignForm,
+        '/madrassah': renderMadrassah,
+        '/madrassah/students': renderMadStudents,
+        '/madrassah/students/new': renderMadStudentForm,
+        '/madrassah/attendance': renderMadAttendance,
+        '/madrassah/terms': renderMadTerms,
+        '/madrassah/terms/new': renderMadTermForm,
+        '/madrassah/reports': renderMadReports,
+        '/madrassah/reports/new': renderMadReportForm,
+        '/madrassah/fees': renderMadFees,
+        '/patrons': renderPatrons,
         '/settings': renderSettings,
         '/auth/login': renderLogin,
         '/auth/register': renderRegister,
@@ -216,12 +228,15 @@ async function renderDashboard() {
     var members = await api('admin/members/count');
     var bookings = await api('admin/bookings');
     var campaigns = await api('mosques/' + mosque.id + '/campaigns');
+    var patrons = await api('admin/patrons');
 
     var memberCount = members.count || 0;
     var subCount = subs.total || (subs.subscribers||[]).length;
     var enqCount = (enquiries.enquiries||[]).length;
     var bookCount = (bookings.bookings||[]).length;
     var campCount = (campaigns.campaigns||[]).length;
+    var patronCount = patrons.total_active || 0;
+    var patronMonthly = patrons.monthly_pence || 0;
 
     render(shell(
         '<div class="d-header"><h1>Dashboard</h1></div>' +
@@ -231,6 +246,7 @@ async function renderDashboard() {
         '<div class="d-card d-stat"><div class="d-stat__num">' + enqCount + '</div><div class="d-stat__label">New Enquiries</div></div>' +
         '<div class="d-card d-stat"><div class="d-stat__num">' + bookCount + '</div><div class="d-stat__label">Bookings</div></div>' +
         '</div>' +
+        (patronCount > 0 ? '<div class="d-card" style="margin-bottom:16px"><h3 style="margin-bottom:8px">\ud83c\udfc5 Patrons</h3><p style="color:var(--text-dim);font-size:13px">' + patronCount + ' active patron' + (patronCount>1?'s':'') + ' — \u00a3' + (patronMonthly/100).toFixed(2) + '/month</p><button class="d-btn d-btn--secondary d-btn--sm" style="margin-top:8px" onclick="navigate(\'/patrons\')">View Patrons</button></div>' : '') +
         (campCount > 0 ? '<div class="d-card" style="margin-bottom:16px"><h3 style="margin-bottom:8px">Fundraising</h3><p style="color:var(--text-dim);font-size:13px">' + campCount + ' active campaign' + (campCount>1?'s':'') + '</p><button class="d-btn d-btn--secondary d-btn--sm" style="margin-top:8px" onclick="navigate(\'/campaigns\')">Manage Campaigns</button></div>' : '') +
         '<div class="d-card"><h3 style="margin-bottom:12px">Quick Actions</h3>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
@@ -622,6 +638,322 @@ async function deleteCampaign(id) {
     await api('admin/campaigns/' + id, {method:'DELETE'});
     toast('Deleted.');
     renderCampaigns();
+}
+
+// ── Madrassah ──
+async function renderMadrassah() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Madrassah</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/madrassah/stats');
+
+    render(shell(
+        '<div class="d-header"><h1>\ud83d\udcda Madrassah</h1></div>' +
+        '<div class="d-grid d-grid-4" style="margin-bottom:20px">' +
+        '<div class="d-card d-stat"><div class="d-stat__num">' + (res.total_students||0) + '</div><div class="d-stat__label">Students</div></div>' +
+        '<div class="d-card d-stat"><div class="d-stat__num">' + (res.present_today||0) + '</div><div class="d-stat__label">Present Today</div></div>' +
+        '<div class="d-card d-stat"><div class="d-stat__num">' + (res.unpaid_fees||0) + '</div><div class="d-stat__label">Unpaid Fees</div></div>' +
+        '<div class="d-card d-stat"><div class="d-stat__num">' + (res.current_term ? esc(res.current_term.name) : '\u2014') + '</div><div class="d-stat__label">Current Term</div></div>' +
+        '</div>' +
+        '<div class="d-grid d-grid-3">' +
+        '<div class="d-card" style="text-align:center;cursor:pointer" onclick="navigate(\'/madrassah/students\')"><div style="font-size:32px;margin-bottom:8px;">\ud83d\udc66\ud83d\udc67</div><h3 style="font-size:14px;">Students</h3><p style="font-size:12px;color:var(--text-dim)">Manage enrolments</p></div>' +
+        '<div class="d-card" style="text-align:center;cursor:pointer" onclick="navigate(\'/madrassah/attendance\')"><div style="font-size:32px;margin-bottom:8px;">\u2705</div><h3 style="font-size:14px;">Attendance</h3><p style="font-size:12px;color:var(--text-dim)">Mark register</p></div>' +
+        '<div class="d-card" style="text-align:center;cursor:pointer" onclick="navigate(\'/madrassah/terms\')"><div style="font-size:32px;margin-bottom:8px;">\ud83d\udcc5</div><h3 style="font-size:14px;">Terms</h3><p style="font-size:12px;color:var(--text-dim)">Academic calendar</p></div>' +
+        '</div>' +
+        '<div class="d-grid d-grid-3" style="margin-top:16px">' +
+        '<div class="d-card" style="text-align:center;cursor:pointer" onclick="navigate(\'/madrassah/reports\')"><div style="font-size:32px;margin-bottom:8px;">\ud83d\udcdd</div><h3 style="font-size:14px;">Reports</h3><p style="font-size:12px;color:var(--text-dim)">Progress & grades</p></div>' +
+        '<div class="d-card" style="text-align:center;cursor:pointer" onclick="navigate(\'/madrassah/fees\')"><div style="font-size:32px;margin-bottom:8px;">\ud83d\udcb7</div><h3 style="font-size:14px;">Fees</h3><p style="font-size:12px;color:var(--text-dim)">Payments & invoices</p></div>' +
+        '<div class="d-card" style="text-align:center;cursor:pointer" onclick="navigate(\'/classes\')"><div style="font-size:32px;margin-bottom:8px;">\ud83c\udf93</div><h3 style="font-size:14px;">Classes</h3><p style="font-size:12px;color:var(--text-dim)">Manage curriculum</p></div>' +
+        '</div>'
+    ));
+}
+
+async function renderMadStudents() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Students</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/madrassah/students');
+    var list = res.students || [];
+    var rows = list.map(function(s) {
+        return '<tr><td><strong>'+esc(s.child_name)+'</strong></td><td>'+esc(s.year_group||'\u2014')+'</td><td>'+esc(s.class_title||'\u2014')+'</td><td>'+esc(s.parent_name)+'</td><td>'+esc(s.parent_email)+'</td><td>'+esc(s.parent_phone)+'</td><td><button class="d-btn d-btn--danger d-btn--sm" onclick="deleteMadStudent('+s.id+')">Remove</button></td></tr>';
+    }).join('');
+    render(shell(
+        '<div class="d-header"><h1>Students</h1><div style="display:flex;gap:8px"><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/madrassah\')">\u2190 Back</button><button class="d-btn d-btn--primary d-btn--sm" onclick="navigate(\'/madrassah/students/new\')">+ Add Student</button></div></div>' +
+        '<div class="d-card">' +
+        (rows ? '<table class="d-table"><thead><tr><th>Child</th><th>Year</th><th>Class</th><th>Parent</th><th>Email</th><th>Phone</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<p style="color:var(--text-dim)">No students enrolled yet.</p>') +
+        '</div>'
+    ));
+}
+
+async function deleteMadStudent(id) {
+    if (!confirm('Remove this student?')) return;
+    await api('admin/madrassah/students/'+id, {method:'DELETE'});
+    toast('Student removed.'); renderMadStudents();
+}
+
+async function renderMadStudentForm() {
+    if (!mosque) await loadMosque();
+    var clRes = await api('admin/classes');
+    var classes = (clRes.classes||[]).filter(function(c){return c.status==='active';});
+    var classOpts = '<option value="">No class assigned</option>' + classes.map(function(c){return '<option value="'+c.id+'">'+esc(c.title)+'</option>';}).join('');
+
+    render(shell(
+        '<div class="d-header"><h1>Add Student</h1><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/madrassah/students\')">\u2190 Back</button></div>' +
+        '<div class="d-card">' +
+        '<div class="d-grid d-grid-2"><div class="d-field"><label>Child Name</label><input id="ms_child" placeholder="e.g. Muhammad Ali"></div><div class="d-field"><label>Date of Birth</label><input type="date" id="ms_dob"></div></div>' +
+        '<div class="d-grid d-grid-2"><div class="d-field"><label>Year Group</label><select id="ms_year"><option value="">Select</option><option>Reception</option><option>Year 1</option><option>Year 2</option><option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option><option>Year 7</option><option>Year 8</option><option>Year 9</option><option>Year 10</option></select></div><div class="d-field"><label>Class</label><select id="ms_class">'+classOpts+'</select></div></div>' +
+        '<hr style="border:none;border-top:1px solid var(--border);margin:16px 0"><h4 style="margin-bottom:12px;font-size:13px">Parent / Guardian</h4>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Parent Name</label><input id="ms_parent"></div><div class="d-field"><label>Email</label><input type="email" id="ms_email"></div><div class="d-field"><label>Phone</label><input id="ms_phone"></div></div>' +
+        '<div class="d-grid d-grid-2"><div class="d-field"><label>Emergency Contact</label><input id="ms_emerg"></div><div class="d-field"><label>Emergency Phone</label><input id="ms_emergph"></div></div>' +
+        '<div class="d-field"><label>Medical Notes</label><textarea id="ms_medical" rows="2" placeholder="Allergies, conditions, etc."></textarea></div>' +
+        '<button class="d-btn d-btn--primary" id="ms-save" onclick="saveMadStudent()"><span class="btn-text">Add Student</span><span class="spinner"></span></button>' +
+        '</div>'
+    ));
+}
+
+async function saveMadStudent() {
+    btn('#ms-save',true);
+    var res = await api('admin/madrassah/students',{method:'POST',body:{
+        child_name:$('#ms_child').value, child_dob:$('#ms_dob').value||null,
+        year_group:$('#ms_year').value, class_id:parseInt($('#ms_class').value)||0,
+        parent_name:$('#ms_parent').value, parent_email:$('#ms_email').value,
+        parent_phone:$('#ms_phone').value,
+        emergency_contact:$('#ms_emerg').value, emergency_phone:$('#ms_emergph').value,
+        medical_notes:$('#ms_medical').value
+    }});
+    btn('#ms-save',false);
+    if(res.ok){toast('Student added!');navigate('/madrassah/students');}
+    else toast(res.error||'Failed.','error');
+}
+
+async function renderMadAttendance() {
+    if (!mosque) await loadMosque();
+    var today = new Date().toISOString().split('T')[0];
+    render(shell('<div class="d-header"><h1>Attendance</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/madrassah/attendance?date='+today);
+    var list = res.attendance || [];
+
+    var rows = list.map(function(s,i) {
+        var checked = {present:s.status==='present',absent:s.status==='absent',late:s.status==='late',excused:s.status==='excused'};
+        return '<tr><td><strong>'+esc(s.child_name)+'</strong></td><td>'+esc(s.year_group||'')+'</td>' +
+            '<td><select id="att_'+s.student_id+'" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border)">' +
+            '<option value="present"'+(checked.present?' selected':'')+'>Present</option>' +
+            '<option value="absent"'+(checked.absent?' selected':'')+'>Absent</option>' +
+            '<option value="late"'+(checked.late?' selected':'')+'>Late</option>' +
+            '<option value="excused"'+(checked.excused?' selected':'')+'>Excused</option>' +
+            '</select></td><td><input id="attn_'+s.student_id+'" value="'+esc(s.notes)+'" placeholder="Notes" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);width:120px"></td></tr>';
+    }).join('');
+
+    render(shell(
+        '<div class="d-header"><h1>Attendance</h1><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/madrassah\')">\u2190 Back</button></div>' +
+        '<div class="d-card">' +
+        '<div class="d-field" style="max-width:200px"><label>Date</label><input type="date" id="att_date" value="'+today+'" onchange="loadAttendance()"></div>' +
+        (rows ? '<table class="d-table"><thead><tr><th>Student</th><th>Year</th><th>Status</th><th>Notes</th></tr></thead><tbody>'+rows+'</tbody></table>' +
+        '<button class="d-btn d-btn--primary" style="margin-top:16px" id="att-save" onclick="saveAttendance()"><span class="btn-text">Save Attendance</span><span class="spinner"></span></button>'
+        : '<p style="color:var(--text-dim)">No students to mark. <a href="#/madrassah/students/new" style="color:var(--primary)">Add students first</a>.</p>') +
+        '</div>'
+    ));
+    window._attStudents = list;
+}
+
+async function loadAttendance() {
+    var date = $('#att_date').value;
+    var res = await api('admin/madrassah/attendance?date='+date);
+    window._attStudents = res.attendance || [];
+    renderMadAttendance();
+}
+
+async function saveAttendance() {
+    btn('#att-save',true);
+    var records = (window._attStudents||[]).map(function(s){
+        var sel = document.getElementById('att_'+s.student_id);
+        var note = document.getElementById('attn_'+s.student_id);
+        return { student_id: s.student_id, status: sel?sel.value:'present', notes: note?note.value:'' };
+    });
+    var res = await api('admin/madrassah/attendance',{method:'POST',body:{date:$('#att_date').value,records:records,class_id:0}});
+    btn('#att-save',false);
+    if(res.ok) toast('Attendance saved! '+res.marked+' records.');
+    else toast(res.error||'Failed.','error');
+}
+
+async function renderMadTerms() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Terms</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/madrassah/terms');
+    var list = res.terms || [];
+    var rows = list.map(function(t) {
+        var fee = t.fee_pence > 0 ? '\u00a3'+(t.fee_pence/100).toFixed(0)+' '+t.fee_frequency : 'Free';
+        var badge = t.status==='active' ? '<span class="d-badge d-badge--green">Active</span>' : '<span class="d-badge d-badge--gray">'+esc(t.status)+'</span>';
+        return '<tr><td><strong>'+esc(t.name)+'</strong></td><td>'+fmtDate(t.start_date)+' \u2014 '+fmtDate(t.end_date)+'</td><td>'+fee+'</td><td>'+badge+'</td><td>'+(t.enrolment_open?'\u2705':'\u274c')+'</td><td><button class="d-btn d-btn--secondary d-btn--sm" onclick="genFees('+t.id+')">Generate Fees</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="delTerm('+t.id+')">Del</button></td></tr>';
+    }).join('');
+    render(shell(
+        '<div class="d-header"><h1>Academic Terms</h1><div style="display:flex;gap:8px"><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/madrassah\')">\u2190 Back</button><button class="d-btn d-btn--primary d-btn--sm" onclick="navigate(\'/madrassah/terms/new\')">+ New Term</button></div></div>' +
+        '<div class="d-card">' +
+        (rows ? '<table class="d-table"><thead><tr><th>Term</th><th>Dates</th><th>Fee</th><th>Status</th><th>Enrol</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<p style="color:var(--text-dim)">No terms created yet.</p>') +
+        '</div>'
+    ));
+}
+
+async function genFees(termId) {
+    if(!confirm('Generate fee invoices for all students for this term?')) return;
+    var res = await api('admin/madrassah/fees/generate',{method:'POST',body:{term_id:termId}});
+    if(res.ok) toast(res.message);
+    else toast(res.error||'Failed.','error');
+}
+
+async function delTerm(id) {
+    if(!confirm('Delete this term?')) return;
+    await api('admin/madrassah/terms/'+id,{method:'DELETE'});
+    toast('Deleted.'); renderMadTerms();
+}
+
+async function renderMadTermForm() {
+    if (!mosque) await loadMosque();
+    render(shell(
+        '<div class="d-header"><h1>New Term</h1><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/madrassah/terms\')">\u2190 Back</button></div>' +
+        '<div class="d-card">' +
+        '<div class="d-field"><label>Term Name</label><input id="mt_name" placeholder="e.g. Autumn 2026"></div>' +
+        '<div class="d-grid d-grid-2"><div class="d-field"><label>Start Date</label><input type="date" id="mt_start"></div><div class="d-field"><label>End Date</label><input type="date" id="mt_end"></div></div>' +
+        '<div class="d-grid d-grid-2"><div class="d-field"><label>Fee (\u00a3)</label><input type="number" id="mt_fee" placeholder="150"></div><div class="d-field"><label>Fee Frequency</label><select id="mt_freq"><option value="termly">Per Term</option><option value="monthly">Monthly</option><option value="annual">Annual</option></select></div></div>' +
+        '<button class="d-btn d-btn--primary" id="mt-save" onclick="saveMadTerm()"><span class="btn-text">Create Term</span><span class="spinner"></span></button>' +
+        '</div>'
+    ));
+}
+
+async function saveMadTerm() {
+    btn('#mt-save',true);
+    var res = await api('admin/madrassah/terms',{method:'POST',body:{
+        name:$('#mt_name').value, start_date:$('#mt_start').value, end_date:$('#mt_end').value,
+        fee_pence:Math.round(parseFloat($('#mt_fee').value||0)*100),
+        fee_frequency:$('#mt_freq').value
+    }});
+    btn('#mt-save',false);
+    if(res.ok){toast('Term created!');navigate('/madrassah/terms');}
+    else toast(res.error||'Failed.','error');
+}
+
+async function renderMadReports() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Reports</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/madrassah/reports');
+    var list = res.reports || [];
+    var gradeColor = function(g){if(g==='A'||g==='Excellent')return'green';if(g==='B'||g==='Good')return'blue';if(g==='C'||g==='Satisfactory')return'yellow';return'gray';};
+    var rows = list.map(function(r) {
+        return '<tr><td><strong>'+esc(r.child_name)+'</strong></td><td>'+esc(r.subject)+'</td><td><span class="d-badge d-badge--'+gradeColor(r.grade)+'">'+esc(r.grade||'\u2014')+'</span></td><td>'+esc(r.quran_progress||'\u2014')+'</td><td>'+esc(r.behaviour)+'</td><td style="font-size:12px;max-width:200px">'+esc(r.teacher_notes||'')+'</td></tr>';
+    }).join('');
+    render(shell(
+        '<div class="d-header"><h1>Student Reports</h1><div style="display:flex;gap:8px"><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/madrassah\')">\u2190 Back</button><button class="d-btn d-btn--primary d-btn--sm" onclick="navigate(\'/madrassah/reports/new\')">+ New Report</button></div></div>' +
+        '<div class="d-card">' +
+        (rows ? '<table class="d-table"><thead><tr><th>Student</th><th>Subject</th><th>Grade</th><th>Quran</th><th>Behaviour</th><th>Notes</th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<p style="color:var(--text-dim)">No reports yet.</p>') +
+        '</div>'
+    ));
+}
+
+async function renderMadReportForm() {
+    if (!mosque) await loadMosque();
+    var stRes = await api('admin/madrassah/students');
+    var tmRes = await api('admin/madrassah/terms');
+    var students = stRes.students||[];
+    var terms = tmRes.terms||[];
+    var stOpts = students.map(function(s){return '<option value="'+s.id+'">'+esc(s.child_name)+' ('+esc(s.year_group||'no year')+')</option>';}).join('');
+    var tmOpts = terms.map(function(t){return '<option value="'+t.id+'">'+esc(t.name)+'</option>';}).join('');
+
+    render(shell(
+        '<div class="d-header"><h1>New Report</h1><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/madrassah/reports\')">\u2190 Back</button></div>' +
+        '<div class="d-card">' +
+        '<div class="d-grid d-grid-2"><div class="d-field"><label>Student</label><select id="mr_student">'+stOpts+'</select></div><div class="d-field"><label>Term</label><select id="mr_term">'+tmOpts+'</select></div></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Subject</label><input id="mr_subject" value="General"></div><div class="d-field"><label>Grade</label><select id="mr_grade"><option>Excellent</option><option>Good</option><option>Satisfactory</option><option>Needs Improvement</option></select></div><div class="d-field"><label>Behaviour</label><select id="mr_behave"><option value="excellent">Excellent</option><option value="good" selected>Good</option><option value="satisfactory">Satisfactory</option><option value="needs_improvement">Needs Improvement</option></select></div></div>' +
+        '<div class="d-field"><label>Quran Progress</label><input id="mr_quran" placeholder="e.g. Completed Juz 3, memorising Surah Baqarah"></div>' +
+        '<div class="d-field"><label>Teacher Notes</label><textarea id="mr_notes" rows="3" placeholder="Overall observations, areas for improvement..."></textarea></div>' +
+        '<button class="d-btn d-btn--primary" id="mr-save" onclick="saveMadReport()"><span class="btn-text">Save Report</span><span class="spinner"></span></button>' +
+        '</div>'
+    ));
+}
+
+async function saveMadReport() {
+    btn('#mr-save',true);
+    var res = await api('admin/madrassah/reports',{method:'POST',body:{
+        student_id:parseInt($('#mr_student').value),
+        term_id:parseInt($('#mr_term').value),
+        subject:$('#mr_subject').value,
+        grade:$('#mr_grade').value,
+        behaviour:$('#mr_behave').value,
+        quran_progress:$('#mr_quran').value,
+        teacher_notes:$('#mr_notes').value
+    }});
+    btn('#mr-save',false);
+    if(res.ok){toast('Report saved!');navigate('/madrassah/reports');}
+    else toast(res.error||'Failed.','error');
+}
+
+async function renderMadFees() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Fees</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/madrassah/fees');
+    var list = res.fees || [];
+    var statusBadge = function(s){if(s==='paid')return'<span class="d-badge d-badge--green">Paid</span>';if(s==='unpaid')return'<span class="d-badge d-badge--yellow">Unpaid</span>';return'<span class="d-badge d-badge--gray">'+esc(s)+'</span>';};
+    var rows = list.map(function(f) {
+        return '<tr><td><strong>'+esc(f.child_name)+'</strong></td><td>'+esc(f.parent_name)+'</td><td>'+esc(f.term_name||'\u2014')+'</td><td>\u00a3'+(f.amount_pence/100).toFixed(2)+'</td><td>'+statusBadge(f.status)+'</td><td>'+(f.paid_at?fmtDate(f.paid_at):(f.due_date?'Due '+fmtDate(f.due_date):'\u2014'))+'</td></tr>';
+    }).join('');
+
+    var paidGBP = ((res.paid_pence||0)/100).toFixed(2);
+    var outGBP = ((res.outstanding_pence||0)/100).toFixed(2);
+
+    render(shell(
+        '<div class="d-header"><h1>Madrassah Fees</h1><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/madrassah\')">\u2190 Back</button></div>' +
+        '<div class="d-grid d-grid-3" style="margin-bottom:16px">' +
+        '<div class="d-card d-stat"><div class="d-stat__num">'+(res.paid_count||0)+'</div><div class="d-stat__label">Fees Paid</div></div>' +
+        '<div class="d-card d-stat"><div class="d-stat__num">\u00a3'+paidGBP+'</div><div class="d-stat__label">Collected</div></div>' +
+        '<div class="d-card d-stat"><div class="d-stat__num">\u00a3'+outGBP+'</div><div class="d-stat__label">Outstanding</div></div>' +
+        '</div>' +
+        '<div class="d-card">' +
+        (rows ? '<table class="d-table"><thead><tr><th>Student</th><th>Parent</th><th>Term</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<p style="color:var(--text-dim)">No fees generated yet. <a href="#/madrassah/terms" style="color:var(--primary)">Create a term</a> and generate fees.</p>') +
+        '</div>'
+    ));
+}
+
+async function renderPatrons() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Patrons</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/patrons');
+    var list = res.patrons || [];
+    var totalActive = res.total_active || 0;
+    var monthlyPence = res.monthly_pence || 0;
+    var monthlyGBP = (monthlyPence / 100).toFixed(2);
+    var yearlyGBP = (monthlyPence * 12 / 100).toFixed(2);
+
+    var tierBadge = function(t) {
+        if (t === 'champion') return '<span class="d-badge d-badge--green">Champion</span>';
+        if (t === 'guardian') return '<span class="d-badge d-badge--blue">Guardian</span>';
+        return '<span class="d-badge d-badge--gray">Supporter</span>';
+    };
+    var statusBadge = function(s) {
+        if (s === 'active') return '<span class="d-badge d-badge--green">Active</span>';
+        if (s === 'cancelled') return '<span class="d-badge d-badge--red">Cancelled</span>';
+        if (s === 'payment_failed') return '<span class="d-badge d-badge--yellow">Payment Failed</span>';
+        return '<span class="d-badge d-badge--gray">' + esc(s) + '</span>';
+    };
+
+    var rows = list.map(function(p) {
+        return '<tr><td><strong>' + esc(p.user_name) + '</strong><br><span style="font-size:11px;color:var(--text-dim)">' + esc(p.user_email) + '</span></td><td>' + tierBadge(p.tier) + '</td><td>\u00a3' + (p.amount_pence/100).toFixed(2) + '/mo</td><td>' + statusBadge(p.status) + '</td><td>' + fmtDate(p.started_at) + '</td></tr>';
+    }).join('');
+
+    render(shell(
+        '<div class="d-header"><h1>Patrons</h1></div>' +
+        '<div class="d-grid d-grid-3" style="margin-bottom:20px">' +
+        '<div class="d-card d-stat"><div class="d-stat__num">' + totalActive + '</div><div class="d-stat__label">Active Patrons</div></div>' +
+        '<div class="d-card d-stat"><div class="d-stat__num">\u00a3' + monthlyGBP + '</div><div class="d-stat__label">Monthly Revenue</div></div>' +
+        '<div class="d-card d-stat"><div class="d-stat__num">\u00a3' + yearlyGBP + '</div><div class="d-stat__label">Projected Yearly</div></div>' +
+        '</div>' +
+        '<div class="d-card">' +
+        '<h3 style="margin-bottom:12px">All Patrons</h3>' +
+        (rows ? '<table class="d-table"><thead><tr><th>Member</th><th>Tier</th><th>Amount</th><th>Status</th><th>Since</th></tr></thead><tbody>' + rows + '</tbody></table>'
+        : '<p style="color:var(--text-dim)">No patrons yet. Share the patron page with your congregation to start receiving monthly support.</p>') +
+        '</div>' +
+        '<div class="d-card" style="margin-top:16px"><h3 style="margin-bottom:8px">Share Patron Page</h3><p style="color:var(--text-dim);font-size:13px">Members can become patrons at:</p><p style="margin-top:8px"><a href="/mosque/' + esc(mosque?.slug||'') + '/patron" target="_blank" style="color:var(--primary);font-weight:700">yourjannah.com/mosque/' + esc(mosque?.slug||'') + '/patron</a></p></div>'
+    ));
 }
 
 async function renderSettings() {

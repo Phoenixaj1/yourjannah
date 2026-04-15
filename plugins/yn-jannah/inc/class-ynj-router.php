@@ -75,6 +75,8 @@ class YNJ_Router {
             '#^/mosque/([a-z0-9-]+)/classes/?$#'         => 'render_classes',
             '#^/mosque/([a-z0-9-]+)/rooms/?$#'          => 'render_rooms',
             '#^/mosque/([a-z0-9-]+)/contact/?$#'        => 'render_contact',
+            '#^/mosque/([a-z0-9-]+)/patron/?$#'         => 'render_patron',
+            '#^/mosque/([a-z0-9-]+)/madrassah/?$#'      => 'render_madrassah',
             '#^/mosque/([a-z0-9-]+)/donate/?$#'         => 'render_donate',
             '#^/mosque/([a-z0-9-]+)/directory/?$#'      => 'render_directory',
             '#^/mosque/([a-z0-9-]+)/?$#'                => 'render_mosque',

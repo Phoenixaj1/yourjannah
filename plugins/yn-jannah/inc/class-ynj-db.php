@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '1.7.0';
+    const SCHEMA_VERSION = '1.9.0';
 
     /**
      * Return the full table name for a given short name.
@@ -450,7 +450,131 @@ class YNJ_DB {
             KEY status (status)
         ) $charset_collate;";
 
-        // 13. Subscribers
+        // 14. Madrassah Terms
+        $tables[] = "CREATE TABLE {$t('madrassah_terms')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            name varchar(255) NOT NULL DEFAULT '',
+            start_date date NOT NULL,
+            end_date date NOT NULL,
+            fee_pence int(11) NOT NULL DEFAULT 0,
+            fee_frequency varchar(20) NOT NULL DEFAULT 'termly',
+            enrolment_open tinyint(1) NOT NULL DEFAULT 1,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 15. Madrassah Students (children linked to parent user)
+        $tables[] = "CREATE TABLE {$t('madrassah_students')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            parent_user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            parent_name varchar(255) NOT NULL DEFAULT '',
+            parent_email varchar(255) NOT NULL DEFAULT '',
+            parent_phone varchar(50) NOT NULL DEFAULT '',
+            child_name varchar(255) NOT NULL DEFAULT '',
+            child_dob date DEFAULT NULL,
+            year_group varchar(30) NOT NULL DEFAULT '',
+            class_id bigint(20) unsigned DEFAULT NULL,
+            medical_notes text NOT NULL,
+            emergency_contact varchar(255) NOT NULL DEFAULT '',
+            emergency_phone varchar(50) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'active',
+            enrolled_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY parent_user_id (parent_user_id),
+            KEY class_id (class_id),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 16. Madrassah Attendance
+        $tables[] = "CREATE TABLE {$t('madrassah_attendance')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            student_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            class_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            session_id bigint(20) unsigned DEFAULT NULL,
+            attendance_date date NOT NULL,
+            status varchar(20) NOT NULL DEFAULT 'present',
+            notes varchar(255) NOT NULL DEFAULT '',
+            marked_by varchar(255) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY student_date (student_id, attendance_date, class_id),
+            KEY student_id (student_id),
+            KEY class_id (class_id),
+            KEY attendance_date (attendance_date),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 17. Madrassah Fee Payments
+        $tables[] = "CREATE TABLE {$t('madrassah_fees')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            student_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            term_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            parent_user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            amount_pence int(11) NOT NULL DEFAULT 0,
+            stripe_session_id varchar(255) NOT NULL DEFAULT '',
+            stripe_payment_intent varchar(255) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'unpaid',
+            paid_at datetime DEFAULT NULL,
+            due_date date DEFAULT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY student_id (student_id),
+            KEY term_id (term_id),
+            KEY parent_user_id (parent_user_id),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 18. Madrassah Reports (teacher notes / progress)
+        $tables[] = "CREATE TABLE {$t('madrassah_reports')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            student_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            term_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            class_id bigint(20) unsigned DEFAULT NULL,
+            subject varchar(100) NOT NULL DEFAULT '',
+            grade varchar(20) NOT NULL DEFAULT '',
+            teacher_notes text NOT NULL,
+            quran_progress varchar(255) NOT NULL DEFAULT '',
+            behaviour varchar(20) NOT NULL DEFAULT 'good',
+            created_by varchar(255) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY student_id (student_id),
+            KEY term_id (term_id),
+            KEY class_id (class_id)
+        ) $charset_collate;";
+
+        // 19. Patrons (mosque memberships)
+        $tables[] = "CREATE TABLE {$t('patrons')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_name varchar(255) NOT NULL DEFAULT '',
+            user_email varchar(255) NOT NULL DEFAULT '',
+            tier varchar(20) NOT NULL DEFAULT 'supporter',
+            amount_pence int(11) NOT NULL DEFAULT 500,
+            stripe_customer_id varchar(100) NOT NULL DEFAULT '',
+            stripe_subscription_id varchar(100) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            started_at datetime DEFAULT NULL,
+            cancelled_at datetime DEFAULT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY mosque_user (mosque_id, user_id),
+            KEY mosque_id (mosque_id),
+            KEY user_id (user_id),
+            KEY status (status),
+            KEY stripe_subscription_id (stripe_subscription_id)
+        ) $charset_collate;";
+
+        // 15. Subscribers
         $tables[] = "CREATE TABLE {$t('subscribers')} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
@@ -513,6 +637,12 @@ class YNJ_DB {
             'class_sessions',
             'enrolments',
             'campaigns',
+            'madrassah_terms',
+            'madrassah_students',
+            'madrassah_attendance',
+            'madrassah_fees',
+            'madrassah_reports',
+            'patrons',
             'users',
             'subscribers',
         ];
