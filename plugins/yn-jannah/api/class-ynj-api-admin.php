@@ -118,6 +118,13 @@ class YNJ_API_Admin {
             'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ]);
 
+        // --- Congregation member count (bearer) ---
+        register_rest_route( self::NS, '/admin/members/count', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'member_count' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
+        ] );
+
         // --- Eid management (bearer) ---
         register_rest_route( self::NS, '/admin/eid', [
             'methods'             => 'POST',
@@ -714,6 +721,27 @@ class YNJ_API_Admin {
             'ok'    => true,
             'rooms' => $rooms,
         ] );
+    }
+
+    // ================================================================
+    // MEMBER COUNT
+    // ================================================================
+
+    /**
+     * GET /admin/members/count — Count users who have this mosque as favourite.
+     */
+    public static function member_count( \WP_REST_Request $request ) {
+        $mosque = $request->get_param( '_ynj_mosque' );
+
+        global $wpdb;
+        $users_table = YNJ_DB::table( 'users' );
+
+        $count = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM $users_table WHERE favourite_mosque_id = %d AND status = 'active'",
+            (int) $mosque->id
+        ) );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'count' => $count ] );
     }
 
     // ================================================================

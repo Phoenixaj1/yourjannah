@@ -209,19 +209,31 @@ async function renderDashboard() {
     if (!mosque) await loadMosque();
     var subs = await api('admin/subscribers');
     var enquiries = await api('admin/enquiries?status=new');
+    var members = await api('admin/members/count');
+    var bookings = await api('admin/bookings');
+    var campaigns = await api('mosques/' + mosque.id + '/campaigns');
+
+    var memberCount = members.count || 0;
+    var subCount = subs.total || (subs.subscribers||[]).length;
+    var enqCount = (enquiries.enquiries||[]).length;
+    var bookCount = (bookings.bookings||[]).length;
+    var campCount = (campaigns.campaigns||[]).length;
 
     render(shell(
         '<div class="d-header"><h1>Dashboard</h1></div>' +
-        '<div class="d-grid d-grid-3" style="margin-bottom:20px">' +
-        '<div class="d-card d-stat"><div class="d-stat__num">' + ((subs.subscribers||[]).length) + '</div><div class="d-stat__label">Subscribers</div></div>' +
-        '<div class="d-card d-stat"><div class="d-stat__num">' + ((enquiries.enquiries||[]).length) + '</div><div class="d-stat__label">New Enquiries</div></div>' +
-        '<div class="d-card d-stat"><div class="d-stat__num">' + esc(mosque?.city || '') + '</div><div class="d-stat__label">Location</div></div>' +
+        '<div class="d-grid d-grid-4" style="margin-bottom:20px">' +
+        '<div class="d-card d-stat"><div class="d-stat__num">' + memberCount + '</div><div class="d-stat__label">Members on YourJannah</div></div>' +
+        '<div class="d-card d-stat"><div class="d-stat__num">' + subCount + '</div><div class="d-stat__label">Push Subscribers</div></div>' +
+        '<div class="d-card d-stat"><div class="d-stat__num">' + enqCount + '</div><div class="d-stat__label">New Enquiries</div></div>' +
+        '<div class="d-card d-stat"><div class="d-stat__num">' + bookCount + '</div><div class="d-stat__label">Bookings</div></div>' +
         '</div>' +
+        (campCount > 0 ? '<div class="d-card" style="margin-bottom:16px"><h3 style="margin-bottom:8px">Fundraising</h3><p style="color:var(--text-dim);font-size:13px">' + campCount + ' active campaign' + (campCount>1?'s':'') + '</p><button class="d-btn d-btn--secondary d-btn--sm" style="margin-top:8px" onclick="navigate(\'/campaigns\')">Manage Campaigns</button></div>' : '') +
         '<div class="d-card"><h3 style="margin-bottom:12px">Quick Actions</h3>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
         '<button class="d-btn d-btn--primary d-btn--sm" onclick="navigate(\'/announcements\')">New Announcement</button>' +
         '<button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/prayers\')">Update Prayer Times</button>' +
         '<button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/events\')">Add Event</button>' +
+        '<button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/campaigns\')">New Campaign</button>' +
         '</div></div>'
     ));
 }
