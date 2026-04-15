@@ -3218,6 +3218,26 @@ img,svg{display:block;max-width:100%;}
     .ynj-desktop-grid__left{width:420px;}
 }
 
+/* Sub-page desktop layouts */
+@media(min-width:900px){
+    /* Campaigns: 2-column grid */
+    .ynj-campaign{display:inline-block;width:calc(50% - 8px);vertical-align:top;margin-right:12px;}
+    .ynj-campaign:nth-child(2n){margin-right:0;}
+    /* Services: wider cards */
+    .ynj-svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    /* Sponsors: wider layout */
+    .ynj-sponsor{padding:20px 0;}
+    /* More page: 3-column */
+    .ynj-more-grid{grid-template-columns:1fr 1fr 1fr;}
+    /* Room cards: 2-column */
+    .ynj-room-card+.ynj-room-card{margin-top:0;}
+    /* Prayer timetable: wider */
+    .ynj-tt-scroll{overflow-x:visible;margin:0;}
+    .ynj-tt-table{font-size:13px;}
+    /* Back button + title wider */
+    .ynj-back{margin-right:8px;}
+}
+
 /* Bottom Nav */
 .ynj-nav{
     position:fixed;bottom:0;left:0;right:0;
@@ -3236,6 +3256,32 @@ img,svg{display:block;max-width:100%;}
 </style>
 </head>
 <body>
+<script>
+// Auto-inject desktop nav into every page header
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.innerWidth < 900) return;
+    var header = document.querySelector('.ynj-header__inner');
+    if (!header || document.getElementById('desktop-nav')) return;
+    var slug = localStorage.getItem('ynj_mosque_slug') || '';
+    var nav = document.createElement('nav');
+    nav.className = 'ynj-header__nav';
+    nav.id = 'desktop-nav-auto';
+    nav.style.display = 'flex';
+    var path = location.pathname;
+    var links = [
+        ['/', 'Home'], ['/mosque/'+slug+'/fundraising', 'Fundraise'],
+        ['/mosque/'+slug+'/sponsors', 'Sponsors'], ['/mosque/'+slug+'/services', 'Services'],
+        ['/mosque/'+slug+'/rooms', 'Rooms'], ['/profile', 'My Account']
+    ];
+    nav.innerHTML = links.map(function(l) {
+        var active = (l[0] === '/' && path === '/') || (l[0] !== '/' && path.indexOf(l[0]) === 0);
+        return '<a href="'+l[0]+'"'+(active?' class="ynj-hn--active"':'')+'>'+l[1]+'</a>';
+    }).join('');
+    var right = header.querySelector('.ynj-header__right') || header.querySelector('.ynj-logo');
+    if (right && right.nextSibling) header.insertBefore(nav, right);
+    else header.appendChild(nav);
+});
+</script>
         <?php
     }
 
