@@ -146,7 +146,7 @@ $slug = ynj_mosque_slug();
             (e.location ? '<div class="ynj-ev-meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 2C7.6 2 4 5.4 4 9.5 4 14.3 12 22 12 22s8-7.7 8-12.5C20 5.4 16.4 2 12 2z"/></svg>' + e.location + '</div>' : '') +
             '</div>' +
             (snippet ? '<p class="ynj-ev-desc">' + snippet + '</p>' : '') +
-            '<div class="ynj-ev-footer">' + cta + capacityHtml + '</div>' +
+            '<div class="ynj-ev-footer">' + cta + '<button class="ynj-ev-btn ynj-ev-btn--outline" onclick="ynjShare(\'' + e.title.replace(/'/g,"\\'") + '\',\'\',\'' + detailUrl + '\')">↗ Share</button>' + capacityHtml + '</div>' +
             '</div></div>';
     }
 

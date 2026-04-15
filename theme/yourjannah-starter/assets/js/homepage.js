@@ -17,9 +17,28 @@
                 registerSW();
                 setupMosqueSelector();
                 setupGpsButton();
+                showGreeting();
 
                 // Try GPS automatically
                 requestGps();
+            }
+
+            function showGreeting() {
+                var el = document.getElementById('ynj-greeting');
+                if (!el) return;
+                var user = null;
+                try { user = JSON.parse(localStorage.getItem('ynj_user')); } catch(e) {}
+                var hasMosque = !!localStorage.getItem('ynj_mosque_slug');
+
+                if (!hasMosque) {
+                    // First-visit onboarding
+                    el.style.display = '';
+                    el.innerHTML = '<div class="ynj-card" style="text-align:center;padding:20px;"><h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">Welcome to YourJannah</h3><p class="ynj-text-muted" style="margin-bottom:12px;">Your mosque community app — prayer times, events, donate, and more.</p><button class="ynj-btn" style="justify-content:center;" onclick="document.getElementById(\'mosque-dropdown\').style.display=\'\';document.getElementById(\'mosque-search\').focus();">🕌 Find Your Mosque</button></div>';
+                } else if (user && user.name) {
+                    // Logged-in greeting
+                    el.style.display = '';
+                    el.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 4px;"><span style="font-size:14px;font-weight:600;">Assalamu alaikum, ' + (user.name.split(' ')[0]) + '</span><a href="/profile" style="font-size:12px;font-weight:600;">My Profile →</a></div>';
+                }
             }
 
             function requestGps() {

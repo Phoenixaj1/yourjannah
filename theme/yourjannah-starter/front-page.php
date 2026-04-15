@@ -15,6 +15,9 @@ get_header();
   <div class="ynj-desktop-grid">
     <div class="ynj-desktop-grid__left">
 
+    <!-- Welcome / Greeting (JS populates) -->
+    <div id="ynj-greeting" style="display:none;"></div>
+
     <!-- Sponsor Ticker -->
     <div class="ynj-ticker" id="sponsor-ticker" style="display:none;">
         <span class="ynj-ticker__label">⭐ <?php esc_html_e( 'Sponsors', 'yourjannah' ); ?></span>

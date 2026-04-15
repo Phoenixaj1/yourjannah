@@ -89,6 +89,27 @@
     });
 
     // ================================================================
+    // SHARE HELPER (Web Share API with fallback)
+    // ================================================================
+
+    window.ynjShare = function(title, text, url) {
+        if (navigator.share) {
+            navigator.share({ title: title, text: text, url: url }).catch(function(){});
+        } else {
+            // Fallback: copy link
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(url).then(function() {
+                    var t = document.createElement('div');
+                    t.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:10px;background:#166534;color:#fff;font-size:13px;font-weight:600;z-index:9999;';
+                    t.textContent = 'Link copied!';
+                    document.body.appendChild(t);
+                    setTimeout(function(){ t.remove(); }, 2000);
+                });
+            }
+        }
+    };
+
+    // ================================================================
     // SERVICE WORKER
     // ================================================================
 

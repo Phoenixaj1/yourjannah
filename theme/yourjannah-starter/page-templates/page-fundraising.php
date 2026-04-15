@@ -94,10 +94,13 @@ $slug = ynj_mosque_slug();
                             '<div><strong>' + donors + '</strong> donors</div>' +
                             (pct ? '<div><strong>' + pct + '%</strong></div>' : '') +
                         '</div>' +
-                        '<a href="' + donateUrl + '"' + donateTarget + ' class="ynj-btn" style="width:100%;justify-content:center;">' +
+                        '<div style="display:flex;gap:8px;">' +
+                        '<a href="' + donateUrl + '"' + donateTarget + ' class="ynj-btn" style="flex:1;justify-content:center;">' +
                             '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>' +
                             (isRecurring ? ' Donate Monthly' : ' Donate Now') +
                         '</a>' +
+                        '<button class="ynj-btn ynj-btn--outline" onclick="ynjShare(\'' + c.title.replace(/'/g,"\\\\'") + '\',' + '\'Help fund ' + c.title.replace(/'/g,"\\\\'") + '\',' + '\'' + donateUrl + '\')">↗</button>' +
+                        '</div>' +
                     '</div>' +
                 '</div>';
             }).join('');

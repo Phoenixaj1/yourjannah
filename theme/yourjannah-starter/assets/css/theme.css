@@ -607,6 +607,24 @@ img,svg{display:block;max-width:100%;}
 }
 .ynj-nav__item--active{color:#00ADEF;}
 .ynj-nav__item svg{width:22px;height:22px;}
+button.ynj-nav__item{background:none;border:none;font-family:inherit;cursor:pointer;}
+
+/* More drawer */
+.ynj-more-drawer{
+    display:none;position:fixed;inset:0;z-index:250;background:rgba(0,0,0,.4);
+}
+.ynj-more-drawer.open{display:flex;align-items:flex-end;justify-content:center;}
+.ynj-more-drawer__sheet{
+    background:#fff;border-radius:18px 18px 0 0;padding:12px 20px 32px;
+    width:100%;max-width:500px;
+}
+.ynj-more-drawer__handle{width:40px;height:4px;border-radius:2px;background:#d4d4d8;margin:0 auto 16px;}
+.ynj-more-drawer__link{
+    display:flex;align-items:center;gap:12px;padding:14px 0;
+    border-bottom:1px solid #f0f0ec;text-decoration:none;color:#0a1628;font-size:15px;font-weight:600;
+}
+.ynj-more-drawer__link:last-child{border-bottom:none;}
+.ynj-more-drawer__link span{font-size:20px;width:28px;text-align:center;}
 
 /* WP Nav Menu Integration */
 .ynj-header__nav ul{display:flex;align-items:center;gap:4px;list-style:none;margin:0;padding:0;}
