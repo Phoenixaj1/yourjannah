@@ -143,6 +143,20 @@ class YNJ_API_Admin {
             'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
+        // --- Invite additional admin (bearer) ---
+        register_rest_route( self::NS, '/admin/invite', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'invite_admin' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
+        ] );
+
+        // --- List admins for this mosque (bearer) ---
+        register_rest_route( self::NS, '/admin/admins', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'list_admins' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
+        ] );
+
         // --- Broadcast message to subscribers (bearer) ---
         register_rest_route( self::NS, '/admin/broadcast', [
             'methods'             => 'POST',
@@ -835,6 +849,45 @@ class YNJ_API_Admin {
         ) );
 
         return new \WP_REST_Response( [ 'ok' => true, 'members' => $members ?: [] ] );
+    }
+
+    // ================================================================
+    // MULTI-ADMIN
+    // ================================================================
+
+    public static function invite_admin( \WP_REST_Request $request ) {
+        $mosque = $request->get_param( '_ynj_mosque' );
+        $data   = $request->get_json_params();
+        $email  = sanitize_email( $data['email'] ?? '' );
+
+        $result = YNJ_WP_Auth::invite_admin( (int) $mosque->id, $email, $mosque->name );
+
+        if ( is_wp_error( $result ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => $result->get_error_message() ], $result->get_error_data()['status'] ?? 400 );
+        }
+
+        return new \WP_REST_Response( $result );
+    }
+
+    public static function list_admins( \WP_REST_Request $request ) {
+        $mosque = $request->get_param( '_ynj_mosque' );
+        $mosque_id = (int) $mosque->id;
+
+        $users = get_users( [
+            'role'       => 'ynj_mosque_admin',
+            'meta_key'   => 'ynj_mosque_id',
+            'meta_value' => $mosque_id,
+        ] );
+
+        $admins = array_map( function( $u ) {
+            return [
+                'id'    => $u->ID,
+                'name'  => $u->display_name,
+                'email' => $u->user_email,
+            ];
+        }, $users );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'admins' => $admins ] );
     }
 
     // ================================================================

@@ -158,6 +158,60 @@ class YNJ_WP_Auth {
         ];
     }
 
+    /**
+     * Invite an additional admin to an existing mosque.
+     */
+    public static function invite_admin( $mosque_id, $email, $mosque_name ) {
+        $email = sanitize_email( $email );
+        if ( ! is_email( $email ) ) {
+            return new WP_Error( 'invalid_email', 'Valid email required.', [ 'status' => 400 ] );
+        }
+
+        $existing = get_user_by( 'email', $email );
+        if ( $existing ) {
+            // User exists — add mosque admin role + mosque_id
+            $existing->add_role( 'ynj_mosque_admin' );
+            update_user_meta( $existing->ID, 'ynj_mosque_id', $mosque_id );
+            $ids = get_user_meta( $existing->ID, 'ynj_mosque_ids', true ) ?: [];
+            if ( ! in_array( $mosque_id, $ids, true ) ) {
+                $ids[] = $mosque_id;
+                update_user_meta( $existing->ID, 'ynj_mosque_ids', $ids );
+            }
+
+            wp_mail( $email,
+                'You\'ve been added as an admin — ' . $mosque_name,
+                'Assalamu alaikum,\n\nYou\'ve been added as an admin for ' . $mosque_name . ' on YourJannah.\n\nLog in at: ' . home_url( '/dashboard' ) . '\n\nJazakallah khayr.'
+            );
+
+            return [ 'ok' => true, 'message' => 'Existing user added as admin.' ];
+        }
+
+        // New user — create with temporary password
+        $temp_pass = wp_generate_password( 12, false );
+        $username = sanitize_user( str_replace( '@', '_', $email ), true );
+        $wp_user_id = wp_create_user( $username, $temp_pass, $email );
+
+        if ( is_wp_error( $wp_user_id ) ) {
+            return new WP_Error( 'invite_failed', $wp_user_id->get_error_message(), [ 'status' => 500 ] );
+        }
+
+        $wp_user = new WP_User( $wp_user_id );
+        $wp_user->set_role( 'ynj_mosque_admin' );
+        update_user_meta( $wp_user_id, 'ynj_mosque_id', $mosque_id );
+        update_user_meta( $wp_user_id, 'ynj_mosque_ids', [ $mosque_id ] );
+
+        wp_mail( $email,
+            'You\'re invited to manage ' . $mosque_name . ' on YourJannah',
+            'Assalamu alaikum,\n\nYou\'ve been invited to manage ' . $mosque_name . ' on YourJannah.\n\n'
+            . 'Log in at: ' . home_url( '/dashboard' ) . '\n'
+            . 'Email: ' . $email . '\n'
+            . 'Temporary password: ' . $temp_pass . '\n\n'
+            . 'Please change your password after first login.\n\nJazakallah khayr.'
+        );
+
+        return [ 'ok' => true, 'message' => 'Invite sent to ' . $email ];
+    }
+
     // ================================================================
     // MOSQUE ADMIN: LOGIN
     // ================================================================

@@ -281,6 +281,14 @@
                                 fajr: strip(t.Fajr), sunrise: strip(t.Sunrise), dhuhr: strip(t.Dhuhr),
                                 asr: strip(t.Asr), maghrib: strip(t.Maghrib), isha: strip(t.Isha)
                             });
+                            // Ramadan detection from Hijri date
+                            if (d.data.date && d.data.date.hijri) {
+                                var hijri = d.data.date.hijri;
+                                var month = parseInt(hijri.month && hijri.month.number || 0);
+                                if (month === 9) { // Ramadan
+                                    showRamadanMode(strip(t.Fajr), strip(t.Maghrib));
+                                }
+                            }
                         }
                     })
                     .catch(function(err) {
@@ -295,6 +303,19 @@
                             }
                         }
                     });
+            }
+
+            /* ---- Ramadan Mode ---- */
+            function showRamadanMode(fajrTime, maghribTime) {
+                var el = document.getElementById('ramadan-banner');
+                if (!el) return;
+                el.style.display = '';
+                el.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                    '<div><strong style="font-size:14px;">🌙 Ramadan Mubarak</strong></div>' +
+                    '<div style="display:flex;gap:16px;font-size:13px;">' +
+                    '<span>Suhoor ends <strong>' + fajrTime + '</strong></span>' +
+                    '<span>Iftar at <strong>' + maghribTime + '</strong></span>' +
+                    '</div></div>';
             }
 
             /* ---- Prayer Times ---- */

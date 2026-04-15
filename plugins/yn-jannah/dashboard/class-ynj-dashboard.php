@@ -271,6 +271,14 @@ async function doRegister() {
 // ── Setup Wizard ──
 var setupStep = 1;
 
+function getNextFriday() {
+    var d = new Date();
+    var day = d.getDay();
+    var diff = (5 - day + 7) % 7 || 7;
+    d.setDate(d.getDate() + diff);
+    return d.toISOString().slice(0,10);
+}
+
 function needsSetup() {
     if (!mosque) return false;
     // Consider setup needed if no phone AND no description (fresh registration)
@@ -368,8 +376,19 @@ async function wizardNext() {
     btn('#w-next', false);
 
     if (setupStep === 5) {
-        // Mark setup complete
+        // Mark setup complete + create template Jumu'ah event
         await api('admin/me', { method:'PUT', body:{ setup_complete:1 } });
+        // Auto-create a recurring Jumu'ah event so the mosque page isn't empty
+        await api('admin/events', { method:'POST', body:{
+            title: 'Jumu\'ah Prayer',
+            event_type: 'jummah',
+            event_date: getNextFriday(),
+            start_time: '13:00:00',
+            end_time: '14:00:00',
+            description: 'Weekly Jumu\'ah prayer. All welcome.',
+            status: 'published',
+            recurring_type: 'weekly'
+        }}).catch(function(){});
         await loadMosque();
         toast('Setup complete! Welcome to YourJannah \ud83c\udf89');
         navigate('/');
@@ -429,6 +448,16 @@ async function renderDashboard() {
         '<div class="d-card d-stat"><div class="d-stat__num">' + bookCount + '</div><div class="d-stat__label">Bookings</div></div>' +
         '</div>' +
         (actionItems.length > 0 ? '<div class="d-card" style="margin-bottom:16px"><h3 style="margin-bottom:12px">Action Items</h3>' + actionItems.join('') + '</div>' : '') +
+        // Getting started prompts for empty sections
+        (function() {
+            var evCount = (events.events||[]).length;
+            var annCount = (subs.subscribers||[]).length; // reusing for check
+            var prompts = [];
+            if (evCount === 0) prompts.push('<a href="#/events" style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:8px;text-decoration:none;color:var(--text);background:#fffbeb;border:1px solid #fde68a;margin-bottom:6px"><span style="font-size:20px">\ud83d\udcc5</span><div><strong>Add your first event</strong><br><span style="font-size:12px;color:var(--text-dim)">Create an event so your congregation can see what\'s happening</span></div></a>');
+            if (campCount === 0) prompts.push('<a href="#/campaigns" style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:8px;text-decoration:none;color:var(--text);background:#eff6ff;border:1px solid #bfdbfe;margin-bottom:6px"><span style="font-size:20px">\u2764\ufe0f</span><div><strong>Start a fundraising campaign</strong><br><span style="font-size:12px;color:var(--text-dim)">Create a campaign to collect donations for your masjid</span></div></a>');
+            if (subCount === 0 && memberCount === 0) prompts.push('<a href="#/broadcast" style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:8px;text-decoration:none;color:var(--text);background:#f0fdf4;border:1px solid #bbf7d0;margin-bottom:6px"><span style="font-size:20px">\ud83d\ude80</span><div><strong>Share your mosque page</strong><br><span style="font-size:12px;color:var(--text-dim)">Invite your congregation to subscribe at yourjannah.com/mosque/' + esc(mosque?.slug||'') + '</span></div></a>');
+            return prompts.length > 0 ? '<div class="d-card" style="margin-bottom:16px"><h3 style="margin-bottom:12px">\ud83c\udf1f Getting Started</h3>' + prompts.join('') + '</div>' : '';
+        })() +
         // Revenue summary
         '<div class="d-card" style="margin-bottom:16px;background:linear-gradient(135deg,#f0fdf4,#ecfeff);border:1px solid #bbf7d0">' +
         '<h3 style="margin-bottom:12px">\ud83d\udcb0 Revenue Overview</h3>' +
@@ -1845,8 +1874,36 @@ async function renderSettings() {
         '<div class="d-field"><label>Description</label><textarea id="s_desc" rows="3">' + esc(mosque?.description||'') + '</textarea></div>' +
         '<button class="d-btn d-btn--primary" id="s-save" onclick="saveSettings()"><span class="btn-text">Save Profile</span><span class="spinner"></span></button>' +
         '</div></div>' +
-        '<div><div class="d-card"><h3>Mosque Page</h3><p style="margin-top:8px"><a href="/mosque/' + esc(mosque?.slug||'') + '" target="_blank" style="color:var(--primary);font-weight:700">yourjannah.com/mosque/' + esc(mosque?.slug||'') + '</a></p></div></div></div>'
+        '<div>' +
+        '<div class="d-card" style="margin-bottom:16px"><h3>Mosque Page</h3><p style="margin-top:8px"><a href="/mosque/' + esc(mosque?.slug||'') + '" target="_blank" style="color:var(--primary);font-weight:700">yourjannah.com/mosque/' + esc(mosque?.slug||'') + '</a></p></div>' +
+        '<div class="d-card"><h3 style="margin-bottom:12px">\ud83d\udc65 Admin Team</h3><div id="admin-list"><p style="color:var(--text-dim)">Loading...</p></div>' +
+        '<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px"><p style="font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:8px">INVITE ADMIN</p>' +
+        '<div style="display:flex;gap:8px"><input type="email" id="invite-email" placeholder="email@example.com" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px"><button class="d-btn d-btn--primary d-btn--sm" onclick="inviteAdmin()">Invite</button></div></div>' +
+        '</div></div></div>'
     ));
+}
+
+// Load admin list on settings page
+(async function loadAdminList() {
+    // Defer until admin-list element exists
+    setTimeout(async function() {
+        var el = document.getElementById('admin-list');
+        if (!el) return;
+        var res = await api('admin/admins');
+        if (res.ok && res.admins) {
+            el.innerHTML = res.admins.map(function(a) {
+                return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0ec"><div><strong style="font-size:13px">' + esc(a.name) + '</strong><br><span style="font-size:12px;color:var(--text-dim)">' + esc(a.email) + '</span></div></div>';
+            }).join('') || '<p style="color:var(--text-dim)">No admins found.</p>';
+        }
+    }, 100);
+})();
+
+async function inviteAdmin() {
+    var email = $('#invite-email')?.value;
+    if (!email) { toast('Enter an email address.', 'error'); return; }
+    var res = await api('admin/invite', { method: 'POST', body: { email: email } });
+    if (res.ok) { toast(res.message || 'Invite sent!'); if ($('#invite-email')) $('#invite-email').value = ''; }
+    else toast(res.error || 'Failed.', 'error');
 }
 
 async function saveSettings() {

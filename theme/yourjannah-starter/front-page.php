@@ -15,6 +15,9 @@ get_header();
   <div class="ynj-desktop-grid">
     <div class="ynj-desktop-grid__left">
 
+    <!-- Ramadan banner (shown automatically during Ramadan) -->
+    <div id="ramadan-banner" style="display:none;background:linear-gradient(135deg,#1a1628,#2d1b69);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:10px;"></div>
+
     <!-- Welcome / Greeting (JS populates) -->
     <div id="ynj-greeting" style="display:none;"></div>
 
