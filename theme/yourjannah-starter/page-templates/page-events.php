@@ -51,18 +51,7 @@ $slug = ynj_mosque_slug();
 </style>
 
 <main class="ynj-main">
-    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px;">
-        <h2 id="ev-title" style="font-size:18px;font-weight:700;margin:0;"><?php esc_html_e( 'Events', 'yourjannah' ); ?></h2>
-        <span class="ynj-scope"><?php esc_html_e( 'Showing:', 'yourjannah' ); ?>
-            <select id="ynj-radius" onchange="if(typeof onRadiusChange==='function')onRadiusChange()">
-                <option value="0" selected><?php esc_html_e( 'This Masjid Only', 'yourjannah' ); ?></option>
-                <option value="5"><?php esc_html_e( 'Within 5 miles', 'yourjannah' ); ?></option>
-                <option value="10"><?php esc_html_e( 'Within 10 miles', 'yourjannah' ); ?></option>
-                <option value="25"><?php esc_html_e( 'Within 25 miles', 'yourjannah' ); ?></option>
-                <option value="9999"><?php esc_html_e( 'Nationwide', 'yourjannah' ); ?></option>
-            </select>
-        </span>
-    </div>
+    <h2 id="ev-title" style="font-size:18px;font-weight:700;margin-bottom:4px;"><?php esc_html_e( 'Events', 'yourjannah' ); ?></h2>
     <p class="ynj-text-muted" style="margin-bottom:12px;"><?php esc_html_e( 'Upcoming events', 'yourjannah' ); ?></p>
 
     <div class="ynj-ev-filter" id="ev-filters">

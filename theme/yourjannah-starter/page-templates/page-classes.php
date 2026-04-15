@@ -31,18 +31,6 @@ $slug = ynj_mosque_slug();
         </div>
     <?php endif; ?>
 
-    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;">
-        <h2 style="font-size:18px;font-weight:700;margin:0;"><?php esc_html_e( 'Classes', 'yourjannah' ); ?></h2>
-        <span class="ynj-scope"><?php esc_html_e( 'Showing:', 'yourjannah' ); ?>
-            <select id="ynj-radius" onchange="if(typeof onRadiusChange==='function')onRadiusChange()">
-                <option value="0" selected><?php esc_html_e( 'This Masjid Only', 'yourjannah' ); ?></option>
-                <option value="5"><?php esc_html_e( 'Within 5 miles', 'yourjannah' ); ?></option>
-                <option value="10"><?php esc_html_e( 'Within 10 miles', 'yourjannah' ); ?></option>
-                <option value="25"><?php esc_html_e( 'Within 25 miles', 'yourjannah' ); ?></option>
-                <option value="9999"><?php esc_html_e( 'Nationwide', 'yourjannah' ); ?></option>
-            </select>
-        </span>
-    </div>
     <div class="ynj-search-bar" style="margin-bottom:14px;">
         <div class="ynj-search-bar__filters">
             <select id="cls-cat" class="ynj-search-bar__select" onchange="loadClasses()">

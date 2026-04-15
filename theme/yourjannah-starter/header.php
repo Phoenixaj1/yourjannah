@@ -33,22 +33,27 @@
 
         <div class="ynj-header__right">
             <?php
-            // GPS button (always available)
-            ?>
-            <button class="ynj-gps-btn" id="gps-btn" type="button" title="<?php esc_attr_e( 'Detect my location', 'yourjannah' ); ?>">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
-            </button>
-
-            <?php
-            // Mosque name (shown on all pages)
             $mosque_slug = ynj_mosque_slug();
             $mosque = ynj_get_mosque( $mosque_slug );
             $mosque_name = $mosque ? $mosque->name : '';
             ?>
-            <button class="ynj-mosque-selector" id="mosque-selector" type="button">
-                <span id="mosque-name"><?php echo esc_html( $mosque_name ?: __( 'Finding mosque...', 'yourjannah' ) ); ?></span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-            </button>
+            <!-- GPS + Mosque selector fused -->
+            <div class="ynj-mosque-pill" id="mosque-selector">
+                <button class="ynj-mosque-pill__gps" id="gps-btn" type="button" title="<?php esc_attr_e( 'Detect my location', 'yourjannah' ); ?>">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+                </button>
+                <span class="ynj-mosque-pill__name" id="mosque-name"><?php echo esc_html( $mosque_name ?: __( 'Finding...', 'yourjannah' ) ); ?></span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:.6;flex-shrink:0;"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+
+            <!-- Radius badge -->
+            <select id="ynj-radius" class="ynj-radius-badge" onchange="if(typeof onRadiusChange==='function')onRadiusChange()">
+                <option value="0" selected>+0m</option>
+                <option value="5">+5mi</option>
+                <option value="10">+10mi</option>
+                <option value="25">+25mi</option>
+                <option value="9999">All</option>
+            </select>
         </div>
     </div>
 </header>

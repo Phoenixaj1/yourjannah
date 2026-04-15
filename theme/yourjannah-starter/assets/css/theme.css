@@ -33,39 +33,40 @@ img,svg{display:block;max-width:100%;}
 /* Header right group */
 .ynj-header__right{margin-left:auto;display:flex;align-items:center;gap:8px;}
 
-/* GPS Button */
-.ynj-gps-btn{
-    display:flex;align-items:center;justify-content:center;
-    width:40px;height:40px;border-radius:50%;border:none;
-    background:rgba(255,255,255,.2);color:#fff;cursor:pointer;transition:all .2s;
-    flex-shrink:0;backdrop-filter:blur(4px);
-}
-.ynj-gps-btn:hover{background:rgba(255,255,255,.35);}
-.ynj-gps-btn:active{background:rgba(255,255,255,.3);transform:scale(.95);}
-.ynj-gps-btn.ynj-gps-btn--loading{animation:gpsPulse 1.2s ease-in-out infinite;}
-.ynj-gps-btn svg{display:block;}
-@keyframes gpsPulse{0%,100%{opacity:1}50%{opacity:.4}}
-
-/* Mosque Selector */
-.ynj-mosque-selector{
-    display:flex;align-items:center;gap:6px;
+/* Fused mosque pill: [GPS | Mosque Name ▾] */
+.ynj-mosque-pill{
+    display:flex;align-items:center;gap:0;
     background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
-    border-radius:20px;padding:8px 14px;color:#fff;font-size:13px;font-weight:600;
-    cursor:pointer;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    border-radius:22px;color:#fff;cursor:pointer;
+    backdrop-filter:blur(4px);transition:all .15s;overflow:hidden;
+}
+.ynj-mosque-pill:hover{background:rgba(255,255,255,.22);}
+.ynj-mosque-pill__gps{
+    display:flex;align-items:center;justify-content:center;
+    width:36px;height:36px;border:none;background:rgba(255,255,255,.1);
+    color:#fff;cursor:pointer;flex-shrink:0;transition:background .15s;
+    border-right:1px solid rgba(255,255,255,.15);
+}
+.ynj-mosque-pill__gps:hover{background:rgba(255,255,255,.25);}
+.ynj-mosque-pill__gps.ynj-gps-btn--loading{animation:gpsPulse 1.2s ease-in-out infinite;}
+@keyframes gpsPulse{0%,100%{opacity:1}50%{opacity:.4}}
+.ynj-mosque-pill__name{
+    padding:0 8px;font-size:12px;font-weight:600;
+    max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* Radius badge */
+.ynj-radius-badge{
+    background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+    border-radius:14px;padding:6px 10px;color:#fff;font-size:11px;font-weight:700;
+    cursor:pointer;-webkit-appearance:none;appearance:none;
+    font-family:inherit;text-align:center;min-width:48px;
+    background-image:url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%23fff' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 6px center;padding-right:18px;
     backdrop-filter:blur(4px);transition:all .15s;
 }
-.ynj-mosque-selector:hover{background:rgba(255,255,255,.25);}
-.ynj-mosque-selector svg{flex-shrink:0;opacity:.7;}
-
-/* Inline Radius Selector (per-page) */
-.ynj-scope{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#6b8fa3;}
-.ynj-scope select{
-    border:none;background:transparent;color:#00ADEF;font-size:12px;font-weight:600;
-    cursor:pointer;padding:0;font-family:inherit;-webkit-appearance:none;appearance:none;
-    background-image:url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%2300ADEF' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat:no-repeat;background-position:right center;padding-right:14px;
-}
-.ynj-scope select option{color:#0a1628;}
+.ynj-radius-badge:hover{background:rgba(255,255,255,.28);}
+.ynj-radius-badge option{color:#0a1628;background:#fff;}
 .ynj-dropdown{
     position:fixed;top:56px;left:0;right:0;z-index:150;
     background:rgba(255,255,255,.97);backdrop-filter:blur(16px);
