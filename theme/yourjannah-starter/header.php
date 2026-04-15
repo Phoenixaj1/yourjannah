@@ -49,15 +49,6 @@
                 <span id="mosque-name"><?php echo esc_html( $mosque_name ?: __( 'Finding mosque...', 'yourjannah' ) ); ?></span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
             </button>
-
-            <?php // Radius selector — shown on homepage + mosque pages ?>
-            <select id="ynj-radius" class="ynj-radius-select" onchange="if(typeof onRadiusChange==='function')onRadiusChange()">
-                <option value="0" selected><?php esc_html_e( 'This Masjid', 'yourjannah' ); ?></option>
-                <option value="5">5 mi</option>
-                <option value="10">10 mi</option>
-                <option value="25">25 mi</option>
-                <option value="9999"><?php esc_html_e( 'Nationwide', 'yourjannah' ); ?></option>
-            </select>
         </div>
     </div>
 </header>

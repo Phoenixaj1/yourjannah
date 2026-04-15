@@ -21,6 +21,18 @@ $slug = ynj_mosque_slug();
         <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/sponsors/join' ) ); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;background:#fff;color:#00ADEF;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">⭐ <?php esc_html_e( 'Become a Sponsor', 'yourjannah' ); ?></a>
     </div>
 
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;">
+        <h2 style="font-size:18px;font-weight:700;margin:0;"><?php esc_html_e( 'Sponsors', 'yourjannah' ); ?></h2>
+        <span class="ynj-scope"><?php esc_html_e( 'Showing:', 'yourjannah' ); ?>
+            <select id="ynj-radius" onchange="if(typeof onRadiusChange==='function')onRadiusChange()">
+                <option value="0" selected><?php esc_html_e( 'This Masjid Only', 'yourjannah' ); ?></option>
+                <option value="5"><?php esc_html_e( 'Within 5 miles', 'yourjannah' ); ?></option>
+                <option value="10"><?php esc_html_e( 'Within 10 miles', 'yourjannah' ); ?></option>
+                <option value="25"><?php esc_html_e( 'Within 25 miles', 'yourjannah' ); ?></option>
+                <option value="9999"><?php esc_html_e( 'Nationwide', 'yourjannah' ); ?></option>
+            </select>
+        </span>
+    </div>
     <div id="local-biz-list" class="ynj-sponsors-grid"><p class="ynj-text-muted">Loading&hellip;</p></div>
 </main>
 

@@ -110,7 +110,18 @@ get_header();
 
     <!-- Feed -->
     <section id="feed-section">
-        <h3 style="font-size:16px;font-weight:700;margin:0 0 10px;"><?php esc_html_e( 'What\'s Happening', 'yourjannah' ); ?></h3>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;">
+            <h3 style="font-size:16px;font-weight:700;margin:0;"><?php esc_html_e( 'What\'s Happening', 'yourjannah' ); ?></h3>
+            <span class="ynj-scope"><?php esc_html_e( 'Showing:', 'yourjannah' ); ?>
+                <select id="ynj-radius" onchange="if(typeof onRadiusChange==='function')onRadiusChange()">
+                    <option value="0" selected><?php esc_html_e( 'This Masjid Only', 'yourjannah' ); ?></option>
+                    <option value="5"><?php esc_html_e( 'Within 5 miles', 'yourjannah' ); ?></option>
+                    <option value="10"><?php esc_html_e( 'Within 10 miles', 'yourjannah' ); ?></option>
+                    <option value="25"><?php esc_html_e( 'Within 25 miles', 'yourjannah' ); ?></option>
+                    <option value="9999"><?php esc_html_e( 'Nationwide', 'yourjannah' ); ?></option>
+                </select>
+            </span>
+        </div>
 
         <div class="ynj-filter-chips" id="feed-filters">
             <button class="ynj-chip ynj-chip--active" data-filter="all" onclick="filterFeed('all')">All</button>
