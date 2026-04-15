@@ -479,6 +479,7 @@ class YNJ_DB {
             push_p256dh text NOT NULL,
             push_auth varchar(100) NOT NULL DEFAULT '',
             alert_before_minutes int(11) NOT NULL DEFAULT 20,
+            total_points int(11) NOT NULL DEFAULT 0,
             token_hash varchar(64) NOT NULL DEFAULT '',
             token_last_used datetime DEFAULT NULL,
             status varchar(20) NOT NULL DEFAULT 'active',
@@ -695,7 +696,24 @@ class YNJ_DB {
             KEY status (status)
         ) $charset_collate;";
 
-        // 17. Event Volunteers
+        // 17. Points Ledger
+        $tables[] = "CREATE TABLE {$t('points')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            action varchar(30) NOT NULL DEFAULT '',
+            points int(11) NOT NULL DEFAULT 0,
+            ref_id bigint(20) unsigned DEFAULT NULL,
+            description varchar(255) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY user_id (user_id),
+            KEY mosque_id (mosque_id),
+            KEY action (action),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+
+        // 18. Event Volunteers
         $tables[] = "CREATE TABLE {$t('event_volunteers')} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             event_id bigint(20) unsigned NOT NULL DEFAULT 0,

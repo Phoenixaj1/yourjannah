@@ -50,6 +50,7 @@ spl_autoload_register(function($class) {
         'YNJ_Platform_Admin'       => 'inc/class-ynj-platform-admin.php',
         'YNJ_API_Media'            => 'api/class-ynj-api-media.php',
         'YNJ_Cache'                => 'inc/class-ynj-cache.php',
+        'YNJ_API_Points'           => 'api/class-ynj-api-points.php',
     ];
     if (isset($map[$class])) {
         require_once YNJ_DIR . $map[$class];
@@ -98,6 +99,7 @@ add_action('rest_api_init', function() {
     YNJ_API_Subscriptions::register();
     YNJ_API_Masjid_Services::register();
     YNJ_API_Media::register();
+    YNJ_API_Points::register();
 });
 
 // Admin menus
@@ -184,6 +186,23 @@ add_action('ynj_new_class', function($mosque_id, $data) {
         YNJ_Push::send_push($u->push_endpoint, $u->push_p256dh, $u->push_auth, $payload);
     }
 }, 10, 2);
+
+// Points: auto-award on booking/donation
+add_action('ynj_new_booking', function($mosque_id, $data) {
+    if (!empty($data['user_email'])) {
+        global $wpdb;
+        $user = $wpdb->get_row($wpdb->prepare("SELECT id FROM " . YNJ_DB::table('users') . " WHERE email = %s", $data['user_email']));
+        if ($user) YNJ_API_Points::award($user->id, $mosque_id, 'event_rsvp', null, $data['notes'] ?? 'Event booking');
+    }
+}, 10, 2);
+
+add_action('ynj_payment_received', function($mosque_id, $data, $type) {
+    if (!empty($data['user_email']) && in_array($type, ['event_donation', 'patron_membership'])) {
+        global $wpdb;
+        $user = $wpdb->get_row($wpdb->prepare("SELECT id FROM " . YNJ_DB::table('users') . " WHERE email = %s", $data['user_email']));
+        if ($user) YNJ_API_Points::award($user->id, $mosque_id, 'donation', null, 'Donation/patron payment');
+    }
+}, 10, 3);
 
 // WP Site Health checks
 add_filter('site_status_tests', function($tests) {

@@ -110,6 +110,22 @@ get_header();
         <?php esc_html_e( 'Donate to Masjid', 'yourjannah' ); ?>
     </a>
 
+    <!-- Check-in + Points (logged-in users only) -->
+    <div id="ynj-points-card" style="display:none;">
+        <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:10px;">
+            <button id="checkin-btn" onclick="doCheckIn()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
+                📍 <?php esc_html_e( 'Check In', 'yourjannah' ); ?>
+            </button>
+            <div id="points-display" style="display:flex;align-items:center;gap:6px;padding:12px 16px;border-radius:12px;background:linear-gradient(135deg,#fef3c7,#fde68a);min-width:90px;justify-content:center;">
+                <span style="font-size:18px;">⭐</span>
+                <div>
+                    <div id="points-total" style="font-size:18px;font-weight:900;color:#92400e;line-height:1;">0</div>
+                    <div style="font-size:9px;font-weight:600;color:#92400e;text-transform:uppercase;">points</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Full Timetable link -->
     <a class="ynj-timetable-link" id="timetable-link" href="#">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>

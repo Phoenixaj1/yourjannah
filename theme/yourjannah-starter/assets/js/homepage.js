@@ -18,6 +18,7 @@
                 setupMosqueSelector();
                 setupGpsButton();
                 showGreeting();
+                loadPoints();
 
                 // Try GPS automatically
                 requestGps();
@@ -40,6 +41,61 @@
                     el.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 4px;"><span style="font-size:14px;font-weight:600;">Assalamu alaikum, ' + (user.name.split(' ')[0]) + '</span><a href="/profile" style="font-size:12px;font-weight:600;">My Profile →</a></div>';
                 }
             }
+
+            // Load points for logged-in users
+            function loadPoints() {
+                var token = localStorage.getItem('ynj_user_token');
+                if (!token) return;
+                var card = document.getElementById('ynj-points-card');
+                if (card) card.style.display = '';
+
+                fetch(API + '/points/me', { headers: { 'Authorization': 'Bearer ' + token } })
+                    .then(function(r) { return r.ok ? r.json() : null; })
+                    .then(function(d) {
+                        if (d && d.ok) {
+                            var el = document.getElementById('points-total');
+                            if (el) el.textContent = d.total || 0;
+                        }
+                    })
+                    .catch(function(){});
+            }
+
+            window.doCheckIn = function() {
+                var token = localStorage.getItem('ynj_user_token');
+                if (!token) { window.location.href = '/login'; return; }
+                if (!mosqueSlug) { alert('Select a mosque first.'); return; }
+
+                var btn = document.getElementById('checkin-btn');
+                btn.disabled = true; btn.textContent = 'Checking in...';
+
+                if (!('geolocation' in navigator)) { btn.textContent = 'GPS not available'; btn.disabled = false; return; }
+
+                navigator.geolocation.getCurrentPosition(function(pos) {
+                    fetch(API + '/points/checkin', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({ mosque_slug: mosqueSlug, lat: pos.coords.latitude, lng: pos.coords.longitude })
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(d) {
+                        if (d.ok) {
+                            btn.textContent = '✅ ' + d.message;
+                            btn.style.background = '#166534';
+                            var el = document.getElementById('points-total');
+                            if (el) el.textContent = d.total;
+                        } else {
+                            btn.textContent = d.error || 'Check-in failed';
+                            btn.disabled = false;
+                            setTimeout(function() { btn.textContent = '📍 Check In'; }, 3000);
+                        }
+                    })
+                    .catch(function() { btn.textContent = '📍 Check In'; btn.disabled = false; });
+                }, function() {
+                    btn.textContent = 'Enable GPS to check in';
+                    btn.disabled = false;
+                    setTimeout(function() { btn.textContent = '📍 Check In'; }, 3000);
+                }, { timeout: 8000 });
+            };
 
             function requestGps() {
                 if (!('geolocation' in navigator)) {
