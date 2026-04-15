@@ -199,15 +199,16 @@
                             });
                         }
 
-                        // Check if we have actual adhan times (not just jamat overrides)
-                        const hasAdhan = m.prayer_times && m.prayer_times.fajr && m.prayer_times.maghrib && !m.prayer_times.error;
-                        if (hasAdhan) {
-                            setPrayerTimes(m.prayer_times);
+                        // Always fetch from Aladhan (reliable from browser)
+                        // Use stored times only if Aladhan fails
+                        const lat = m.latitude || userLat;
+                        const lng = m.longitude || userLng;
+                        if (lat && lng) {
+                            fetchAladhan(lat, lng);
                         } else {
-                            // Always fallback to client-side Aladhan (browser CAN reach it even if server can't)
-                            const lat = m.latitude || userLat;
-                            const lng = m.longitude || userLng;
-                            if (lat && lng) fetchAladhan(lat, lng);
+                            // No coords at all — try stored times as last resort
+                            const hasAdhan = m.prayer_times && m.prayer_times.fajr && m.prayer_times.maghrib && !m.prayer_times.error;
+                            if (hasAdhan) setPrayerTimes(m.prayer_times);
                         }
 
                         // If we didn't get travel from GPS, try from mosque coords
@@ -230,10 +231,12 @@
             }
 
             /* ---- Aladhan Fallback ---- */
+            let aladhanAttempts = 0;
             function fetchAladhan(lat, lng) {
+                aladhanAttempts++;
                 const ts = Math.floor(Date.now() / 1000);
                 fetch(`https://api.aladhan.com/v1/timings/${ts}?latitude=${lat}&longitude=${lng}&method=2`)
-                    .then(r => r.json())
+                    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
                     .then(d => {
                         if (d && d.data && d.data.timings) {
                             const t = d.data.timings;
@@ -244,7 +247,18 @@
                             });
                         }
                     })
-                    .catch(() => {});
+                    .catch(function(err) {
+                        console.warn('Aladhan fetch failed (attempt ' + aladhanAttempts + '):', err);
+                        // Retry once after 2s
+                        if (aladhanAttempts < 2) {
+                            setTimeout(function(){ fetchAladhan(lat, lng); }, 2000);
+                        } else {
+                            // Last resort: try stored mosque prayer times
+                            if (mosqueData && mosqueData.prayer_times && mosqueData.prayer_times.fajr) {
+                                setPrayerTimes(mosqueData.prayer_times);
+                            }
+                        }
+                    });
             }
 
             /* ---- Prayer Times ---- */
