@@ -1167,6 +1167,13 @@ class YNJ_Renderer {
             <section class="ynj-card ynj-card--hero">
                 <h1 class="ynj-mosque-name" id="mp-name">Loading&hellip;</h1>
                 <p class="ynj-text-muted" id="mp-address" style="color:rgba(255,255,255,.7);"></p>
+                <div id="mp-subscribe" style="margin-top:12px;display:none;">
+                    <button id="mp-sub-btn" class="ynj-btn" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;justify-content:center;width:100%;" onclick="toggleSubscribe()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+                        <span id="mp-sub-text">Subscribe for Updates</span>
+                    </button>
+                    <p id="mp-sub-count" class="ynj-text-muted" style="text-align:center;font-size:11px;margin-top:4px;color:rgba(255,255,255,.6);"></p>
+                </div>
             </section>
 
             <section class="ynj-card" id="mp-prayer-card">
@@ -1194,13 +1201,82 @@ class YNJ_Renderer {
                 el.href = el.dataset.navMosque.replace('{slug}', slug);
             });
 
+            const token = localStorage.getItem('ynj_user_token') || '';
+            let isSubscribed = false;
+            let mosqueId = 0;
+
+            // Check subscription status
+            function checkSub() {
+                if (!token) {
+                    document.getElementById('mp-subscribe').style.display = '';
+                    document.getElementById('mp-sub-btn').onclick = function() { window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname); };
+                    return;
+                }
+                document.getElementById('mp-subscribe').style.display = '';
+                fetch('/wp-json/ynj/v1/auth/subscriptions', {
+                    headers: {'Authorization': 'Bearer ' + token}
+                }).then(r=>r.json()).then(data => {
+                    const subs = data.subscriptions || [];
+                    isSubscribed = subs.some(s => s.mosque_slug === slug);
+                    updateSubBtn();
+                }).catch(() => {});
+            }
+
+            function updateSubBtn() {
+                const btn = document.getElementById('mp-sub-btn');
+                const text = document.getElementById('mp-sub-text');
+                if (isSubscribed) {
+                    btn.style.background = 'rgba(255,255,255,.9)';
+                    btn.style.color = '#00ADEF';
+                    text.textContent = '✓ Subscribed';
+                } else {
+                    btn.style.background = 'rgba(255,255,255,.2)';
+                    btn.style.color = '#fff';
+                    text.textContent = 'Subscribe for Updates';
+                }
+            }
+
+            window.toggleSubscribe = async function() {
+                if (!token) { window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname); return; }
+                const btn = document.getElementById('mp-sub-btn');
+                btn.disabled = true;
+                if (isSubscribed) {
+                    await fetch('/wp-json/ynj/v1/auth/subscriptions/' + mosqueId, {
+                        method: 'DELETE', headers: {'Content-Type':'application/json','Authorization':'Bearer '+token}
+                    });
+                    isSubscribed = false;
+                } else {
+                    await fetch('/wp-json/ynj/v1/auth/subscriptions', {
+                        method: 'POST', headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
+                        body: JSON.stringify({mosque_slug: slug})
+                    });
+                    isSubscribed = true;
+                }
+                btn.disabled = false;
+                updateSubBtn();
+            };
+
+            // Subscriber count
+            function loadSubCount() {
+                if (!mosqueId) return;
+                fetch('/wp-json/ynj/v1/mosques/' + mosqueId + '/subscriber-count')
+                    .then(r=>r.json()).then(data => {
+                        if (data.total > 0) {
+                            document.getElementById('mp-sub-count').textContent = data.total + ' subscriber' + (data.total !== 1 ? 's' : '');
+                        }
+                    }).catch(() => {});
+            }
+
             fetch(`/wp-json/ynj/v1/mosques/${slug}`)
                 .then(r => r.json())
                 .then(resp => {
                     const data = resp.mosque || resp;
                     if (!data) return;
+                    mosqueId = data.id;
                     document.getElementById('mp-name').textContent = data.name || slug;
                     document.getElementById('mp-address').textContent = data.address || '';
+                    checkSub();
+                    loadSubCount();
                     if (data.prayer_times && !data.prayer_times.error) {
                         const grid = document.getElementById('mp-prayer-grid');
                         grid.innerHTML = '';
@@ -1594,21 +1670,15 @@ class YNJ_Renderer {
             document.getElementById('svc-radius').addEventListener('change', doSearch);
 
             function executeSearch() {
-                const q = document.getElementById('svc-search').value.trim();
-                const type = document.getElementById('svc-type').value;
-                const radiusMi = parseInt(document.getElementById('svc-radius').value);
+                const q = (document.getElementById('svc-search') || {}).value || '';
+                const type = (document.getElementById('svc-type') || {}).value || '';
+                const radiusEl = document.getElementById('svc-radius');
+                const radiusMi = radiusEl ? parseInt(radiusEl.value) : 10;
 
-                // If "My Mosque" selected and no search query, just show local
-                if (radiusMi === 0 && !q && !type) {
-                    document.getElementById('community-services').style.display = 'none';
-                    return;
-                }
-
-                const radiusKm = radiusMi === 0 ? 0 : (radiusMi === 9999 ? 9999 : radiusMi * 1.609);
-                const communityEl = document.getElementById('community-services');
+                const radiusKm = radiusMi === 9999 ? 9999 : radiusMi * 1.609;
                 const communityList = document.getElementById('community-svc-list');
+                if (!communityList) return;
 
-                communityEl.style.display = '';
                 communityList.innerHTML = '<p class="ynj-text-muted">Searching...</p>';
 
                 const params = new URLSearchParams();
@@ -2577,20 +2647,9 @@ class YNJ_Renderer {
                 </section>
             <?php else : ?>
             <h2 id="bk-title" style="font-size:18px;font-weight:700;margin-bottom:4px;">Booking</h2>
-            <p class="ynj-text-muted" style="margin-bottom:14px;">Book masjid services, rooms and facilities</p>
+            <p class="ynj-text-muted" style="margin-bottom:14px;">Book rooms and masjid services — all bookings require masjid approval</p>
 
-            <div class="ynj-book-tabs">
-                <button class="ynj-book-tab ynj-book-tab--active" id="tab-services" onclick="switchBookTab('services')">🕌 Masjid Services</button>
-                <button class="ynj-book-tab" id="tab-rooms" onclick="switchBookTab('rooms')">🏠 Rooms</button>
-            </div>
-
-            <div id="services-panel">
-                <div id="services-list"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading masjid services...</p></div>
-            </div>
-
-            <div id="rooms-panel" style="display:none;">
-                <div id="rooms-list"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading rooms...</p></div>
-            </div>
+            <div id="rooms-list"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading...</p></div>
 
             <!-- Room Booking Modal -->
             <div class="ynj-modal" id="booking-modal" style="display:none;">
@@ -2636,14 +2695,7 @@ class YNJ_Renderer {
                 el.href = el.dataset.navMosque.replace('{slug}', slug);
             });
 
-            window.switchBookTab = function(tab) {
-                document.getElementById('tab-services').classList.toggle('ynj-book-tab--active', tab === 'services');
-                document.getElementById('tab-rooms').classList.toggle('ynj-book-tab--active', tab === 'rooms');
-                document.getElementById('services-panel').style.display = tab === 'services' ? '' : 'none';
-                document.getElementById('rooms-panel').style.display = tab === 'rooms' ? '' : 'none';
-            };
-
-            // Load mosque info + rooms + services
+            // Load mosque info + rooms
             fetch('/wp-json/ynj/v1/mosques/' + slug)
                 .then(r => r.json())
                 .then(resp => {
@@ -2656,12 +2708,6 @@ class YNJ_Renderer {
                         .then(r => r.ok ? r.json() : { rooms: [] })
                         .then(data => renderRooms(data.rooms || []))
                         .catch(() => { document.getElementById('rooms-list').innerHTML = '<p class="ynj-text-muted">Could not load rooms.</p>'; });
-
-                    // Load services
-                    fetch('/wp-json/ynj/v1/mosques/' + m.id + '/services')
-                        .then(r => r.ok ? r.json() : { services: [] })
-                        .then(data => renderServices(data.services || []))
-                        .catch(() => { document.getElementById('services-list').innerHTML = '<p class="ynj-text-muted">Could not load services.</p>'; });
                 })
                 .catch(() => {});
 
@@ -2688,42 +2734,6 @@ class YNJ_Renderer {
                         (r.availability_notes ? '<p style="font-size:12px;color:#6b8fa3;margin-bottom:8px;">\ud83d\udcc5 ' + r.availability_notes + '</p>' : '') +
                         '<button class="ynj-book-btn" onclick="openBooking(' + r.id + ',\'' + r.name.replace(/'/g, "\\'") + '\',' + (r.hourly_rate_pence||0) + ')">Book This Room</button>' +
                         '</div>';
-                }).join('');
-            }
-
-            var svcIcons = {
-                'nikkah':'💍','nikah':'💍','funeral':'🕊️','janazah':'🕊️',
-                'counselling':'🤝','counseling':'🤝','quran':'📖','hifz':'📖',
-                'ruqyah':'🤲','revert':'🕌','conversion':'🕌','marriage':'💍',
-                'halaqah':'📚','islamic_school':'📚','madrassah':'📚',
-                'circumcision':'🏥','aqiqah':'🐑','walima':'🍽️',
-                'imam':'🕌','khutbah':'🎤','catering':'🍽️','parking':'🅿️'
-            };
-
-            function renderServices(services) {
-                const el = document.getElementById('services-list');
-                if (!services.length) {
-                    el.innerHTML = '<div style="text-align:center;padding:30px 20px;"><div style="font-size:40px;margin-bottom:8px;">🕌</div><h3 style="font-size:15px;">No Masjid Services Listed</h3><p class="ynj-text-muted">This mosque hasn\'t listed their services yet (nikkah, funeral, counselling, etc.)</p></div>';
-                    return;
-                }
-                el.innerHTML = services.map(function(s) {
-                    var icon = svcIcons[(s.service_type||'').toLowerCase()] || '🕌';
-                    var rate = s.hourly_rate_pence > 0 ? '\u00a3' + (s.hourly_rate_pence/100).toFixed(0) : 'Free / Contact';
-                    return '<div class="ynj-svc-card">' +
-                        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
-                        '<div style="width:40px;height:40px;border-radius:10px;background:#e8f4f8;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">' + icon + '</div>' +
-                        '<div><span class="ynj-svc-type">' + (s.service_type || 'Service') + '</span>' +
-                        '<h3 style="margin:0;">' + s.provider_name + '</h3></div></div>' +
-                        (s.description ? '<p class="ynj-text-muted" style="margin:6px 0;line-height:1.4;">' + s.description + '</p>' : '') +
-                        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">' +
-                        '<span style="font-size:12px;font-weight:700;color:#00ADEF;background:#e8f4f8;padding:3px 10px;border-radius:6px;">' + rate + '</span>' +
-                        (s.area_covered ? '<span style="font-size:12px;color:#6b8fa3;background:#f0f4f8;padding:3px 10px;border-radius:6px;">📍 ' + s.area_covered + '</span>' : '') +
-                        '</div>' +
-                        '<div style="display:flex;gap:8px;margin-top:10px;">' +
-                        (s.phone ? '<a href="tel:' + s.phone + '" class="ynj-book-btn" style="font-size:12px;padding:6px 14px;">📞 Enquire</a>' : '') +
-                        (s.email ? '<a href="mailto:' + s.email + '" class="ynj-book-btn ynj-book-btn--outline" style="font-size:12px;padding:6px 14px;">✉️ Email</a>' : '') +
-                        (!s.phone && !s.email ? '<a href="/mosque/' + slug + '/contact" class="ynj-book-btn" style="font-size:12px;padding:6px 14px;">📝 Enquire via Masjid</a>' : '') +
-                        '</div></div>';
                 }).join('');
             }
 
@@ -3673,6 +3683,11 @@ class YNJ_Renderer {
                         <button class="ynj-btn ynj-btn--outline" id="save-prefs" type="button" style="width:100%;justify-content:center;">Save Preferences</button>
                     </section>
 
+                    <section class="ynj-card" id="subs-section">
+                        <h3 class="ynj-card__title">🔔 My Mosque Subscriptions</h3>
+                        <div id="subs-list"><p class="ynj-text-muted">Loading...</p></div>
+                    </section>
+
                     <section class="ynj-card">
                         <h3 class="ynj-card__title">My Bookings (${bookings.length})</h3>
                         <div class="ynj-feed" id="bookings-list">
@@ -3712,7 +3727,58 @@ class YNJ_Renderer {
                     btn.disabled = false; btn.textContent = 'Save Preferences';
                     if (resp.ok) { btn.textContent = 'Saved ✓'; setTimeout(()=>{ btn.textContent = 'Save Preferences'; }, 2000); }
                 });
+
+                // Load subscriptions
+                loadSubscriptions();
             }
+
+            async function loadSubscriptions() {
+                const resp = await fetch(`${API}/auth/subscriptions`, {headers}).then(r=>r.json()).catch(()=>({subscriptions:[]}));
+                const subs = resp.subscriptions || [];
+                const el = document.getElementById('subs-list');
+                if (!subs.length) {
+                    el.innerHTML = '<p class="ynj-text-muted">Not subscribed to any mosques yet. Visit a mosque page and tap Subscribe.</p>';
+                    return;
+                }
+                el.innerHTML = subs.map(s => {
+                    const prefToggles = [
+                        {key:'notify_events', label:'Events', icon:'📅', val:s.notify_events},
+                        {key:'notify_classes', label:'Classes', icon:'🎓', val:s.notify_classes},
+                        {key:'notify_announcements', label:'Updates', icon:'📢', val:s.notify_announcements},
+                        {key:'notify_live', label:'Live', icon:'🔴', val:s.notify_live},
+                        {key:'notify_fundraising', label:'Fundraise', icon:'❤️', val:s.notify_fundraising},
+                    ];
+                    const toggles = prefToggles.map(p =>
+                        '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">' +
+                        '<input type="checkbox" data-mosque="'+s.mosque_id+'" data-pref="'+p.key+'" '+(p.val?'checked':'')+' onchange="updateSubPref(this)" style="width:14px;height:14px;accent-color:#00ADEF;">' +
+                        p.icon + ' ' + p.label + '</label>'
+                    ).join('');
+                    return '<div style="padding:12px 0;border-bottom:1px solid #f0f0f0;">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+                        '<div><strong style="font-size:14px;">' + s.mosque_name + '</strong>' +
+                        (s.mosque_city ? '<br><span class="ynj-text-muted" style="font-size:12px;">' + s.mosque_city + '</span>' : '') + '</div>' +
+                        '<button onclick="unsubMosque('+s.mosque_id+',this)" style="font-size:11px;color:#dc2626;background:none;border:1px solid #fecaca;padding:4px 10px;border-radius:6px;cursor:pointer;">Unsubscribe</button>' +
+                        '</div>' +
+                        '<div style="display:flex;gap:12px;flex-wrap:wrap;">' + toggles + '</div>' +
+                        '</div>';
+                }).join('');
+            }
+
+            window.updateSubPref = async function(el) {
+                const mosqueId = el.dataset.mosque;
+                const pref = el.dataset.pref;
+                const body = {}; body[pref] = el.checked ? 1 : 0;
+                await fetch(`${API}/auth/subscriptions/${mosqueId}`, {
+                    method: 'PUT', headers, body: JSON.stringify(body)
+                });
+            };
+
+            window.unsubMosque = async function(mosqueId, btn) {
+                if (!confirm('Unsubscribe from this mosque?')) return;
+                btn.disabled = true; btn.textContent = '...';
+                await fetch(`${API}/auth/subscriptions/${mosqueId}`, {method:'DELETE', headers});
+                loadSubscriptions();
+            };
 
             load();
         })();
