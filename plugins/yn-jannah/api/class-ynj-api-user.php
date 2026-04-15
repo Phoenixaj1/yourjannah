@@ -60,6 +60,20 @@ class YNJ_API_User {
             'callback'            => [ __CLASS__, 'save_push' ],
             'permission_callback' => [ 'YNJ_User_Auth', 'user_check' ],
         ] );
+
+        // POST /auth/forgot-password — request reset email
+        register_rest_route( self::NS, '/auth/forgot-password', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'forgot_password' ],
+            'permission_callback' => '__return_true',
+        ] );
+
+        // POST /auth/reset-password — reset with key
+        register_rest_route( self::NS, '/auth/reset-password', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'reset_password' ],
+            'permission_callback' => '__return_true',
+        ] );
     }
 
     public static function handle_register( \WP_REST_Request $request ) {
@@ -267,6 +281,69 @@ class YNJ_API_User {
             'distance_miles' => round( $distance_mi, 1 ),
             'message'        => "Verified as $level_label of " . $mosque->name,
         ] );
+    }
+
+    public static function forgot_password( \WP_REST_Request $request ) {
+        $data  = $request->get_json_params();
+        $email = sanitize_email( $data['email'] ?? '' );
+
+        if ( ! is_email( $email ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Valid email required.' ], 400 );
+        }
+
+        $user = get_user_by( 'email', $email );
+        if ( ! $user ) {
+            // Don't reveal if email exists
+            return new \WP_REST_Response( [ 'ok' => true, 'message' => 'If an account exists, a reset link has been sent.' ] );
+        }
+
+        // Generate reset key
+        $key = get_password_reset_key( $user );
+        if ( is_wp_error( $key ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Could not generate reset link.' ], 500 );
+        }
+
+        // Send email
+        $reset_url = home_url( '/reset-password?key=' . $key . '&email=' . rawurlencode( $email ) );
+        $subject   = 'Reset Your Password — YourJannah';
+        $body      = '<div style="font-family:Inter,system-ui,sans-serif;max-width:500px;margin:0 auto;padding:20px;">'
+            . '<div style="background:linear-gradient(135deg,#0a1628,#00ADEF);color:#fff;padding:20px;border-radius:12px 12px 0 0;text-align:center;">'
+            . '<h2 style="margin:0;">YourJannah</h2></div>'
+            . '<div style="background:#fff;border:1px solid #e5e5e5;border-top:none;padding:24px;border-radius:0 0 12px 12px;">'
+            . '<h3>Password Reset</h3>'
+            . '<p>Click the button below to reset your password:</p>'
+            . '<a href="' . esc_url( $reset_url ) . '" style="display:inline-block;background:#00ADEF;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin:16px 0;">Reset Password</a>'
+            . '<p style="font-size:13px;color:#999;">This link expires in 24 hours. If you didn\'t request this, ignore this email.</p>'
+            . '</div></div>';
+
+        add_filter( 'wp_mail_content_type', function() { return 'text/html'; } );
+        wp_mail( $email, $subject, $body );
+        remove_filter( 'wp_mail_content_type', function() { return 'text/html'; } );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'message' => 'If an account exists, a reset link has been sent.' ] );
+    }
+
+    public static function reset_password( \WP_REST_Request $request ) {
+        $data     = $request->get_json_params();
+        $email    = sanitize_email( $data['email'] ?? '' );
+        $key      = sanitize_text_field( $data['key'] ?? '' );
+        $password = $data['password'] ?? '';
+
+        if ( ! $email || ! $key || strlen( $password ) < 6 ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Email, key, and new password (6+ chars) required.' ], 400 );
+        }
+
+        $wp_user = get_user_by( 'email', $email );
+        $login   = $wp_user ? $wp_user->user_login : '';
+        $user    = check_password_reset_key( $key, $login );
+
+        if ( is_wp_error( $user ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Invalid or expired reset link.' ], 400 );
+        }
+
+        wp_set_password( $password, $user->ID );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'message' => 'Password reset. You can now sign in.' ] );
     }
 
     public static function save_push( \WP_REST_Request $request ) {

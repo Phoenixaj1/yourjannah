@@ -3637,7 +3637,12 @@ class YNJ_Renderer {
                 </form>
                 <button class="ynj-btn" id="login-btn" type="button" style="width:100%;justify-content:center;margin-top:16px;">Sign In</button>
                 <p class="ynj-text-muted" id="login-error" style="margin-top:8px;text-align:center;"></p>
-                <p style="text-align:center;margin-top:16px;font-size:13px;">Don't have an account? <a href="/register" style="font-weight:700;">Create one</a></p>
+                <p style="text-align:center;margin-top:12px;font-size:13px;"><a href="/forgot-password" style="color:#00ADEF;">Forgot password?</a></p>
+                <p style="text-align:center;margin-top:8px;font-size:13px;">Don't have an account? <a href="/register" style="font-weight:700;">Create one</a></p>
+                <div style="border-top:1px solid #eee;margin-top:16px;padding-top:16px;text-align:center;">
+                    <p style="font-size:12px;color:#6b8fa3;margin-bottom:8px;">Are you a mosque admin?</p>
+                    <a href="/dashboard" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#00ADEF;">🕌 Mosque Admin Dashboard</a>
+                </div>
             </section>
         </main>
         <script>
@@ -4359,6 +4364,132 @@ class YNJ_Renderer {
                 document.getElementById('patron-cta').style.display = 'none';
             }
         })();
+        </script>
+        </body></html>
+        <?php
+        exit;
+    }
+
+    /* ================================================================== */
+    /*  PAGE: Forgot Password                                             */
+    /* ================================================================== */
+
+    public static function render_forgot_password(): void {
+        self::page_head( 'Forgot Password — YourJannah', 'Request a password reset link.' );
+        ?>
+        <?php self::render_header( 'account' ); ?>
+        <main class="ynj-main" style="padding-top:24px;">
+            <section class="ynj-card" style="text-align:center;padding:32px 20px 20px;">
+                <div style="font-size:36px;margin-bottom:8px;">🔑</div>
+                <h2 style="font-size:20px;font-weight:700;margin-bottom:4px;">Forgot Password</h2>
+                <p class="ynj-text-muted" style="margin-bottom:8px;">Enter your email and we'll send you a reset link.</p>
+            </section>
+            <section class="ynj-card" id="forgot-form-section">
+                <form id="forgot-form" class="ynj-form">
+                    <div class="ynj-field"><label>Email</label><input type="email" name="email" required placeholder="your@email.com"></div>
+                </form>
+                <button class="ynj-btn" id="forgot-btn" type="button" style="width:100%;justify-content:center;margin-top:16px;">Send Reset Link</button>
+                <p class="ynj-text-muted" id="forgot-msg" style="margin-top:8px;text-align:center;"></p>
+                <p style="text-align:center;margin-top:16px;font-size:13px;">Remember your password? <a href="/login" style="font-weight:700;">Sign in</a></p>
+            </section>
+        </main>
+        <?php self::render_bottom_nav(); ?>
+        <script>
+        document.getElementById('forgot-btn').addEventListener('click', async function() {
+            const btn = this; const form = document.getElementById('forgot-form');
+            const email = form.querySelector('[name="email"]').value.trim();
+            if (!email) { document.getElementById('forgot-msg').textContent = 'Please enter your email.'; return; }
+            btn.disabled = true; btn.textContent = 'Sending...';
+            try {
+                const resp = await fetch('/wp-json/ynj/v1/auth/forgot-password', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({email})
+                });
+                const data = await resp.json();
+                const msg = document.getElementById('forgot-msg');
+                if (data.ok) {
+                    msg.style.color = '#16a34a';
+                    msg.textContent = data.message || 'If an account exists, a reset link has been sent.';
+                    btn.textContent = 'Sent';
+                } else {
+                    msg.style.color = '#dc2626';
+                    msg.textContent = data.error || 'Something went wrong.';
+                    btn.disabled = false; btn.textContent = 'Send Reset Link';
+                }
+            } catch(e) {
+                document.getElementById('forgot-msg').textContent = 'Network error.';
+                btn.disabled = false; btn.textContent = 'Send Reset Link';
+            }
+        });
+        </script>
+        </body></html>
+        <?php
+        exit;
+    }
+
+    /* ================================================================== */
+    /*  PAGE: Reset Password                                              */
+    /* ================================================================== */
+
+    public static function render_reset_password(): void {
+        self::page_head( 'Reset Password — YourJannah', 'Set a new password for your account.' );
+        ?>
+        <?php self::render_header( 'account' ); ?>
+        <main class="ynj-main" style="padding-top:24px;">
+            <section class="ynj-card" style="text-align:center;padding:32px 20px 20px;">
+                <div style="font-size:36px;margin-bottom:8px;">🔒</div>
+                <h2 style="font-size:20px;font-weight:700;margin-bottom:4px;">Reset Password</h2>
+                <p class="ynj-text-muted" style="margin-bottom:8px;">Enter your new password below.</p>
+            </section>
+            <section class="ynj-card" id="reset-form-section">
+                <form id="reset-form" class="ynj-form">
+                    <div class="ynj-field"><label>New Password</label><input type="password" name="password" required placeholder="Min 6 characters"></div>
+                    <div class="ynj-field"><label>Confirm Password</label><input type="password" name="password_confirm" required placeholder="Repeat password"></div>
+                </form>
+                <button class="ynj-btn" id="reset-btn" type="button" style="width:100%;justify-content:center;margin-top:16px;">Reset Password</button>
+                <p class="ynj-text-muted" id="reset-msg" style="margin-top:8px;text-align:center;"></p>
+            </section>
+        </main>
+        <?php self::render_bottom_nav(); ?>
+        <script>
+        document.getElementById('reset-btn').addEventListener('click', async function() {
+            const btn = this; const form = document.getElementById('reset-form');
+            const password = form.querySelector('[name="password"]').value;
+            const confirm = form.querySelector('[name="password_confirm"]').value;
+            const msg = document.getElementById('reset-msg');
+
+            if (!password || password.length < 6) { msg.textContent = 'Password must be at least 6 characters.'; return; }
+            if (password !== confirm) { msg.textContent = 'Passwords do not match.'; return; }
+
+            // Read key and email from URL params
+            const params = new URLSearchParams(window.location.search);
+            const key = params.get('key');
+            const email = params.get('email');
+
+            if (!key || !email) { msg.textContent = 'Invalid reset link. Please request a new one.'; return; }
+
+            btn.disabled = true; btn.textContent = 'Resetting...';
+            try {
+                const resp = await fetch('/wp-json/ynj/v1/auth/reset-password', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({email, key, password})
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    msg.style.color = '#16a34a';
+                    msg.textContent = data.message || 'Password reset. Redirecting to login...';
+                    btn.textContent = 'Done';
+                    setTimeout(() => { window.location.href = '/login'; }, 2000);
+                } else {
+                    msg.style.color = '#dc2626';
+                    msg.textContent = data.error || 'Reset failed.';
+                    btn.disabled = false; btn.textContent = 'Reset Password';
+                }
+            } catch(e) {
+                msg.textContent = 'Network error.';
+                btn.disabled = false; btn.textContent = 'Reset Password';
+            }
+        });
         </script>
         </body></html>
         <?php

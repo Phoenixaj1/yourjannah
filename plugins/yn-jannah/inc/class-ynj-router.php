@@ -33,6 +33,9 @@ class YNJ_Router {
             return;
         }
 
+        // Reset status to 200 for our custom routes (WP defaults to 404 for unknown paths)
+        status_header( 200 );
+
         $path = self::get_request_path();
 
         // ---- Static assets served with correct content types ----
@@ -119,6 +122,18 @@ class YNJ_Router {
 
         if ( '/profile' === $path ) {
             YNJ_Renderer::render_profile();
+            exit;
+        }
+
+        // ---- Password reset pages ----
+
+        if ( '/forgot-password' === $path ) {
+            YNJ_Renderer::render_forgot_password();
+            exit;
+        }
+
+        if ( '/reset-password' === $path ) {
+            YNJ_Renderer::render_reset_password();
             exit;
         }
 

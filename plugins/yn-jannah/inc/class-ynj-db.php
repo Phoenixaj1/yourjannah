@@ -49,6 +49,41 @@ class YNJ_DB {
         }
 
         update_option( 'ynj_db_version', self::SCHEMA_VERSION );
+
+        // Add composite indexes for production performance
+        self::add_performance_indexes();
+    }
+
+    /**
+     * Add composite indexes for common query patterns.
+     * Safe to call multiple times — checks existence first.
+     */
+    public static function add_performance_indexes() {
+        global $wpdb;
+
+        $indexes = [
+            [ self::table( 'events' ),               'idx_events_mosque_status_date',  'mosque_id, status, event_date' ],
+            [ self::table( 'announcements' ),         'idx_ann_mosque_status',          'mosque_id, status, published_at' ],
+            [ self::table( 'classes' ),               'idx_classes_mosque_status_cat',  'mosque_id, status, category' ],
+            [ self::table( 'masjid_services' ),       'idx_msvc_mosque_status',         'mosque_id, status' ],
+            [ self::table( 'madrassah_attendance' ),  'idx_att_student_date',           'student_id, attendance_date' ],
+            [ self::table( 'madrassah_fees' ),        'idx_fees_mosque_status',         'mosque_id, status' ],
+            [ self::table( 'user_subscriptions' ),    'idx_usub_user_status',           'user_id, status' ],
+            [ self::table( 'patrons' ),               'idx_patrons_mosque_status',      'mosque_id, status' ],
+        ];
+
+        foreach ( $indexes as $idx ) {
+            $table = $idx[0];
+            $name  = $idx[1];
+            $cols  = $idx[2];
+            $exists = $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND INDEX_NAME = %s",
+                $table, $name
+            ) );
+            if ( ! $exists ) {
+                $wpdb->query( "ALTER TABLE `$table` ADD INDEX `$name` ($cols)" ); // phpcs:ignore
+            }
+        }
     }
 
     /**
