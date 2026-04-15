@@ -60,6 +60,14 @@ class YNJ_Renderer {
 
         <main class="ynj-main">
 
+            <!-- Sponsor Ticker -->
+            <div class="ynj-ticker" id="sponsor-ticker" style="display:none;">
+                <span class="ynj-ticker__label">⭐ Sponsors</span>
+                <div class="ynj-ticker__track">
+                    <div class="ynj-ticker__slide" id="ticker-content"></div>
+                </div>
+            </div>
+
             <!-- Travel Settings (inline, compact) -->
             <div class="ynj-travel-settings" id="travel-settings" style="display:none;">
                 <div class="ynj-travel-settings__row">
@@ -312,6 +320,28 @@ class YNJ_Renderer {
                         const m = resp.mosque || resp;
                         mosqueData = m;
                         document.getElementById('mosque-name').textContent = m.name || slug;
+
+                        // Sponsor ticker
+                        fetch(`${API}/mosques/${slug}/directory`)
+                            .then(r => r.json())
+                            .then(dirData => {
+                                const biz = dirData.businesses || [];
+                                if (biz.length) {
+                                    const ticker = document.getElementById('sponsor-ticker');
+                                    const content = document.getElementById('ticker-content');
+                                    // Duplicate items for seamless loop
+                                    const items = biz.map((b, i) =>
+                                        `<a href="/mosque/${slug}/sponsors" class="ynj-ticker__item"><span class="ynj-ticker__rank">#${i+1}</span>${b.business_name}<span class="ynj-ticker__cat">${b.category}</span></a>`
+                                    ).join('');
+                                    content.innerHTML = items + items; // duplicate for seamless scroll
+                                    ticker.style.display = '';
+                                    // Adjust speed based on content width
+                                    const width = content.scrollWidth / 2;
+                                    const speed = Math.max(10, Math.round(width / 40));
+                                    content.style.animationDuration = speed + 's';
+                                }
+                            })
+                            .catch(() => {});
 
                         // Donate button — link to DonationForMasjid
                         const dfmSlug = m.dfm_slug || m.slug || slug;
@@ -2882,6 +2912,29 @@ img,svg{display:block;max-width:100%;}
 .ynj-leave-by{display:flex;align-items:center;gap:4px;font-weight:600;}
 .ynj-leave-by svg{display:inline;}
 .ynj-travel-dist{opacity:.7;}
+
+/* Sponsor Ticker */
+.ynj-ticker{
+    display:flex;align-items:center;gap:8px;
+    background:rgba(255,255,255,.7);border:1px solid rgba(0,173,239,.12);
+    border-radius:10px;padding:8px 12px;margin-bottom:10px;overflow:hidden;
+}
+.ynj-ticker__label{font-size:10px;font-weight:700;color:#f59e0b;white-space:nowrap;flex-shrink:0;}
+.ynj-ticker__track{flex:1;overflow:hidden;position:relative;height:18px;}
+.ynj-ticker__slide{
+    display:flex;gap:24px;white-space:nowrap;font-size:12px;font-weight:600;
+    color:<?php echo self::COLOR_TEXT; ?>;position:absolute;top:0;left:0;
+    animation:tickerScroll 20s linear infinite;
+}
+.ynj-ticker__slide a{color:<?php echo self::COLOR_TEXT; ?>;text-decoration:none;}
+.ynj-ticker__slide a:hover{color:<?php echo self::COLOR_ACCENT; ?>;}
+.ynj-ticker__item{display:inline-flex;align-items:center;gap:6px;}
+.ynj-ticker__item .ynj-ticker__rank{color:#f59e0b;font-size:11px;}
+.ynj-ticker__item .ynj-ticker__cat{color:<?php echo self::COLOR_TEXT_MUTED; ?>;font-size:10px;font-weight:500;}
+@keyframes tickerScroll{
+    0%{transform:translateX(0)}
+    100%{transform:translateX(-50%)}
+}
 
 /* Travel Settings */
 .ynj-travel-settings{margin-bottom:10px;}
