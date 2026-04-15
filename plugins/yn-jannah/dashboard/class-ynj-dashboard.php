@@ -223,14 +223,180 @@ async function renderDashboard() {
     ));
 }
 
-// ── Placeholder pages ──
-async function renderPrayers() { render(shell('<div class="d-header"><h1>Prayer Times</h1></div><div class="d-card"><p>Prayer time management coming in next update.</p></div>')); }
-async function renderAnnouncements() { render(shell('<div class="d-header"><h1>Announcements</h1></div><div class="d-card"><p>Announcement management coming in next update.</p></div>')); }
-async function renderEvents() { render(shell('<div class="d-header"><h1>Events</h1></div><div class="d-card"><p>Event management coming in next update.</p></div>')); }
-async function renderBookings() { render(shell('<div class="d-header"><h1>Bookings</h1></div><div class="d-card"><p>Booking management coming in next update.</p></div>')); }
-async function renderRooms() { render(shell('<div class="d-header"><h1>Rooms</h1></div><div class="d-card"><p>Room management coming in next update.</p></div>')); }
-async function renderEnquiries() { render(shell('<div class="d-header"><h1>Enquiries</h1></div><div class="d-card"><p>Enquiry management coming in next update.</p></div>')); }
-async function renderSubscribers() { render(shell('<div class="d-header"><h1>Subscribers</h1></div><div class="d-card"><p>Subscriber management coming in next update.</p></div>')); }
+// ── Prayer Times ──
+async function renderPrayers() {
+    if (!mosque) await loadMosque();
+    var today = new Date().toISOString().split('T')[0];
+    render(shell('<div class="d-header"><h1>Prayer Times</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('mosques/' + mosque.id + '/prayers?date=' + today);
+    var times = res.times || {};
+    var labels = {fajr:'Fajr',dhuhr:'Dhuhr',asr:'Asr',maghrib:'Maghrib',isha:'Isha'};
+    var rows = Object.entries(labels).map(function(e) {
+        var k=e[0],v=e[1]; return '<tr><td><strong>'+v+'</strong></td><td>'+fmtTime(times[k])+'</td><td><input type="time" id="jt_'+k+'" value="'+(times[k+'_jamat']?times[k+'_jamat'].substring(0,5):'')+'" style="width:120px"></td></tr>';
+    }).join('');
+    render(shell(
+        '<div class="d-header"><h1>Prayer Times</h1><span class="d-badge d-badge--blue">'+today+'</span></div>' +
+        '<div class="d-card"><h3 style="margin-bottom:12px">Jamat Time Overrides</h3><p style="margin-bottom:16px;color:var(--text-dim);font-size:13px">Adhan times are from Aladhan API. Set your jamat (congregation) times below.</p>' +
+        '<table class="d-table"><thead><tr><th>Prayer</th><th>Adhan</th><th>Jamat Time</th></tr></thead><tbody>'+rows+'</tbody></table>' +
+        '<div class="d-field" style="margin-top:16px"><label>Date</label><input type="date" id="pt_date" value="'+today+'"></div>' +
+        '<button class="d-btn d-btn--primary" id="pt-save" onclick="savePrayers()"><span class="btn-text">Save Jamat Times</span><span class="spinner"></span></button></div>'
+    ));
+}
+async function savePrayers() {
+    btn('#pt-save',true);
+    var times={};['fajr','dhuhr','asr','maghrib','isha'].forEach(function(k){var v=$('#jt_'+k);if(v&&v.value)times[k+'_jamat']=v.value+':00';});
+    var res=await api('admin/prayers',{method:'PUT',body:{date:$('#pt_date').value,times:times}});
+    btn('#pt-save',false);
+    if(res.ok)toast('Jamat times saved!');else toast(res.error||'Failed.','error');
+}
+
+// ── Announcements ──
+async function renderAnnouncements() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Announcements</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/announcements') || {};
+    // Fallback: use public endpoint
+    if (!res.announcements) { res = await api('mosques/' + mosque.id + '/announcements'); }
+    var list = res.announcements || [];
+    var rows = list.map(function(a) {
+        return '<tr><td><strong>'+esc(a.title)+'</strong></td><td><span class="d-badge d-badge--'+(a.status==='published'?'green':'gray')+'">'+esc(a.status)+'</span></td><td>'+(a.pinned?'📌':'')+'</td><td>'+fmtDate(a.published_at)+'</td><td>'+(a.push_sent?'✅':'—')+'</td><td><button class="d-btn d-btn--danger d-btn--sm" onclick="deleteAnn('+a.id+')">Delete</button></td></tr>';
+    }).join('');
+    render(shell(
+        '<div class="d-header"><h1>Announcements</h1><button class="d-btn d-btn--primary d-btn--sm" onclick="showAnnForm()">+ New</button></div>' +
+        '<div class="d-card" id="ann-form" style="display:none"><h3 style="margin-bottom:12px">New Announcement</h3>' +
+        '<div class="d-field"><label>Title</label><input type="text" id="ann_title"></div>' +
+        '<div class="d-field"><label>Body</label><textarea id="ann_body" rows="4"></textarea></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Type</label><select id="ann_type"><option>general</option><option>urgent</option><option>event</option></select></div><div class="d-field"><label>Pinned</label><select id="ann_pinned"><option value="0">No</option><option value="1">Yes</option></select></div><div class="d-field"><label>Publish</label><select id="ann_publish"><option value="1">Now</option><option value="0">Draft</option></select></div></div>' +
+        '<div style="display:flex;gap:8px"><button class="d-btn d-btn--primary" id="ann-save" onclick="saveAnn()"><span class="btn-text">Save & Publish</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="$(\'#ann-form\').style.display=\'none\'">Cancel</button></div></div>' +
+        '<div class="d-card"><table class="d-table"><thead><tr><th>Title</th><th>Status</th><th>Pin</th><th>Date</th><th>Push</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" style="color:var(--text-dim)">No announcements yet.</td></tr>')+'</tbody></table></div>'
+    ));
+}
+function showAnnForm(){$('#ann-form').style.display='';}
+async function saveAnn(){
+    btn('#ann-save',true);
+    var res=await api('admin/announcements',{method:'POST',body:{title:$('#ann_title').value,body:$('#ann_body').value,type:$('#ann_type').value,pinned:parseInt($('#ann_pinned').value),publish:parseInt($('#ann_publish').value)}});
+    btn('#ann-save',false);
+    if(res.ok){toast('Announcement created!');renderAnnouncements();}else toast(res.error||'Failed.','error');
+}
+async function deleteAnn(id){if(!confirm('Delete this announcement?'))return;await api('admin/announcements/'+id,{method:'DELETE'});toast('Deleted.');renderAnnouncements();}
+
+// ── Events ──
+async function renderEvents() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Events</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/events') || {};
+    if (!res.events) { res = await api('mosques/' + mosque.id + '/events'); }
+    var list = res.events || [];
+    var rows = list.map(function(e) {
+        return '<tr><td><strong>'+esc(e.title)+'</strong></td><td>'+esc(e.event_date||'')+'</td><td>'+fmtTime(e.start_time)+'</td><td>'+esc(e.event_type||'')+'</td><td>'+e.registered_count+'/'+(e.max_capacity||'∞')+'</td><td><span class="d-badge d-badge--'+(e.status==='published'?'green':'gray')+'">'+esc(e.status)+'</span></td><td><button class="d-btn d-btn--danger d-btn--sm" onclick="deleteEvent('+e.id+')">Del</button></td></tr>';
+    }).join('');
+    render(shell(
+        '<div class="d-header"><h1>Events</h1><button class="d-btn d-btn--primary d-btn--sm" onclick="showEventForm()">+ New Event</button></div>' +
+        '<div class="d-card" id="ev-form" style="display:none"><h3 style="margin-bottom:12px">New Event</h3>' +
+        '<div class="d-field"><label>Title</label><input type="text" id="ev_title"></div>' +
+        '<div class="d-field"><label>Description</label><textarea id="ev_desc" rows="3"></textarea></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Date</label><input type="date" id="ev_date"></div><div class="d-field"><label>Start</label><input type="time" id="ev_start"></div><div class="d-field"><label>End</label><input type="time" id="ev_end"></div></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Location</label><input type="text" id="ev_location"></div><div class="d-field"><label>Type</label><select id="ev_type"><option>talk</option><option>class</option><option>course</option><option>workshop</option><option>community</option><option>sports</option><option>competition</option><option>youth</option></select></div><div class="d-field"><label>Capacity</label><input type="number" id="ev_cap" value="0"></div></div>' +
+        '<div class="d-grid d-grid-2"><div class="d-field"><label>Ticket Price (pence, 0=free)</label><input type="number" id="ev_price" value="0"></div><div class="d-field"><label>Status</label><select id="ev_status"><option>published</option><option>draft</option></select></div></div>' +
+        '<div style="display:flex;gap:8px"><button class="d-btn d-btn--primary" id="ev-save" onclick="saveEvent()"><span class="btn-text">Create Event</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="$(\'#ev-form\').style.display=\'none\'">Cancel</button></div></div>' +
+        '<div class="d-card"><table class="d-table"><thead><tr><th>Title</th><th>Date</th><th>Time</th><th>Type</th><th>RSVP</th><th>Status</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="7" style="color:var(--text-dim)">No events.</td></tr>')+'</tbody></table></div>'
+    ));
+}
+function showEventForm(){$('#ev-form').style.display='';}
+async function saveEvent(){
+    btn('#ev-save',true);
+    var res=await api('admin/events',{method:'POST',body:{title:$('#ev_title').value,description:$('#ev_desc').value,event_date:$('#ev_date').value,start_time:$('#ev_start').value+':00',end_time:$('#ev_end').value+':00',location:$('#ev_location').value,event_type:$('#ev_type').value,max_capacity:parseInt($('#ev_cap').value),ticket_price_pence:parseInt($('#ev_price').value),requires_booking:1,status:$('#ev_status').value}});
+    btn('#ev-save',false);
+    if(res.ok){toast('Event created!');renderEvents();}else toast(res.error||'Failed.','error');
+}
+async function deleteEvent(id){if(!confirm('Delete this event?'))return;await api('admin/events/'+id,{method:'DELETE'});toast('Deleted.');renderEvents();}
+
+// ── Bookings ──
+async function renderBookings() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Bookings</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/bookings');
+    var list = res.bookings || [];
+    var rows = list.map(function(b) {
+        var type = b.event_id ? 'Event' : (b.room_id ? 'Room' : '—');
+        var badge = b.status==='confirmed'?'green':(b.status==='pending'||b.status==='pending_payment'?'yellow':'red');
+        return '<tr><td><strong>'+esc(b.user_name)+'</strong><br><span style="font-size:11px;color:var(--text-dim)">'+esc(b.user_email)+'</span></td><td>'+type+'</td><td>'+esc(b.booking_date)+'</td><td>'+fmtTime(b.start_time)+' — '+fmtTime(b.end_time)+'</td><td><span class="d-badge d-badge--'+badge+'">'+esc(b.status)+'</span></td><td>'+(b.status==='pending'?'<button class="d-btn d-btn--primary d-btn--sm" onclick="updateBooking('+b.id+',\'confirmed\')">Approve</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="updateBooking('+b.id+',\'cancelled\')">Reject</button>':'')+'</td></tr>';
+    }).join('');
+    render(shell(
+        '<div class="d-header"><h1>Bookings</h1></div>' +
+        '<div class="d-card"><table class="d-table"><thead><tr><th>Guest</th><th>Type</th><th>Date</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" style="color:var(--text-dim)">No bookings.</td></tr>')+'</tbody></table></div>'
+    ));
+}
+async function updateBooking(id,status){await api('admin/bookings/'+id,{method:'PUT',body:{status:status}});toast('Booking '+status+'.');renderBookings();}
+
+// ── Rooms ──
+async function renderRooms() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Rooms</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/rooms');
+    var list = res.rooms || [];
+    var rows = list.map(function(r) {
+        return '<tr><td><strong>'+esc(r.name)+'</strong></td><td>'+r.capacity+'</td><td>£'+(r.hourly_rate_pence/100).toFixed(0)+'/hr</td><td>£'+(r.daily_rate_pence/100).toFixed(0)+'/day</td><td><span class="d-badge d-badge--'+(r.status==='active'?'green':'gray')+'">'+esc(r.status)+'</span></td><td><button class="d-btn d-btn--danger d-btn--sm" onclick="deleteRoom('+r.id+')">Del</button></td></tr>';
+    }).join('');
+    render(shell(
+        '<div class="d-header"><h1>Rooms</h1><button class="d-btn d-btn--primary d-btn--sm" onclick="showRoomForm()">+ Add Room</button></div>' +
+        '<div class="d-card" id="rm-form" style="display:none"><h3 style="margin-bottom:12px">Add Room</h3>' +
+        '<div class="d-field"><label>Name</label><input type="text" id="rm_name"></div>' +
+        '<div class="d-field"><label>Description</label><textarea id="rm_desc" rows="2"></textarea></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Capacity</label><input type="number" id="rm_cap" value="0"></div><div class="d-field"><label>Hourly Rate (pence)</label><input type="number" id="rm_hourly" value="0"></div><div class="d-field"><label>Daily Rate (pence)</label><input type="number" id="rm_daily" value="0"></div></div>' +
+        '<div style="display:flex;gap:8px"><button class="d-btn d-btn--primary" id="rm-save" onclick="saveRoom()"><span class="btn-text">Add Room</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="$(\'#rm-form\').style.display=\'none\'">Cancel</button></div></div>' +
+        '<div class="d-card"><table class="d-table"><thead><tr><th>Name</th><th>Capacity</th><th>Hourly</th><th>Daily</th><th>Status</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" style="color:var(--text-dim)">No rooms.</td></tr>')+'</tbody></table></div>'
+    ));
+}
+function showRoomForm(){$('#rm-form').style.display='';}
+async function saveRoom(){
+    btn('#rm-save',true);
+    var res=await api('admin/rooms',{method:'POST',body:{name:$('#rm_name').value,description:$('#rm_desc').value,capacity:parseInt($('#rm_cap').value),hourly_rate_pence:parseInt($('#rm_hourly').value),daily_rate_pence:parseInt($('#rm_daily').value)}});
+    btn('#rm-save',false);
+    if(res.ok){toast('Room added!');renderRooms();}else toast(res.error||'Failed.','error');
+}
+async function deleteRoom(id){if(!confirm('Delete this room?'))return;await api('admin/rooms/'+id,{method:'DELETE'});toast('Deleted.');renderRooms();}
+
+// ── Enquiries ──
+async function renderEnquiries() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Enquiries</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/enquiries');
+    var list = res.enquiries || [];
+    var rows = list.map(function(e) {
+        var badge = e.status==='new'?'blue':(e.status==='read'?'yellow':(e.status==='replied'?'green':'gray'));
+        return '<tr><td><strong>'+esc(e.name)+'</strong><br><span style="font-size:11px;color:var(--text-dim)">'+esc(e.email)+'</span></td><td>'+esc(e.subject||'—')+'</td><td><span class="d-badge d-badge--'+badge+'">'+esc(e.status)+'</span></td><td>'+fmtDate(e.created_at)+'</td><td>'+(e.status==='new'?'<button class="d-btn d-btn--secondary d-btn--sm" onclick="markEnquiry('+e.id+',\'read\')">Read</button> ':'')+(e.status!=='replied'?'<button class="d-btn d-btn--primary d-btn--sm" onclick="markEnquiry('+e.id+',\'replied\')">Replied</button>':'')+'</td></tr>' +
+        '<tr><td colspan="5" style="padding:8px 12px;background:#f9fafb;font-size:13px;color:var(--text-dim)">'+esc(e.message)+'</td></tr>';
+    }).join('');
+    render(shell(
+        '<div class="d-header"><h1>Enquiries</h1></div>' +
+        '<div class="d-card"><table class="d-table"><thead><tr><th>From</th><th>Subject</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" style="color:var(--text-dim)">No enquiries.</td></tr>')+'</tbody></table></div>'
+    ));
+}
+async function markEnquiry(id,status){await api('admin/enquiries/'+id,{method:'PUT',body:{status:status}});toast('Marked as '+status+'.');renderEnquiries();}
+
+// ── Subscribers ──
+async function renderSubscribers() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Subscribers</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/subscribers');
+    var list = res.subscribers || [];
+    var total = res.total || list.length;
+    var rows = list.map(function(s) {
+        return '<tr><td><strong>'+esc(s.name||'—')+'</strong></td><td>'+esc(s.email)+'</td><td>'+esc(s.phone||'—')+'</td><td>'+esc(s.device_type||'—')+'</td><td>'+fmtDate(s.subscribed_at)+'</td></tr>';
+    }).join('');
+    render(shell(
+        '<div class="d-header"><h1>Subscribers</h1><span class="d-badge d-badge--green">'+total+' total</span></div>' +
+        '<div class="d-card"><button class="d-btn d-btn--secondary d-btn--sm" onclick="exportCSV()" style="margin-bottom:12px">Export CSV</button>' +
+        '<table class="d-table"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Device</th><th>Subscribed</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" style="color:var(--text-dim)">No subscribers yet.</td></tr>')+'</tbody></table></div>'
+    ));
+}
+function exportCSV(){
+    var table=$('.d-table');if(!table)return;
+    var csv=[];var rows=table.querySelectorAll('tr');
+    rows.forEach(function(r){var cols=[];r.querySelectorAll('th,td').forEach(function(c){cols.push('"'+c.textContent.replace(/"/g,'""')+'"');});csv.push(cols.join(','));});
+    var blob=new Blob([csv.join('\n')],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='subscribers.csv';a.click();
+}
 async function renderSettings() {
     if (!mosque) await loadMosque();
     render(shell(
