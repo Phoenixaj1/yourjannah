@@ -124,6 +124,7 @@ function shell(content) {
         { path: '/rooms', icon: '\ud83c\udfe0', label: 'Rooms' },
         { path: '/enquiries', icon: '\u2709\ufe0f', label: 'Enquiries' },
         { path: '/subscribers', icon: '\ud83d\udc65', label: 'Subscribers' },
+        { path: '/campaigns', icon: '\u2764\ufe0f', label: 'Fundraising' },
         { path: '/settings', icon: '\u2699\ufe0f', label: 'Settings' },
     ];
     var isActive = function(p) { return p === '/' ? hash === '/' : hash.startsWith(p); };
@@ -168,6 +169,7 @@ function route() {
         '/rooms': renderRooms,
         '/enquiries': renderEnquiries,
         '/subscribers': renderSubscribers,
+        '/campaigns': renderCampaigns,
         '/settings': renderSettings,
         '/auth/login': renderLogin,
         '/auth/register': renderRegister,

@@ -60,6 +60,24 @@ class YNJ_Renderer {
 
         <main class="ynj-main">
 
+            <!-- Travel Settings (inline, compact) -->
+            <div class="ynj-travel-settings" id="travel-settings" style="display:none;">
+                <div class="ynj-travel-settings__row">
+                    <select id="mode-select" class="ynj-ts-select" onchange="onModeChange()">
+                        <option value="walk">🚶 Walk</option>
+                        <option value="drive">🚗 Drive</option>
+                        <option value="bike">🚲 Cycle</option>
+                    </select>
+                    <select id="buffer-select" class="ynj-ts-select" onchange="onBufferChange()">
+                        <option value="0">No buffer</option>
+                        <option value="5">+5 min wudhu</option>
+                        <option value="10" selected>+10 min wudhu</option>
+                        <option value="15">+15 min prep</option>
+                        <option value="20">+20 min prep</option>
+                    </select>
+                </div>
+            </div>
+
             <!-- Section 1: Next Prayer Hero -->
             <section class="ynj-card ynj-card--hero" id="next-prayer-card">
                 <p class="ynj-label" id="next-prayer-label">Next Prayer</p>
@@ -73,9 +91,6 @@ class YNJ_Renderer {
                     </div>
                     <span class="ynj-travel-dist" id="travel-dist"></span>
                 </div>
-                <button class="ynj-mode-toggle" id="mode-toggle" onclick="toggleTravelMode()" type="button" style="display:none;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2"/><path d="M10 22l2-7 3 3v7M14 13l2-3-3-3-2 4"/></svg> Walking
-                </button>
                 <div class="ynj-nav-buttons" id="nav-buttons" style="display:none;">
                     <a class="ynj-btn ynj-btn--navigate" id="navigate-walk" href="#" target="_blank" rel="noopener">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2"/><path d="M10 22l2-7 3 3v7M14 13l2-3-3-3-2 4"/></svg>
@@ -87,6 +102,12 @@ class YNJ_Renderer {
                     </a>
                 </div>
             </section>
+
+            <!-- Hadith motivation -->
+            <p class="ynj-hadith" id="hadith-line">
+                <em>&ldquo;Prayer in congregation is twenty-seven times more virtuous than prayer offered alone.&rdquo;</em>
+                <span>— Sahih al-Bukhari 645</span>
+            </p>
 
             <!-- Section 2: View Full Timetable link -->
             <a class="ynj-timetable-link" id="timetable-link" href="#">
@@ -265,7 +286,6 @@ class YNJ_Renderer {
                         `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
 
                     if (userLat != null) {
-                        document.getElementById('mode-toggle').style.display = '';
                         calcTravelFromCoords(lat, lng);
                     } else {
                         showPostcodePrompt(lat, lng);
@@ -412,13 +432,22 @@ class YNJ_Renderer {
                 document.getElementById('next-prayer-time').textContent = timeDisplay;
                 document.getElementById('next-prayer-label').textContent = 'Next Prayer';
 
-                // Urgency colours
+                // Urgency based on leave-by time (jamat - travel - buffer)
                 hero.classList.remove('ynj-hero--urgent','ynj-hero--critical');
-                if (travelMinutes && diffMin <= travelMinutes + 5) {
-                    hero.classList.add('ynj-hero--critical');
-                    document.getElementById('leave-by-text').textContent = 'LEAVE NOW';
-                } else if (travelMinutes && diffMin <= travelMinutes + 15) {
-                    hero.classList.add('ynj-hero--urgent');
+                if (travelMinutes) {
+                    const totalLead = travelMinutes + bufferMinutes;
+                    // Calculate minutes until we need to leave (using jamat time)
+                    const jamatTime = jamatTimes[nextName+'_jamat'] || nextTime;
+                    const [jh,jm] = jamatTime.split(':').map(Number);
+                    const jt = new Date(now); jt.setHours(jh,jm,0,0);
+                    const minsUntilLeave = Math.floor((jt - now) / 60000) - totalLead;
+
+                    if (minsUntilLeave <= 0) {
+                        hero.classList.add('ynj-hero--critical');
+                        document.getElementById('leave-by-text').textContent = '🚨 LEAVE NOW';
+                    } else if (minsUntilLeave <= 10) {
+                        hero.classList.add('ynj-hero--urgent');
+                    }
                 }
 
                 updateLeaveBy();
@@ -430,13 +459,22 @@ class YNJ_Renderer {
                 const prayers = ['fajr','dhuhr','asr','maghrib','isha'];
                 for (const p of prayers) {
                     if (!prayerTimes[p]) continue;
-                    const [h,m] = prayerTimes[p].split(':').map(Number);
+
+                    // Use JAMAT time if available, otherwise adhan
+                    const targetTime = jamatTimes[p+'_jamat'] || prayerTimes[p];
+                    const [h,m] = targetTime.split(':').map(Number);
                     const t = new Date(now); t.setHours(h,m,0,0);
+
                     if (t > now) {
-                        const leave = new Date(t.getTime() - travelMinutes * 60000);
+                        // Leave time = jamat time - travel time - buffer (wudhu/prep)
+                        const totalLeadMin = travelMinutes + bufferMinutes;
+                        const leave = new Date(t.getTime() - totalLeadMin * 60000);
                         const lh = String(leave.getHours()).padStart(2,'0');
                         const lm = String(leave.getMinutes()).padStart(2,'0');
-                        document.getElementById('leave-by-text').textContent = `Leave by ${lh}:${lm}`;
+
+                        const parts = [`Leave by ${lh}:${lm}`];
+                        if (bufferMinutes > 0) parts.push(`(inc. ${bufferMinutes}min prep)`);
+                        document.getElementById('leave-by-text').textContent = parts.join(' ');
                         return;
                     }
                 }
@@ -686,35 +724,47 @@ class YNJ_Renderer {
             }
 
             /* ---- Travel Calculation ---- */
-            let travelMode = localStorage.getItem('ynj_travel_mode') || 'walk'; // 'walk' or 'drive'
+            let travelMode = localStorage.getItem('ynj_travel_mode') || 'walk';
+            let bufferMinutes = parseInt(localStorage.getItem('ynj_buffer_min') || '10');
+            let distanceKm = 0;
+
+            // Speeds: walk ~5km/h, drive ~30km/h urban, bike ~15km/h
+            const modeSpeed = { walk: 12, drive: 2, bike: 4 }; // min per km
+            const modeLabel = { walk: 'walk', drive: 'drive', bike: 'cycle' };
 
             function calcTravelFromCoords(mLat, mLng) {
-                const km = haversine(userLat, userLng, mLat, mLng);
-                const mi = km * 0.621;
-                // Walk: ~5km/h (12 min/km), Drive: ~30km/h (2 min/km) urban avg
-                travelMinutes = travelMode === 'drive'
-                    ? Math.max(1, Math.round(km * 2))
-                    : Math.max(1, Math.round(km * 12));
-                const modeLabel = travelMode === 'drive' ? 'drive' : 'walk';
-                const distText = mi < 0.5 ? `${Math.round(km*1000)}m` : `${mi.toFixed(1)} mi`;
-                document.getElementById('travel-dist').textContent = `${distText} · ~${travelMinutes} min ${modeLabel}`;
+                distanceKm = haversine(userLat, userLng, mLat, mLng);
+                recalcTravel();
+            }
+
+            function recalcTravel() {
+                if (!distanceKm) return;
+                const mi = distanceKm * 0.621;
+                travelMinutes = Math.max(1, Math.round(distanceKm * (modeSpeed[travelMode] || 12)));
+                const distText = mi < 0.5 ? `${Math.round(distanceKm*1000)}m` : `${mi.toFixed(1)} mi`;
+                document.getElementById('travel-dist').textContent = `${distText} · ~${travelMinutes} min ${modeLabel[travelMode]}`;
                 document.getElementById('hero-travel').style.display = '';
+                document.getElementById('travel-settings').style.display = '';
+
+                // Sync dropdowns
+                const modeEl = document.getElementById('mode-select');
+                const bufEl = document.getElementById('buffer-select');
+                if (modeEl) modeEl.value = travelMode;
+                if (bufEl) bufEl.value = bufferMinutes;
+
                 updateLeaveBy();
-                updateModeToggle();
             }
 
-            function updateModeToggle() {
-                const el = document.getElementById('mode-toggle');
-                if (!el) return;
-                el.innerHTML = travelMode === 'walk'
-                    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2"/><path d="M10 22l2-7 3 3v7M14 13l2-3-3-3-2 4"/></svg> Walking'
-                    : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17h14M7 11l2-5h6l2 5M4 17v-3a1 1 0 011-1h14a1 1 0 011 1v3"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/></svg> Driving';
-            }
-
-            window.toggleTravelMode = function() {
-                travelMode = travelMode === 'walk' ? 'drive' : 'walk';
+            window.onModeChange = function() {
+                travelMode = document.getElementById('mode-select').value;
                 localStorage.setItem('ynj_travel_mode', travelMode);
-                if (userLat && mosqueLat) calcTravelFromCoords(mosqueLat, mosqueLng);
+                recalcTravel();
+            };
+
+            window.onBufferChange = function() {
+                bufferMinutes = parseInt(document.getElementById('buffer-select').value) || 0;
+                localStorage.setItem('ynj_buffer_min', bufferMinutes);
+                updateLeaveBy();
             };
 
             function showPostcodePrompt(mLat, mLng) {
@@ -773,7 +823,6 @@ class YNJ_Renderer {
                                     <span id="leave-by-text">Calculating...</span>
                                 </div>
                                 <span class="ynj-travel-dist" id="travel-dist"></span>`;
-                            document.getElementById('mode-toggle').style.display = '';
                             calcTravelFromCoords(mLat, mLng);
                         } else {
                             travelEl.innerHTML = '<span style="font-size:12px;opacity:.7;">Postcode not found. <a href="#" onclick="localStorage.removeItem(\'ynj_user_postcode\');location.reload();return false;" style="color:#fff;text-decoration:underline;">Try again</a></span>';
@@ -1371,6 +1420,103 @@ class YNJ_Renderer {
                         communityList.innerHTML = '<p class="ynj-text-muted">Search failed. Try again.</p>';
                     });
             }
+        })();
+        </script>
+        </body></html>
+        <?php
+        exit;
+    }
+
+    /* ================================================================== */
+    /*  PAGE: Fundraising                                                 */
+    /* ================================================================== */
+
+    public static function render_fundraising( string $slug ): void {
+        self::page_head( 'Fundraising — YourJannah', 'Support your masjid\'s fundraising campaigns.' );
+        ?>
+        <style>
+        .ynj-campaign{background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;border:1px solid rgba(255,255,255,.6);box-shadow:0 2px 12px rgba(0,0,0,.04);}
+        .ynj-campaign__img{width:100%;height:140px;object-fit:cover;background:#e8f4f8;display:flex;align-items:center;justify-content:center;font-size:48px;}
+        .ynj-campaign__body{padding:16px;}
+        .ynj-campaign__body h3{font-size:16px;font-weight:700;margin-bottom:4px;}
+        .ynj-campaign__body p{font-size:13px;color:#555;margin-bottom:12px;line-height:1.4;}
+        .ynj-progress{height:10px;background:#e8f0f4;border-radius:5px;overflow:hidden;margin-bottom:8px;}
+        .ynj-progress__bar{height:100%;border-radius:5px;background:linear-gradient(90deg,#00ADEF,#16a34a);transition:width .6s ease;}
+        .ynj-campaign__stats{display:flex;justify-content:space-between;font-size:12px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;margin-bottom:12px;}
+        .ynj-campaign__stats strong{color:<?php echo self::COLOR_TEXT; ?>;font-size:14px;}
+        .ynj-campaign__cat{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:6px;background:#e8f4f8;color:<?php echo self::COLOR_ACCENT; ?>;margin-bottom:8px;}
+        </style>
+        <header class="ynj-header">
+            <div class="ynj-header__inner">
+                <a href="/" class="ynj-back" aria-label="Back">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                </a>
+                <div class="ynj-logo"><span>Fundraising</span></div>
+            </div>
+        </header>
+        <main class="ynj-main">
+            <div id="campaigns-list">
+                <p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading campaigns...</p>
+            </div>
+        </main>
+        <?php self::render_bottom_nav( 'fundraising', $slug ); ?>
+        <script>
+        (function(){
+            const slug = <?php echo wp_json_encode( $slug ); ?>;
+            document.querySelectorAll('[data-nav-mosque]').forEach(el => {
+                el.href = el.dataset.navMosque.replace('{slug}', slug);
+            });
+
+            const catIcons = {
+                'general':'🕌','welfare':'🤲','expansion':'🏗️','renovation':'🔨',
+                'education':'📖','youth':'👦','sisters':'👩','emergency':'🚨',
+                'equipment':'🛠️','roof':'🏠','heating':'🔥','parking':'🅿️'
+            };
+
+            fetch(`/wp-json/ynj/v1/mosques/${slug}/campaigns`)
+                .then(r => r.json())
+                .then(data => {
+                    const campaigns = data.campaigns || [];
+                    const el = document.getElementById('campaigns-list');
+
+                    if (!campaigns.length) {
+                        el.innerHTML = '<div class="ynj-card" style="text-align:center;padding:40px 20px;"><div style="font-size:48px;margin-bottom:12px;">🕌</div><h3 style="margin-bottom:8px;">No Active Campaigns</h3><p class="ynj-text-muted">This mosque has no fundraising campaigns right now.</p></div>';
+                        return;
+                    }
+
+                    el.innerHTML = campaigns.map(c => {
+                        const icon = catIcons[c.category] || '🕌';
+                        const target = c.target_pence > 0 ? '£' + (c.target_pence/100).toLocaleString() : '';
+                        const raised = '£' + (c.raised_pence/100).toLocaleString();
+                        const pct = c.percentage || 0;
+                        const donors = c.donor_count || 0;
+                        const snippet = (c.description||'').length > 120 ? c.description.slice(0,120)+'...' : (c.description||'');
+                        const donateUrl = c.dfm_link || '#';
+                        const donateTarget = c.dfm_link ? ' target="_blank" rel="noopener"' : '';
+
+                        return `<div class="ynj-campaign">
+                            <div class="ynj-campaign__img">${icon}</div>
+                            <div class="ynj-campaign__body">
+                                <span class="ynj-campaign__cat">${c.category}</span>
+                                <h3>${c.title}</h3>
+                                <p>${snippet}</p>
+                                ${target ? `<div class="ynj-progress"><div class="ynj-progress__bar" style="width:${pct}%"></div></div>` : ''}
+                                <div class="ynj-campaign__stats">
+                                    <div><strong>${raised}</strong> raised${target ? ' of '+target : ''}</div>
+                                    <div><strong>${donors}</strong> donors</div>
+                                    ${pct ? `<div><strong>${pct}%</strong></div>` : ''}
+                                </div>
+                                <a href="${donateUrl}"${donateTarget} class="ynj-btn" style="width:100%;justify-content:center;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                                    Donate Now
+                                </a>
+                            </div>
+                        </div>`;
+                    }).join('');
+                })
+                .catch(() => {
+                    document.getElementById('campaigns-list').innerHTML = '<p class="ynj-text-muted" style="text-align:center;padding:20px;">Could not load campaigns.</p>';
+                });
         })();
         </script>
         </body></html>
@@ -2705,16 +2851,16 @@ img,svg{display:block;max-width:100%;}
 .ynj-leave-by svg{display:inline;}
 .ynj-travel-dist{opacity:.7;}
 
-/* Mode toggle */
-.ynj-mode-toggle{
-    display:inline-flex;align-items:center;gap:5px;
-    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);
-    color:rgba(255,255,255,.85);border-radius:20px;padding:5px 14px;
-    font-size:11px;font-weight:600;cursor:pointer;position:relative;z-index:1;
-    margin:6px auto 4px;font-family:inherit;letter-spacing:.3px;
+/* Travel Settings */
+.ynj-travel-settings{margin-bottom:10px;}
+.ynj-travel-settings__row{display:flex;gap:8px;}
+.ynj-ts-select{
+    flex:1;padding:8px 10px;border:1px solid #e0e8ed;border-radius:10px;
+    font-size:13px;font-family:inherit;background:#fff;color:<?php echo self::COLOR_TEXT; ?>;
+    outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b8fa3' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;
 }
-.ynj-mode-toggle:active{background:rgba(255,255,255,.25);}
-.ynj-mode-toggle svg{display:inline;}
 
 /* Navigate buttons */
 .ynj-nav-buttons{display:flex;gap:10px;justify-content:center;position:relative;z-index:1;}
@@ -2732,6 +2878,11 @@ img,svg{display:block;max-width:100%;}
 .ynj-hero--critical{background:linear-gradient(180deg,#991b1b 0%,#dc2626 40%,#ef4444 100%) !important;}
 .ynj-hero--critical .ynj-leave-by{animation:urgencyPulse 1s ease-in-out infinite;}
 @keyframes urgencyPulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* Hadith */
+.ynj-hadith{text-align:center;padding:8px 16px;font-size:12px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;line-height:1.5;margin-bottom:10px;}
+.ynj-hadith em{display:block;font-style:italic;color:<?php echo self::COLOR_TEXT; ?>;margin-bottom:2px;}
+.ynj-hadith span{font-size:10px;opacity:.7;}
 
 /* Timetable link */
 .ynj-timetable-link{
@@ -2954,6 +3105,12 @@ img,svg{display:block;max-width:100%;}
                 'label' => 'Home',
                 'href'  => '/',
                 'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M9 21V9h6v12"/></svg>',
+            ],
+            'fundraising' => [
+                'label' => 'Fundraise',
+                'href'  => '/mosque/{slug}/fundraising',
+                'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>',
+                'mosque' => true,
             ],
             'sponsors' => [
                 'label' => 'Sponsors',

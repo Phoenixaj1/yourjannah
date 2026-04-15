@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '1.1.0';
+    const SCHEMA_VERSION = '1.2.0';
 
     /**
      * Return the full table name for a given short name.
@@ -316,7 +316,29 @@ class YNJ_DB {
             KEY service_type (service_type)
         ) $charset_collate;";
 
-        // 12. Users (congregation members)
+        // 12. Fundraising Campaigns
+        $tables[] = "CREATE TABLE {$t('campaigns')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            title varchar(255) NOT NULL DEFAULT '',
+            description text NOT NULL,
+            image_url varchar(500) NOT NULL DEFAULT '',
+            target_pence bigint(20) NOT NULL DEFAULT 0,
+            raised_pence bigint(20) NOT NULL DEFAULT 0,
+            donor_count int(11) NOT NULL DEFAULT 0,
+            category varchar(50) NOT NULL DEFAULT 'general',
+            dfm_link varchar(500) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'active',
+            start_date date DEFAULT NULL,
+            end_date date DEFAULT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY category (category)
+        ) $charset_collate;";
+
+        // 13. Users (congregation members)
         $tables[] = "CREATE TABLE {$t('users')} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             name varchar(255) NOT NULL DEFAULT '',
@@ -400,6 +422,7 @@ class YNJ_DB {
             'enquiries',
             'businesses',
             'services',
+            'campaigns',
             'users',
             'subscribers',
         ];
