@@ -51,7 +51,11 @@ document.getElementById('login-btn').addEventListener('click', async function() 
         if (data.ok && data.token) {
             localStorage.setItem('ynj_user_token', data.token);
             if (data.user) localStorage.setItem('ynj_user', JSON.stringify(data.user));
-            window.location.href = '<?php echo esc_js( home_url( '/profile' ) ); ?>';
+            // Check for redirect param, otherwise go to mosque homepage or home
+            var params = new URLSearchParams(window.location.search);
+            var redirect = params.get('redirect');
+            if (redirect) { window.location.href = redirect; }
+            else { var s = localStorage.getItem('ynj_mosque_slug'); window.location.href = s ? '<?php echo esc_js( home_url( '/mosque/' ) ); ?>' + s : '<?php echo esc_js( home_url( '/' ) ); ?>'; }
         } else {
             document.getElementById('login-error').textContent = data.error || '<?php echo esc_js( __( 'Login failed.', 'yourjannah' ) ); ?>';
             btn.disabled = false;

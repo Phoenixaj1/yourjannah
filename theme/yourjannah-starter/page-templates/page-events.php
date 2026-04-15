@@ -65,6 +65,15 @@ $slug = ynj_mosque_slug();
         <button class="ynj-ev-chip" data-filter="sports,competition" onclick="filterEv('sports,competition')">⚽ <?php esc_html_e( 'Sports', 'yourjannah' ); ?></button>
     </div>
     <div id="ev-feed"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading events&hellip;</p></div>
+
+    <!-- Soft donation prompt -->
+    <div style="margin-top:16px;padding:16px;border-radius:12px;background:linear-gradient(135deg,#f0fdf4,#ecfeff);border:1px solid #bbf7d0;text-align:center;">
+        <p style="font-size:13px;color:#166534;margin-bottom:8px;"><?php esc_html_e( 'Enjoying these events? Help keep them running.', 'yourjannah' ); ?></p>
+        <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/fundraising' ) ); ?>" class="ynj-btn" style="justify-content:center;padding:8px 20px;font-size:13px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+            <?php esc_html_e( 'Donate to Masjid', 'yourjannah' ); ?>
+        </a>
+    </div>
 </main>
 
 <script>

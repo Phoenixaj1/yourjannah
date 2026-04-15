@@ -98,8 +98,13 @@ class YNJ_API_User {
         }
 
         return new \WP_REST_Response( [
-            'ok'    => true,
-            'token' => $result['token'],
+            'ok'      => true,
+            'token'   => $result['token'],
+            'user'    => [
+                'id'   => $result['user_id'],
+                'name' => sanitize_text_field( $data['name'] ?? '' ),
+                'email' => sanitize_email( $data['email'] ?? '' ),
+            ],
             'message' => 'Account created. Welcome to YourJannah!',
         ], 201 );
     }

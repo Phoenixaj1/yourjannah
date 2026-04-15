@@ -47,12 +47,15 @@ document.getElementById('reg-btn').addEventListener('click', async function() {
         const resp = await fetch(ynjData.restUrl + 'auth/register', {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'X-WP-Nonce': ynjData.nonce},
-            body: JSON.stringify({name, email, password, phone: form.querySelector('[name="phone"]').value.trim()})
+            body: JSON.stringify({name, email, password, phone: form.querySelector('[name="phone"]').value.trim(), mosque_slug: localStorage.getItem('ynj_mosque_slug') || ''})
         });
         const data = await resp.json();
         if (data.ok && data.token) {
             localStorage.setItem('ynj_user_token', data.token);
-            window.location.href = '<?php echo esc_js( home_url( '/profile' ) ); ?>';
+            if (data.user) localStorage.setItem('ynj_user', JSON.stringify(data.user));
+            // Redirect to mosque homepage (not empty profile)
+            var savedSlug = localStorage.getItem('ynj_mosque_slug');
+            window.location.href = savedSlug ? '<?php echo esc_js( home_url( '/mosque/' ) ); ?>' + savedSlug : '<?php echo esc_js( home_url( '/' ) ); ?>';
         } else {
             document.getElementById('reg-error').textContent = data.error || '<?php echo esc_js( __( 'Registration failed.', 'yourjannah' ) ); ?>';
             btn.disabled = false;

@@ -303,7 +303,16 @@ async function renderDashboard() {
         '<div class="d-card d-stat"><div class="d-stat__num">' + bookCount + '</div><div class="d-stat__label">Bookings</div></div>' +
         '</div>' +
         (actionItems.length > 0 ? '<div class="d-card" style="margin-bottom:16px"><h3 style="margin-bottom:12px">Action Items</h3>' + actionItems.join('') + '</div>' : '') +
-        (patronCount > 0 ? '<div class="d-card" style="margin-bottom:16px"><h3 style="margin-bottom:8px">\ud83c\udfc5 Patrons</h3><p style="color:var(--text-dim);font-size:13px">' + patronCount + ' active patron' + (patronCount>1?'s':'') + ' \u2014 \u00a3' + (patronMonthly/100).toFixed(2) + '/month</p><button class="d-btn d-btn--secondary d-btn--sm" style="margin-top:8px" onclick="navigate(\'/patrons\')">View Patrons</button></div>' : '') +
+        // Revenue summary
+        '<div class="d-card" style="margin-bottom:16px;background:linear-gradient(135deg,#f0fdf4,#ecfeff);border:1px solid #bbf7d0">' +
+        '<h3 style="margin-bottom:12px">\ud83d\udcb0 Revenue Overview</h3>' +
+        '<div class="d-grid d-grid-3">' +
+        '<div style="text-align:center"><div style="font-size:22px;font-weight:900;color:#166534">\u00a3' + (patronMonthly/100).toFixed(0) + '</div><div style="font-size:11px;color:var(--text-dim)">Patron Monthly</div></div>' +
+        '<div style="text-align:center"><div style="font-size:22px;font-weight:900;color:#166534">' + patronCount + '</div><div style="font-size:11px;color:var(--text-dim)">Active Patrons</div></div>' +
+        '<div style="text-align:center"><div style="font-size:22px;font-weight:900;color:#166534">' + (subs.total||(subs.subscribers||[]).length) + '</div><div style="font-size:11px;color:var(--text-dim)">Subscribers</div></div>' +
+        '</div>' +
+        '<p style="margin-top:12px;font-size:12px;color:var(--text-dim)">Sponsor & service listing revenue coming soon. <a href="#/patrons">View patrons \u2192</a></p>' +
+        '</div>' +
         (campCount > 0 ? '<div class="d-card" style="margin-bottom:16px"><h3 style="margin-bottom:8px">Fundraising</h3><p style="color:var(--text-dim);font-size:13px">' + campCount + ' active campaign' + (campCount>1?'s':'') + '</p><button class="d-btn d-btn--secondary d-btn--sm" style="margin-top:8px" onclick="navigate(\'/campaigns\')">Manage Campaigns</button></div>' : '') +
         '<div class="d-card"><h3 style="margin-bottom:12px">Quick Actions</h3>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
@@ -975,17 +984,28 @@ async function sendEnquiryReply(id){
 // ── Subscribers ──
 async function renderSubscribers() {
     if (!mosque) await loadMosque();
-    render(shell('<div class="d-header"><h1>Subscribers</h1></div><div class="d-card">Loading...</div>'));
-    var res = await api('admin/subscribers');
-    var list = res.subscribers || [];
-    var total = res.total || list.length;
-    var rows = list.map(function(s) {
-        return '<tr><td><strong>'+esc(s.name||'—')+'</strong></td><td>'+esc(s.email)+'</td><td>'+esc(s.phone||'—')+'</td><td>'+esc(s.device_type||'—')+'</td><td>'+fmtDate(s.subscribed_at)+'</td></tr>';
+    render(shell('<div class="d-header"><h1>Subscribers & Members</h1></div><div class="d-card">Loading...</div>'));
+    // Fetch both legacy subscribers AND authenticated members
+    var [legacyRes, membersRes] = await Promise.all([
+        api('admin/subscribers'),
+        api('admin/members').catch(function(){ return {members:[]}; })
+    ]);
+    var legacy = (legacyRes.subscribers || []).map(function(s) { s._source = 'push'; return s; });
+    var members = (membersRes.members || []).map(function(m) { m._source = 'registered'; m.subscribed_at = m.joined_at || m.created_at; return m; });
+    // Merge and deduplicate by email
+    var seen = {};
+    var all = [];
+    members.forEach(function(m) { seen[m.email] = true; all.push(m); });
+    legacy.forEach(function(s) { if (!seen[s.email]) all.push(s); });
+    var total = all.length;
+    var rows = all.map(function(s) {
+        var badge = s._source === 'registered' ? '<span class="d-badge d-badge--green">Member</span>' : '<span class="d-badge d-badge--blue">Push</span>';
+        return '<tr><td><strong>'+esc(s.name||'—')+'</strong></td><td>'+esc(s.email)+'</td><td>'+esc(s.phone||'—')+'</td><td>'+badge+'</td><td>'+fmtDate(s.subscribed_at)+'</td></tr>';
     }).join('');
     render(shell(
-        '<div class="d-header"><h1>Subscribers</h1><span class="d-badge d-badge--green">'+total+' total</span></div>' +
+        '<div class="d-header"><h1>Subscribers & Members</h1><span class="d-badge d-badge--green">'+total+' total</span></div>' +
         '<div class="d-card"><button class="d-btn d-btn--secondary d-btn--sm" onclick="exportCSV()" style="margin-bottom:12px">Export CSV</button>' +
-        '<table class="d-table"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Device</th><th>Subscribed</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" style="color:var(--text-dim)">No subscribers yet.</td></tr>')+'</tbody></table></div>'
+        '<table class="d-table"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Type</th><th>Joined</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" style="color:var(--text-dim)">No subscribers yet.</td></tr>')+'</tbody></table></div>'
     ));
 }
 function exportCSV(){

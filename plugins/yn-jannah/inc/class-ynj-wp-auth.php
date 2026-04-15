@@ -319,6 +319,27 @@ class YNJ_WP_Auth {
 
         do_action( 'ynj_user_registered', $wp_user_id, $data );
 
+        // Auto-subscribe to mosque if slug provided
+        $mosque_slug = sanitize_title( $data['mosque_slug'] ?? '' );
+        if ( $mosque_slug ) {
+            $mosque = $wpdb->get_row( $wpdb->prepare(
+                "SELECT id FROM " . YNJ_DB::table( 'mosques' ) . " WHERE slug = %s AND status = 'active'",
+                $mosque_slug
+            ) );
+            if ( $mosque ) {
+                $wpdb->replace( YNJ_DB::table( 'user_subscriptions' ), [
+                    'user_id'   => $ynj_user_id,
+                    'mosque_id' => $mosque->id,
+                    'notify_events'        => 1,
+                    'notify_classes'       => 1,
+                    'notify_announcements' => 1,
+                    'notify_live'          => 1,
+                    'notify_fundraising'   => 1,
+                ] );
+                update_user_meta( $wp_user_id, 'ynj_favourite_mosque_id', $mosque->id );
+            }
+        }
+
         return [
             'ok'         => true,
             'token'      => $token,

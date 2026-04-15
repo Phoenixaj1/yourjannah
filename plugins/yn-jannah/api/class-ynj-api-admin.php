@@ -136,6 +136,13 @@ class YNJ_API_Admin {
             'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
+        // --- Congregation members list (bearer) ---
+        register_rest_route( self::NS, '/admin/members', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'list_members' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
+        ] );
+
         // --- Eid management (bearer) ---
         register_rest_route( self::NS, '/admin/eid', [
             'methods'             => 'POST',
@@ -797,6 +804,30 @@ class YNJ_API_Admin {
         ) );
 
         return new \WP_REST_Response( [ 'ok' => true, 'count' => $count, 'verified' => $verified ] );
+    }
+
+    /**
+     * GET /admin/members — List users subscribed to this mosque (from user_subscriptions + users tables).
+     */
+    public static function list_members( \WP_REST_Request $request ) {
+        $mosque = $request->get_param( '_ynj_mosque' );
+        $mosque_id = (int) $mosque->id;
+
+        global $wpdb;
+        $us_table    = YNJ_DB::table( 'user_subscriptions' );
+        $users_table = YNJ_DB::table( 'users' );
+
+        $members = $wpdb->get_results( $wpdb->prepare(
+            "SELECT u.id, u.name, u.email, u.phone, us.created_at as joined_at
+             FROM $us_table us
+             JOIN $users_table u ON u.id = us.user_id
+             WHERE us.mosque_id = %d
+             ORDER BY us.created_at DESC
+             LIMIT 500",
+            $mosque_id
+        ) );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'members' => $members ?: [] ] );
     }
 
     // ================================================================

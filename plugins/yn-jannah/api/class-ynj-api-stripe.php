@@ -507,6 +507,17 @@ class YNJ_API_Stripe {
                 'status'       => 'confirmed',
             ] );
 
+            // Notify mosque admin of new booking
+            do_action( 'ynj_new_booking', (int) $room->mosque_id, [
+                'user_name'    => sanitize_text_field( $data['user_name'] ?? '' ),
+                'user_email'   => sanitize_email( $data['user_email'] ?? '' ),
+                'room_id'      => $room_id,
+                'booking_date' => sanitize_text_field( $data['booking_date'] ?? '' ),
+                'start_time'   => sanitize_text_field( $data['start_time'] ?? '' ),
+                'end_time'     => sanitize_text_field( $data['end_time'] ?? '' ),
+                'notes'        => $room->name . ' (free room booking)',
+            ] );
+
             return new \WP_REST_Response( [
                 'ok'         => true,
                 'free'       => true,
@@ -654,6 +665,99 @@ class YNJ_API_Stripe {
             'checkout_url' => $session->url,
             'session_id'   => $session->id,
             'booking_id'   => $booking_id,
+        ] );
+    }
+
+    /**
+     * POST /stripe/checkout/class — Create class enrolment checkout.
+     */
+    public static function checkout_class( \WP_REST_Request $request ) {
+        $data = $request->get_json_params();
+
+        $class_id = absint( $data['class_id'] ?? 0 );
+        if ( ! $class_id ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'class_id required.' ], 400 );
+        }
+
+        global $wpdb;
+        $class_table = YNJ_DB::table( 'classes' );
+        $class = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM $class_table WHERE id = %d AND status = 'published'", $class_id
+        ) );
+
+        if ( ! $class ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Class not found.' ], 404 );
+        }
+
+        // Check capacity
+        if ( $class->max_capacity > 0 && $class->enrolled_count >= $class->max_capacity ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Class is full.' ], 409 );
+        }
+
+        $user_name  = sanitize_text_field( $data['user_name'] ?? '' );
+        $user_email = sanitize_email( $data['user_email'] ?? '' );
+
+        if ( ! $user_name || ! is_email( $user_email ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Name and valid email required.' ], 400 );
+        }
+
+        // Create enrolment record
+        $enrol_table = YNJ_DB::table( 'enrolments' );
+        $wpdb->insert( $enrol_table, [
+            'class_id'   => $class_id,
+            'user_name'  => $user_name,
+            'user_email' => $user_email,
+            'user_phone' => sanitize_text_field( $data['user_phone'] ?? '' ),
+            'status'     => $class->price_pence > 0 ? 'pending_payment' : 'confirmed',
+        ] );
+        $enrolment_id = (int) $wpdb->insert_id;
+
+        // Increment enrolled count
+        $wpdb->query( $wpdb->prepare(
+            "UPDATE $class_table SET enrolled_count = enrolled_count + 1 WHERE id = %d", $class_id
+        ) );
+
+        if ( $class->price_pence <= 0 ) {
+            return new \WP_REST_Response( [
+                'ok'           => true,
+                'free'         => true,
+                'enrolment_id' => $enrolment_id,
+            ] );
+        }
+
+        // Get mosque for Stripe account
+        $mosque_table = YNJ_DB::table( 'mosques' );
+        $mosque = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM $mosque_table WHERE id = %d", $class->mosque_id
+        ) );
+
+        $price_label = $class->price_type === 'per_session' ? '/session' : ( $class->price_type === 'monthly' ? '/month' : '' );
+        $success_url = home_url( '/mosque/' . ( $mosque->slug ?? '' ) . '/classes?enrolled=1' );
+        $cancel_url  = home_url( '/mosque/' . ( $mosque->slug ?? '' ) . '/classes' );
+
+        $session = YNJ_Stripe::create_checkout(
+            $class->price_pence,
+            $class->title . ' — Class Enrolment' . $price_label,
+            $success_url,
+            $cancel_url,
+            [
+                'type'          => 'class_enrolment',
+                'class_id'      => (string) $class_id,
+                'enrolment_id'  => (string) $enrolment_id,
+                'mosque_id'     => (string) $class->mosque_id,
+                'user_email'    => $user_email,
+            ]
+        );
+
+        if ( is_wp_error( $session ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => $session->get_error_message() ], 500 );
+        }
+
+        return new \WP_REST_Response( [
+            'ok'           => true,
+            'checkout_url' => $session->url,
+            'session_id'   => $session->id,
+            'enrolment_id' => $enrolment_id,
         ] );
     }
 }
