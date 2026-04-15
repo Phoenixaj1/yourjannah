@@ -38,6 +38,14 @@ class YNJ_Renderer {
                     <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
                     <span>YourJannah</span>
                 </div>
+                <nav class="ynj-header__nav" style="display:none;" id="desktop-nav">
+                    <a href="/" class="ynj-hn--active">Home</a>
+                    <a href="#" id="dn-fundraise" data-nav-mosque="/mosque/{slug}/fundraising">Fundraise</a>
+                    <a href="#" id="dn-sponsors" data-nav-mosque="/mosque/{slug}/sponsors">Sponsors</a>
+                    <a href="#" id="dn-services" data-nav-mosque="/mosque/{slug}/services">Services</a>
+                    <a href="#" id="dn-rooms" data-nav-mosque="/mosque/{slug}/rooms">Rooms</a>
+                    <a href="/profile">My Account</a>
+                </nav>
                 <div class="ynj-header__right">
                     <button class="ynj-gps-btn" id="gps-btn" type="button" title="Detect my location">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
@@ -59,6 +67,8 @@ class YNJ_Renderer {
         </div>
 
         <main class="ynj-main">
+          <div class="ynj-desktop-grid">
+            <div class="ynj-desktop-grid__left">
 
             <!-- Sponsor Ticker -->
             <div class="ynj-ticker" id="sponsor-ticker" style="display:none;">
@@ -130,6 +140,9 @@ class YNJ_Renderer {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
             </a>
 
+            </div><!-- end left column -->
+            <div class="ynj-desktop-grid__right">
+
             <!-- Section 3: Feed -->
             <section id="feed-section">
                 <div class="ynj-feed-tabs">
@@ -177,6 +190,8 @@ class YNJ_Renderer {
                 <p class="ynj-subscribe-status" id="subscribe-status"></p>
             </section>
 
+            </div><!-- end right column -->
+          </div><!-- end desktop grid -->
         </main>
 
         <?php self::render_bottom_nav( 'home' ); ?>
@@ -2823,6 +2838,8 @@ img,svg{display:block;max-width:100%;}
 
 /* Layout */
 .ynj-main{max-width:500px;margin:0 auto;padding:12px 16px 24px;}
+@media(min-width:900px){.ynj-main{max-width:1100px;padding:20px 24px;}}
+@media(min-width:1200px){.ynj-main{max-width:1280px;}}
 
 /* Header */
 .ynj-header{
@@ -3169,6 +3186,37 @@ img,svg{display:block;max-width:100%;}
 /* Text helpers */
 .ynj-text-muted{font-size:13px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}
 .ynj-mosque-name{font-size:22px;font-weight:700;}
+
+/* Desktop Grid */
+.ynj-desktop-grid{display:flex;flex-direction:column;}
+.ynj-desktop-grid__left,.ynj-desktop-grid__right{width:100%;}
+
+/* Desktop Responsive */
+@media(min-width:900px){
+    .ynj-main{max-width:1100px;padding:20px 24px;}
+    .ynj-header__inner{max-width:1100px;}
+    .ynj-dropdown__inner{max-width:1100px;}
+    .ynj-desktop-grid{flex-direction:row;gap:24px;align-items:flex-start;}
+    .ynj-desktop-grid__left{width:380px;flex-shrink:0;position:sticky;top:72px;}
+    .ynj-desktop-grid__right{flex:1;min-width:0;}
+    .ynj-card--hero{padding:24px 20px 20px;}
+    .ynj-countdown{font-size:32px;}
+    .ynj-hero-prayer{font-size:20px;}
+    .ynj-nav{display:none;}
+    body{padding-bottom:0;}
+    /* Desktop top nav inside header */
+    .ynj-header__nav{display:flex !important;align-items:center;gap:4px;margin-left:24px;}
+    .ynj-header__nav a{color:rgba(255,255,255,.7);font-size:12px;font-weight:600;text-decoration:none;padding:6px 12px;border-radius:8px;transition:all .15s;white-space:nowrap;}
+    .ynj-header__nav a:hover,.ynj-header__nav a.ynj-hn--active{color:#fff;background:rgba(255,255,255,.15);}
+    .ynj-feed-card{padding:16px 20px;}
+    .ynj-svc-card{padding:16px 20px;}
+}
+
+@media(min-width:1200px){
+    .ynj-main{max-width:1280px;}
+    .ynj-header__inner{max-width:1280px;}
+    .ynj-desktop-grid__left{width:420px;}
+}
 
 /* Bottom Nav */
 .ynj-nav{
