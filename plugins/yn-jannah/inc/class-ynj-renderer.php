@@ -109,6 +109,12 @@ class YNJ_Renderer {
                 <span>— Sahih al-Bukhari 645</span>
             </p>
 
+            <!-- Donate button -->
+            <a class="ynj-donate-btn" id="donate-btn" href="#" target="_blank" rel="noopener" style="display:none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                Donate to Masjid
+            </a>
+
             <!-- Section 2: View Full Timetable link -->
             <a class="ynj-timetable-link" id="timetable-link" href="#">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
@@ -306,6 +312,12 @@ class YNJ_Renderer {
                         const m = resp.mosque || resp;
                         mosqueData = m;
                         document.getElementById('mosque-name').textContent = m.name || slug;
+
+                        // Donate button — link to DonationForMasjid
+                        const dfmSlug = m.dfm_slug || m.slug || slug;
+                        const donateBtn = document.getElementById('donate-btn');
+                        donateBtn.href = `https://donationformasjid.com/${dfmSlug}`;
+                        donateBtn.style.display = '';
 
                         // Always show navigate if we have mosque coords
                         if (m.latitude && m.longitude) {
@@ -2878,6 +2890,17 @@ img,svg{display:block;max-width:100%;}
 .ynj-hero--critical{background:linear-gradient(180deg,#991b1b 0%,#dc2626 40%,#ef4444 100%) !important;}
 .ynj-hero--critical .ynj-leave-by{animation:urgencyPulse 1s ease-in-out infinite;}
 @keyframes urgencyPulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* Donate button */
+.ynj-donate-btn{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;
+    border-radius:14px;padding:14px;margin-bottom:10px;
+    font-size:15px;font-weight:700;text-decoration:none;
+    box-shadow:0 4px 14px rgba(22,163,74,.25);transition:all .2s;
+}
+.ynj-donate-btn:active{transform:scale(.97);}
+.ynj-donate-btn svg{display:inline;}
 
 /* Hadith */
 .ynj-hadith{text-align:center;padding:8px 16px;font-size:12px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;line-height:1.5;margin-bottom:10px;}
