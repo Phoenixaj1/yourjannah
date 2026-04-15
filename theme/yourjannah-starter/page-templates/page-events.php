@@ -44,38 +44,26 @@ $slug = ynj_mosque_slug();
 .ynj-ev-filter::-webkit-scrollbar{display:none;}
 .ynj-ev-chip{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid #ddd;background:#fff;color:#0a1628;cursor:pointer;white-space:nowrap;transition:all .15s;}
 .ynj-ev-chip--active{background:#00ADEF;color:#fff;border-color:#00ADEF;}
-#ev-feed,#ev-nearby-feed{display:grid;grid-template-columns:1fr;gap:14px;}
-@media(min-width:700px){#ev-feed,#ev-nearby-feed{grid-template-columns:1fr 1fr;}}
-.ynj-ev-mosque-tag{font-size:11px;color:#00ADEF;font-weight:600;margin-top:4px;}
+#ev-feed{display:grid;grid-template-columns:1fr;gap:14px;}
+@media(min-width:700px){#ev-feed{grid-template-columns:1fr 1fr;}}
 .ynj-ev-empty{grid-column:1/-1;}
 </style>
 
 <main class="ynj-main">
     <h2 id="ev-title" style="font-size:18px;font-weight:700;margin-bottom:4px;"><?php esc_html_e( 'Events', 'yourjannah' ); ?></h2>
-    <p class="ynj-text-muted" style="margin-bottom:12px;"><?php esc_html_e( 'Upcoming events at your mosque and nearby', 'yourjannah' ); ?></p>
+    <p class="ynj-text-muted" style="margin-bottom:12px;"><?php esc_html_e( 'Upcoming events at this mosque', 'yourjannah' ); ?></p>
 
-    <div class="ynj-feed-tabs" style="margin-bottom:12px;">
-        <button class="ynj-feed-tab ynj-feed-tab--active" id="ev-tab-local" onclick="switchEvTab('local')">🕌 <?php esc_html_e( 'Your Mosque', 'yourjannah' ); ?></button>
-        <button class="ynj-feed-tab" id="ev-tab-nearby" onclick="switchEvTab('nearby')">📍 <?php esc_html_e( 'Nearby', 'yourjannah' ); ?></button>
+    <div class="ynj-ev-filter" id="ev-filters">
+        <button class="ynj-ev-chip ynj-ev-chip--active" data-filter="all" onclick="filterEv('all')"><?php esc_html_e( 'All', 'yourjannah' ); ?></button>
+        <button class="ynj-ev-chip" data-filter="_live" onclick="filterEv('_live')">🔴 <?php esc_html_e( 'Live', 'yourjannah' ); ?></button>
+        <button class="ynj-ev-chip" data-filter="talk" onclick="filterEv('talk')">🎤 <?php esc_html_e( 'Talks', 'yourjannah' ); ?></button>
+        <button class="ynj-ev-chip" data-filter="class" onclick="filterEv('class')">🎓 <?php esc_html_e( 'Classes', 'yourjannah' ); ?></button>
+        <button class="ynj-ev-chip" data-filter="community,iftar" onclick="filterEv('community,iftar')">🤝 <?php esc_html_e( 'Community', 'yourjannah' ); ?></button>
+        <button class="ynj-ev-chip" data-filter="youth,kids,children" onclick="filterEv('youth,kids,children')">👦 <?php esc_html_e( 'Youth', 'yourjannah' ); ?></button>
+        <button class="ynj-ev-chip" data-filter="sisters" onclick="filterEv('sisters')">👩 <?php esc_html_e( 'Sisters', 'yourjannah' ); ?></button>
+        <button class="ynj-ev-chip" data-filter="sports,competition" onclick="filterEv('sports,competition')">⚽ <?php esc_html_e( 'Sports', 'yourjannah' ); ?></button>
     </div>
-
-    <div id="ev-local-panel">
-        <div class="ynj-ev-filter" id="ev-filters">
-            <button class="ynj-ev-chip ynj-ev-chip--active" data-filter="all" onclick="filterEv('all')"><?php esc_html_e( 'All', 'yourjannah' ); ?></button>
-            <button class="ynj-ev-chip" data-filter="_live" onclick="filterEv('_live')">🔴 <?php esc_html_e( 'Live', 'yourjannah' ); ?></button>
-            <button class="ynj-ev-chip" data-filter="talk" onclick="filterEv('talk')">🎤 <?php esc_html_e( 'Talks', 'yourjannah' ); ?></button>
-            <button class="ynj-ev-chip" data-filter="class" onclick="filterEv('class')">🎓 <?php esc_html_e( 'Classes', 'yourjannah' ); ?></button>
-            <button class="ynj-ev-chip" data-filter="community,iftar" onclick="filterEv('community,iftar')">🤝 <?php esc_html_e( 'Community', 'yourjannah' ); ?></button>
-            <button class="ynj-ev-chip" data-filter="youth,kids,children" onclick="filterEv('youth,kids,children')">👦 <?php esc_html_e( 'Youth', 'yourjannah' ); ?></button>
-            <button class="ynj-ev-chip" data-filter="sisters" onclick="filterEv('sisters')">👩 <?php esc_html_e( 'Sisters', 'yourjannah' ); ?></button>
-            <button class="ynj-ev-chip" data-filter="sports,competition" onclick="filterEv('sports,competition')">⚽ <?php esc_html_e( 'Sports', 'yourjannah' ); ?></button>
-        </div>
-        <div id="ev-feed"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading events&hellip;</p></div>
-    </div>
-
-    <div id="ev-nearby-panel" style="display:none;">
-        <div id="ev-nearby-feed" style="display:grid;grid-template-columns:1fr;gap:14px;"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Tap to discover events at nearby mosques</p></div>
-    </div>
+    <div id="ev-feed"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading events&hellip;</p></div>
 </main>
 
 <script>
@@ -83,23 +71,11 @@ $slug = ynj_mosque_slug();
     const slug = <?php echo wp_json_encode( $slug ); ?>;
     const API  = ynjData.restUrl;
     let allEvents = [];
-    let nearbyEvents = [];
-    let nearbyLoaded = false;
     let currentFilter = 'all';
-    let mosqueId = 0;
-    let mosqueLat = null, mosqueLng = null;
 
     document.querySelectorAll('[data-nav-mosque]').forEach(el => {
         el.href = el.dataset.navMosque.replace('{slug}', slug);
     });
-
-    window.switchEvTab = function(tab) {
-        document.getElementById('ev-tab-local').classList.toggle('ynj-feed-tab--active', tab === 'local');
-        document.getElementById('ev-tab-nearby').classList.toggle('ynj-feed-tab--active', tab === 'nearby');
-        document.getElementById('ev-local-panel').style.display = tab === 'local' ? '' : 'none';
-        document.getElementById('ev-nearby-panel').style.display = tab === 'nearby' ? '' : 'none';
-        if (tab === 'nearby' && !nearbyLoaded) loadNearbyEvents();
-    };
 
     const typeIcons = {
         'talk':'🎤','class':'📖','course':'🎓','workshop':'🛠️','community':'🤝',
@@ -196,62 +172,11 @@ $slug = ynj_mosque_slug();
         renderAll();
     };
 
-    function loadNearbyEvents() {
-        const feed = document.getElementById('ev-nearby-feed');
-        feed.innerHTML = '<p class="ynj-text-muted" style="text-align:center;padding:20px;">Searching nearby mosques...</p>';
-
-        function doSearch(lat, lng) {
-            fetch(API + 'mosques/nearest?lat=' + lat + '&lng=' + lng + '&limit=10')
-                .then(r => r.json())
-                .then(data => {
-                    const mosques = (data.mosques || []).filter(m => m.slug !== slug);
-                    if (!mosques.length) {
-                        feed.innerHTML = '<div class="ynj-ev-empty" style="grid-column:1/-1"><div>📍</div><h3>No Nearby Mosques</h3><p class="ynj-text-muted">No other mosques found in your area.</p></div>';
-                        return;
-                    }
-                    Promise.all(mosques.slice(0, 5).map(m =>
-                        fetch(API + 'mosques/' + m.slug + '/events?upcoming=1')
-                            .then(r => r.json())
-                            .then(d => (d.events || []).map(e => Object.assign(e, { _mosque_name: m.name, _mosque_slug: m.slug, _distance: m.distance })))
-                            .catch(() => [])
-                    )).then(results => {
-                        nearbyEvents = results.flat().sort((a, b) => (a.event_date || '').localeCompare(b.event_date || ''));
-                        nearbyLoaded = true;
-                        if (!nearbyEvents.length) {
-                            feed.innerHTML = '<div class="ynj-ev-empty" style="grid-column:1/-1"><div>📅</div><h3>No Nearby Events</h3><p class="ynj-text-muted">No upcoming events at nearby mosques.</p></div>';
-                            return;
-                        }
-                        feed.innerHTML = nearbyEvents.map(e => {
-                            const card = renderEvent(e);
-                            const mosqueTag = '<div class="ynj-ev-mosque-tag">🕌 ' + (e._mosque_name || '') + (e._distance ? ' · ' + (e._distance < 1.6 ? (e._distance*0.621).toFixed(1) : Math.round(e._distance*0.621)) + ' mi' : '') + '</div>';
-                            return card.replace('</div></div>', mosqueTag + '</div></div>');
-                        }).join('');
-                    });
-                })
-                .catch(() => {
-                    feed.innerHTML = '<div class="ynj-ev-empty" style="grid-column:1/-1"><div>😕</div><h3>Search Failed</h3><p class="ynj-text-muted">Could not search nearby. Check your connection.</p></div>';
-                });
-        }
-
-        if ('geolocation' in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                pos => doSearch(pos.coords.latitude, pos.coords.longitude),
-                () => { if (mosqueLat) doSearch(mosqueLat, mosqueLng); else feed.innerHTML = '<div class="ynj-ev-empty" style="grid-column:1/-1"><div>📍</div><h3>Location Needed</h3><p class="ynj-text-muted">Enable GPS to discover nearby events.</p></div>'; },
-                { timeout: 8000, maximumAge: 300000 }
-            );
-        } else if (mosqueLat) {
-            doSearch(mosqueLat, mosqueLng);
-        }
-    }
-
     // Load mosque info
     fetch(API + 'mosques/' + slug)
         .then(r => r.json())
         .then(resp => {
             const m = resp.mosque || resp;
-            mosqueId = m.id;
-            mosqueLat = m.latitude;
-            mosqueLng = m.longitude;
             document.getElementById('ev-title').textContent = (m.name || 'Your Mosque') + ' Events';
         }).catch(() => {});
 

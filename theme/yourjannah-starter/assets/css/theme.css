@@ -441,6 +441,7 @@ img,svg{display:block;max-width:100%;}
 .ynj-field input:focus,.ynj-field select:focus,.ynj-field textarea:focus{border-color:#00ADEF;}
 .ynj-field textarea{resize:vertical;}
 .ynj-field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:400px){.ynj-field-row{grid-template-columns:1fr;}}
 
 /* Tier Selector */
 .ynj-tier-grid{display:flex;flex-direction:column;gap:10px;}

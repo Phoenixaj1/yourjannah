@@ -110,40 +110,35 @@ get_header();
 
     <!-- Feed -->
     <section id="feed-section">
-        <div class="ynj-feed-tabs">
-            <button class="ynj-feed-tab ynj-feed-tab--active" id="tab-local" onclick="switchFeedTab('local')"><?php esc_html_e( 'Your Mosque', 'yourjannah' ); ?></button>
-            <button class="ynj-feed-tab" id="tab-wider" onclick="switchFeedTab('wider')"><?php esc_html_e( 'Nearby Events', 'yourjannah' ); ?></button>
-        </div>
-        <div id="feed-local">
-            <div class="ynj-filter-chips" id="local-filters">
-                <button class="ynj-chip ynj-chip--active" data-filter="all" onclick="filterLocal('all')">All</button>
-                <button class="ynj-chip" data-filter="_live" onclick="filterLocal('_live')">🔴 Live</button>
-                <button class="ynj-chip" data-filter="_classes" onclick="filterLocal('_classes')">🎓 Classes</button>
-                <button class="ynj-chip" data-filter="announcements" onclick="filterLocal('announcements')">📢 Updates</button>
-                <button class="ynj-chip" data-filter="talk" onclick="filterLocal('talk')">🎤 Talks</button>
-                <button class="ynj-chip" data-filter="youth,kids,children" onclick="filterLocal('youth,kids,children')">👦 Youth</button>
-                <button class="ynj-chip" data-filter="sisters" onclick="filterLocal('sisters')">👩 Sisters</button>
-                <button class="ynj-chip" data-filter="sports,competition" onclick="filterLocal('sports,competition')">⚽ Sports</button>
-                <button class="ynj-chip" data-filter="community,iftar,fundraiser" onclick="filterLocal('community,iftar,fundraiser')">🤝 Community</button>
-            </div>
-            <div id="local-feed-list">
-                <p class="ynj-text-muted" style="padding:16px;text-align:center;"><?php esc_html_e( 'Loading...', 'yourjannah' ); ?></p>
+        <!-- Radius selector: this masjid only (default) or widen radius -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <h3 style="font-size:16px;font-weight:700;margin:0;"><?php esc_html_e( 'What\'s Happening', 'yourjannah' ); ?></h3>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span class="ynj-feed-count" id="feed-count" style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:#00ADEF;color:#fff;font-size:11px;font-weight:700;">0</span>
+                <select id="feed-radius" style="padding:7px 12px;border-radius:10px;border:1px solid rgba(0,0,0,.1);font-size:13px;font-weight:600;background:rgba(255,255,255,.9);color:#0a1628;cursor:pointer;-webkit-appearance:auto;" onchange="onRadiusChange()">
+                    <option value="0" selected><?php esc_html_e( 'This Masjid Only', 'yourjannah' ); ?></option>
+                    <option value="5"><?php esc_html_e( 'Within 5 miles', 'yourjannah' ); ?></option>
+                    <option value="10"><?php esc_html_e( 'Within 10 miles', 'yourjannah' ); ?></option>
+                    <option value="25"><?php esc_html_e( 'Within 25 miles', 'yourjannah' ); ?></option>
+                    <option value="9999"><?php esc_html_e( 'Nationwide', 'yourjannah' ); ?></option>
+                </select>
             </div>
         </div>
-        <div id="feed-wider" style="display:none;">
-            <div class="ynj-filter-chips" id="event-filters">
-                <button class="ynj-chip ynj-chip--active" data-filter="all" onclick="filterEvents('all')">All</button>
-                <button class="ynj-chip" data-filter="class" onclick="filterEvents('class')">🎓 Classes</button>
-                <button class="ynj-chip" data-filter="talk" onclick="filterEvents('talk')">🎤 Talks</button>
-                <button class="ynj-chip" data-filter="youth,kids,children" onclick="filterEvents('youth,kids,children')">👦 Youth</button>
-                <button class="ynj-chip" data-filter="sisters" onclick="filterEvents('sisters')">👩 Sisters</button>
-                <button class="ynj-chip" data-filter="sports,competition" onclick="filterEvents('sports,competition')">⚽ Sports</button>
-                <button class="ynj-chip" data-filter="community,iftar,fundraiser" onclick="filterEvents('community,iftar,fundraiser')">🤝 Community</button>
-                <button class="ynj-chip" data-filter="workshop" onclick="filterEvents('workshop')">🛠️ Workshop</button>
-            </div>
-            <div id="wider-events-list">
-                <p class="ynj-text-muted" style="padding:16px;text-align:center;"><?php esc_html_e( 'Tap "Nearby Events" to discover what\'s happening.', 'yourjannah' ); ?></p>
-            </div>
+
+        <div class="ynj-filter-chips" id="feed-filters">
+            <button class="ynj-chip ynj-chip--active" data-filter="all" onclick="filterFeed('all')">All</button>
+            <button class="ynj-chip" data-filter="_live" onclick="filterFeed('_live')">🔴 Live</button>
+            <button class="ynj-chip" data-filter="_classes" onclick="filterFeed('_classes')">🎓 Classes</button>
+            <button class="ynj-chip" data-filter="announcements" onclick="filterFeed('announcements')">📢 Updates</button>
+            <button class="ynj-chip" data-filter="talk" onclick="filterFeed('talk')">🎤 Talks</button>
+            <button class="ynj-chip" data-filter="youth,kids,children" onclick="filterFeed('youth,kids,children')">👦 Youth</button>
+            <button class="ynj-chip" data-filter="sisters" onclick="filterFeed('sisters')">👩 Sisters</button>
+            <button class="ynj-chip" data-filter="sports,competition" onclick="filterFeed('sports,competition')">⚽ Sports</button>
+            <button class="ynj-chip" data-filter="community,iftar,fundraiser" onclick="filterFeed('community,iftar,fundraiser')">🤝 Community</button>
+        </div>
+
+        <div id="feed-list">
+            <p class="ynj-text-muted" style="padding:16px;text-align:center;"><?php esc_html_e( 'Loading...', 'yourjannah' ); ?></p>
         </div>
     </section>
 

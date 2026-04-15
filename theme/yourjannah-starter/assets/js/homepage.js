@@ -345,15 +345,8 @@
             }
 
             /* ---- Feed ---- */
-            let widerFeedLoaded = false;
-
-            window.switchFeedTab = function(tab) {
-                document.getElementById('tab-local').classList.toggle('ynj-feed-tab--active', tab==='local');
-                document.getElementById('tab-wider').classList.toggle('ynj-feed-tab--active', tab==='wider');
-                document.getElementById('feed-local').style.display = tab==='local' ? '' : 'none';
-                document.getElementById('feed-wider').style.display = tab==='wider' ? '' : 'none';
-                if (tab==='wider' && !widerFeedLoaded) loadWiderFeed();
-            };
+            let currentRadius = 0; // 0 = this masjid only
+            let currentFeedFilter = 'all';
 
             const eventTypeIcons = {
                 'talk':'🎤','class':'📖','course':'🎓','workshop':'🛠️','community':'🤝',
@@ -441,7 +434,9 @@
                 </div>`;
             }
 
-            let allLocalItems = [];
+            let allFeedItems = [];
+            let nearbyFeedItems = [];
+            let nearbyLoaded = false;
 
             function loadFeed(slug) {
                 Promise.all([
@@ -449,15 +444,15 @@
                     fetch(`${API}/mosques/${slug}/events?upcoming=1`).then(r => r.json()).catch(() => ({events:[]})),
                     fetch(`${API}/mosques/${slug}/classes`).then(r => r.json()).catch(() => ({classes:[]}))
                 ]).then(([aData, eData, cData]) => {
-                    allLocalItems = [];
+                    allFeedItems = [];
                     (aData.announcements || []).forEach(a => {
-                        allLocalItems.push({ type:'announcement', title:a.title, body:a.body, date:a.published_at||'', pinned:a.pinned });
+                        allFeedItems.push({ type:'announcement', title:a.title, body:a.body, date:a.published_at||'', pinned:a.pinned });
                     });
                     (eData.events || []).forEach(e => {
                         const time = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
                         const isLive = e.is_live && e.is_online;
                         const ticketPrice = e.ticket_price_pence > 0 ? '£'+(e.ticket_price_pence/100).toFixed(e.ticket_price_pence%100?2:0) : '';
-                        allLocalItems.push({
+                        allFeedItems.push({
                             type: isLive ? 'live' : 'event',
                             title: e.title, body:e.description||'', date:e.event_date||'', time:time,
                             location:e.location||'', event_id:e.id, mosque_slug:slug,
@@ -470,7 +465,7 @@
                     (cData.classes || []).forEach(c => {
                         const time = c.start_time ? String(c.start_time).replace(/:\d{2}$/,'') : '';
                         const price = c.price_pence > 0 ? '£'+(c.price_pence/100) : 'Free';
-                        allLocalItems.push({
+                        allFeedItems.push({
                             type:'class', title:c.title, body:c.description||'',
                             date:c.start_date||'', time:time, location:c.location||'',
                             event_type:'class', mosque_slug:slug,
@@ -478,27 +473,30 @@
                             day_of_week:c.day_of_week||''
                         });
                     });
-                    allLocalItems.sort((a,b) => {
-                        // Pinned announcements always first
-                        if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1;
-                        // Live events next
-                        if(a.type==='live'&&b.type!=='live')return -1; if(a.type!=='live'&&b.type==='live')return 1;
-                        // Announcements after live but before events
-                        if(a.type==='announcement'&&b.type!=='announcement')return -1;
-                        if(a.type!=='announcement'&&b.type==='announcement')return 1;
-                        // Events and classes: nearest date first (ascending)
-                        if(a.type!=='announcement'&&b.type!=='announcement') return (a.date||'9').localeCompare(b.date||'9');
-                        // Announcements: newest first (descending)
-                        return (b.date||'').localeCompare(a.date||'');
-                    });
-                    renderLocalFeed('all');
+                    sortFeedItems(allFeedItems);
+                    renderFeed();
                 });
             }
 
-            function renderLocalFeed(filter) {
-                const el = document.getElementById('local-feed-list');
-                let items = allLocalItems;
+            function sortFeedItems(items) {
+                items.sort((a,b) => {
+                    if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1;
+                    if(a.type==='live'&&b.type!=='live')return -1; if(a.type!=='live'&&b.type==='live')return 1;
+                    if(a.type==='announcement'&&b.type!=='announcement')return -1;
+                    if(a.type!=='announcement'&&b.type==='announcement')return 1;
+                    if(a.type!=='announcement'&&b.type!=='announcement') return (a.date||'9').localeCompare(b.date||'9');
+                    return (b.date||'').localeCompare(a.date||'');
+                });
+            }
 
+            function renderFeed() {
+                const el = document.getElementById('feed-list');
+                // Combine local + nearby (if radius > 0)
+                let items = currentRadius === 0 ? allFeedItems.slice() : allFeedItems.concat(nearbyFeedItems);
+                if (currentRadius > 0) sortFeedItems(items);
+
+                // Apply filter
+                const filter = currentFeedFilter;
                 if (filter === '_live') {
                     items = items.filter(i => i.type === 'live');
                 } else if (filter === '_classes') {
@@ -510,6 +508,10 @@
                     items = items.filter(i => i.type === 'event' && types.includes((i.event_type||'').toLowerCase()));
                 }
 
+                // Update count badge
+                const countEl = document.getElementById('feed-count');
+                if (countEl) countEl.textContent = items.length;
+
                 if (!items.length) {
                     el.innerHTML = filter === 'all'
                         ? '<p class="ynj-text-muted" style="padding:12px;text-align:center;">No announcements or events yet.</p>'
@@ -519,111 +521,104 @@
                 el.innerHTML = '<div class="ynj-feed">' + items.map(renderFeedCard).join('') + '</div>';
             }
 
-            window.filterLocal = function(filter) {
-                document.querySelectorAll('#local-filters .ynj-chip').forEach(c => {
+            window.filterFeed = function(filter) {
+                currentFeedFilter = filter;
+                document.querySelectorAll('#feed-filters .ynj-chip').forEach(c => {
                     c.classList.toggle('ynj-chip--active', c.dataset.filter === filter);
                 });
-                renderLocalFeed(filter);
+                renderFeed();
             };
 
-            let allWiderEvents = [];
+            window.onRadiusChange = function() {
+                const sel = document.getElementById('feed-radius');
+                currentRadius = parseInt(sel.value) || 0;
+                if (currentRadius === 0) {
+                    // Back to this masjid only
+                    renderFeed();
+                    return;
+                }
+                // Load nearby content if not already loaded
+                if (!nearbyLoaded) {
+                    loadNearbyFeed();
+                } else {
+                    renderFeed();
+                }
+            };
 
-            function loadWiderFeed() {
-                widerFeedLoaded = true;
-                const el = document.getElementById('wider-events-list');
+            function loadNearbyFeed() {
+                const el = document.getElementById('feed-list');
                 const lat = userLat || mosqueLat;
                 const lng = userLng || mosqueLng;
-                if (!lat) { el.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">Location needed to find nearby events.</p>'; return; }
+                if (!lat) {
+                    el.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">Enable GPS or enter your postcode to discover nearby events.</p>';
+                    return;
+                }
 
                 el.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">Finding events near you...</p>';
 
-                fetch(`${API}/mosques/nearest?lat=${lat}&lng=${lng}&limit=10`)
+                const radiusKm = currentRadius === 9999 ? 9999 : currentRadius * 1.609;
+                fetch(`${API}/mosques/nearest?lat=${lat}&lng=${lng}&limit=15&radius_km=${radiusKm}`)
                     .then(r => r.json())
                     .then(data => {
                         const mosques = (data.mosques||[]).filter(m => m.slug !== mosqueSlug);
-                        if (!mosques.length) { el.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">No nearby mosques found.</p>'; return; }
+                        if (!mosques.length) {
+                            nearbyFeedItems = [];
+                            nearbyLoaded = true;
+                            renderFeed();
+                            return;
+                        }
 
-                        // Fetch events AND classes from nearby mosques
-                        const eventFetches = mosques.slice(0,8).map(m =>
+                        const eventFetches = mosques.slice(0,10).map(m =>
                             fetch(`${API}/mosques/${m.slug}/events?upcoming=1`).then(r=>r.json())
-                                .then(d => (d.events||[]).map(e => ({...e, _type:'event', mosque_name:m.name, mosque_slug:m.slug, distance:m.distance})))
+                                .then(d => (d.events||[]).map(e => ({...e, _src:'event', mosque_name:m.name, mosque_slug:m.slug, distance:m.distance})))
                                 .catch(() => [])
                         );
-                        const classFetches = mosques.slice(0,8).map(m =>
+                        const classFetches = mosques.slice(0,10).map(m =>
                             fetch(`${API}/mosques/${m.slug}/classes`).then(r=>r.json())
-                                .then(d => (d.classes||[]).map(c => ({...c, _type:'class', mosque_name:m.name, mosque_slug:m.slug, distance:m.distance})))
+                                .then(d => (d.classes||[]).map(c => ({...c, _src:'class', mosque_name:m.name, mosque_slug:m.slug, distance:m.distance})))
                                 .catch(() => [])
                         );
                         return Promise.all([...eventFetches, ...classFetches]);
                     })
                     .then(results => {
-                        if (!results) return;
-                        allWiderEvents = results.flat().sort((a,b) => {
-                            // Live first, then by date
-                            if (a.is_live && !b.is_live) return -1;
-                            if (!a.is_live && b.is_live) return 1;
-                            return ((a.event_date||a.start_date)||'').localeCompare((b.event_date||b.start_date)||'');
+                        if (!results) { nearbyLoaded = true; renderFeed(); return; }
+                        nearbyFeedItems = [];
+                        results.flat().forEach(e => {
+                            const time = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
+                            const distLabel = e.distance ? ` · ${e.distance < 1.6 ? (e.distance*0.621).toFixed(1)+'mi' : Math.round(e.distance*0.621)+'mi'}` : '';
+                            const mosqueName = (e.mosque_name||'') + distLabel;
+
+                            if (e._src === 'class') {
+                                const price = e.price_pence > 0 ? '£'+(e.price_pence/100) : 'Free';
+                                nearbyFeedItems.push({
+                                    type:'class', title:e.title, body:e.description||'',
+                                    date:e.start_date||'', time:time, location:e.location||'',
+                                    event_type:'class', mosque_slug:e.mosque_slug,
+                                    class_id:e.id, instructor:e.instructor_name||'', price:price,
+                                    day_of_week:e.day_of_week||'', mosque_name:mosqueName
+                                });
+                            } else {
+                                const isLive = e.is_live && e.is_online;
+                                const ticketPrice = e.ticket_price_pence > 0 ? '£'+(e.ticket_price_pence/100).toFixed(e.ticket_price_pence%100?2:0) : '';
+                                nearbyFeedItems.push({
+                                    type: isLive ? 'live' : 'event',
+                                    title:e.title, body:e.description||'', date:e.event_date||'',
+                                    time:time, location:e.location||'', event_id:e.id, mosque_slug:e.mosque_slug,
+                                    event_type: isLive ? 'live' : (e.event_type||''),
+                                    live_url: e.live_url||'', mosque_name:mosqueName,
+                                    ticket_price: ticketPrice,
+                                    donation_target: e.donation_target_pence > 0 ? '£'+(e.donation_target_pence/100).toLocaleString() : ''
+                                });
+                            }
                         });
-                        renderWiderEvents('all');
+                        nearbyLoaded = true;
+                        renderFeed();
                     })
-                    .catch(() => { el.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">Could not load.</p>'; });
-            }
-
-            function renderWiderEvents(filter) {
-                const el = document.getElementById('wider-events-list');
-                let events = allWiderEvents;
-
-                if (filter && filter !== 'all') {
-                    const types = filter.split(',');
-                    events = events.filter(e => {
-                        if (e._type === 'class') return types.includes('class');
-                        return types.includes((e.event_type||'').toLowerCase());
+                    .catch(() => {
+                        nearbyLoaded = true;
+                        renderFeed();
                     });
-                }
-
-                if (!events.length) {
-                    el.innerHTML = filter === 'all'
-                        ? '<p class="ynj-text-muted" style="padding:16px;text-align:center;">No upcoming events at nearby mosques.</p>'
-                        : '<p class="ynj-text-muted" style="padding:16px;text-align:center;">No events matching this filter. Try "All".</p>';
-                    return;
-                }
-
-                el.innerHTML = '<div class="ynj-feed">' + events.map(e => {
-                    const time = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
-                    const distLabel = e.distance ? ` · ${e.distance < 1.6 ? (e.distance*0.621).toFixed(1)+'mi' : Math.round(e.distance*0.621)+'mi'}` : '';
-                    const mosqueName = e.mosque_name + distLabel;
-
-                    if (e._type === 'class') {
-                        const price = e.price_pence > 0 ? '£'+(e.price_pence/100) : 'Free';
-                        return renderFeedCard({
-                            type:'class', title:e.title, body:e.description||'',
-                            date:e.start_date||'', time:time, location:e.location||'',
-                            event_type:'class', mosque_slug:e.mosque_slug,
-                            class_id:e.id, instructor:e.instructor_name||'', price:price,
-                            day_of_week:e.day_of_week||'', mosque_name:mosqueName
-                        });
-                    }
-
-                    const isLive = e.is_live && e.is_online;
-                    const ticketPrice = e.ticket_price_pence > 0 ? '£'+(e.ticket_price_pence/100).toFixed(e.ticket_price_pence%100?2:0) : '';
-                    return renderFeedCard({
-                        type: isLive ? 'live' : 'event',
-                        title:e.title, body:e.description||'', date:e.event_date||'',
-                        time:time, location:e.location||'', event_id:e.id, mosque_slug:e.mosque_slug,
-                        event_type: isLive ? 'live' : (e.event_type||''),
-                        live_url: e.live_url||'', mosque_name: mosqueName,
-                        ticket_price: ticketPrice,
-                        donation_target: e.donation_target_pence > 0 ? '£'+(e.donation_target_pence/100).toLocaleString() : ''
-                    });
-                }).join('') + '</div>';
             }
-
-            window.filterEvents = function(filter) {
-                document.querySelectorAll('#event-filters .ynj-chip').forEach(c => {
-                    c.classList.toggle('ynj-chip--active', c.dataset.filter === filter);
-                });
-                renderWiderEvents(filter);
-            };
 
             function timeAgo(dateStr) {
                 if (!dateStr) return '';

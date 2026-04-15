@@ -19,8 +19,9 @@ spl_autoload_register(function($class) {
         'YNJ_Auth'            => 'inc/class-ynj-auth.php',
         'YNJ_Prayer'          => 'inc/class-ynj-prayer.php',
         'YNJ_Push'            => 'inc/class-ynj-push.php',
-        'YNJ_Router'          => 'inc/class-ynj-router.php',
-        'YNJ_Renderer'        => 'inc/class-ynj-renderer.php',
+        // Archived — replaced by yourjannah-starter theme templates
+        // 'YNJ_Router'       => '_archive/class-ynj-router.php',
+        // 'YNJ_Renderer'     => '_archive/class-ynj-renderer.php',
         'YNJ_Admin'           => 'inc/class-ynj-admin.php',
         'YNJ_Dashboard'       => 'dashboard/class-ynj-dashboard.php',
         'YNJ_API_Mosques'     => 'api/class-ynj-api-mosques.php',
@@ -105,8 +106,8 @@ if (is_admin()) {
     YNJ_Platform_Admin::register();
 }
 
-// Frontend routing (handles yourjannah.com domain)
-add_action('template_redirect', ['YNJ_Router', 'handle'], 1);
+// Frontend routing — now handled by yourjannah-starter theme templates
+// Old router archived to _archive/class-ynj-router.php
 
 // PWA headers
 add_action('wp_head', function() {
