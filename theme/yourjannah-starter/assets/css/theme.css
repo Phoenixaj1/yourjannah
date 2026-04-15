@@ -539,3 +539,9 @@ img,svg{display:block;max-width:100%;}
 }
 .ynj-nav__item--active{color:#00ADEF;}
 .ynj-nav__item svg{width:22px;height:22px;}
+
+/* WP Nav Menu Integration */
+.ynj-header__nav ul{display:flex;align-items:center;gap:4px;list-style:none;margin:0;padding:0;}
+.ynj-header__nav li{margin:0;padding:0;}
+.ynj-header__nav a{color:rgba(255,255,255,.7);font-size:12px;font-weight:600;text-decoration:none;padding:6px 10px;border-radius:8px;transition:all .15s;white-space:nowrap;display:block;}
+.ynj-header__nav a:hover,.ynj-header__nav .current-menu-item a{color:#fff;background:rgba(255,255,255,.15);}

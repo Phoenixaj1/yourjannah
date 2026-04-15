@@ -1,7 +1,7 @@
         (function(){
             'use strict';
 
-            const API = ynjData.restUrl.replace(//$/, '');
+            const API = ynjData.restUrl.replace(/\/+$/, '');
             const VAPID = ynjData.vapidKey;
 
             let mosqueSlug = localStorage.getItem('ynj_mosque_slug');
