@@ -46,6 +46,7 @@ spl_autoload_register(function($class) {
         'YNJ_API_Subscriptions'    => 'api/class-ynj-api-subscriptions.php',
         'YNJ_API_Masjid_Services'  => 'api/class-ynj-api-masjid-services.php',
         'YNJ_WP_Auth'              => 'inc/class-ynj-wp-auth.php',
+        'YNJ_Platform_Admin'       => 'inc/class-ynj-platform-admin.php',
         'YNJ_API_Media'            => 'api/class-ynj-api-media.php',
         'YNJ_Cache'                => 'inc/class-ynj-cache.php',
     ];
@@ -98,9 +99,10 @@ add_action('rest_api_init', function() {
     YNJ_API_Media::register();
 });
 
-// Admin menu
+// Admin menus
 if (is_admin()) {
     add_action('admin_menu', ['YNJ_Admin', 'register_menu']);
+    YNJ_Platform_Admin::register();
 }
 
 // Frontend routing (handles yourjannah.com domain)
