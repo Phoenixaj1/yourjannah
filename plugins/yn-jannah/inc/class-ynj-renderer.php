@@ -32,39 +32,7 @@ class YNJ_Renderer {
         self::page_head( 'YourJannah — Your Mosque Community', 'Prayer times, travel estimates, announcements and events from your local mosque.' );
         ?>
 
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-                <nav class="ynj-header__nav" style="display:none;" id="desktop-nav">
-                    <a href="/" class="ynj-hn--active">Home</a>
-                    <a href="#" id="dn-fundraise" data-nav-mosque="/mosque/{slug}/fundraising">Fundraise</a>
-                    <a href="#" id="dn-sponsors" data-nav-mosque="/mosque/{slug}/sponsors">Sponsors</a>
-                    <a href="#" id="dn-services" data-nav-mosque="/mosque/{slug}/services">Services</a>
-                    <a href="#" id="dn-rooms" data-nav-mosque="/mosque/{slug}/rooms">Rooms</a>
-                    <a href="/profile">My Account</a>
-                </nav>
-                <div class="ynj-header__right">
-                    <button class="ynj-gps-btn" id="gps-btn" type="button" title="Detect my location">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
-                    </button>
-                    <button class="ynj-mosque-selector" id="mosque-selector" type="button">
-                        <span id="mosque-name">Finding mosque&hellip;</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-                    </button>
-                </div>
-            </div>
-        </header>
-
-        <!-- Mosque selector dropdown (hidden by default) -->
-        <div class="ynj-dropdown" id="mosque-dropdown" style="display:none;">
-            <div class="ynj-dropdown__inner">
-                <input class="ynj-dropdown__search" id="mosque-search" type="text" placeholder="Search mosques&hellip;" autocomplete="off">
-                <div class="ynj-dropdown__list" id="mosque-list"></div>
-            </div>
-        </div>
+        <?php self::render_header( 'home', '', true ); ?>
 
         <main class="ynj-main">
           <div class="ynj-desktop-grid">
@@ -108,6 +76,12 @@ class YNJ_Renderer {
                         <span id="leave-by-text">Leave by --:--</span>
                     </div>
                     <span class="ynj-travel-dist" id="travel-dist"></span>
+                </div>
+                <div class="ynj-hero-gps" id="hero-gps-prompt">
+                    <button class="ynj-btn ynj-btn--gps" id="hero-gps-btn" type="button" onclick="document.getElementById('gps-btn').click()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+                        Detect My Location
+                    </button>
                 </div>
                 <div class="ynj-nav-buttons" id="nav-buttons" style="display:none;">
                     <a class="ynj-btn ynj-btn--navigate" id="navigate-walk" href="#" target="_blank" rel="noopener">
@@ -395,18 +369,24 @@ class YNJ_Renderer {
                             }
                         }
 
-                        if (m.prayer_times && !m.prayer_times.error) {
-                            // Store jamat times separately
+                        // Store jamat overrides if present
+                        if (m.prayer_times) {
                             ['fajr_jamat','dhuhr_jamat','asr_jamat','maghrib_jamat','isha_jamat'].forEach(k => {
                                 if (m.prayer_times[k]) {
                                     jamatTimes[k] = String(m.prayer_times[k]).replace(/:\d{2}$/,'').replace(/\s*\(.*\)/,'');
                                 }
                             });
+                        }
+
+                        // Check if we have actual adhan times (not just jamat overrides)
+                        const hasAdhan = m.prayer_times && m.prayer_times.fajr && m.prayer_times.maghrib && !m.prayer_times.error;
+                        if (hasAdhan) {
                             setPrayerTimes(m.prayer_times);
-                        } else if (m.latitude && m.longitude) {
-                            fetchAladhan(m.latitude, m.longitude);
-                        } else if (userLat) {
-                            fetchAladhan(userLat, userLng);
+                        } else {
+                            // Always fallback to client-side Aladhan (browser CAN reach it even if server can't)
+                            const lat = m.latitude || userLat;
+                            const lng = m.longitude || userLng;
+                            if (lat && lng) fetchAladhan(lat, lng);
                         }
 
                         // If we didn't get travel from GPS, try from mosque coords
@@ -1181,17 +1161,7 @@ class YNJ_Renderer {
         self::page_head( 'Mosque — YourJannah', 'Your mosque community on YourJannah.' );
         ?>
 
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( '', $slug ); ?>
 
         <main class="ynj-main" id="mosque-profile">
             <section class="ynj-card ynj-card--hero">
@@ -1302,17 +1272,7 @@ class YNJ_Renderer {
         }
         .ynj-print-header{display:none;}
         </style>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( '', $slug ); ?>
         <main class="ynj-main">
             <div class="ynj-print-header">
                 <h1 id="print-mosque" style="font-size:20px;font-weight:900;margin-bottom:4px;"></h1>
@@ -1502,17 +1462,7 @@ class YNJ_Renderer {
     public static function render_services( string $slug ): void {
         self::page_head( 'Services — YourJannah', 'Find Muslim professionals and masjid services near you.' );
         ?>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( 'services', $slug ); ?>
         <main class="ynj-main">
             <!-- Search Bar -->
             <div class="ynj-search-bar">
@@ -1706,17 +1656,7 @@ class YNJ_Renderer {
         .ynj-campaign__stats strong{color:<?php echo self::COLOR_TEXT; ?>;font-size:14px;}
         .ynj-campaign__cat{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:6px;background:#e8f4f8;color:<?php echo self::COLOR_ACCENT; ?>;margin-bottom:8px;}
         </style>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( 'fundraising', $slug ); ?>
         <main class="ynj-main">
             <h2 id="fundraising-title" style="font-size:18px;font-weight:700;margin-bottom:14px;">Masjid Fundraising</h2>
             <div id="campaigns-list">
@@ -1816,17 +1756,7 @@ class YNJ_Renderer {
     public static function render_sponsors( string $slug ): void {
         self::page_head( 'Sponsors — YourJannah', 'Muslim businesses supporting your community.' );
         ?>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( 'sponsors', $slug ); ?>
         <main class="ynj-main">
             <!-- Search Bar -->
             <div class="ynj-search-bar">
@@ -1986,17 +1916,7 @@ class YNJ_Renderer {
     public static function render_events( string $slug ): void {
         self::page_head( 'Events — YourJannah', 'Upcoming events at your mosque.' );
         ?>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( 'events', $slug ); ?>
         <main class="ynj-main">
             <section class="ynj-card" id="events-list">
                 <h2 class="ynj-card__title" id="ev-mosque-name">Loading&hellip;</h2>
@@ -2041,17 +1961,7 @@ class YNJ_Renderer {
     public static function render_donate( string $slug ): void {
         self::page_head( 'Donate — YourJannah', '100% of your donation reaches your masjid.' );
         ?>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( '', $slug ); ?>
         <main class="ynj-main">
             <section class="ynj-card ynj-card--hero" style="text-align:center;">
                 <h2 id="dn-mosque-name" style="margin-bottom:8px;">Your Masjid</h2>
@@ -2107,17 +2017,7 @@ class YNJ_Renderer {
     public static function render_directory( string $slug ): void {
         self::page_head( 'More — YourJannah', 'Room bookings, events, and more.' );
         ?>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( '', $slug ?? '' ); ?>
         <main class="ynj-main">
             <section class="ynj-card">
                 <h2 class="ynj-card__title">Quick Links</h2>
@@ -2175,17 +2075,7 @@ class YNJ_Renderer {
         $stripe_pk = YNJ_Stripe::public_key();
         self::page_head( 'Become a Sponsor — YourJannah', 'Support your local masjid with a business sponsorship.' );
         ?>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/mosque/<?php echo esc_attr( $slug ); ?>/sponsors" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( 'sponsors', $slug ); ?>
         <main class="ynj-main">
             <?php if ( isset( $_GET['payment'] ) && $_GET['payment'] === 'success' ) : ?>
                 <section class="ynj-card" style="text-align:center;padding:40px 20px;">
@@ -2315,17 +2205,7 @@ class YNJ_Renderer {
     public static function render_service_signup( string $slug ): void {
         self::page_head( 'List Your Service — YourJannah', 'Advertise your professional service to the local Muslim community.' );
         ?>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/mosque/<?php echo esc_attr( $slug ); ?>/services" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( 'services', $slug ); ?>
         <main class="ynj-main">
             <?php if ( isset( $_GET['payment'] ) && $_GET['payment'] === 'success' ) : ?>
                 <section class="ynj-card" style="text-align:center;padding:40px 20px;">
@@ -2407,17 +2287,7 @@ class YNJ_Renderer {
     public static function render_rooms( string $slug ): void {
         self::page_head( 'Room Booking — YourJannah', 'Book a room at your local mosque.' );
         ?>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/mosque/<?php echo esc_attr( $slug ); ?>/directory" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( 'rooms', $slug ); ?>
         <main class="ynj-main">
             <?php if ( isset( $_GET['payment'] ) && $_GET['payment'] === 'success' ) : ?>
                 <section class="ynj-card" style="text-align:center;padding:40px 20px;">
@@ -2574,17 +2444,7 @@ class YNJ_Renderer {
     public static function render_event_detail( string $slug, int $event_id ): void {
         self::page_head( 'Event — YourJannah', 'Event details and booking.' );
         ?>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/mosque/<?php echo esc_attr( $slug ); ?>/events" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( 'events', $slug ); ?>
         <main class="ynj-main">
             <section class="ynj-card" id="event-detail">
                 <p class="ynj-text-muted">Loading event...</p>
@@ -2745,17 +2605,7 @@ class YNJ_Renderer {
     public static function render_contact( string $slug ): void {
         self::page_head( 'Contact — YourJannah', 'Send an enquiry to your local mosque.' );
         ?>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/mosque/<?php echo esc_attr( $slug ); ?>/directory" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( '', $slug ); ?>
         <main class="ynj-main">
             <section class="ynj-card" id="contact-form-card">
                 <h2 class="ynj-card__title">Send an Enquiry</h2>
@@ -2842,15 +2692,7 @@ class YNJ_Renderer {
         .ynj-class-card__spots{font-size:12px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;margin-bottom:10px;}
         @media(min-width:900px){.ynj-classes-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}.ynj-class-card{margin-bottom:0;}}
         </style>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/" class="ynj-back" aria-label="Back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( 'classes', $slug ); ?>
         <main class="ynj-main">
             <?php if ( isset( $_GET['enrolled'] ) ) : ?>
                 <div class="ynj-card" style="text-align:center;padding:30px 20px;">
@@ -3065,15 +2907,7 @@ class YNJ_Renderer {
         .ynj-class-card__schedule span{background:#f0f8fc;padding:3px 8px;border-radius:6px;color:<?php echo self::COLOR_TEXT; ?>;}
         @media(min-width:900px){.ynj-classes-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}.ynj-class-card{margin-bottom:0;}}
         </style>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/" class="ynj-back" aria-label="Back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( 'classes', $slug ); ?>
         <main class="ynj-main">
             <div class="ynj-search-bar">
                 <input class="ynj-search-bar__input" id="cls-q" type="text" placeholder="Search classes (e.g. tajweed, business, SEO)..." oninput="searchClasses()">
@@ -3192,17 +3026,7 @@ class YNJ_Renderer {
         .ynj-donate-inline select{width:auto;}
         @media(min-width:900px){.ynj-live-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}.ynj-live-card--featured{grid-column:1/-1;}.ynj-live-card--featured .ynj-live-card__video{aspect-ratio:21/9;}}
         </style>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( 'live' ); ?>
         <main class="ynj-main">
             <div class="ynj-feed-tabs" style="margin-bottom:16px;">
                 <button class="ynj-feed-tab ynj-feed-tab--active" id="lt-all" onclick="filterLive('all')">All</button>
@@ -3328,17 +3152,7 @@ class YNJ_Renderer {
     public static function render_login(): void {
         self::page_head( 'Login — YourJannah', 'Sign in to your YourJannah account.' );
         ?>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( 'account' ); ?>
         <main class="ynj-main" style="padding-top:24px;">
             <section class="ynj-card" style="text-align:center;padding:32px 20px 20px;">
                 <div style="font-size:36px;margin-bottom:8px;">🕌</div>
@@ -3391,17 +3205,7 @@ class YNJ_Renderer {
     public static function render_register(): void {
         self::page_head( 'Create Account — YourJannah', 'Join YourJannah to get prayer reminders and book events.' );
         ?>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( 'account' ); ?>
         <main class="ynj-main" style="padding-top:24px;">
             <section class="ynj-card" style="text-align:center;padding:32px 20px 20px;">
                 <div style="font-size:36px;margin-bottom:8px;">🕌</div>
@@ -3457,17 +3261,7 @@ class YNJ_Renderer {
     public static function render_profile(): void {
         self::page_head( 'My Account — YourJannah', 'Manage your profile, bookings, and preferences.' );
         ?>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( 'account' ); ?>
         <main class="ynj-main" id="profile-main">
             <p class="ynj-text-muted" style="text-align:center;padding:40px 0;">Loading...</p>
         </main>
@@ -3612,17 +3406,7 @@ class YNJ_Renderer {
         .ynj-report-card{background:#f9fafb;border-radius:10px;padding:14px;margin-bottom:8px;}
         .ynj-report-card h4{font-size:13px;font-weight:700;margin-bottom:4px;}
         </style>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/mosque/<?php echo esc_attr( $slug ); ?>" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( '', $slug ); ?>
         <main class="ynj-main">
             <div class="ynj-mad-hero">
                 <div style="font-size:36px;margin-bottom:6px;">📚</div>
@@ -3842,17 +3626,7 @@ class YNJ_Renderer {
         .ynj-status-card p{font-size:13px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}
         .ynj-cancel-link{display:inline-block;margin-top:8px;font-size:12px;color:#dc2626;cursor:pointer;text-decoration:underline;}
         </style>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <a href="/mosque/<?php echo esc_attr( $slug ); ?>" class="ynj-back" aria-label="Back">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </a>
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header( '', $slug ); ?>
         <main class="ynj-main">
             <div class="ynj-patron-hero">
                 <div style="font-size:42px;margin-bottom:8px;">🏅</div>
@@ -4071,14 +3845,7 @@ class YNJ_Renderer {
     public static function render_404(): void {
         self::page_head( 'Not Found — YourJannah', 'Page not found.' );
         ?>
-        <header class="ynj-header">
-            <div class="ynj-header__inner">
-                <div class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
-                    <span>YourJannah</span>
-                </div>
-            </div>
-        </header>
+        <?php self::render_header(); ?>
         <main class="ynj-main" style="text-align:center;padding:60px 20px;">
             <h1 style="font-size:48px;margin-bottom:12px;">404</h1>
             <p class="ynj-text-muted" style="margin-bottom:24px;">This page could not be found.</p>
@@ -4350,7 +4117,7 @@ img,svg{display:block;max-width:100%;}
 .ynj-badge--pinned{background:#dcfce7;color:#166534;}
 
 /* Filter Chips */
-.ynj-filter-chips{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0 12px;scrollbar-width:none;}
+.ynj-filter-chips{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0 12px;scrollbar-width:none;max-width:100%;}
 .ynj-filter-chips::-webkit-scrollbar{display:none;}
 .ynj-chip{
     white-space:nowrap;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;
@@ -4562,8 +4329,8 @@ img,svg{display:block;max-width:100%;}
 .ynj-mosque-name{font-size:22px;font-weight:700;}
 
 /* Desktop Grid */
-.ynj-desktop-grid{display:flex;flex-direction:column;}
-.ynj-desktop-grid__left,.ynj-desktop-grid__right{width:100%;}
+.ynj-desktop-grid{display:flex;flex-direction:column;overflow:hidden;}
+.ynj-desktop-grid__left,.ynj-desktop-grid__right{width:100%;max-width:100%;overflow:hidden;}
 
 /* Desktop Responsive */
 @media(min-width:900px){
@@ -4632,37 +4399,85 @@ img,svg{display:block;max-width:100%;}
 </style>
 </head>
 <body>
-<script>
-// Auto-inject desktop nav into every page header
-document.addEventListener('DOMContentLoaded', function() {
-    if (window.innerWidth < 900) return;
-    var header = document.querySelector('.ynj-header__inner');
-    if (!header || document.getElementById('desktop-nav')) return;
-    var slug = localStorage.getItem('ynj_mosque_slug') || '';
-    var nav = document.createElement('nav');
-    nav.className = 'ynj-header__nav';
-    nav.id = 'desktop-nav-auto';
-    nav.style.display = 'flex';
-    var path = location.pathname;
-    var links = [
-        ['/', 'Home'],
-        ['/mosque/'+slug+'/classes', 'Classes'],
-        ['/live', 'Live'],
-        ['/mosque/'+slug+'/events', 'Events'],
-        ['/mosque/'+slug+'/fundraising', 'Fundraise'],
-        ['/mosque/'+slug+'/sponsors', 'Sponsors'],
-        ['/mosque/'+slug+'/services', 'Services'],
-        ['/profile', 'Account']
-    ];
-    nav.innerHTML = links.map(function(l) {
-        var active = (l[0] === '/' && path === '/') || (l[0] !== '/' && path.indexOf(l[0]) === 0);
-        return '<a href="'+l[0]+'"'+(active?' class="ynj-hn--active"':'')+'>'+l[1]+'</a>';
-    }).join('');
-    var right = header.querySelector('.ynj-header__right') || header.querySelector('.ynj-logo');
-    if (right && right.nextSibling) header.insertBefore(nav, right);
-    else header.appendChild(nav);
-});
-</script>
+        <?php
+    }
+
+    /* ================================================================== */
+    /*  SHARED: Header (consistent across ALL pages)                      */
+    /* ================================================================== */
+
+    /**
+     * Render the unified header.
+     *
+     * @param string $active   Active nav item key (home, classes, live, events, fundraising, sponsors, services, account)
+     * @param string $slug     Mosque slug for nav links (empty = use JS localStorage fallback)
+     * @param bool   $show_gps Show the GPS + mosque selector on right side (homepage only)
+     */
+    public static function render_header( string $active = '', string $slug = '', bool $show_gps = false ): void {
+        $nav_items = [
+            'home'        => [ 'label' => 'Home',       'href' => '/' ],
+            'classes'     => [ 'label' => 'Classes',    'href' => '/mosque/{slug}/classes' ],
+            'live'        => [ 'label' => 'Live',       'href' => '/live' ],
+            'events'      => [ 'label' => 'Events',     'href' => '/mosque/{slug}/events' ],
+            'fundraising' => [ 'label' => 'Fundraise',  'href' => '/mosque/{slug}/fundraising' ],
+            'sponsors'    => [ 'label' => 'Sponsors',   'href' => '/mosque/{slug}/sponsors' ],
+            'services'    => [ 'label' => 'Services',   'href' => '/mosque/{slug}/services' ],
+            'rooms'       => [ 'label' => 'Rooms',      'href' => '/mosque/{slug}/rooms' ],
+            'account'     => [ 'label' => 'My Account', 'href' => '/profile' ],
+        ];
+        ?>
+        <header class="ynj-header">
+            <div class="ynj-header__inner">
+                <a href="/" class="ynj-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <span>YourJannah</span>
+                </a>
+                <nav class="ynj-header__nav" id="desktop-nav">
+                    <?php foreach ( $nav_items as $key => $item ) :
+                        $href  = str_replace( '{slug}', esc_attr( $slug ), $item['href'] );
+                        $is_active = ( $key === $active );
+                    ?>
+                    <a href="<?php echo esc_attr( $href ); ?>"<?php echo $is_active ? ' class="ynj-hn--active"' : ''; ?>
+                       <?php if ( str_contains( $item['href'], '{slug}' ) ) echo 'data-nav-mosque="' . esc_attr( $item['href'] ) . '"'; ?>
+                    ><?php echo esc_html( $item['label'] ); ?></a>
+                    <?php endforeach; ?>
+                </nav>
+                <div class="ynj-header__right">
+                    <?php if ( $show_gps ) : ?>
+                    <button class="ynj-gps-btn" id="gps-btn" type="button" title="Detect my location">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+                    </button>
+                    <button class="ynj-mosque-selector" id="mosque-selector" type="button">
+                        <span id="mosque-name">Finding mosque&hellip;</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <?php else : ?>
+                    <button class="ynj-gps-btn" id="gps-btn" type="button" title="Detect my location" onclick="if('geolocation' in navigator){navigator.geolocation.getCurrentPosition(function(p){var s=localStorage.getItem('ynj_mosque_slug');if(s)return;fetch('/wp-json/ynj/v1/mosques/nearest?lat='+p.coords.latitude+'&lng='+p.coords.longitude+'&limit=1').then(function(r){return r.json()}).then(function(d){if(d.ok&&d.mosques&&d.mosques[0]){localStorage.setItem('ynj_mosque_slug',d.mosques[0].slug);location.reload()}})},null,{timeout:8000})}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+                    </button>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </header>
+        <?php if ( $show_gps ) : ?>
+        <!-- Mosque selector dropdown (hidden by default) -->
+        <div class="ynj-dropdown" id="mosque-dropdown" style="display:none;">
+            <div class="ynj-dropdown__inner">
+                <input class="ynj-dropdown__search" id="mosque-search" type="text" placeholder="Search mosques&hellip;" autocomplete="off">
+                <div class="ynj-dropdown__list" id="mosque-list"></div>
+            </div>
+        </div>
+        <?php endif; ?>
+        <script>
+        // Wire mosque slug into nav links on sub-pages
+        (function(){
+            var slug = <?php echo wp_json_encode( $slug ); ?> || localStorage.getItem('ynj_mosque_slug') || '';
+            if (!slug) return;
+            document.querySelectorAll('[data-nav-mosque]').forEach(function(el) {
+                el.href = el.dataset.navMosque.replace('{slug}', slug);
+            });
+        })();
+        </script>
         <?php
     }
 
