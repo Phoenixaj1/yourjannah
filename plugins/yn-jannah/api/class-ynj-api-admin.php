@@ -143,6 +143,13 @@ class YNJ_API_Admin {
             'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
+        // --- Broadcast message to subscribers (bearer) ---
+        register_rest_route( self::NS, '/admin/broadcast', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'broadcast' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
+        ] );
+
         // --- Eid management (bearer) ---
         register_rest_route( self::NS, '/admin/eid', [
             'methods'             => 'POST',
@@ -828,6 +835,102 @@ class YNJ_API_Admin {
         ) );
 
         return new \WP_REST_Response( [ 'ok' => true, 'members' => $members ?: [] ] );
+    }
+
+    // ================================================================
+    // BROADCAST
+    // ================================================================
+
+    /**
+     * POST /admin/broadcast — Send message to mosque's subscribers.
+     * Accepts: subject, body, method (push|email|both)
+     */
+    public static function broadcast( \WP_REST_Request $request ) {
+        $mosque = $request->get_param( '_ynj_mosque' );
+        $data   = $request->get_json_params();
+        $mosque_id = (int) $mosque->id;
+
+        $subject = sanitize_text_field( $data['subject'] ?? '' );
+        $body    = wp_kses_post( $data['body'] ?? '' );
+        $method  = sanitize_text_field( $data['method'] ?? 'both' );
+
+        if ( empty( $subject ) || empty( $body ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Subject and message required.' ], 400 );
+        }
+
+        $sent_push = 0;
+        $sent_email = 0;
+
+        // Push notifications
+        if ( in_array( $method, [ 'push', 'both' ], true ) && class_exists( 'YNJ_Push' ) ) {
+            $result = YNJ_Push::send_to_mosque( $mosque_id, $subject, wp_strip_all_tags( $body ), '/' );
+            $sent_push = $result['sent'] ?? 0;
+        }
+
+        // Email — batch through subscribers + user_subscriptions
+        if ( in_array( $method, [ 'email', 'both' ], true ) ) {
+            global $wpdb;
+            $sub_table  = YNJ_DB::table( 'subscribers' );
+            $us_table   = YNJ_DB::table( 'user_subscriptions' );
+            $user_table = YNJ_DB::table( 'users' );
+
+            // Collect unique emails from both tables
+            $emails_sent = [];
+            $batch_size = 200;
+
+            $html = '<div style="font-family:Inter,system-ui,sans-serif;max-width:600px;margin:0 auto;">'
+                . '<div style="background:linear-gradient(135deg,#0a1628,#00ADEF);color:#fff;padding:20px;border-radius:12px 12px 0 0;text-align:center;">'
+                . '<h2 style="margin:0;">' . esc_html( $mosque->name ) . '</h2></div>'
+                . '<div style="background:#fff;border:1px solid #e5e5e5;border-top:none;padding:24px;border-radius:0 0 12px 12px;">'
+                . '<h3>' . esc_html( $subject ) . '</h3>' . $body
+                . '<p style="margin-top:16px;font-size:12px;color:#999;">Sent via YourJannah</p>'
+                . '</div></div>';
+
+            add_filter( 'wp_mail_content_type', function() { return 'text/html'; } );
+
+            // Legacy subscribers (email field)
+            $offset = 0;
+            do {
+                $batch = $wpdb->get_results( $wpdb->prepare(
+                    "SELECT email FROM $sub_table WHERE mosque_id = %d AND status = 'active' AND email != '' LIMIT %d OFFSET %d",
+                    $mosque_id, $batch_size, $offset
+                ) );
+                foreach ( $batch as $r ) {
+                    if ( is_email( $r->email ) && ! isset( $emails_sent[ $r->email ] ) ) {
+                        wp_mail( $r->email, $subject . ' — ' . $mosque->name, $html );
+                        $emails_sent[ $r->email ] = true;
+                        $sent_email++;
+                    }
+                }
+                $offset += $batch_size;
+            } while ( count( $batch ) === $batch_size );
+
+            // Authenticated subscribers
+            $offset = 0;
+            do {
+                $batch = $wpdb->get_results( $wpdb->prepare(
+                    "SELECT u.email FROM $us_table s JOIN $user_table u ON u.id = s.user_id WHERE s.mosque_id = %d AND u.status = 'active' LIMIT %d OFFSET %d",
+                    $mosque_id, $batch_size, $offset
+                ) );
+                foreach ( $batch as $r ) {
+                    if ( is_email( $r->email ) && ! isset( $emails_sent[ $r->email ] ) ) {
+                        wp_mail( $r->email, $subject . ' — ' . $mosque->name, $html );
+                        $emails_sent[ $r->email ] = true;
+                        $sent_email++;
+                    }
+                }
+                $offset += $batch_size;
+            } while ( count( $batch ) === $batch_size );
+
+            remove_filter( 'wp_mail_content_type', function() { return 'text/html'; } );
+        }
+
+        return new \WP_REST_Response( [
+            'ok'         => true,
+            'sent_push'  => $sent_push,
+            'sent_email' => $sent_email,
+            'message'    => "Broadcast sent: {$sent_push} push, {$sent_email} email.",
+        ] );
     }
 
     // ================================================================

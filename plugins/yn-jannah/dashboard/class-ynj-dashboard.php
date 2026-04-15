@@ -167,6 +167,7 @@ function shell(content) {
         { path: '/masjid-services', icon: '\ud83d\udd4c', label: 'Masjid Services' },
         { path: '/enquiries', icon: '\u2709\ufe0f', label: 'Enquiries' },
         { path: '/subscribers', icon: '\ud83d\udc65', label: 'Subscribers' },
+        { path: '/broadcast', icon: '\ud83d\udce3', label: 'Broadcast' },
         { path: '/classes', icon: '\ud83c\udf93', label: 'Classes' },
         { path: '/campaigns', icon: '\u2764\ufe0f', label: 'Fundraising' },
         { path: '/madrassah', icon: '\ud83d\udcda', label: 'Madrassah' },
@@ -234,6 +235,7 @@ function route() {
         '/madrassah/reports/new': renderMadReportForm,
         '/madrassah/fees': renderMadFees,
         '/patrons': renderPatrons,
+        '/broadcast': renderBroadcast,
         '/settings': renderSettings,
         '/auth/login': renderLogin,
         '/auth/register': renderRegister,
@@ -1788,6 +1790,48 @@ async function renderPatrons() {
     ));
 }
 
+// ── Broadcast ──
+async function renderBroadcast() {
+    if (!mosque) await loadMosque();
+    var subs = await api('admin/subscribers');
+    var members = await api('admin/members/count');
+    var totalReach = (subs.total || (subs.subscribers||[]).length) + (members.count || 0);
+
+    render(shell(
+        '<div class="d-header"><h1>\ud83d\udce3 Broadcast Message</h1></div>' +
+        '<div class="d-card" style="background:linear-gradient(135deg,#eff6ff,#ecfeff);border:1px solid #bfdbfe;margin-bottom:16px">' +
+        '<p style="font-size:14px;font-weight:600;color:#1e40af">Reach up to ' + totalReach + ' subscribers & members</p>' +
+        '<p style="font-size:12px;color:var(--text-dim);margin-top:4px">Send a push notification, email, or both to everyone subscribed to your mosque.</p></div>' +
+        '<div class="d-card">' +
+        '<div class="d-field"><label>Subject</label><input type="text" id="bc_subject" placeholder="e.g. Jumu\'ah time change this week"></div>' +
+        '<div class="d-field"><label>Message</label><textarea id="bc_body" rows="5" placeholder="Write your message to the congregation..."></textarea></div>' +
+        '<div class="d-field"><label>Send Method</label><select id="bc_method"><option value="both">Both Push + Email (recommended)</option><option value="push">Push Notification Only</option><option value="email">Email Only</option></select></div>' +
+        '<button class="d-btn d-btn--primary" style="width:100%" id="bc-send" onclick="sendBroadcast()"><span class="btn-text">\ud83d\udce8 Send Broadcast</span><span class="spinner"></span></button>' +
+        '<div id="bc-result" style="margin-top:12px"></div>' +
+        '</div>'
+    ));
+}
+
+async function sendBroadcast() {
+    var subject = $('#bc_subject')?.value;
+    var body = $('#bc_body')?.value;
+    var method = $('#bc_method')?.value || 'both';
+    if (!subject || !body) { toast('Subject and message required.', 'error'); return; }
+    if (!confirm('Send this broadcast to all your subscribers?')) return;
+
+    btn('#bc-send', true);
+    var res = await api('admin/broadcast', { method: 'POST', body: { subject: subject, body: body, method: method } });
+    btn('#bc-send', false);
+    if (res.ok) {
+        var el = document.getElementById('bc-result');
+        el.innerHTML = '<div class="d-alert d-alert--success">\u2705 ' + esc(res.message) + '</div>';
+        toast('Broadcast sent!');
+    } else {
+        toast(res.error || 'Failed to send.', 'error');
+    }
+}
+
+// ── Settings ──
 async function renderSettings() {
     if (!mosque) await loadMosque();
     render(shell(

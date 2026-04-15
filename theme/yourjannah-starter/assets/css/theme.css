@@ -240,6 +240,18 @@ img,svg{display:block;max-width:100%;}
 .ynj-po--next .ynj-po__leave{color:rgba(255,255,255,.7);}
 .ynj-po--past{opacity:.4;}
 
+/* Jumu'ah Card */
+.ynj-jumuah-card{
+    background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;
+    border-radius:14px;padding:14px 18px;margin-bottom:10px;
+}
+.ynj-jumuah-card__header{font-size:14px;font-weight:700;color:#92400e;margin-bottom:8px;}
+.ynj-jumuah-slot{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(245,158,11,.15);}
+.ynj-jumuah-slot:last-child{border-bottom:none;}
+.ynj-jumuah-slot__name{font-size:13px;font-weight:600;color:#0a1628;}
+.ynj-jumuah-slot__times{font-size:13px;color:#92400e;font-weight:700;font-variant-numeric:tabular-nums;}
+.ynj-jumuah-slot__lang{font-size:10px;color:#6b8fa3;margin-top:1px;}
+
 /* Hadith */
 .ynj-hadith{text-align:center;padding:8px 16px;font-size:12px;color:#6b8fa3;line-height:1.5;margin-bottom:10px;}
 .ynj-hadith em{display:block;font-style:italic;color:#0a1628;margin-bottom:2px;}

@@ -163,6 +163,24 @@
                         if (sh) sh.textContent = 'Funds go to supporting ' + mName;
                         if (svh) svh.textContent = 'Proceeds help fund ' + mName;
 
+                        // Jumu'ah times
+                        fetch(`${API}/mosques/${slug}/jumuah`)
+                            .then(r => r.ok ? r.json() : {slots:[]})
+                            .then(jData => {
+                                var slots = jData.slots || [];
+                                if (slots.length) {
+                                    var el = document.getElementById('jumuah-slots');
+                                    el.innerHTML = slots.map(function(s) {
+                                        var khutbah = s.khutbah_time ? String(s.khutbah_time).substring(0,5) : '';
+                                        var salah = s.salah_time ? String(s.salah_time).substring(0,5) : '';
+                                        var lang = s.language ? '<div class="ynj-jumuah-slot__lang">' + s.language + '</div>' : '';
+                                        return '<div class="ynj-jumuah-slot"><div><div class="ynj-jumuah-slot__name">' + (s.slot_name || 'Jumu\'ah') + '</div>' + lang + '</div><div class="ynj-jumuah-slot__times">' + (khutbah ? 'Khutbah ' + khutbah + ' · ' : '') + 'Salah ' + salah + '</div></div>';
+                                    }).join('');
+                                    document.getElementById('jumuah-card').style.display = '';
+                                }
+                            })
+                            .catch(function(){});
+
                         // Sponsor ticker
                         fetch(`${API}/mosques/${slug}/directory`)
                             .then(r => r.json())

@@ -89,6 +89,12 @@ get_header();
         <div class="ynj-prayer-overview" id="prayer-overview-grid"></div>
     </section>
 
+    <!-- Jumu'ah Card -->
+    <section class="ynj-jumuah-card" id="jumuah-card" style="display:none;">
+        <div class="ynj-jumuah-card__header">🕌 <?php esc_html_e( 'Jumu\'ah', 'yourjannah' ); ?></div>
+        <div id="jumuah-slots"></div>
+    </section>
+
     <!-- Hadith -->
     <p class="ynj-hadith" id="hadith-line">
         <em>&ldquo;<?php esc_html_e( 'Prayer in congregation is twenty-seven times more virtuous than prayer offered alone.', 'yourjannah' ); ?>&rdquo;</em>
