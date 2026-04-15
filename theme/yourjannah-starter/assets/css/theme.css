@@ -311,11 +311,8 @@ img,svg{display:block;max-width:100%;}
     background:rgba(255,255,255,.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
     border-radius:14px;border:1px solid rgba(255,255,255,.6);
     box-shadow:0 1px 6px rgba(0,0,0,.04);
-    display:flex;overflow:hidden;
+    display:flex;overflow:hidden;border-left:3px solid transparent;
 }
-.ynj-feed-card--event{border-left:none;}
-.ynj-feed-card--announcement{border-left:none;}
-.ynj-feed-card--pinned{border-left:none;}
 .ynj-feed-card__date{
     width:56px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
     padding:10px 4px;text-align:center;background:#f0f8fc;
@@ -323,11 +320,20 @@ img,svg{display:block;max-width:100%;}
 .ynj-feed-card__date-day{font-size:9px;font-weight:700;text-transform:uppercase;color:#6b8fa3;letter-spacing:.5px;}
 .ynj-feed-card__date-num{font-size:22px;font-weight:800;color:#0a1628;line-height:1;}
 .ynj-feed-card__date-month{font-size:9px;font-weight:600;color:#6b8fa3;text-transform:uppercase;}
-.ynj-feed-card--pinned .ynj-feed-card__date{background:#dcfce7;}
-.ynj-feed-card--live .ynj-feed-card__date{background:#fee2e2;}
-.ynj-feed-card--live .ynj-feed-card__date-num{color:#dc2626;}
-.ynj-feed-card--class .ynj-feed-card__date{background:#ede9fe;}
-.ynj-feed-card--class .ynj-feed-card__date-num{color:#7c3aed;}
+/* Card colour accents per category */
+.ynj-fc--live{border-left-color:#dc2626;} .ynj-fc--live .ynj-feed-card__date{background:#fee2e2;} .ynj-fc--live .ynj-feed-card__date-num{color:#dc2626;}
+.ynj-fc--class{border-left-color:#7c3aed;} .ynj-fc--class .ynj-feed-card__date{background:#ede9fe;} .ynj-fc--class .ynj-feed-card__date-num{color:#7c3aed;}
+.ynj-fc--talk{border-left-color:#d97706;} .ynj-fc--talk .ynj-feed-card__date{background:#fef3c7;} .ynj-fc--talk .ynj-feed-card__date-num{color:#92400e;}
+.ynj-fc--community{border-left-color:#2563eb;} .ynj-fc--community .ynj-feed-card__date{background:#dbeafe;} .ynj-fc--community .ynj-feed-card__date-num{color:#1e40af;}
+.ynj-fc--sports{border-left-color:#16a34a;} .ynj-fc--sports .ynj-feed-card__date{background:#dcfce7;} .ynj-fc--sports .ynj-feed-card__date-num{color:#166534;}
+.ynj-fc--youth{border-left-color:#ea580c;} .ynj-fc--youth .ynj-feed-card__date{background:#ffedd5;} .ynj-fc--youth .ynj-feed-card__date-num{color:#c2410c;}
+.ynj-fc--sisters{border-left-color:#db2777;} .ynj-fc--sisters .ynj-feed-card__date{background:#fce7f3;} .ynj-fc--sisters .ynj-feed-card__date-num{color:#be185d;}
+.ynj-fc--fundraiser{border-left-color:#16a34a;} .ynj-fc--fundraiser .ynj-feed-card__date{background:#dcfce7;} .ynj-fc--fundraiser .ynj-feed-card__date-num{color:#166534;}
+.ynj-fc--eid{border-left-color:#d97706;} .ynj-fc--eid .ynj-feed-card__date{background:#fef3c7;} .ynj-fc--eid .ynj-feed-card__date-num{color:#92400e;}
+.ynj-fc--quran{border-left-color:#0369a1;} .ynj-fc--quran .ynj-feed-card__date{background:#e8f4f8;} .ynj-fc--quran .ynj-feed-card__date-num{color:#0369a1;}
+.ynj-fc--other{border-left-color:#6b7280;} .ynj-fc--other .ynj-feed-card__date{background:#f3f4f6;}
+.ynj-fc--pinned{border-left-color:#16a34a;} .ynj-fc--pinned .ynj-feed-card__date{background:#dcfce7;}
+.ynj-fc--announcement{border-left-color:#0369a1;} .ynj-fc--announcement .ynj-feed-card__date{background:#e8f4f8;}
 .ynj-feed-card__content{flex:1;padding:12px 14px;min-width:0;}
 .ynj-feed-card__top{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
 .ynj-feed-card__top h4{font-size:14px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}

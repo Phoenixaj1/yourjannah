@@ -370,31 +370,47 @@
             let currentRadius = 0; // 0 = this masjid only
             let currentFeedFilter = 'all';
 
-            const eventTypeIcons = {
-                'talk':'🎤','class':'📖','course':'🎓','workshop':'🛠️','community':'🤝',
-                'sports':'⚽','competition':'🏆','youth':'👦','kids':'🧒','children':'🧒',
-                'sisters':'👩','fundraiser':'💰','iftar':'🍽️','eid':'🌙','quran':'📖',
-                'halaqa':'📚','nikah':'💍','janazah':'🕊️','other':'📌'
+            // Per-type icon, badge colour, and card accent
+            const typeConfig = {
+                'talk':        {icon:'🎤', bg:'#fef3c7', fg:'#92400e', accent:'talk'},
+                'halaqa':      {icon:'📚', bg:'#fef3c7', fg:'#92400e', accent:'talk'},
+                'class':       {icon:'📖', bg:'#ede9fe', fg:'#7c3aed', accent:'class'},
+                'course':      {icon:'🎓', bg:'#ede9fe', fg:'#7c3aed', accent:'class'},
+                'workshop':    {icon:'🛠️', bg:'#fef3c7', fg:'#92400e', accent:'talk'},
+                'community':   {icon:'🤝', bg:'#dbeafe', fg:'#1e40af', accent:'community'},
+                'iftar':       {icon:'🍽️', bg:'#dbeafe', fg:'#1e40af', accent:'community'},
+                'sports':      {icon:'⚽', bg:'#dcfce7', fg:'#166534', accent:'sports'},
+                'competition': {icon:'🏆', bg:'#dcfce7', fg:'#166534', accent:'sports'},
+                'youth':       {icon:'👦', bg:'#ffedd5', fg:'#c2410c', accent:'youth'},
+                'kids':        {icon:'🧒', bg:'#ffedd5', fg:'#c2410c', accent:'youth'},
+                'children':    {icon:'🧒', bg:'#ffedd5', fg:'#c2410c', accent:'youth'},
+                'sisters':     {icon:'👩', bg:'#fce7f3', fg:'#be185d', accent:'sisters'},
+                'fundraiser':  {icon:'💰', bg:'#dcfce7', fg:'#166534', accent:'fundraiser'},
+                'eid':         {icon:'🌙', bg:'#fef3c7', fg:'#92400e', accent:'eid'},
+                'quran':       {icon:'📖', bg:'#e8f4f8', fg:'#0369a1', accent:'quran'},
+                'nikah':       {icon:'💍', bg:'#fce7f3', fg:'#be185d', accent:'sisters'},
+                'janazah':     {icon:'🕊️', bg:'#f3f4f6', fg:'#4b5563', accent:'other'},
+                'other':       {icon:'📌', bg:'#f3f4f6', fg:'#4b5563', accent:'other'},
             };
 
             function renderFeedCard(item) {
-                let cardClass, badge;
+                let cardAccent = '', badge;
 
                 if (item.type === 'live') {
-                    cardClass = 'ynj-feed-card--event';
+                    cardAccent = 'ynj-fc--live';
                     badge = '<span class="ynj-badge" style="background:#fee2e2;color:#dc2626;">🔴 LIVE</span>';
                 } else if (item.type === 'class') {
-                    cardClass = 'ynj-feed-card--event';
+                    cardAccent = 'ynj-fc--class';
                     badge = `<span class="ynj-badge" style="background:#ede9fe;color:#7c3aed;">🎓 Class${item.price ? ' · '+item.price : ''}</span>`;
                 } else if (item.type === 'event') {
-                    cardClass = 'ynj-feed-card--event';
                     const et = (item.event_type||'').toLowerCase();
-                    const icon = eventTypeIcons[et] || '📅';
+                    const cfg = typeConfig[et] || {icon:'📅', bg:'#e8f4f8', fg:'#00ADEF', accent:'other'};
+                    cardAccent = 'ynj-fc--' + cfg.accent;
                     const label = (item.event_type||'Event').charAt(0).toUpperCase() + (item.event_type||'event').slice(1);
-                    badge = `<span class="ynj-badge ynj-badge--event">${icon} ${label}</span>`;
+                    badge = `<span class="ynj-badge" style="background:${cfg.bg};color:${cfg.fg};">${cfg.icon} ${label}</span>`;
                 } else {
-                    cardClass = item.pinned ? 'ynj-feed-card--pinned' : 'ynj-feed-card--announcement';
-                    badge = item.pinned ? '<span class="ynj-badge ynj-badge--pinned">📌 Pinned</span>' : '<span class="ynj-badge">📢 Update</span>';
+                    cardAccent = item.pinned ? 'ynj-fc--pinned' : 'ynj-fc--announcement';
+                    badge = item.pinned ? '<span class="ynj-badge" style="background:#dcfce7;color:#166534;">📌 Pinned</span>' : '<span class="ynj-badge" style="background:#e8f4f8;color:#0369a1;">📢 Update</span>';
                 }
 
                 const snippet = (item.body||'').length > 80 ? item.body.slice(0,80)+'...' : (item.body||'');
@@ -442,10 +458,7 @@
                     </div>`;
                 }
 
-                const liveClass = item.type === 'live' ? ' ynj-feed-card--live' : '';
-                const classClass = item.type === 'class' ? ' ynj-feed-card--class' : '';
-
-                return `<div class="ynj-feed-card ${cardClass}${liveClass}${classClass}">
+                return `<div class="ynj-feed-card ${cardAccent}">
                     ${dateStrip}
                     <div class="ynj-feed-card__content">
                         <div class="ynj-feed-card__top">${badge}<h4>${item.title}</h4></div>
