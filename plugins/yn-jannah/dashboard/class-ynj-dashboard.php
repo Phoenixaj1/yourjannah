@@ -262,17 +262,13 @@ async function renderDashboard() {
     ));
 }
 
-// ── Prayer Times ──
+// ── Prayer Times (Monthly Grid) ──
+var prayerMonth = new Date().toISOString().substring(0,7); // YYYY-MM
+var monthlyData = {}; // {date: {fajr, dhuhr, ...}}
+
 async function renderPrayers() {
     if (!mosque) await loadMosque();
-    var today = new Date().toISOString().split('T')[0];
     render(shell('<div class="d-header"><h1>Prayer Times</h1></div><div class="d-card">Loading...</div>'));
-    var res = await api('mosques/' + mosque.id + '/prayers?date=' + today);
-    var times = res.times || {};
-    var labels = {fajr:'Fajr',dhuhr:'Dhuhr',asr:'Asr',maghrib:'Maghrib',isha:'Isha'};
-    var rows = Object.entries(labels).map(function(e) {
-        var k=e[0],v=e[1]; return '<tr><td><strong>'+v+'</strong></td><td>'+fmtTime(times[k])+'</td><td><input type="time" id="jt_'+k+'" value="'+(times[k+'_jamat']?times[k+'_jamat'].substring(0,5):'')+'" style="width:120px"></td></tr>';
-    }).join('');
 
     // Jumu'ah
     var jRes = await api('mosques/' + mosque.id + '/jumuah');
@@ -290,45 +286,190 @@ async function renderPrayers() {
     }).join('');
 
     render(shell(
-        '<div class="d-header"><h1>Prayer Times</h1></div>' +
+        '<div class="d-header"><h1>\ud83d\udd4c Prayer Times</h1></div>' +
 
-        // Jamat overrides
-        '<div class="d-card"><h3 style="margin-bottom:12px">Jamat Time Overrides</h3><p style="margin-bottom:16px;color:var(--text-dim);font-size:13px">Set jamat times for a specific date. Adhan times are calculated automatically.</p>' +
-        '<table class="d-table"><thead><tr><th>Prayer</th><th>Adhan</th><th>Jamat Time</th></tr></thead><tbody>'+rows+'</tbody></table>' +
-        '<div class="d-grid d-grid-2" style="margin-top:16px"><div class="d-field"><label>Date</label><input type="date" id="pt_date" value="'+today+'"></div><div style="display:flex;align-items:end;gap:8px"><button class="d-btn d-btn--primary" id="pt-save" onclick="savePrayers()"><span class="btn-text">Save for Date</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="bulkApply()">Apply to All Month</button></div></div></div>' +
+        // Step 1: Auto-import adhan times
+        '<div class="d-card" style="margin-bottom:16px">' +
+        '<h3 style="margin-bottom:8px">Step 1: Import Adhan Times</h3>' +
+        '<p style="color:var(--text-dim);font-size:13px;margin-bottom:12px">Automatically fetch adhan (call to prayer) times from the Aladhan API for the whole month. These are calculated from your mosque\'s GPS coordinates.</p>' +
+        '<div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">' +
+        '<div class="d-field" style="margin-bottom:0"><label>Month</label><input type="month" id="pt_month" value="'+prayerMonth+'" onchange="prayerMonth=this.value"></div>' +
+        '<div class="d-field" style="margin-bottom:0"><label>Calculation Method</label><select id="pt_method"><option value="15">Moonsighting Committee (UK)</option><option value="2">ISNA</option><option value="3">Muslim World League</option><option value="4">Umm al-Qura</option><option value="5">Egyptian Authority</option><option value="1">Karachi</option></select></div>' +
+        '<button class="d-btn d-btn--primary" id="pt-import" onclick="importAdhanTimes()"><span class="btn-text">\u2b07\ufe0f Import Adhan Times</span><span class="spinner"></span></button>' +
+        '</div></div>' +
+
+        // Step 2: Set jamat times
+        '<div class="d-card" style="margin-bottom:16px">' +
+        '<h3 style="margin-bottom:8px">Step 2: Set Jamat Times</h3>' +
+        '<p style="color:var(--text-dim);font-size:13px;margin-bottom:12px">Set the jamat (congregation) times. You can set one time and apply it to the whole month, or adjust individual days in the grid below.</p>' +
+        '<div class="d-grid d-grid-3" style="gap:8px">' +
+        '<div class="d-field"><label>Fajr Jamat</label><input type="time" id="jt_fajr" value="04:45"></div>' +
+        '<div class="d-field"><label>Dhuhr Jamat</label><input type="time" id="jt_dhuhr" value="13:30"></div>' +
+        '<div class="d-field"><label>Asr Jamat</label><input type="time" id="jt_asr" value="17:15"></div>' +
+        '<div class="d-field"><label>Maghrib Jamat</label><input type="time" id="jt_maghrib" placeholder="5 min after adhan"></div>' +
+        '<div class="d-field"><label>Isha Jamat</label><input type="time" id="jt_isha" value="22:00"></div>' +
+        '<div style="display:flex;align-items:end"><button class="d-btn d-btn--primary" id="pt-bulk" onclick="bulkApplyJamat()"><span class="btn-text">Apply to Whole Month</span><span class="spinner"></span></button></div>' +
+        '</div></div>' +
+
+        // Step 3: Monthly grid
+        '<div class="d-card" style="margin-bottom:16px;overflow-x:auto">' +
+        '<h3 style="margin-bottom:8px">Monthly Timetable</h3>' +
+        '<div id="prayer-grid"><p style="color:var(--text-dim)">Import adhan times first, then the timetable will appear here.</p></div>' +
+        '</div>' +
 
         // Jumu'ah
-        '<div class="d-card"><h3 style="margin-bottom:12px">Jumu\'ah Slots</h3>' +
+        '<div class="d-card" style="margin-bottom:16px"><h3 style="margin-bottom:12px">Jumu\'ah Slots</h3>' +
         (jRows ? '<table class="d-table"><thead><tr><th>Slot</th><th>Khutbah</th><th>Salah</th><th>Language</th><th></th></tr></thead><tbody>'+jRows+'</tbody></table>' : '<p style="color:var(--text-dim)">No Jumu\'ah slots.</p>') +
         '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px"><h4 style="margin-bottom:8px;font-size:13px">Add Jumu\'ah Slot</h4>' +
         '<div class="d-grid d-grid-4"><div class="d-field"><label>Slot Name</label><input id="jm_name" placeholder="First Jumu\'ah"></div><div class="d-field"><label>Khutbah</label><input type="time" id="jm_khutbah"></div><div class="d-field"><label>Salah</label><input type="time" id="jm_salah"></div><div class="d-field"><label>Language</label><select id="jm_lang"><option>English</option><option>Arabic</option><option>Urdu</option><option>Bilingual</option></select></div></div>' +
         '<button class="d-btn d-btn--primary d-btn--sm" onclick="addJumuah()">Add Slot</button></div></div>' +
 
         // Eid
-        '<div class="d-card"><h3 style="margin-bottom:12px">Eid Times — ' + new Date().getFullYear() + '</h3>' +
+        '<div class="d-card"><h3 style="margin-bottom:12px">Eid Times \u2014 ' + new Date().getFullYear() + '</h3>' +
         (eRows ? '<table class="d-table"><thead><tr><th>Eid</th><th>Slot</th><th>Time</th><th>Location</th></tr></thead><tbody>'+eRows+'</tbody></table>' : '<p style="color:var(--text-dim)">No Eid times set.</p>') +
         '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px"><h4 style="margin-bottom:8px;font-size:13px">Add Eid Slot</h4>' +
         '<div class="d-grid d-grid-4"><div class="d-field"><label>Type</label><select id="eid_type"><option value="eid_ul_fitr">Eid ul-Fitr</option><option value="eid_ul_adha">Eid ul-Adha</option></select></div><div class="d-field"><label>Slot Name</label><input id="eid_name" placeholder="First Prayer"></div><div class="d-field"><label>Time</label><input type="time" id="eid_time"></div><div class="d-field"><label>Location</label><input id="eid_loc" placeholder="Main Hall"></div></div>' +
         '<button class="d-btn d-btn--primary d-btn--sm" onclick="addEid()">Add Eid Slot</button></div></div>'
     ));
+
+    // Try to load existing saved times for this month
+    loadMonthGrid();
 }
 
-async function savePrayers() {
-    btn('#pt-save',true);
-    var times={};['fajr','dhuhr','asr','maghrib','isha'].forEach(function(k){var v=$('#jt_'+k);if(v&&v.value)times[k+'_jamat']=v.value+':00';});
-    var res=await api('admin/prayers',{method:'PUT',body:{date:$('#pt_date').value,times:times}});
-    btn('#pt-save',false);
-    if(res.ok)toast('Jamat times saved!');else toast(res.error||'Failed.','error');
+async function importAdhanTimes() {
+    if (!mosque || !mosque.latitude) { toast('Mosque has no GPS coordinates. Update in Settings.', 'error'); return; }
+    btn('#pt-import', true);
+    var month = $('#pt_month').value;
+    var parts = month.split('-');
+    var year = parts[0], mon = parts[1];
+    var method = $('#pt_method').value;
+
+    try {
+        var url = 'https://api.aladhan.com/v1/calendar/' + year + '/' + parseInt(mon) + '?latitude=' + mosque.latitude + '&longitude=' + mosque.longitude + '&method=' + method;
+        var resp = await fetch(url);
+        var data = await resp.json();
+        if (!data || !data.data || !data.data.length) { toast('No data returned from Aladhan.', 'error'); btn('#pt-import', false); return; }
+
+        // Parse and save each day
+        var dates = [];
+        var strip = function(s) { return (s||'').replace(/\s*\(.*\)/, '').substring(0,5); };
+        data.data.forEach(function(day) {
+            var t = day.timings;
+            var dateStr = day.date.gregorian.year + '-' + String(day.date.gregorian.month.number).padStart(2,'0') + '-' + String(day.date.gregorian.day).padStart(2,'0');
+            var times = {
+                fajr: strip(t.Fajr), sunrise: strip(t.Sunrise), dhuhr: strip(t.Dhuhr),
+                asr: strip(t.Asr), maghrib: strip(t.Maghrib), isha: strip(t.Isha)
+            };
+            monthlyData[dateStr] = times;
+            dates.push({ date: dateStr, times: times });
+        });
+
+        // Save to server via bulk API
+        var res = await api('admin/prayers/bulk', { method: 'PUT', body: { dates: dates } });
+        btn('#pt-import', false);
+        if (res.ok) {
+            toast('Adhan times imported for ' + dates.length + ' days!');
+            renderMonthGrid();
+        } else {
+            toast(res.error || 'Failed to save.', 'error');
+        }
+    } catch(e) {
+        btn('#pt-import', false);
+        toast('Failed to fetch from Aladhan API: ' + e.message, 'error');
+    }
 }
 
-async function bulkApply() {
-    if(!confirm('Apply current jamat times to every day this month?'))return;
-    var times={};['fajr','dhuhr','asr','maghrib','isha'].forEach(function(k){var v=$('#jt_'+k);if(v&&v.value)times[k+'_jamat']=v.value+':00';});
-    var dt=$('#pt_date').value;var ym=dt.substring(0,7);
-    var daysInMonth=new Date(parseInt(ym.split('-')[0]),parseInt(ym.split('-')[1]),0).getDate();
-    var dates=[];for(var d=1;d<=daysInMonth;d++){dates.push({date:ym+'-'+String(d).padStart(2,'0'),times:times});}
-    var res=await api('admin/prayers/bulk',{method:'PUT',body:{dates:dates}});
-    if(res.ok)toast(res.message||'Month updated!');else toast(res.error||'Failed.','error');
+async function loadMonthGrid() {
+    // Fetch saved prayer times for this month from our API
+    var parts = prayerMonth.split('-');
+    var year = parseInt(parts[0]), mon = parseInt(parts[1]);
+    var daysInMonth = new Date(year, mon, 0).getDate();
+
+    for (var d = 1; d <= daysInMonth; d++) {
+        var dateStr = prayerMonth + '-' + String(d).padStart(2,'0');
+        var res = await api('mosques/' + mosque.id + '/prayers?date=' + dateStr);
+        if (res.times && res.times.fajr) {
+            monthlyData[dateStr] = res.times;
+        }
+    }
+    if (Object.keys(monthlyData).length > 0) renderMonthGrid();
+}
+
+function renderMonthGrid() {
+    var el = document.getElementById('prayer-grid');
+    if (!el) return;
+
+    var parts = prayerMonth.split('-');
+    var year = parseInt(parts[0]), mon = parseInt(parts[1]);
+    var daysInMonth = new Date(year, mon, 0).getDate();
+    var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+    var html = '<table class="d-table" style="font-size:12px;white-space:nowrap"><thead><tr><th>Date</th><th>Day</th><th>Fajr</th><th>Sunrise</th><th>Dhuhr</th><th>Asr</th><th>Maghrib</th><th>Isha</th><th>Fajr J</th><th>Dhuhr J</th><th>Asr J</th><th>Maghrib J</th><th>Isha J</th></tr></thead><tbody>';
+
+    for (var d = 1; d <= daysInMonth; d++) {
+        var dateStr = prayerMonth + '-' + String(d).padStart(2,'0');
+        var dt = new Date(year, mon - 1, d);
+        var dayName = dayNames[dt.getDay()];
+        var isFri = dt.getDay() === 5;
+        var t = monthlyData[dateStr] || {};
+        var rowStyle = isFri ? ' style="background:#f0fdf4;font-weight:600"' : '';
+
+        html += '<tr' + rowStyle + '><td>' + d + '</td><td>' + dayName + '</td>';
+        html += '<td>' + (t.fajr||'\u2014') + '</td>';
+        html += '<td>' + (t.sunrise||'\u2014') + '</td>';
+        html += '<td>' + (t.dhuhr||'\u2014') + '</td>';
+        html += '<td>' + (t.asr||'\u2014') + '</td>';
+        html += '<td>' + (t.maghrib||'\u2014') + '</td>';
+        html += '<td>' + (t.isha||'\u2014') + '</td>';
+        // Jamat times (from saved data or empty)
+        html += '<td>' + fmtTime(t.fajr_jamat) + '</td>';
+        html += '<td>' + fmtTime(t.dhuhr_jamat) + '</td>';
+        html += '<td>' + fmtTime(t.asr_jamat) + '</td>';
+        html += '<td>' + fmtTime(t.maghrib_jamat) + '</td>';
+        html += '<td>' + fmtTime(t.isha_jamat) + '</td>';
+        html += '</tr>';
+    }
+    html += '</tbody></table>';
+    html += '<p style="margin-top:8px;font-size:11px;color:var(--text-dim)">Adhan times from Aladhan API. Jamat times (J columns) set by your mosque. Green rows = Friday.</p>';
+    el.innerHTML = html;
+}
+
+async function bulkApplyJamat() {
+    if(!confirm('Apply these jamat times to every day of '+prayerMonth+'?'))return;
+    btn('#pt-bulk',true);
+    var times = {};
+    ['fajr','dhuhr','asr','maghrib','isha'].forEach(function(k) {
+        var v = $('#jt_'+k);
+        if (v && v.value) times[k+'_jamat'] = v.value + ':00';
+    });
+    // For maghrib, if empty, we'll skip (many mosques do 5 min after adhan)
+
+    var parts = prayerMonth.split('-');
+    var year = parseInt(parts[0]), mon = parseInt(parts[1]);
+    var daysInMonth = new Date(year, mon, 0).getDate();
+    var dates = [];
+    for (var d = 1; d <= daysInMonth; d++) {
+        var dateStr = prayerMonth + '-' + String(d).padStart(2,'0');
+        // If maghrib jamat not set, auto-calculate as 5 min after adhan
+        var dayTimes = Object.assign({}, times);
+        if (!dayTimes.maghrib_jamat && monthlyData[dateStr] && monthlyData[dateStr].maghrib) {
+            var maghParts = monthlyData[dateStr].maghrib.split(':');
+            var mH = parseInt(maghParts[0]), mM = parseInt(maghParts[1]) + 5;
+            if (mM >= 60) { mH++; mM -= 60; }
+            dayTimes.maghrib_jamat = String(mH).padStart(2,'0') + ':' + String(mM).padStart(2,'0') + ':00';
+        }
+        dates.push({ date: dateStr, times: dayTimes });
+    }
+    var res = await api('admin/prayers/bulk', { method: 'PUT', body: { dates: dates } });
+    btn('#pt-bulk',false);
+    if (res.ok) {
+        toast('Jamat times applied to ' + dates.length + ' days!');
+        // Refresh grid
+        await loadMonthGrid();
+        renderMonthGrid();
+    } else {
+        toast(res.error || 'Failed.', 'error');
+    }
 }
 
 async function addJumuah() {
@@ -338,8 +479,6 @@ async function addJumuah() {
 async function deleteJumuah(id){if(!confirm('Delete this slot?'))return;await api('admin/jumuah/'+id,{method:'DELETE'});toast('Deleted.');renderPrayers();}
 
 async function addEid() {
-    // Eid uses a direct DB insert via admin endpoint — we need to add this
-    // For now, use the existing admin API pattern
     var res=await api('admin/eid',{method:'POST',body:{eid_type:$('#eid_type').value,year:new Date().getFullYear(),slot_name:$('#eid_name').value,salah_time:$('#eid_time').value+':00',location_notes:$('#eid_loc').value}});
     if(res.ok){toast('Eid slot added!');renderPrayers();}else toast(res.error||'Failed.','error');
 }
