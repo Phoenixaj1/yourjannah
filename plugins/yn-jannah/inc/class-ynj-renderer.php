@@ -1463,7 +1463,7 @@ class YNJ_Renderer {
                 <a href="/" class="ynj-back" aria-label="Back">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
                 </a>
-                <div class="ynj-logo"><span>Fundraising</span></div>
+                <div class="ynj-logo"><span id="fr-header">Fundraising</span></div>
             </div>
         </header>
         <main class="ynj-main">
@@ -1485,6 +1485,15 @@ class YNJ_Renderer {
                 'equipment':'🛠️','roof':'🏠','heating':'🔥','parking':'🅿️'
             };
 
+            // Get mosque name
+            fetch(`/wp-json/ynj/v1/mosques/${slug}`)
+                .then(r => r.json())
+                .then(resp => {
+                    const m = resp.mosque || resp;
+                    document.getElementById('fr-header').textContent = (m.name || 'Your Masjid') + ' Fundraising';
+                })
+                .catch(() => {});
+
             fetch(`/wp-json/ynj/v1/mosques/${slug}/campaigns`)
                 .then(r => r.json())
                 .then(data => {
@@ -1492,7 +1501,7 @@ class YNJ_Renderer {
                     const el = document.getElementById('campaigns-list');
 
                     if (!campaigns.length) {
-                        el.innerHTML = '<div class="ynj-card" style="text-align:center;padding:40px 20px;"><div style="font-size:48px;margin-bottom:12px;">🕌</div><h3 style="margin-bottom:8px;">No Active Campaigns</h3><p class="ynj-text-muted">This mosque has no fundraising campaigns right now.</p></div>';
+                        el.innerHTML = '<div class="ynj-card" style="text-align:center;padding:40px 20px;"><div style="font-size:48px;margin-bottom:12px;">🕌</div><h3 style="margin-bottom:8px;">No Active Campaigns</h3><p class="ynj-text-muted">Your masjid has no fundraising campaigns right now. Check back soon.</p></div>';
                         return;
                     }
 
