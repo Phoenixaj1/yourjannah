@@ -1758,6 +1758,15 @@ class YNJ_Renderer {
         ?>
         <?php self::render_header( 'sponsors', $slug ); ?>
         <main class="ynj-main">
+            <!-- Become a Sponsor CTA -->
+            <div style="background:linear-gradient(135deg,<?php echo self::COLOR_ACCENT; ?>,#0369a1);border-radius:14px;padding:18px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <div>
+                    <h3 style="color:#fff;font-size:15px;font-weight:700;margin-bottom:2px;">Support Your Masjid</h3>
+                    <p style="color:rgba(255,255,255,.8);font-size:12px;">List your business and reach the community</p>
+                </div>
+                <a href="/mosque/<?php echo esc_attr( $slug ); ?>/sponsors/join" style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;background:#fff;color:<?php echo self::COLOR_ACCENT; ?>;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">⭐ Become a Sponsor</a>
+            </div>
+
             <!-- Search Bar -->
             <div class="ynj-search-bar">
                 <input class="ynj-search-bar__input" id="biz-search" type="text" placeholder="Find a business (e.g. restaurant, solicitor)..." autocomplete="off">
@@ -1795,10 +1804,6 @@ class YNJ_Renderer {
                 <div id="community-biz-list" class="ynj-sponsors-grid"></div>
             </section>
 
-            <div style="text-align:center;padding:16px 0;">
-                <p class="ynj-text-muted" style="margin-bottom:8px;">Want to support your local masjid?</p>
-                <a href="/mosque/<?php echo esc_attr( $slug ); ?>/sponsors/join" class="ynj-btn">Become a Sponsor</a>
-            </div>
         </main>
         <?php self::render_bottom_nav( 'sponsors', $slug ); ?>
         <script>
@@ -1916,37 +1921,182 @@ class YNJ_Renderer {
     public static function render_events( string $slug ): void {
         self::page_head( 'Events — YourJannah', 'Upcoming events at your mosque.' );
         ?>
+        <style>
+        .ynj-ev-card{background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-radius:16px;border:1px solid rgba(255,255,255,.6);margin-bottom:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.04);transition:transform .15s;}
+        .ynj-ev-card:hover{transform:translateY(-1px);}
+        .ynj-ev-card--live{border:2px solid #dc2626;box-shadow:0 4px 20px rgba(220,38,38,.1);}
+        .ynj-ev-img{width:100%;height:140px;object-fit:cover;background:#e8f4f8;display:flex;align-items:center;justify-content:center;font-size:48px;}
+        .ynj-ev-body{padding:16px;}
+        .ynj-ev-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+        .ynj-ev-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:6px;}
+        .ynj-ev-badge--type{background:#e8f4f8;color:<?php echo self::COLOR_ACCENT; ?>;}
+        .ynj-ev-badge--live{background:#fee2e2;color:#dc2626;animation:livePulse 2s ease-in-out infinite;}
+        .ynj-ev-badge--free{background:#dcfce7;color:#166534;}
+        .ynj-ev-badge--paid{background:#fef3c7;color:#92400e;}
+        .ynj-ev-badge--online{background:#ede9fe;color:#7c3aed;}
+        @keyframes livePulse{0%,100%{opacity:1}50%{opacity:.6}}
+        .ynj-ev-title{font-size:16px;font-weight:700;margin-bottom:6px;line-height:1.3;}
+        .ynj-ev-meta{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}
+        .ynj-ev-meta-item{display:flex;align-items:center;gap:6px;font-size:13px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}
+        .ynj-ev-meta-item svg{flex-shrink:0;width:14px;height:14px;color:<?php echo self::COLOR_ACCENT; ?>;}
+        .ynj-ev-desc{font-size:13px;color:#555;line-height:1.5;margin-bottom:12px;}
+        .ynj-ev-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+        .ynj-ev-capacity{font-size:12px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}
+        .ynj-ev-capacity-bar{height:4px;width:60px;background:#e5e7eb;border-radius:2px;display:inline-block;vertical-align:middle;margin-left:4px;}
+        .ynj-ev-capacity-bar span{display:block;height:100%;border-radius:2px;background:<?php echo self::COLOR_ACCENT; ?>;}
+        .ynj-ev-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none;border:none;cursor:pointer;transition:all .15s;}
+        .ynj-ev-btn--primary{background:<?php echo self::COLOR_ACCENT; ?>;color:#fff;}
+        .ynj-ev-btn--primary:hover{opacity:.9;}
+        .ynj-ev-btn--live{background:#dc2626;color:#fff;}
+        .ynj-ev-btn--outline{background:transparent;border:1px solid #ddd;color:<?php echo self::COLOR_TEXT; ?>;}
+        .ynj-ev-empty{text-align:center;padding:40px 20px;}
+        .ynj-ev-empty div{font-size:48px;margin-bottom:12px;}
+        .ynj-ev-filter{display:flex;gap:6px;overflow-x:auto;padding:4px 0 14px;scrollbar-width:none;-webkit-overflow-scrolling:touch;max-width:100%;}
+        .ynj-ev-filter::-webkit-scrollbar{display:none;}
+        .ynj-ev-chip{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid #ddd;background:#fff;color:<?php echo self::COLOR_TEXT; ?>;cursor:pointer;white-space:nowrap;transition:all .15s;}
+        .ynj-ev-chip--active{background:<?php echo self::COLOR_ACCENT; ?>;color:#fff;border-color:<?php echo self::COLOR_ACCENT; ?>;}
+        </style>
         <?php self::render_header( 'events', $slug ); ?>
         <main class="ynj-main">
-            <section class="ynj-card" id="events-list">
-                <h2 class="ynj-card__title" id="ev-mosque-name">Loading&hellip;</h2>
-                <div id="ev-feed" class="ynj-feed"><p class="ynj-text-muted">Loading events&hellip;</p></div>
-            </section>
+            <h2 id="ev-title" style="font-size:18px;font-weight:700;margin-bottom:4px;">Events</h2>
+            <p class="ynj-text-muted" style="margin-bottom:12px;">Upcoming events at your mosque</p>
+
+            <div class="ynj-ev-filter" id="ev-filters">
+                <button class="ynj-ev-chip ynj-ev-chip--active" data-filter="all" onclick="filterEv('all')">All</button>
+                <button class="ynj-ev-chip" data-filter="_live" onclick="filterEv('_live')">🔴 Live</button>
+                <button class="ynj-ev-chip" data-filter="talk" onclick="filterEv('talk')">🎤 Talks</button>
+                <button class="ynj-ev-chip" data-filter="class" onclick="filterEv('class')">🎓 Classes</button>
+                <button class="ynj-ev-chip" data-filter="community,iftar" onclick="filterEv('community,iftar')">🤝 Community</button>
+                <button class="ynj-ev-chip" data-filter="youth,kids,children" onclick="filterEv('youth,kids,children')">👦 Youth</button>
+                <button class="ynj-ev-chip" data-filter="sisters" onclick="filterEv('sisters')">👩 Sisters</button>
+                <button class="ynj-ev-chip" data-filter="sports,competition" onclick="filterEv('sports,competition')">⚽ Sports</button>
+            </div>
+
+            <div id="ev-feed"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading events&hellip;</p></div>
         </main>
         <?php self::render_bottom_nav( 'more', $slug ); ?>
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
+            let allEvents = [];
+            let currentFilter = 'all';
+
             document.querySelectorAll('[data-nav-mosque]').forEach(el => {
                 el.href = el.dataset.navMosque.replace('{slug}', slug);
             });
-            fetch(`/wp-json/ynj/v1/mosques/${slug}`).then(r=>r.json()).then(resp=>{
-                const m = resp.mosque||resp;
-                document.getElementById('ev-mosque-name').textContent = m.name||slug;
-            }).catch(()=>{});
-            fetch(`/wp-json/ynj/v1/mosques/${slug}/events?upcoming=1`).then(r=>r.json()).then(data=>{
+
+            const typeIcons = {
+                'talk':'🎤','class':'📖','course':'🎓','workshop':'🛠️','community':'🤝',
+                'sports':'⚽','competition':'🏆','youth':'👦','kids':'🧒','children':'🧒',
+                'sisters':'👩','fundraiser':'💰','iftar':'🍽️','eid':'🌙','quran':'📖',
+                'halaqa':'📚','nikah':'💍','janazah':'🕊️','other':'📌'
+            };
+
+            function fmtDate(d) {
+                if (!d) return '';
+                const dt = new Date(d + 'T00:00:00');
+                const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                return days[dt.getDay()] + ' ' + dt.getDate() + ' ' + months[dt.getMonth()];
+            }
+
+            function fmtTime(t) {
+                return t ? String(t).replace(/:\d{2}$/, '') : '';
+            }
+
+            function renderEvent(e) {
+                const icon = typeIcons[e.event_type] || typeIcons[e.type] || '📅';
+                const isLive = e.is_live && e.live_url;
+                const isFree = !e.ticket_price_pence || e.ticket_price_pence <= 0;
+                const isOnline = e.is_online;
+                const price = !isFree ? '£' + (e.ticket_price_pence / 100).toFixed(2) : '';
+                const spotsLeft = e.max_capacity > 0 ? Math.max(0, e.max_capacity - (e.registered_count||0)) : null;
+                const pctFull = e.max_capacity > 0 ? Math.min(100, Math.round(((e.registered_count||0) / e.max_capacity) * 100)) : 0;
+                const snippet = (e.description||'').length > 150 ? e.description.slice(0,150)+'...' : (e.description||'');
+                const detailUrl = '/mosque/' + slug + '/events/' + e.id;
+
+                let badges = '';
+                if (isLive) badges += '<span class="ynj-ev-badge ynj-ev-badge--live">🔴 LIVE NOW</span>';
+                badges += '<span class="ynj-ev-badge ynj-ev-badge--type">' + icon + ' ' + (e.event_type || 'Event') + '</span>';
+                if (isFree) badges += '<span class="ynj-ev-badge ynj-ev-badge--free">Free</span>';
+                else badges += '<span class="ynj-ev-badge ynj-ev-badge--paid">' + price + '</span>';
+                if (isOnline) badges += '<span class="ynj-ev-badge ynj-ev-badge--online">Online</span>';
+
+                let cta = '';
+                if (isLive) {
+                    cta = '<a href="' + detailUrl + '" class="ynj-ev-btn ynj-ev-btn--live">🔴 Watch Live</a>';
+                } else if (e.requires_booking || !isFree) {
+                    cta = '<a href="' + detailUrl + '" class="ynj-ev-btn ynj-ev-btn--primary">' + (isFree ? 'RSVP Free' : 'Book ' + price) + '</a>';
+                } else {
+                    cta = '<a href="' + detailUrl + '" class="ynj-ev-btn ynj-ev-btn--outline">View Details</a>';
+                }
+
+                let capacityHtml = '';
+                if (spotsLeft !== null) {
+                    if (spotsLeft <= 0) {
+                        capacityHtml = '<span class="ynj-ev-capacity" style="color:#dc2626;font-weight:700;">SOLD OUT</span>';
+                    } else {
+                        capacityHtml = '<span class="ynj-ev-capacity">' + spotsLeft + ' spots left <span class="ynj-ev-capacity-bar"><span style="width:' + pctFull + '%"></span></span></span>';
+                    }
+                }
+
+                return '<div class="ynj-ev-card' + (isLive ? ' ynj-ev-card--live' : '') + '">' +
+                    '<div class="ynj-ev-body">' +
+                    '<div class="ynj-ev-badges">' + badges + '</div>' +
+                    '<h3 class="ynj-ev-title">' + e.title + '</h3>' +
+                    '<div class="ynj-ev-meta">' +
+                    '<div class="ynj-ev-meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' + fmtDate(e.event_date) + '</div>' +
+                    (fmtTime(e.start_time) ? '<div class="ynj-ev-meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>' + fmtTime(e.start_time) + (fmtTime(e.end_time) ? ' — ' + fmtTime(e.end_time) : '') + '</div>' : '') +
+                    (e.location ? '<div class="ynj-ev-meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 2C7.6 2 4 5.4 4 9.5 4 14.3 12 22 12 22s8-7.7 8-12.5C20 5.4 16.4 2 12 2z"/></svg>' + e.location + '</div>' : '') +
+                    '</div>' +
+                    (snippet ? '<p class="ynj-ev-desc">' + snippet + '</p>' : '') +
+                    '<div class="ynj-ev-footer">' + cta + capacityHtml + '</div>' +
+                    '</div></div>';
+            }
+
+            function renderAll() {
                 const feed = document.getElementById('ev-feed');
-                if (data.events && data.events.length) {
-                    feed.innerHTML = data.events.map(e => {
-                        const t = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
-                        return `<div class="ynj-feed-item">
-                            <h4>${e.title}</h4>
-                            <p class="ynj-text-muted">${e.event_date||''} · ${t}${e.location ? ' · '+e.location : ''}</p>
-                            ${e.description ? `<p>${e.description}</p>` : ''}
-                        </div>`;
-                    }).join('');
-                } else { feed.innerHTML = '<p class="ynj-text-muted">No upcoming events.</p>'; }
-            }).catch(()=>{ document.getElementById('ev-feed').innerHTML = '<p class="ynj-text-muted">Could not load events.</p>'; });
+                let filtered = allEvents;
+                if (currentFilter !== 'all') {
+                    const types = currentFilter.split(',');
+                    if (currentFilter === '_live') {
+                        filtered = allEvents.filter(e => e.is_live && e.live_url);
+                    } else {
+                        filtered = allEvents.filter(e => types.includes(e.event_type));
+                    }
+                }
+                if (!filtered.length) {
+                    feed.innerHTML = '<div class="ynj-ev-empty"><div>📅</div><h3>No Events Found</h3><p class="ynj-text-muted">' + (currentFilter === 'all' ? 'No upcoming events at this mosque. Check back soon!' : 'No events match this filter. Try "All".') + '</p></div>';
+                    return;
+                }
+                feed.innerHTML = filtered.map(renderEvent).join('');
+            }
+
+            window.filterEv = function(filter) {
+                currentFilter = filter;
+                document.querySelectorAll('.ynj-ev-chip').forEach(c => {
+                    c.classList.toggle('ynj-ev-chip--active', c.dataset.filter === filter);
+                });
+                renderAll();
+            };
+
+            // Load
+            fetch('/wp-json/ynj/v1/mosques/' + slug)
+                .then(r => r.json())
+                .then(resp => {
+                    const m = resp.mosque || resp;
+                    document.getElementById('ev-title').textContent = (m.name || 'Your Mosque') + ' Events';
+                }).catch(() => {});
+
+            fetch('/wp-json/ynj/v1/mosques/' + slug + '/events?upcoming=1')
+                .then(r => r.json())
+                .then(data => {
+                    allEvents = data.events || [];
+                    renderAll();
+                })
+                .catch(() => {
+                    document.getElementById('ev-feed').innerHTML = '<div class="ynj-ev-empty"><div>😕</div><h3>Could Not Load</h3><p class="ynj-text-muted">Please check your connection and try again.</p></div>';
+                });
         })();
         </script>
         </body></html>
@@ -2285,45 +2435,91 @@ class YNJ_Renderer {
     /* ================================================================== */
 
     public static function render_rooms( string $slug ): void {
-        self::page_head( 'Room Booking — YourJannah', 'Book a room at your local mosque.' );
+        self::render_booking( $slug );
+    }
+
+    public static function render_booking( string $slug ): void {
+        self::page_head( 'Booking — YourJannah', 'Book rooms and services at your local mosque.' );
         ?>
+        <style>
+        .ynj-book-tabs{display:flex;gap:0;margin-bottom:16px;background:rgba(255,255,255,.6);border-radius:12px;padding:4px;border:1px solid rgba(0,0,0,.06);}
+        .ynj-book-tab{flex:1;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;text-align:center;cursor:pointer;border:none;background:transparent;color:<?php echo self::COLOR_TEXT_MUTED; ?>;transition:all .15s;}
+        .ynj-book-tab--active{background:<?php echo self::COLOR_ACCENT; ?>;color:#fff;box-shadow:0 2px 8px rgba(0,173,239,.2);}
+        .ynj-room-card{background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-radius:14px;border:1px solid rgba(255,255,255,.6);padding:18px;margin-bottom:12px;box-shadow:0 2px 12px rgba(0,0,0,.04);}
+        .ynj-room-card h3{font-size:16px;font-weight:700;margin-bottom:4px;}
+        .ynj-room-meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0 12px;}
+        .ynj-room-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;}
+        .ynj-room-badge--cap{background:#e8f4f8;color:<?php echo self::COLOR_ACCENT; ?>;}
+        .ynj-room-badge--price{background:#dcfce7;color:#166534;font-size:14px;}
+        .ynj-room-badge--free{background:#f0fdf4;color:#166534;}
+        .ynj-room-photo{width:100%;height:120px;border-radius:10px;object-fit:cover;margin-bottom:10px;background:#e8f4f8;}
+        .ynj-svc-card{background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-radius:14px;border:1px solid rgba(255,255,255,.6);padding:18px;margin-bottom:12px;box-shadow:0 2px 12px rgba(0,0,0,.04);}
+        .ynj-svc-card h3{font-size:15px;font-weight:700;margin-bottom:3px;}
+        .ynj-svc-type{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:6px;background:#ede9fe;color:#7c3aed;margin-bottom:6px;}
+        .ynj-svc-detail{display:flex;align-items:center;gap:6px;font-size:13px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;margin-top:4px;}
+        .ynj-svc-detail svg{width:14px;height:14px;flex-shrink:0;color:<?php echo self::COLOR_ACCENT; ?>;}
+        .ynj-book-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:<?php echo self::COLOR_ACCENT; ?>;color:#fff;transition:all .15s;}
+        .ynj-book-btn:hover{opacity:.9;}
+        .ynj-book-btn--outline{background:transparent;border:1px solid #ddd;color:<?php echo self::COLOR_TEXT; ?>;}
+        .ynj-share-check{display:flex;align-items:center;gap:8px;margin-top:10px;padding:10px;background:#f0fdf4;border-radius:8px;font-size:12px;color:#166534;}
+        .ynj-share-check input{width:16px;height:16px;accent-color:<?php echo self::COLOR_ACCENT; ?>;}
+        </style>
         <?php self::render_header( 'rooms', $slug ); ?>
         <main class="ynj-main">
             <?php if ( isset( $_GET['payment'] ) && $_GET['payment'] === 'success' ) : ?>
-                <section class="ynj-card" style="text-align:center;padding:40px 20px;">
+                <section class="ynj-room-card" style="text-align:center;padding:40px 20px;">
                     <div style="font-size:48px;margin-bottom:12px;">&#x2705;</div>
-                    <h2 style="margin-bottom:8px;">Room Booked!</h2>
-                    <p class="ynj-text-muted">Your booking is confirmed. You'll receive details at your email.</p>
+                    <h2 style="margin-bottom:8px;">Booking Submitted!</h2>
+                    <p class="ynj-text-muted">Your booking requires masjid approval. You'll be notified once confirmed.</p>
                 </section>
             <?php else : ?>
-                <div id="rooms-list"><p class="ynj-text-muted">Loading rooms...</p></div>
+            <h2 id="bk-title" style="font-size:18px;font-weight:700;margin-bottom:4px;">Booking</h2>
+            <p class="ynj-text-muted" style="margin-bottom:14px;">Book rooms and services at your mosque</p>
 
-                <!-- Booking modal (hidden) -->
-                <div class="ynj-modal" id="booking-modal" style="display:none;">
-                    <div class="ynj-modal__content">
-                        <h3 id="modal-room-name">Book Room</h3>
-                        <form id="room-booking-form" class="ynj-form">
-                            <input type="hidden" name="room_id" id="modal-room-id">
-                            <div class="ynj-field"><label>Date *</label><input type="date" name="booking_date" required min="<?php echo date('Y-m-d'); ?>"></div>
-                            <div class="ynj-field-row">
-                                <div class="ynj-field"><label>Start Time *</label><input type="time" name="start_time" required></div>
-                                <div class="ynj-field"><label>End Time *</label><input type="time" name="end_time" required></div>
-                            </div>
-                            <div class="ynj-field"><label>Your Name *</label><input type="text" name="user_name" required></div>
-                            <div class="ynj-field-row">
-                                <div class="ynj-field"><label>Email *</label><input type="email" name="user_email" required></div>
-                                <div class="ynj-field"><label>Phone</label><input type="tel" name="user_phone"></div>
-                            </div>
-                            <div class="ynj-field"><label>Notes</label><textarea name="notes" rows="2" placeholder="Purpose of booking"></textarea></div>
-                        </form>
-                        <p id="modal-price" class="ynj-text-muted" style="margin:12px 0;"></p>
-                        <div style="display:flex;gap:8px;">
-                            <button class="ynj-btn" id="modal-submit" type="button" style="flex:1;justify-content:center;">Book Now</button>
-                            <button class="ynj-btn ynj-btn--outline" type="button" onclick="document.getElementById('booking-modal').style.display='none'">Cancel</button>
+            <div class="ynj-book-tabs">
+                <button class="ynj-book-tab ynj-book-tab--active" id="tab-rooms" onclick="switchBookTab('rooms')">🏠 Rooms</button>
+                <button class="ynj-book-tab" id="tab-services" onclick="switchBookTab('services')">🛠️ Services</button>
+            </div>
+
+            <div id="rooms-panel">
+                <div id="rooms-list"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading rooms...</p></div>
+            </div>
+
+            <div id="services-panel" style="display:none;">
+                <div id="services-list"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading services...</p></div>
+            </div>
+
+            <!-- Room Booking Modal -->
+            <div class="ynj-modal" id="booking-modal" style="display:none;">
+                <div class="ynj-modal__content">
+                    <h3 id="modal-room-name" style="margin-bottom:12px;">Book Room</h3>
+                    <form id="room-booking-form" class="ynj-form">
+                        <input type="hidden" name="room_id" id="modal-room-id">
+                        <div class="ynj-field"><label>Date *</label><input type="date" name="booking_date" required min="<?php echo date('Y-m-d'); ?>"></div>
+                        <div class="ynj-field-row">
+                            <div class="ynj-field"><label>Start Time *</label><input type="time" name="start_time" required></div>
+                            <div class="ynj-field"><label>End Time *</label><input type="time" name="end_time" required></div>
                         </div>
-                        <p class="ynj-text-muted" id="modal-error" style="margin-top:8px;"></p>
+                        <div class="ynj-field"><label>Your Name *</label><input type="text" name="user_name" required></div>
+                        <div class="ynj-field-row">
+                            <div class="ynj-field"><label>Email *</label><input type="email" name="user_email" required></div>
+                            <div class="ynj-field"><label>Phone</label><input type="tel" name="user_phone"></div>
+                        </div>
+                        <div class="ynj-field"><label>Purpose / Notes</label><textarea name="notes" rows="2" placeholder="What is this booking for?"></textarea></div>
+                        <div class="ynj-share-check">
+                            <input type="checkbox" name="share_to_feed" id="share-check" checked>
+                            <label for="share-check">Share this event with the mosque community (visible on the feed after approval)</label>
+                        </div>
+                    </form>
+                    <p id="modal-price" class="ynj-text-muted" style="margin:12px 0;"></p>
+                    <p class="ynj-text-muted" style="font-size:11px;margin-bottom:8px;">⏳ All bookings require masjid approval before confirmation.</p>
+                    <div style="display:flex;gap:8px;">
+                        <button class="ynj-book-btn" id="modal-submit" type="button" style="flex:1;justify-content:center;">Submit Booking Request</button>
+                        <button class="ynj-book-btn ynj-book-btn--outline" type="button" onclick="document.getElementById('booking-modal').style.display='none'">Cancel</button>
                     </div>
+                    <p class="ynj-text-muted" id="modal-error" style="margin-top:8px;color:#dc2626;"></p>
                 </div>
+            </div>
             <?php endif; ?>
         </main>
         <?php self::render_bottom_nav( 'more', $slug ); ?>
@@ -2331,52 +2527,85 @@ class YNJ_Renderer {
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
-            let roomsData = [];
+            let mosqueId = 0;
 
-            fetch(`/wp-json/ynj/v1/mosques/${slug}/directory`)
-                .then(r => r.json())
-                .then(() => {
-                    // Rooms aren't in directory endpoint — need admin API. Use a direct fetch.
-                    // For now, use the mosque profile which we can extend.
-                    // Actually rooms need their own endpoint. Let me fetch via ID.
-                });
+            document.querySelectorAll('[data-nav-mosque]').forEach(el => {
+                el.href = el.dataset.navMosque.replace('{slug}', slug);
+            });
 
-            // Fetch rooms via mosque profile + admin API workaround
-            // We need a public rooms endpoint — for now fetch mosque then use ID
-            fetch(`/wp-json/ynj/v1/mosques/${slug}`)
+            window.switchBookTab = function(tab) {
+                document.getElementById('tab-rooms').classList.toggle('ynj-book-tab--active', tab === 'rooms');
+                document.getElementById('tab-services').classList.toggle('ynj-book-tab--active', tab === 'services');
+                document.getElementById('rooms-panel').style.display = tab === 'rooms' ? '' : 'none';
+                document.getElementById('services-panel').style.display = tab === 'services' ? '' : 'none';
+            };
+
+            // Load mosque info + rooms + services
+            fetch('/wp-json/ynj/v1/mosques/' + slug)
                 .then(r => r.json())
                 .then(resp => {
                     const m = resp.mosque || resp;
-                    // Fetch rooms (they're only in admin API currently — we'll use the bookings endpoint context)
-                    // TODO: Add public rooms endpoint. For now, render from seeded data.
-                    return fetch(`/wp-json/ynj/v1/mosques/${m.id}/rooms`);
+                    mosqueId = m.id;
+                    document.getElementById('bk-title').textContent = (m.name || 'Mosque') + ' Booking';
+
+                    // Load rooms
+                    fetch('/wp-json/ynj/v1/mosques/' + m.id + '/rooms')
+                        .then(r => r.ok ? r.json() : { rooms: [] })
+                        .then(data => renderRooms(data.rooms || []))
+                        .catch(() => { document.getElementById('rooms-list').innerHTML = '<p class="ynj-text-muted">Could not load rooms.</p>'; });
+
+                    // Load services
+                    fetch('/wp-json/ynj/v1/mosques/' + m.id + '/services')
+                        .then(r => r.ok ? r.json() : { services: [] })
+                        .then(data => renderServices(data.services || []))
+                        .catch(() => { document.getElementById('services-list').innerHTML = '<p class="ynj-text-muted">Could not load services.</p>'; });
                 })
-                .then(r => r.ok ? r.json() : { rooms: [] })
-                .then(data => {
-                    roomsData = data.rooms || [];
-                    renderRooms(roomsData);
-                })
-                .catch(() => {
-                    document.getElementById('rooms-list').innerHTML = '<p class="ynj-text-muted">Could not load rooms.</p>';
-                });
+                .catch(() => {});
 
             function renderRooms(rooms) {
                 const el = document.getElementById('rooms-list');
-                if (!rooms.length) { el.innerHTML = '<p class="ynj-text-muted">No rooms available for booking.</p>'; return; }
+                if (!rooms.length) {
+                    el.innerHTML = '<div style="text-align:center;padding:30px 20px;"><div style="font-size:40px;margin-bottom:8px;">🏠</div><h3 style="font-size:15px;">No Rooms Listed</h3><p class="ynj-text-muted">This mosque hasn\'t listed any rooms yet.</p></div>';
+                    return;
+                }
+                el.innerHTML = rooms.map(function(r) {
+                    var hourly = r.hourly_rate_pence > 0 ? '\u00a3' + (r.hourly_rate_pence/100).toFixed(0) + '/hr' : '';
+                    var daily = r.daily_rate_pence > 0 ? '\u00a3' + (r.daily_rate_pence/100).toFixed(0) + '/day' : '';
+                    var isFree = !r.hourly_rate_pence && !r.daily_rate_pence;
+                    var photo = r.photo_url ? '<img class="ynj-room-photo" src="' + r.photo_url + '" alt="' + r.name + '">' : '';
+                    return '<div class="ynj-room-card">' + photo +
+                        '<h3>' + r.name + '</h3>' +
+                        (r.description ? '<p class="ynj-text-muted" style="margin-bottom:8px;">' + r.description + '</p>' : '') +
+                        '<div class="ynj-room-meta">' +
+                        '<span class="ynj-room-badge ynj-room-badge--cap">👥 ' + r.capacity + ' capacity</span>' +
+                        (isFree ? '<span class="ynj-room-badge ynj-room-badge--free">Free</span>' : '') +
+                        (hourly ? '<span class="ynj-room-badge ynj-room-badge--price">' + hourly + '</span>' : '') +
+                        (daily ? '<span style="font-size:12px;color:#6b8fa3;">' + daily + '</span>' : '') +
+                        '</div>' +
+                        (r.availability_notes ? '<p style="font-size:12px;color:#6b8fa3;margin-bottom:8px;">\ud83d\udcc5 ' + r.availability_notes + '</p>' : '') +
+                        '<button class="ynj-book-btn" onclick="openBooking(' + r.id + ',\'' + r.name.replace(/'/g, "\\'") + '\',' + (r.hourly_rate_pence||0) + ')">Book This Room</button>' +
+                        '</div>';
+                }).join('');
+            }
 
-                el.innerHTML = rooms.map(r => {
-                    const hourly = r.hourly_rate_pence > 0 ? `£${(r.hourly_rate_pence/100).toFixed(0)}/hr` : 'Free';
-                    const daily = r.daily_rate_pence > 0 ? `£${(r.daily_rate_pence/100).toFixed(0)}/day` : '';
-                    return `<div class="ynj-card ynj-room-card">
-                        <h3 style="font-size:16px;font-weight:600;margin-bottom:4px;">${r.name}</h3>
-                        <p class="ynj-text-muted" style="margin-bottom:8px;">${r.description || ''}</p>
-                        <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
-                            <span class="ynj-badge">Capacity: ${r.capacity}</span>
-                            <span style="font-weight:600;color:#00ADEF;">${hourly}</span>
-                            ${daily ? `<span class="ynj-text-muted">${daily}</span>` : ''}
-                        </div>
-                        <button class="ynj-btn ynj-btn--outline" onclick="openBooking(${r.id}, '${r.name.replace(/'/g,"\\'")}', ${r.hourly_rate_pence})">Book This Room</button>
-                    </div>`;
+            function renderServices(services) {
+                const el = document.getElementById('services-list');
+                if (!services.length) {
+                    el.innerHTML = '<div style="text-align:center;padding:30px 20px;"><div style="font-size:40px;margin-bottom:8px;">🛠️</div><h3 style="font-size:15px;">No Services Listed</h3><p class="ynj-text-muted">This mosque hasn\'t listed any bookable services yet.</p></div>';
+                    return;
+                }
+                el.innerHTML = services.map(function(s) {
+                    var rate = s.hourly_rate_pence > 0 ? '\u00a3' + (s.hourly_rate_pence/100).toFixed(0) + '/hr' : 'Contact for pricing';
+                    return '<div class="ynj-svc-card">' +
+                        '<span class="ynj-svc-type">' + (s.service_type || 'Service') + '</span>' +
+                        '<h3>' + s.provider_name + '</h3>' +
+                        (s.description ? '<p class="ynj-text-muted" style="margin:6px 0;">' + s.description + '</p>' : '') +
+                        '<div class="ynj-svc-detail"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>' + rate + '</span></div>' +
+                        (s.area_covered ? '<div class="ynj-svc-detail"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 2C7.6 2 4 5.4 4 9.5 4 14.3 12 22 12 22s8-7.7 8-12.5C20 5.4 16.4 2 12 2z"/></svg><span>' + s.area_covered + '</span></div>' : '') +
+                        '<div style="display:flex;gap:8px;margin-top:10px;">' +
+                        (s.phone ? '<a href="tel:' + s.phone + '" class="ynj-book-btn" style="font-size:12px;padding:6px 14px;">📞 Call</a>' : '') +
+                        (s.email ? '<a href="mailto:' + s.email + '" class="ynj-book-btn ynj-book-btn--outline" style="font-size:12px;padding:6px 14px;">✉️ Email</a>' : '') +
+                        '</div></div>';
                 }).join('');
             }
 
@@ -2384,7 +2613,7 @@ class YNJ_Renderer {
                 document.getElementById('modal-room-id').value = roomId;
                 document.getElementById('modal-room-name').textContent = 'Book: ' + roomName;
                 document.getElementById('modal-price').textContent = hourlyRate > 0
-                    ? `Rate: £${(hourlyRate/100).toFixed(0)}/hour — payment via Stripe`
+                    ? 'Rate: \u00a3' + (hourlyRate/100).toFixed(0) + '/hour \u2014 payment after masjid approval'
                     : 'This room is free to book.';
                 document.getElementById('booking-modal').style.display = '';
                 document.getElementById('modal-error').textContent = '';
@@ -2405,12 +2634,11 @@ class YNJ_Renderer {
                     return;
                 }
 
-                // Calculate hours
                 const [sh,sm] = start.split(':').map(Number);
                 const [eh,em] = end.split(':').map(Number);
                 const hours = Math.max(1, Math.ceil(((eh*60+em) - (sh*60+sm)) / 60));
 
-                btn.disabled = true; btn.textContent = 'Processing...';
+                btn.disabled = true; btn.textContent = 'Submitting...';
 
                 try {
                     const resp = await fetch('/wp-json/ynj/v1/stripe/checkout/room', {
@@ -2420,14 +2648,15 @@ class YNJ_Renderer {
                             booking_date: date, start_time: start+':00', end_time: end+':00',
                             user_name: name, user_email: email,
                             user_phone: form.querySelector('[name="user_phone"]').value.trim(),
-                            notes: form.querySelector('[name="notes"]').value.trim()
+                            notes: form.querySelector('[name="notes"]').value.trim(),
+                            share_to_feed: document.getElementById('share-check').checked
                         })
                     });
                     const data = await resp.json();
                     if (data.ok && data.checkout_url) { window.location.href = data.checkout_url; }
-                    else if (data.ok && data.free) { window.location.href = `/mosque/${slug}/rooms?payment=success`; }
-                    else { document.getElementById('modal-error').textContent = data.error || 'Booking failed.'; btn.disabled = false; btn.textContent = 'Book Now'; }
-                } catch(e) { document.getElementById('modal-error').textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Book Now'; }
+                    else if (data.ok && data.free) { window.location.href = '/mosque/' + slug + '/rooms?payment=success'; }
+                    else { document.getElementById('modal-error').textContent = data.error || 'Booking failed.'; btn.disabled = false; btn.textContent = 'Submit Booking Request'; }
+                } catch(e) { document.getElementById('modal-error').textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Submit Booking Request'; }
             });
         })();
         </script>
@@ -4422,8 +4651,7 @@ img,svg{display:block;max-width:100%;}
             'events'      => [ 'label' => 'Events',     'href' => '/mosque/{slug}/events' ],
             'fundraising' => [ 'label' => 'Fundraise',  'href' => '/mosque/{slug}/fundraising' ],
             'sponsors'    => [ 'label' => 'Sponsors',   'href' => '/mosque/{slug}/sponsors' ],
-            'services'    => [ 'label' => 'Services',   'href' => '/mosque/{slug}/services' ],
-            'rooms'       => [ 'label' => 'Rooms',      'href' => '/mosque/{slug}/rooms' ],
+            'rooms'       => [ 'label' => 'Booking',    'href' => '/mosque/{slug}/rooms' ],
             'account'     => [ 'label' => 'My Account', 'href' => '/profile' ],
         ];
         ?>
