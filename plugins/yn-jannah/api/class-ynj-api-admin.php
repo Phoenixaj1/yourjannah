@@ -911,6 +911,23 @@ class YNJ_API_Admin {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Subject and message required.' ], 400 );
         }
 
+        // Rate limit: max 3 broadcasts per mosque per week
+        $transient_key = 'ynj_broadcast_count_' . $mosque_id;
+        $count_this_week = (int) get_transient( $transient_key );
+        if ( $count_this_week >= 3 ) {
+            $remaining = 7 - ( ( time() - (int) get_option( '_transient_timeout_' . $transient_key, time() ) ) / 86400 );
+            return new \WP_REST_Response( [
+                'ok'    => false,
+                'error' => 'Broadcast limit reached (3 per week). Your congregation appreciates quality over quantity. Try again in a few days.',
+            ], 429 );
+        }
+        // Increment counter (expires after 7 days from first broadcast)
+        if ( $count_this_week === 0 ) {
+            set_transient( $transient_key, 1, 7 * DAY_IN_SECONDS );
+        } else {
+            set_transient( $transient_key, $count_this_week + 1, (int) get_option( '_transient_timeout_' . $transient_key, time() + 7 * DAY_IN_SECONDS ) - time() );
+        }
+
         $sent_push = 0;
         $sent_email = 0;
 

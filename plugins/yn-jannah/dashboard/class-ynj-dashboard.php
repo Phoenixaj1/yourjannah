@@ -1844,7 +1844,8 @@ async function renderBroadcast() {
         '<div class="d-header"><h1>\ud83d\udce3 Broadcast Message</h1></div>' +
         '<div class="d-card" style="background:linear-gradient(135deg,#eff6ff,#ecfeff);border:1px solid #bfdbfe;margin-bottom:16px">' +
         '<p style="font-size:14px;font-weight:600;color:#1e40af">Reach up to ' + totalReach + ' subscribers & members</p>' +
-        '<p style="font-size:12px;color:var(--text-dim);margin-top:4px">Send a push notification, email, or both to everyone subscribed to your mosque.</p></div>' +
+        '<p style="font-size:12px;color:var(--text-dim);margin-top:4px">Send a push notification, email, or both to everyone subscribed to your mosque.</p>' +
+        '<p style="font-size:11px;color:#92400e;margin-top:6px;background:#fef3c7;padding:6px 10px;border-radius:6px">\u26a0\ufe0f Limit: 3 broadcasts per week — quality over quantity</p></div>' +
         '<div class="d-card">' +
         '<div class="d-field"><label>Subject</label><input type="text" id="bc_subject" placeholder="e.g. Jumu\'ah time change this week"></div>' +
         '<div class="d-field"><label>Message</label><textarea id="bc_body" rows="5" placeholder="Write your message to the congregation..."></textarea></div>' +
