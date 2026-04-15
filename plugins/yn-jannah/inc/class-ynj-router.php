@@ -58,15 +58,19 @@ class YNJ_Router {
 
         $mosque_routes = [
             // /mosque/{slug}/prayers
-            '#^/mosque/([a-z0-9-]+)/prayers/?$#' => 'render_prayers',
+            '#^/mosque/([a-z0-9-]+)/prayers/?$#'   => 'render_prayers',
             // /mosque/{slug}/events
-            '#^/mosque/([a-z0-9-]+)/events/?$#'  => 'render_events',
+            '#^/mosque/([a-z0-9-]+)/events/?$#'    => 'render_events',
             // /mosque/{slug}/donate
-            '#^/mosque/([a-z0-9-]+)/donate/?$#'  => 'render_donate',
-            // /mosque/{slug}/directory
+            '#^/mosque/([a-z0-9-]+)/donate/?$#'    => 'render_donate',
+            // /mosque/{slug}/services
+            '#^/mosque/([a-z0-9-]+)/services/?$#'  => 'render_services',
+            // /mosque/{slug}/sponsors
+            '#^/mosque/([a-z0-9-]+)/sponsors/?$#'  => 'render_sponsors',
+            // /mosque/{slug}/directory (More page)
             '#^/mosque/([a-z0-9-]+)/directory/?$#' => 'render_directory',
             // /mosque/{slug} (profile — must be last)
-            '#^/mosque/([a-z0-9-]+)/?$#'          => 'render_mosque',
+            '#^/mosque/([a-z0-9-]+)/?$#'           => 'render_mosque',
         ];
 
         foreach ( $mosque_routes as $pattern => $method ) {
