@@ -254,6 +254,7 @@ class YNJ_Admin {
         if (isset($_POST['ynj_save_settings']) && wp_verify_nonce($_POST['_wpnonce'] ?? '', 'ynj_settings')) {
             update_option('ynj_stripe_secret_key', sanitize_text_field($_POST['stripe_sk'] ?? ''));
             update_option('ynj_stripe_public_key', sanitize_text_field($_POST['stripe_pk'] ?? ''));
+            update_option('ynj_stripe_webhook_secret', sanitize_text_field($_POST['stripe_wh'] ?? ''));
             update_option('ynj_dfm_domain', sanitize_text_field($_POST['dfm_domain'] ?? 'donationformasjid.com'));
             update_option('ynj_aladhan_method', sanitize_text_field($_POST['aladhan_method'] ?? '2'));
             echo '<div class="notice notice-success"><p>Settings saved.</p></div>';
@@ -268,6 +269,14 @@ class YNJ_Admin {
                 <table class="form-table">
                     <tr><th>Stripe Public Key</th><td><input type="text" name="stripe_pk" value="<?php echo esc_attr(get_option('ynj_stripe_public_key', '')); ?>" class="regular-text" placeholder="pk_live_..."></td></tr>
                     <tr><th>Stripe Secret Key</th><td><input type="password" name="stripe_sk" value="<?php echo esc_attr(get_option('ynj_stripe_secret_key', '')); ?>" class="regular-text" placeholder="sk_live_..."></td></tr>
+                    <tr><th>Webhook Secret</th><td><input type="password" name="stripe_wh" value="<?php echo esc_attr(get_option('ynj_stripe_webhook_secret', '')); ?>" class="regular-text" placeholder="whsec_...">
+                    <p class="description">Webhook URL: <code><?php echo home_url('/wp-json/ynj/v1/stripe/webhook'); ?></code></p></td></tr>
+                    <tr><th>Status</th><td><?php
+                        $configured = YNJ_Stripe::is_configured();
+                        echo $configured
+                            ? '<span style="color:green">&#x2705; Stripe configured</span>'
+                            : '<span style="color:red">&#x274C; Not configured — set keys above or they will fall back to yourniyyah-checkout keys</span>';
+                    ?></td></tr>
                 </table>
 
                 <h2>Prayer Times</h2>

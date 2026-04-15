@@ -31,6 +31,8 @@ spl_autoload_register(function($class) {
         'YNJ_API_Directory'   => 'api/class-ynj-api-directory.php',
         'YNJ_API_Subscribe'   => 'api/class-ynj-api-subscribe.php',
         'YNJ_API_Admin'       => 'api/class-ynj-api-admin.php',
+        'YNJ_Stripe'          => 'inc/class-ynj-stripe.php',
+        'YNJ_API_Stripe'      => 'api/class-ynj-api-stripe.php',
     ];
     if (isset($map[$class])) {
         require_once YNJ_DIR . $map[$class];
@@ -59,6 +61,7 @@ add_action('rest_api_init', function() {
     YNJ_API_Directory::register();
     YNJ_API_Subscribe::register();
     YNJ_API_Admin::register();
+    YNJ_API_Stripe::register();
 });
 
 // Admin menu
