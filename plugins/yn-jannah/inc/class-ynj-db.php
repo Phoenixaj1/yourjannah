@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '1.0.0';
+    const SCHEMA_VERSION = '1.1.0';
 
     /**
      * Return the full table name for a given short name.
@@ -121,6 +121,8 @@ class YNJ_DB {
             asr_jamat time DEFAULT NULL,
             maghrib_jamat time DEFAULT NULL,
             isha_jamat time DEFAULT NULL,
+            taraweeh time DEFAULT NULL,
+            suhoor time DEFAULT NULL,
             source varchar(20) NOT NULL DEFAULT 'api',
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
@@ -314,7 +316,32 @@ class YNJ_DB {
             KEY service_type (service_type)
         ) $charset_collate;";
 
-        // 12. Subscribers
+        // 12. Users (congregation members)
+        $tables[] = "CREATE TABLE {$t('users')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            name varchar(255) NOT NULL DEFAULT '',
+            email varchar(255) NOT NULL DEFAULT '',
+            phone varchar(50) NOT NULL DEFAULT '',
+            password_hash varchar(255) NOT NULL DEFAULT '',
+            favourite_mosque_id bigint(20) unsigned DEFAULT NULL,
+            travel_mode varchar(10) NOT NULL DEFAULT 'walk',
+            travel_minutes int(11) NOT NULL DEFAULT 0,
+            push_endpoint text NOT NULL,
+            push_p256dh text NOT NULL,
+            push_auth varchar(100) NOT NULL DEFAULT '',
+            alert_before_minutes int(11) NOT NULL DEFAULT 20,
+            token_hash varchar(64) NOT NULL DEFAULT '',
+            token_last_used datetime DEFAULT NULL,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY email (email),
+            KEY favourite_mosque_id (favourite_mosque_id),
+            KEY token_hash (token_hash),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 13. Subscribers
         $tables[] = "CREATE TABLE {$t('subscribers')} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
@@ -373,6 +400,7 @@ class YNJ_DB {
             'enquiries',
             'businesses',
             'services',
+            'users',
             'subscribers',
         ];
 

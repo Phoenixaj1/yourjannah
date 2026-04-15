@@ -455,6 +455,9 @@ class YNJ_Prayer {
             $result[ $name ] = $row[ $name ] ?? null;
         }
 
+        $result['taraweeh'] = $row['taraweeh'] ?? null;
+        $result['suhoor']   = $row['suhoor'] ?? null;
+
         return $result;
     }
 }

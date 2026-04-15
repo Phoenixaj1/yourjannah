@@ -86,6 +86,23 @@ class YNJ_Router {
             }
         }
 
+        // ---- User auth pages ----
+
+        if ( '/login' === $path ) {
+            YNJ_Renderer::render_login();
+            exit;
+        }
+
+        if ( '/register' === $path ) {
+            YNJ_Renderer::render_register();
+            exit;
+        }
+
+        if ( '/profile' === $path ) {
+            YNJ_Renderer::render_profile();
+            exit;
+        }
+
         // ---- Home ----
 
         if ( '/' === $path || '' === $path ) {

@@ -73,10 +73,16 @@ class YNJ_Renderer {
                     </div>
                     <span class="ynj-travel-dist" id="travel-dist"></span>
                 </div>
-                <a class="ynj-btn ynj-btn--navigate" id="navigate-btn" href="#" target="_blank" rel="noopener" style="display:none;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
-                    Navigate to Masjid
-                </a>
+                <div class="ynj-nav-buttons" id="nav-buttons" style="display:none;">
+                    <a class="ynj-btn ynj-btn--navigate" id="navigate-walk" href="#" target="_blank" rel="noopener">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2"/><path d="M10 22l2-7 3 3v7M14 13l2-3-3-3-2 4"/></svg>
+                        Walk
+                    </a>
+                    <a class="ynj-btn ynj-btn--navigate" id="navigate-drive" href="#" target="_blank" rel="noopener">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17h14M7 11l2-5h6l2 5M4 17v-3a1 1 0 011-1h14a1 1 0 011 1v3"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/></svg>
+                        Drive
+                    </a>
+                </div>
             </section>
 
             <!-- Section 2: View Full Timetable link -->
@@ -117,6 +123,7 @@ class YNJ_Renderer {
             let mosqueSlug = localStorage.getItem('ynj_mosque_slug');
             let mosqueData = null;
             let prayerTimes = null;
+            let jamatTimes = {};
             let userLat = null, userLng = null;
             let travelMinutes = null;
             let nearbyMosques = [];
@@ -204,8 +211,11 @@ class YNJ_Renderer {
             }
 
             /* ---- Mosque Selection ---- */
+            let mosqueLat = null, mosqueLng = null;
+
             function selectMosque(slug, name, lat, lng, distKm) {
                 mosqueSlug = slug;
+                mosqueLat = lat; mosqueLng = lng;
                 localStorage.setItem('ynj_mosque_slug', slug);
                 document.getElementById('mosque-name').textContent = name || slug;
                 updateNavLinks(slug);
@@ -220,9 +230,11 @@ class YNJ_Renderer {
                     const distText = km < 1 ? `${Math.round(km*1000)}m` : `${km.toFixed(1)}km`;
                     document.getElementById('travel-dist').textContent = `${distText} · ~${travelMinutes} min walk`;
                     document.getElementById('hero-travel').style.display = '';
-                    document.getElementById('navigate-btn').style.display = '';
-                    document.getElementById('navigate-btn').href =
+                    document.getElementById('nav-buttons').style.display = '';
+                    document.getElementById('navigate-walk').href =
                         `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`;
+                    document.getElementById('navigate-drive').href =
+                        `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
                     updateLeaveBy();
                 }
 
@@ -242,6 +254,12 @@ class YNJ_Renderer {
                         document.getElementById('mosque-name').textContent = m.name || slug;
 
                         if (m.prayer_times && !m.prayer_times.error) {
+                            // Store jamat times separately
+                            ['fajr_jamat','dhuhr_jamat','asr_jamat','maghrib_jamat','isha_jamat'].forEach(k => {
+                                if (m.prayer_times[k]) {
+                                    jamatTimes[k] = String(m.prayer_times[k]).replace(/:\d{2}$/,'').replace(/\s*\(.*\)/,'');
+                                }
+                            });
                             setPrayerTimes(m.prayer_times);
                         } else if (m.latitude && m.longitude) {
                             fetchAladhan(m.latitude, m.longitude);
@@ -256,9 +274,12 @@ class YNJ_Renderer {
                             const distText = km < 1 ? `${Math.round(km*1000)}m` : `${km.toFixed(1)}km`;
                             document.getElementById('travel-dist').textContent = `${distText} · ~${travelMinutes} min walk`;
                             document.getElementById('hero-travel').style.display = '';
-                            document.getElementById('navigate-btn').style.display = '';
-                            document.getElementById('navigate-btn').href =
+                            document.getElementById('nav-buttons').style.display = '';
+                            document.getElementById('navigate-walk').href =
                                 `https://www.google.com/maps/dir/?api=1&destination=${m.latitude},${m.longitude}&travelmode=walking`;
+                            document.getElementById('navigate-drive').href =
+                                `https://www.google.com/maps/dir/?api=1&destination=${m.latitude},${m.longitude}&travelmode=driving`;
+                            mosqueLat = m.latitude; mosqueLng = m.longitude;
                             updateLeaveBy();
                         }
                     })
@@ -300,24 +321,32 @@ class YNJ_Renderer {
                 if (!prayerTimes) return;
                 const now = new Date();
                 const prayers = ['fajr','dhuhr','asr','maghrib','isha'];
-                let next = null, nextName = null, nextTime = null;
+                let next = null, nextName = null, nextTime = null, nextJamat = null;
 
                 for (const p of prayers) {
                     if (!prayerTimes[p]) continue;
                     const [h,m] = prayerTimes[p].split(':').map(Number);
                     const t = new Date(now); t.setHours(h,m,0,0);
-                    if (t > now) { next = t; nextName = p; nextTime = prayerTimes[p]; break; }
+                    if (t > now) {
+                        next = t; nextName = p; nextTime = prayerTimes[p];
+                        nextJamat = jamatTimes[p+'_jamat'] || null;
+                        break;
+                    }
                 }
+
+                const hero = document.getElementById('next-prayer-card');
 
                 if (!next) {
                     document.getElementById('next-prayer-countdown').textContent = '--:--:--';
                     document.getElementById('next-prayer-name').textContent = 'All prayers completed';
                     document.getElementById('next-prayer-time').textContent = 'See you at Fajr tomorrow';
                     document.getElementById('next-prayer-label').textContent = '';
+                    hero.classList.remove('ynj-hero--urgent','ynj-hero--critical');
                     return;
                 }
 
                 const diff = Math.max(0, Math.floor((next - now) / 1000));
+                const diffMin = Math.floor(diff / 60);
                 const hh = String(Math.floor(diff / 3600)).padStart(2,'0');
                 const mm = String(Math.floor((diff % 3600) / 60)).padStart(2,'0');
                 const ss = String(diff % 60).padStart(2,'0');
@@ -325,8 +354,21 @@ class YNJ_Renderer {
                 const label = nextName.charAt(0).toUpperCase() + nextName.slice(1);
                 document.getElementById('next-prayer-countdown').textContent = `${hh}:${mm}:${ss}`;
                 document.getElementById('next-prayer-name').textContent = label;
-                document.getElementById('next-prayer-time').textContent = nextTime;
+
+                // Show adhan + jamat time
+                const timeDisplay = nextJamat ? `Adhan ${nextTime} · Jamat ${nextJamat}` : nextTime;
+                document.getElementById('next-prayer-time').textContent = timeDisplay;
                 document.getElementById('next-prayer-label').textContent = 'Next Prayer';
+
+                // Urgency colours
+                hero.classList.remove('ynj-hero--urgent','ynj-hero--critical');
+                if (travelMinutes && diffMin <= travelMinutes + 5) {
+                    hero.classList.add('ynj-hero--critical');
+                    document.getElementById('leave-by-text').textContent = 'LEAVE NOW';
+                } else if (travelMinutes && diffMin <= travelMinutes + 15) {
+                    hero.classList.add('ynj-hero--urgent');
+                }
+
                 updateLeaveBy();
             }
 
@@ -1229,6 +1271,10 @@ class YNJ_Renderer {
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="<?php echo self::COLOR_ACCENT; ?>" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>
                         <span>Contact Mosque</span>
                     </a>
+                    <a href="/profile" class="ynj-more-item" id="profile-link">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="<?php echo self::COLOR_ACCENT; ?>" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <span id="profile-label">My Account</span>
+                    </a>
                 </div>
             </section>
         </main>
@@ -1835,6 +1881,257 @@ class YNJ_Renderer {
     }
 
     /* ================================================================== */
+    /*  PAGE: Login                                                       */
+    /* ================================================================== */
+
+    public static function render_login(): void {
+        self::page_head( 'Login — YourJannah', 'Sign in to your YourJannah account.' );
+        ?>
+        <header class="ynj-header">
+            <div class="ynj-header__inner">
+                <a href="/" class="ynj-back" aria-label="Back">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                </a>
+                <div class="ynj-logo"><span>Sign In</span></div>
+            </div>
+        </header>
+        <main class="ynj-main" style="padding-top:24px;">
+            <section class="ynj-card" style="text-align:center;padding:32px 20px 20px;">
+                <div style="font-size:36px;margin-bottom:8px;">🕌</div>
+                <h2 style="font-size:20px;font-weight:700;margin-bottom:4px;">Welcome Back</h2>
+                <p class="ynj-text-muted" style="margin-bottom:24px;">Sign in to see your bookings and get personalised prayer reminders.</p>
+            </section>
+            <section class="ynj-card">
+                <form id="login-form" class="ynj-form">
+                    <div class="ynj-field"><label>Email</label><input type="email" name="email" required placeholder="your@email.com"></div>
+                    <div class="ynj-field"><label>Password</label><input type="password" name="password" required placeholder="Min 6 characters"></div>
+                </form>
+                <button class="ynj-btn" id="login-btn" type="button" style="width:100%;justify-content:center;margin-top:16px;">Sign In</button>
+                <p class="ynj-text-muted" id="login-error" style="margin-top:8px;text-align:center;"></p>
+                <p style="text-align:center;margin-top:16px;font-size:13px;">Don't have an account? <a href="/register" style="font-weight:700;">Create one</a></p>
+            </section>
+        </main>
+        <script>
+        document.getElementById('login-btn').addEventListener('click', async function() {
+            const btn = this; const form = document.getElementById('login-form');
+            const email = form.querySelector('[name="email"]').value.trim();
+            const password = form.querySelector('[name="password"]').value;
+            if (!email || !password) { document.getElementById('login-error').textContent = 'Email and password required.'; return; }
+            btn.disabled = true; btn.textContent = 'Signing in...';
+            try {
+                const resp = await fetch('/wp-json/ynj/v1/auth/login', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({email, password})
+                });
+                const data = await resp.json();
+                if (data.ok && data.token) {
+                    localStorage.setItem('ynj_user_token', data.token);
+                    if (data.user) localStorage.setItem('ynj_user', JSON.stringify(data.user));
+                    window.location.href = '/profile';
+                } else {
+                    document.getElementById('login-error').textContent = data.error || 'Login failed.';
+                    btn.disabled = false; btn.textContent = 'Sign In';
+                }
+            } catch(e) { document.getElementById('login-error').textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Sign In'; }
+        });
+        </script>
+        </body></html>
+        <?php
+        exit;
+    }
+
+    /* ================================================================== */
+    /*  PAGE: Register                                                    */
+    /* ================================================================== */
+
+    public static function render_register(): void {
+        self::page_head( 'Create Account — YourJannah', 'Join YourJannah to get prayer reminders and book events.' );
+        ?>
+        <header class="ynj-header">
+            <div class="ynj-header__inner">
+                <a href="/" class="ynj-back" aria-label="Back">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                </a>
+                <div class="ynj-logo"><span>Create Account</span></div>
+            </div>
+        </header>
+        <main class="ynj-main" style="padding-top:24px;">
+            <section class="ynj-card" style="text-align:center;padding:32px 20px 20px;">
+                <div style="font-size:36px;margin-bottom:8px;">🕌</div>
+                <h2 style="font-size:20px;font-weight:700;margin-bottom:4px;">Join YourJannah</h2>
+                <p class="ynj-text-muted" style="margin-bottom:8px;">Get personalised prayer reminders, save your mosque, and manage your bookings.</p>
+            </section>
+            <section class="ynj-card">
+                <form id="reg-form" class="ynj-form">
+                    <div class="ynj-field"><label>Your Name *</label><input type="text" name="name" required placeholder="Full name"></div>
+                    <div class="ynj-field"><label>Email *</label><input type="email" name="email" required placeholder="your@email.com"></div>
+                    <div class="ynj-field"><label>Phone</label><input type="tel" name="phone" placeholder="07xxx xxxxxx"></div>
+                    <div class="ynj-field"><label>Password *</label><input type="password" name="password" required placeholder="Min 6 characters"></div>
+                </form>
+                <button class="ynj-btn" id="reg-btn" type="button" style="width:100%;justify-content:center;margin-top:16px;">Create Account</button>
+                <p class="ynj-text-muted" id="reg-error" style="margin-top:8px;text-align:center;"></p>
+                <p style="text-align:center;margin-top:16px;font-size:13px;">Already have an account? <a href="/login" style="font-weight:700;">Sign in</a></p>
+            </section>
+        </main>
+        <script>
+        document.getElementById('reg-btn').addEventListener('click', async function() {
+            const btn = this; const form = document.getElementById('reg-form');
+            const name = form.querySelector('[name="name"]').value.trim();
+            const email = form.querySelector('[name="email"]').value.trim();
+            const password = form.querySelector('[name="password"]').value;
+            if (!name || !email || !password) { document.getElementById('reg-error').textContent = 'Name, email, and password required.'; return; }
+            if (password.length < 6) { document.getElementById('reg-error').textContent = 'Password must be at least 6 characters.'; return; }
+            btn.disabled = true; btn.textContent = 'Creating account...';
+            try {
+                const resp = await fetch('/wp-json/ynj/v1/auth/register', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({name, email, password, phone: form.querySelector('[name="phone"]').value.trim()})
+                });
+                const data = await resp.json();
+                if (data.ok && data.token) {
+                    localStorage.setItem('ynj_user_token', data.token);
+                    window.location.href = '/profile';
+                } else {
+                    document.getElementById('reg-error').textContent = data.error || 'Registration failed.';
+                    btn.disabled = false; btn.textContent = 'Create Account';
+                }
+            } catch(e) { document.getElementById('reg-error').textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Create Account'; }
+        });
+        </script>
+        </body></html>
+        <?php
+        exit;
+    }
+
+    /* ================================================================== */
+    /*  PAGE: User Profile                                                */
+    /* ================================================================== */
+
+    public static function render_profile(): void {
+        self::page_head( 'My Account — YourJannah', 'Manage your profile, bookings, and preferences.' );
+        ?>
+        <header class="ynj-header">
+            <div class="ynj-header__inner">
+                <a href="/" class="ynj-back" aria-label="Back">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                </a>
+                <div class="ynj-logo"><span>My Account</span></div>
+            </div>
+        </header>
+        <main class="ynj-main" id="profile-main">
+            <p class="ynj-text-muted" style="text-align:center;padding:40px 0;">Loading...</p>
+        </main>
+        <?php self::render_bottom_nav( 'more' ); ?>
+        <script>
+        (function(){
+            const API = '/wp-json/ynj/v1';
+            const token = localStorage.getItem('ynj_user_token');
+
+            if (!token) { window.location.href = '/login'; return; }
+
+            const headers = {'Content-Type':'application/json','Authorization':'Bearer '+token};
+
+            async function load() {
+                const main = document.getElementById('profile-main');
+
+                // Fetch profile
+                const profileResp = await fetch(`${API}/auth/me`, {headers}).then(r=>r.json()).catch(()=>({ok:false}));
+                if (!profileResp.ok) { localStorage.removeItem('ynj_user_token'); window.location.href = '/login'; return; }
+                const user = profileResp.user;
+
+                // Fetch bookings
+                const bookingsResp = await fetch(`${API}/auth/bookings`, {headers}).then(r=>r.json()).catch(()=>({bookings:[]}));
+                const bookings = bookingsResp.bookings || [];
+
+                main.innerHTML = `
+                    <section class="ynj-card">
+                        <div style="text-align:center;margin-bottom:16px;">
+                            <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#00ADEF,#0090d0);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;margin:0 auto 8px;">${user.name.charAt(0).toUpperCase()}</div>
+                            <h2 style="font-size:18px;font-weight:700;">${user.name}</h2>
+                            <p class="ynj-text-muted">${user.email}</p>
+                        </div>
+                    </section>
+
+                    <section class="ynj-card">
+                        <h3 class="ynj-card__title">Prayer Preferences</h3>
+                        <form id="pref-form" class="ynj-form">
+                            <div class="ynj-field-row">
+                                <div class="ynj-field">
+                                    <label>Travel Mode</label>
+                                    <select name="travel_mode">
+                                        <option value="walk" ${user.travel_mode==='walk'?'selected':''}>Walking</option>
+                                        <option value="drive" ${user.travel_mode==='drive'?'selected':''}>Driving</option>
+                                    </select>
+                                </div>
+                                <div class="ynj-field">
+                                    <label>Travel Time (min)</label>
+                                    <input type="number" name="travel_minutes" value="${user.travel_minutes||''}" placeholder="e.g. 15" min="0" max="120">
+                                </div>
+                            </div>
+                            <div class="ynj-field">
+                                <label>Alert Before Prayer (minutes)</label>
+                                <select name="alert_before_minutes">
+                                    <option value="10" ${user.alert_before_minutes===10?'selected':''}>10 minutes</option>
+                                    <option value="15" ${user.alert_before_minutes===15?'selected':''}>15 minutes</option>
+                                    <option value="20" ${user.alert_before_minutes===20?'selected':''}>20 minutes (default)</option>
+                                    <option value="30" ${user.alert_before_minutes===30?'selected':''}>30 minutes</option>
+                                    <option value="45" ${user.alert_before_minutes===45?'selected':''}>45 minutes</option>
+                                </select>
+                            </div>
+                        </form>
+                        <button class="ynj-btn ynj-btn--outline" id="save-prefs" type="button" style="width:100%;justify-content:center;">Save Preferences</button>
+                    </section>
+
+                    <section class="ynj-card">
+                        <h3 class="ynj-card__title">My Bookings (${bookings.length})</h3>
+                        <div class="ynj-feed" id="bookings-list">
+                            ${bookings.length ? bookings.map(b => {
+                                const badge = b.status==='confirmed'?'green':(b.status==='pending'||b.status==='pending_payment'?'yellow':'red');
+                                const title = b.type==='event' ? (b.event_title||'Event') : (b.room_name||'Room');
+                                const time = b.start_time ? b.start_time.substring(0,5) : '';
+                                return `<div class="ynj-feed-item">
+                                    <div class="ynj-feed-item__head">
+                                        <span class="ynj-badge ynj-badge--${b.type==='event'?'event':''}"">${b.type==='event'?'Event':'Room'}</span>
+                                        <h4>${title}</h4>
+                                    </div>
+                                    <span class="ynj-feed-meta">${b.booking_date||''} · ${time}${b.mosque_name ? ' · '+b.mosque_name : ''}</span>
+                                    <span class="ynj-badge" style="margin-top:4px;background:${badge==='green'?'#dcfce7':badge==='yellow'?'#fef3c7':'#fee2e2'};color:${badge==='green'?'#166534':badge==='yellow'?'#92400e':'#991b1b'}">${b.status}</span>
+                                </div>`;
+                            }).join('') : '<p class="ynj-text-muted">No bookings yet. Browse events and rooms to get started.</p>'}
+                        </div>
+                    </section>
+
+                    <div style="text-align:center;padding:16px 0;">
+                        <button class="ynj-btn ynj-btn--outline" onclick="localStorage.removeItem('ynj_user_token');localStorage.removeItem('ynj_user');window.location.href='/';" style="color:#dc2626;border-color:#dc2626;">Logout</button>
+                    </div>
+                `;
+
+                // Save preferences handler
+                document.getElementById('save-prefs').addEventListener('click', async function() {
+                    const btn = this; const form = document.getElementById('pref-form');
+                    btn.disabled = true; btn.textContent = 'Saving...';
+                    const resp = await fetch(`${API}/auth/me`, {
+                        method: 'PUT', headers,
+                        body: JSON.stringify({
+                            travel_mode: form.querySelector('[name="travel_mode"]').value,
+                            travel_minutes: parseInt(form.querySelector('[name="travel_minutes"]').value) || 0,
+                            alert_before_minutes: parseInt(form.querySelector('[name="alert_before_minutes"]').value) || 20,
+                        })
+                    }).then(r=>r.json());
+                    btn.disabled = false; btn.textContent = 'Save Preferences';
+                    if (resp.ok) { btn.textContent = 'Saved ✓'; setTimeout(()=>{ btn.textContent = 'Save Preferences'; }, 2000); }
+                });
+            }
+
+            load();
+        })();
+        </script>
+        </body></html>
+        <?php
+        exit;
+    }
+
+    /* ================================================================== */
     /*  404 Page                                                          */
     /* ================================================================== */
 
@@ -1991,16 +2288,22 @@ img,svg{display:block;max-width:100%;}
 .ynj-leave-by svg{display:inline;}
 .ynj-travel-dist{opacity:.7;}
 
-/* Navigate button */
+/* Navigate buttons */
+.ynj-nav-buttons{display:flex;gap:10px;justify-content:center;position:relative;z-index:1;}
 .ynj-btn--navigate{
-    display:inline-flex;align-items:center;gap:8px;
+    display:inline-flex;align-items:center;gap:6px;
     background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);
-    color:#fff;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:700;
-    cursor:pointer;transition:all .2s;position:relative;z-index:1;text-decoration:none;
-    box-shadow:none;
+    color:#fff;border-radius:12px;padding:10px 20px;font-size:13px;font-weight:700;
+    cursor:pointer;transition:all .2s;text-decoration:none;box-shadow:none;
 }
 .ynj-btn--navigate:active{background:rgba(255,255,255,.3);transform:scale(.97);}
 .ynj-btn--navigate svg{display:inline;}
+
+/* Urgency states */
+.ynj-hero--urgent{background:linear-gradient(180deg,#92400e 0%,#d97706 40%,#f59e0b 100%) !important;}
+.ynj-hero--critical{background:linear-gradient(180deg,#991b1b 0%,#dc2626 40%,#ef4444 100%) !important;}
+.ynj-hero--critical .ynj-leave-by{animation:urgencyPulse 1s ease-in-out infinite;}
+@keyframes urgencyPulse{0%,100%{opacity:1}50%{opacity:.5}}
 
 /* Timetable link */
 .ynj-timetable-link{
