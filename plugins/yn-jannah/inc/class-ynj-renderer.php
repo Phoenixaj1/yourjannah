@@ -1460,9 +1460,9 @@ class YNJ_Renderer {
     /* ================================================================== */
 
     public static function render_services( string $slug ): void {
-        self::page_head( 'Services — YourJannah', 'Find Muslim professionals and masjid services near you.' );
+        self::page_head( 'People — YourJannah', 'Find trusted Muslim professionals in your community.' );
         ?>
-        <?php self::render_header( 'services', $slug ); ?>
+        <?php self::render_header( 'people', $slug ); ?>
         <main class="ynj-main">
             <!-- Search Bar -->
             <div class="ynj-search-bar">
@@ -2358,7 +2358,7 @@ class YNJ_Renderer {
     public static function render_service_signup( string $slug ): void {
         self::page_head( 'List Your Service — YourJannah', 'Advertise your professional service to the local Muslim community.' );
         ?>
-        <?php self::render_header( 'services', $slug ); ?>
+        <?php self::render_header( 'people', $slug ); ?>
         <main class="ynj-main">
             <?php if ( isset( $_GET['payment'] ) && $_GET['payment'] === 'success' ) : ?>
                 <section class="ynj-card" style="text-align:center;padding:40px 20px;">
@@ -2442,7 +2442,7 @@ class YNJ_Renderer {
     }
 
     public static function render_booking( string $slug ): void {
-        self::page_head( 'Booking — YourJannah', 'Book rooms and services at your local mosque.' );
+        self::page_head( 'Booking — YourJannah', 'Book masjid services: nikkah, funeral, counselling, rooms and more.' );
         ?>
         <style>
         .ynj-book-tabs{display:flex;gap:0;margin-bottom:16px;background:rgba(255,255,255,.6);border-radius:12px;padding:4px;border:1px solid rgba(0,0,0,.06);}
@@ -2477,19 +2477,19 @@ class YNJ_Renderer {
                 </section>
             <?php else : ?>
             <h2 id="bk-title" style="font-size:18px;font-weight:700;margin-bottom:4px;">Booking</h2>
-            <p class="ynj-text-muted" style="margin-bottom:14px;">Book rooms and services at your mosque</p>
+            <p class="ynj-text-muted" style="margin-bottom:14px;">Book masjid services, rooms and facilities</p>
 
             <div class="ynj-book-tabs">
-                <button class="ynj-book-tab ynj-book-tab--active" id="tab-rooms" onclick="switchBookTab('rooms')">🏠 Rooms</button>
-                <button class="ynj-book-tab" id="tab-services" onclick="switchBookTab('services')">🛠️ Services</button>
+                <button class="ynj-book-tab ynj-book-tab--active" id="tab-services" onclick="switchBookTab('services')">🕌 Masjid Services</button>
+                <button class="ynj-book-tab" id="tab-rooms" onclick="switchBookTab('rooms')">🏠 Rooms</button>
             </div>
 
-            <div id="rooms-panel">
+            <div id="services-panel">
+                <div id="services-list"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading masjid services...</p></div>
+            </div>
+
+            <div id="rooms-panel" style="display:none;">
                 <div id="rooms-list"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading rooms...</p></div>
-            </div>
-
-            <div id="services-panel" style="display:none;">
-                <div id="services-list"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading services...</p></div>
             </div>
 
             <!-- Room Booking Modal -->
@@ -2537,10 +2537,10 @@ class YNJ_Renderer {
             });
 
             window.switchBookTab = function(tab) {
-                document.getElementById('tab-rooms').classList.toggle('ynj-book-tab--active', tab === 'rooms');
                 document.getElementById('tab-services').classList.toggle('ynj-book-tab--active', tab === 'services');
-                document.getElementById('rooms-panel').style.display = tab === 'rooms' ? '' : 'none';
+                document.getElementById('tab-rooms').classList.toggle('ynj-book-tab--active', tab === 'rooms');
                 document.getElementById('services-panel').style.display = tab === 'services' ? '' : 'none';
+                document.getElementById('rooms-panel').style.display = tab === 'rooms' ? '' : 'none';
             };
 
             // Load mosque info + rooms + services
@@ -2591,23 +2591,38 @@ class YNJ_Renderer {
                 }).join('');
             }
 
+            var svcIcons = {
+                'nikkah':'💍','nikah':'💍','funeral':'🕊️','janazah':'🕊️',
+                'counselling':'🤝','counseling':'🤝','quran':'📖','hifz':'📖',
+                'ruqyah':'🤲','revert':'🕌','conversion':'🕌','marriage':'💍',
+                'halaqah':'📚','islamic_school':'📚','madrassah':'📚',
+                'circumcision':'🏥','aqiqah':'🐑','walima':'🍽️',
+                'imam':'🕌','khutbah':'🎤','catering':'🍽️','parking':'🅿️'
+            };
+
             function renderServices(services) {
                 const el = document.getElementById('services-list');
                 if (!services.length) {
-                    el.innerHTML = '<div style="text-align:center;padding:30px 20px;"><div style="font-size:40px;margin-bottom:8px;">🛠️</div><h3 style="font-size:15px;">No Services Listed</h3><p class="ynj-text-muted">This mosque hasn\'t listed any bookable services yet.</p></div>';
+                    el.innerHTML = '<div style="text-align:center;padding:30px 20px;"><div style="font-size:40px;margin-bottom:8px;">🕌</div><h3 style="font-size:15px;">No Masjid Services Listed</h3><p class="ynj-text-muted">This mosque hasn\'t listed their services yet (nikkah, funeral, counselling, etc.)</p></div>';
                     return;
                 }
                 el.innerHTML = services.map(function(s) {
-                    var rate = s.hourly_rate_pence > 0 ? '\u00a3' + (s.hourly_rate_pence/100).toFixed(0) + '/hr' : 'Contact for pricing';
+                    var icon = svcIcons[(s.service_type||'').toLowerCase()] || '🕌';
+                    var rate = s.hourly_rate_pence > 0 ? '\u00a3' + (s.hourly_rate_pence/100).toFixed(0) : 'Free / Contact';
                     return '<div class="ynj-svc-card">' +
-                        '<span class="ynj-svc-type">' + (s.service_type || 'Service') + '</span>' +
-                        '<h3>' + s.provider_name + '</h3>' +
-                        (s.description ? '<p class="ynj-text-muted" style="margin:6px 0;">' + s.description + '</p>' : '') +
-                        '<div class="ynj-svc-detail"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>' + rate + '</span></div>' +
-                        (s.area_covered ? '<div class="ynj-svc-detail"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 2C7.6 2 4 5.4 4 9.5 4 14.3 12 22 12 22s8-7.7 8-12.5C20 5.4 16.4 2 12 2z"/></svg><span>' + s.area_covered + '</span></div>' : '') +
+                        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
+                        '<div style="width:40px;height:40px;border-radius:10px;background:#e8f4f8;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">' + icon + '</div>' +
+                        '<div><span class="ynj-svc-type">' + (s.service_type || 'Service') + '</span>' +
+                        '<h3 style="margin:0;">' + s.provider_name + '</h3></div></div>' +
+                        (s.description ? '<p class="ynj-text-muted" style="margin:6px 0;line-height:1.4;">' + s.description + '</p>' : '') +
+                        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">' +
+                        '<span style="font-size:12px;font-weight:700;color:#00ADEF;background:#e8f4f8;padding:3px 10px;border-radius:6px;">' + rate + '</span>' +
+                        (s.area_covered ? '<span style="font-size:12px;color:#6b8fa3;background:#f0f4f8;padding:3px 10px;border-radius:6px;">📍 ' + s.area_covered + '</span>' : '') +
+                        '</div>' +
                         '<div style="display:flex;gap:8px;margin-top:10px;">' +
-                        (s.phone ? '<a href="tel:' + s.phone + '" class="ynj-book-btn" style="font-size:12px;padding:6px 14px;">📞 Call</a>' : '') +
+                        (s.phone ? '<a href="tel:' + s.phone + '" class="ynj-book-btn" style="font-size:12px;padding:6px 14px;">📞 Enquire</a>' : '') +
                         (s.email ? '<a href="mailto:' + s.email + '" class="ynj-book-btn ynj-book-btn--outline" style="font-size:12px;padding:6px 14px;">✉️ Email</a>' : '') +
+                        (!s.phone && !s.email ? '<a href="/mosque/' + slug + '/contact" class="ynj-book-btn" style="font-size:12px;padding:6px 14px;">📝 Enquire via Masjid</a>' : '') +
                         '</div></div>';
                 }).join('');
             }
@@ -4649,12 +4664,13 @@ img,svg{display:block;max-width:100%;}
     public static function render_header( string $active = '', string $slug = '', bool $show_gps = false ): void {
         $nav_items = [
             'home'        => [ 'label' => 'Home',       'href' => '/' ],
+            'events'      => [ 'label' => 'Events',     'href' => '/mosque/{slug}/events' ],
             'classes'     => [ 'label' => 'Classes',    'href' => '/mosque/{slug}/classes' ],
             'live'        => [ 'label' => 'Live',       'href' => '/live' ],
-            'events'      => [ 'label' => 'Events',     'href' => '/mosque/{slug}/events' ],
             'fundraising' => [ 'label' => 'Fundraise',  'href' => '/mosque/{slug}/fundraising' ],
             'sponsors'    => [ 'label' => 'Sponsors',   'href' => '/mosque/{slug}/sponsors' ],
             'rooms'       => [ 'label' => 'Booking',    'href' => '/mosque/{slug}/rooms' ],
+            'people'      => [ 'label' => 'People',     'href' => '/mosque/{slug}/services' ],
             'account'     => [ 'label' => 'My Account', 'href' => '/profile' ],
         ];
         ?>
@@ -4724,10 +4740,10 @@ img,svg{display:block;max-width:100%;}
                 'href'  => '/',
                 'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M9 21V9h6v12"/></svg>',
             ],
-            'explore' => [
-                'label' => 'Explore',
-                'href'  => '/mosque/{slug}/classes',
-                'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>',
+            'events' => [
+                'label' => 'Events',
+                'href'  => '/mosque/{slug}/events',
+                'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
                 'mosque' => true,
             ],
             'fundraising' => [
@@ -4736,10 +4752,10 @@ img,svg{display:block;max-width:100%;}
                 'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>',
                 'mosque' => true,
             ],
-            'sponsors' => [
-                'label' => 'Local Sponsors',
-                'href'  => '/mosque/{slug}/sponsors',
-                'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+            'rooms' => [
+                'label' => 'Booking',
+                'href'  => '/mosque/{slug}/rooms',
+                'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>',
                 'mosque' => true,
             ],
             'more' => [
