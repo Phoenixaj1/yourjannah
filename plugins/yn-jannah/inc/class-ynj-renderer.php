@@ -2819,14 +2819,47 @@ class YNJ_Renderer {
             </div>
         </main>
             <!-- Teach a Course CTA -->
-            <div class="ynj-card" style="text-align:center;padding:24px 20px;margin-top:8px;">
-                <h3 style="font-size:16px;font-weight:700;margin-bottom:6px;">🎓 Want to teach a course?</h3>
-                <p class="ynj-text-muted" style="margin-bottom:14px;">Share your knowledge with the community. Contact the masjid to propose your class.</p>
-                <a id="whatsapp-teach" href="#" target="_blank" rel="noopener" class="ynj-btn" style="background:#25D366;width:100%;justify-content:center;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492l4.637-1.467A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75c-2.09 0-4.034-.656-5.634-1.775l-.403-.262-2.75.87.913-2.684-.287-.442A9.715 9.715 0 012.25 12c0-5.385 4.365-9.75 9.75-9.75S21.75 6.615 21.75 12s-4.365 9.75-9.75 9.75z"/></svg>
-                    Contact Masjid on WhatsApp
-                </a>
-                <p class="ynj-text-muted" style="margin-top:8px;font-size:11px;">All courses require masjid approval before listing.</p>
+            <div class="ynj-card" style="padding:24px 20px;margin-top:8px;">
+                <h3 style="font-size:16px;font-weight:700;margin-bottom:6px;text-align:center;">🎓 Want to teach a course?</h3>
+                <p class="ynj-text-muted" style="margin-bottom:14px;text-align:center;">Share your knowledge with the community. Submit a proposal — the masjid will review and get back to you.</p>
+
+                <div id="propose-form-wrap">
+                    <form id="propose-form" class="ynj-form">
+                        <div class="ynj-field"><label>Your Name *</label><input type="text" name="name" required placeholder="Full name"></div>
+                        <div class="ynj-field-row">
+                            <div class="ynj-field"><label>Email *</label><input type="email" name="email" required></div>
+                            <div class="ynj-field"><label>Phone</label><input type="tel" name="phone"></div>
+                        </div>
+                        <div class="ynj-field"><label>Course Title *</label><input type="text" name="title" required placeholder="e.g. SEO for Small Businesses"></div>
+                        <div class="ynj-field-row">
+                            <div class="ynj-field"><label>Category</label>
+                                <select name="category">
+                                    <option>Business</option><option>SEO</option><option>Marketing</option><option>Finance</option>
+                                    <option>Quran</option><option>Arabic</option><option>Islamic Studies</option><option>Fiqh</option>
+                                    <option>Health</option><option>Fitness</option><option>Cooking</option><option>Youth</option>
+                                    <option>Sisters</option><option>Other</option>
+                                </select>
+                            </div>
+                            <div class="ynj-field"><label>Suggested Price</label><input type="text" name="price" placeholder="e.g. £10/session, Free"></div>
+                        </div>
+                        <div class="ynj-field"><label>Description *</label><textarea name="description" rows="3" required placeholder="What will students learn? How many sessions? Any prerequisites?"></textarea></div>
+                    </form>
+                    <button class="ynj-btn" id="propose-btn" type="button" style="width:100%;justify-content:center;margin-top:12px;" onclick="submitProposal()">Submit Proposal</button>
+                    <p class="ynj-text-muted" id="propose-status" style="margin-top:8px;text-align:center;"></p>
+                </div>
+
+                <div id="propose-success" style="display:none;text-align:center;padding:20px 0;">
+                    <div style="font-size:36px;margin-bottom:8px;">✅</div>
+                    <h4>Proposal Submitted!</h4>
+                    <p class="ynj-text-muted">The masjid will review your proposal and contact you.</p>
+                </div>
+
+                <div style="text-align:center;margin-top:12px;">
+                    <a id="whatsapp-teach" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;color:#25D366;font-size:13px;font-weight:600;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492l4.637-1.467A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75c-2.09 0-4.034-.656-5.634-1.775l-.403-.262-2.75.87.913-2.684-.287-.442A9.715 9.715 0 012.25 12c0-5.385 4.365-9.75 9.75-9.75S21.75 6.615 21.75 12s-4.365 9.75-9.75 9.75z"/></svg>
+                        Or contact via WhatsApp
+                    </a>
+                </div>
             </div>
         </main>
         <?php self::render_bottom_nav( 'explore', $slug ); ?>
@@ -2835,6 +2868,45 @@ class YNJ_Renderer {
             const slug = <?php echo wp_json_encode( $slug ); ?>;
             const API = '/wp-json/ynj/v1';
             document.querySelectorAll('[data-nav-mosque]').forEach(el => el.href = el.dataset.navMosque.replace('{slug}', slug));
+
+            // Submit class proposal as enquiry
+            window.submitProposal = async function() {
+                const form = document.getElementById('propose-form');
+                const name = form.querySelector('[name="name"]').value.trim();
+                const email = form.querySelector('[name="email"]').value.trim();
+                const title = form.querySelector('[name="title"]').value.trim();
+                const desc = form.querySelector('[name="description"]').value.trim();
+                if (!name || !email || !title || !desc) {
+                    document.getElementById('propose-status').textContent = 'Please fill in all required fields.';
+                    return;
+                }
+                document.getElementById('propose-btn').disabled = true;
+                document.getElementById('propose-btn').textContent = 'Submitting...';
+
+                const category = form.querySelector('[name="category"]').value;
+                const price = form.querySelector('[name="price"]').value.trim();
+                const phone = form.querySelector('[name="phone"]').value.trim();
+
+                const resp = await fetch(`${API}/enquiries`, {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({
+                        mosque_slug: slug,
+                        name: name, email: email, phone: phone,
+                        type: 'class_proposal',
+                        subject: 'Class Proposal: ' + title,
+                        message: `Course: ${title}\nCategory: ${category}\nSuggested Price: ${price||'TBD'}\n\n${desc}\n\nFrom: ${name} (${email}${phone ? ', '+phone : ''})`
+                    })
+                }).then(r=>r.json()).catch(()=>({ok:false}));
+
+                if (resp.ok) {
+                    document.getElementById('propose-form-wrap').style.display = 'none';
+                    document.getElementById('propose-success').style.display = '';
+                } else {
+                    document.getElementById('propose-status').textContent = resp.error || 'Failed to submit.';
+                    document.getElementById('propose-btn').disabled = false;
+                    document.getElementById('propose-btn').textContent = 'Submit Proposal';
+                }
+            };
 
             // Set WhatsApp link from mosque phone
             fetch(`${API}/mosques/${slug}`).then(r=>r.json()).then(resp => {
