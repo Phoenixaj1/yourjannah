@@ -215,7 +215,9 @@ class YNJ_API_Admin {
         }
 
         $data   = $request->get_json_params();
-        $result = YNJ_Auth::register( $data );
+
+        // Use WP auth (creates wp_user + mosque record)
+        $result = YNJ_WP_Auth::register_mosque_admin( $data );
 
         if ( is_wp_error( $result ) ) {
             $status = $result->get_error_data()['status'] ?? 400;
@@ -237,7 +239,8 @@ class YNJ_API_Admin {
     }
 
     /**
-     * POST /admin/login — Email + password login. Rate limited 10/min.
+     * POST /admin/login — Email + password login via WordPress auth.
+     * Auto-migrates old custom tokens to WP users on first login.
      */
     public static function handle_login( \WP_REST_Request $request ) {
         $ip = self::get_ip();
@@ -246,7 +249,7 @@ class YNJ_API_Admin {
         }
 
         $data   = $request->get_json_params();
-        $result = YNJ_Auth::login( $data['email'] ?? '', $data['password'] ?? '' );
+        $result = YNJ_WP_Auth::login_mosque_admin( $data['email'] ?? '', $data['password'] ?? '' );
 
         if ( is_wp_error( $result ) ) {
             $status = $result->get_error_data()['status'] ?? 400;
@@ -254,8 +257,8 @@ class YNJ_API_Admin {
         }
 
         return new \WP_REST_Response( [
-            'ok'      => true,
-            'token'   => $result['token'],
+            'ok'        => true,
+            'token'     => $result['token'],
             'mosque_id' => $result['mosque_id'] ?? null,
         ] );
     }

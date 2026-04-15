@@ -64,10 +64,11 @@ class YNJ_API_User {
 
     public static function handle_register( \WP_REST_Request $request ) {
         $data   = $request->get_json_params();
-        $result = YNJ_User_Auth::register( $data );
+        $result = YNJ_WP_Auth::register_congregation( $data );
 
-        if ( ! $result['ok'] ) {
-            return new \WP_REST_Response( $result, 400 );
+        if ( is_wp_error( $result ) ) {
+            $status = $result->get_error_data()['status'] ?? 400;
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => $result->get_error_message() ], $status );
         }
 
         return new \WP_REST_Response( [
@@ -79,10 +80,11 @@ class YNJ_API_User {
 
     public static function handle_login( \WP_REST_Request $request ) {
         $data   = $request->get_json_params();
-        $result = YNJ_User_Auth::login( $data );
+        $result = YNJ_WP_Auth::login_congregation( $data['email'] ?? '', $data['password'] ?? '' );
 
-        if ( ! $result['ok'] ) {
-            return new \WP_REST_Response( $result, 401 );
+        if ( is_wp_error( $result ) ) {
+            $status = $result->get_error_data()['status'] ?? 400;
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => $result->get_error_message() ], $status );
         }
 
         return new \WP_REST_Response( [

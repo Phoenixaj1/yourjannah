@@ -45,14 +45,24 @@ spl_autoload_register(function($class) {
         'YNJ_API_Madrassah'   => 'api/class-ynj-api-madrassah.php',
         'YNJ_API_Subscriptions'    => 'api/class-ynj-api-subscriptions.php',
         'YNJ_API_Masjid_Services'  => 'api/class-ynj-api-masjid-services.php',
+        'YNJ_WP_Auth'              => 'inc/class-ynj-wp-auth.php',
     ];
     if (isset($map[$class])) {
         require_once YNJ_DIR . $map[$class];
     }
 });
 
-// Install DB on activation
+// Install DB + roles on activation
 register_activation_hook(__FILE__, ['YNJ_DB', 'install']);
+register_activation_hook(__FILE__, ['YNJ_WP_Auth', 'install_roles']);
+register_deactivation_hook(__FILE__, ['YNJ_WP_Auth', 'remove_roles']);
+
+// Ensure roles exist (in case plugin was updated without deactivation/reactivation)
+add_action('init', function() {
+    if ( ! get_role( 'ynj_mosque_admin' ) ) {
+        YNJ_WP_Auth::install_roles();
+    }
+}, 5);
 
 // Auto-upgrade DB on version change
 add_action('admin_init', function() {

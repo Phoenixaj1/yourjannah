@@ -268,19 +268,24 @@ class YNJ_Auth {
      * @return bool|WP_Error
      */
     public static function bearer_check( $request ) {
+        // Try old custom token first
         $mosque = self::verify_bearer( $request );
 
-        if ( ! $mosque ) {
-            return new WP_Error(
-                'ynj_unauthorized',
-                'Invalid or missing authentication token.',
-                [ 'status' => 401 ]
-            );
+        if ( $mosque ) {
+            $request->set_param( '_ynj_mosque', $mosque );
+            return true;
         }
 
-        $request->set_param( '_ynj_mosque', $mosque );
+        // Fallback: try WP auth (application passwords, cookie+nonce, etc.)
+        if ( class_exists( 'YNJ_WP_Auth' ) ) {
+            return YNJ_WP_Auth::mosque_admin_check( $request );
+        }
 
-        return true;
+        return new WP_Error(
+            'ynj_unauthorized',
+            'Invalid or missing authentication token.',
+            [ 'status' => 401 ]
+        );
     }
 
     /**
