@@ -88,6 +88,8 @@ class YNJ_API_Campaigns {
             'target_pence' => absint( $data['target_pence'] ?? 0 ),
             'category'     => sanitize_text_field( $data['category'] ?? 'general' ),
             'dfm_link'     => esc_url_raw( $data['dfm_link'] ?? '' ),
+            'recurring'    => absint( $data['recurring'] ?? 0 ),
+            'recurring_interval' => sanitize_text_field( $data['recurring_interval'] ?? '' ),
             'status'       => 'active',
             'start_date'   => sanitize_text_field( $data['start_date'] ?? date( 'Y-m-d' ) ),
             'end_date'     => ! empty( $data['end_date'] ) ? sanitize_text_field( $data['end_date'] ) : null,
@@ -121,6 +123,8 @@ class YNJ_API_Campaigns {
         if ( isset( $data['category'] ) )     $update['category']     = sanitize_text_field( $data['category'] );
         if ( isset( $data['dfm_link'] ) )     $update['dfm_link']     = esc_url_raw( $data['dfm_link'] );
         if ( isset( $data['status'] ) )       $update['status']       = sanitize_text_field( $data['status'] );
+        if ( isset( $data['recurring'] ) )    $update['recurring']    = absint( $data['recurring'] );
+        if ( isset( $data['recurring_interval'] ) ) $update['recurring_interval'] = sanitize_text_field( $data['recurring_interval'] );
         if ( isset( $data['end_date'] ) )     $update['end_date']     = sanitize_text_field( $data['end_date'] );
 
         if ( ! empty( $update ) ) $wpdb->update( $table, $update, [ 'id' => $id ] );
@@ -154,6 +158,8 @@ class YNJ_API_Campaigns {
             'percentage'   => $target > 0 ? min( 100, round( $raised / $target * 100 ) ) : 0,
             'category'     => $r->category,
             'dfm_link'     => $r->dfm_link,
+            'recurring'    => (bool) ( $r->recurring ?? 0 ),
+            'recurring_interval' => $r->recurring_interval ?? '',
             'status'       => $r->status,
             'start_date'   => $r->start_date,
             'end_date'     => $r->end_date,

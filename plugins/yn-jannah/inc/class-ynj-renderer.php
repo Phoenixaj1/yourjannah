@@ -1506,21 +1506,27 @@ class YNJ_Renderer {
                         const donateUrl = c.dfm_link || '#';
                         const donateTarget = c.dfm_link ? ' target="_blank" rel="noopener"' : '';
 
+                        const isRecurring = c.recurring || ['welfare','general'].includes(c.category);
+                        const recurBadge = isRecurring
+                            ? '<span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:#dbeafe;color:#1e40af;margin-left:6px;">🔄 Monthly</span>'
+                            : '';
+                        const targetLabel = isRecurring ? '/month' : '';
+
                         return `<div class="ynj-campaign">
                             <div class="ynj-campaign__img">${icon}</div>
                             <div class="ynj-campaign__body">
-                                <span class="ynj-campaign__cat">${c.category}</span>
+                                <span class="ynj-campaign__cat">${c.category}</span>${recurBadge}
                                 <h3>${c.title}</h3>
                                 <p>${snippet}</p>
                                 ${target ? `<div class="ynj-progress"><div class="ynj-progress__bar" style="width:${pct}%"></div></div>` : ''}
                                 <div class="ynj-campaign__stats">
-                                    <div><strong>${raised}</strong> raised${target ? ' of '+target : ''}</div>
+                                    <div><strong>${raised}</strong> raised${target ? ' of '+target+targetLabel : ''}</div>
                                     <div><strong>${donors}</strong> donors</div>
                                     ${pct ? `<div><strong>${pct}%</strong></div>` : ''}
                                 </div>
                                 <a href="${donateUrl}"${donateTarget} class="ynj-btn" style="width:100%;justify-content:center;">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-                                    Donate Now
+                                    ${isRecurring ? 'Donate Monthly' : 'Donate Now'}
                                 </a>
                             </div>
                         </div>`;

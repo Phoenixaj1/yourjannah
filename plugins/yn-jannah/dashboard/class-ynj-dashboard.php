@@ -170,6 +170,7 @@ function route() {
         '/enquiries': renderEnquiries,
         '/subscribers': renderSubscribers,
         '/campaigns': renderCampaigns,
+        '/campaigns/new': renderCampaignForm,
         '/settings': renderSettings,
         '/auth/login': renderLogin,
         '/auth/register': renderRegister,
@@ -454,6 +455,70 @@ function exportCSV(){
     rows.forEach(function(r){var cols=[];r.querySelectorAll('th,td').forEach(function(c){cols.push('"'+c.textContent.replace(/"/g,'""')+'"');});csv.push(cols.join(','));});
     var blob=new Blob([csv.join('\n')],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='subscribers.csv';a.click();
 }
+// ── Fundraising Campaigns ──
+async function renderCampaigns() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Fundraising</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('mosques/' + mosque.id + '/campaigns');
+    var list = res.campaigns || [];
+    var rows = list.map(function(c) {
+        var pct = c.percentage || 0;
+        var target = c.target_pence > 0 ? '£' + (c.target_pence/100).toLocaleString() : '';
+        var raised = '£' + (c.raised_pence/100).toLocaleString();
+        var recur = c.recurring ? '<span class="d-badge d-badge--blue">Monthly</span>' : '';
+        return '<tr><td><strong>'+esc(c.title)+'</strong> '+recur+'</td><td>'+esc(c.category)+'</td><td>'+raised+(target?' / '+target:'')+'</td><td><div style="background:#e5e7eb;border-radius:4px;height:8px;width:80px;display:inline-block;vertical-align:middle"><div style="background:#16a34a;border-radius:4px;height:100%;width:'+pct+'%"></div></div> '+pct+'%</td><td>'+c.donor_count+'</td><td><button class="d-btn d-btn--danger d-btn--sm" onclick="deleteCampaign('+c.id+')">Del</button></td></tr>';
+    }).join('');
+    render(shell(
+        '<div class="d-header"><h1>Fundraising Campaigns</h1><button class="d-btn d-btn--primary d-btn--sm" onclick="navigate(\'/campaigns/new\')">+ New Campaign</button></div>' +
+        '<div class="d-card">' +
+        (rows ? '<table class="d-table"><thead><tr><th>Campaign</th><th>Category</th><th>Raised</th><th>Progress</th><th>Donors</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<p style="color:var(--text-dim)">No campaigns yet. Create your first fundraising campaign.</p>') +
+        '</div>'
+    ));
+}
+
+async function renderCampaignForm() {
+    if (!mosque) await loadMosque();
+    render(shell(
+        '<div class="d-header"><h1>New Campaign</h1></div>' +
+        '<div class="d-card">' +
+        '<div class="d-field"><label>Title</label><input id="cp_title" placeholder="e.g. New Roof Fund"></div>' +
+        '<div class="d-field"><label>Description</label><textarea id="cp_desc" rows="3" placeholder="Tell donors what this is for and why it matters"></textarea></div>' +
+        '<div class="d-grid d-grid-3">' +
+        '<div class="d-field"><label>Category</label><select id="cp_cat"><option>general</option><option>welfare</option><option>expansion</option><option>renovation</option><option>education</option><option>youth</option><option>emergency</option><option>equipment</option><option>heating</option><option>parking</option></select></div>' +
+        '<div class="d-field"><label>Target (£)</label><input type="number" id="cp_target" placeholder="50000"></div>' +
+        '<div class="d-field"><label>Type</label><select id="cp_recur"><option value="0">One-off target</option><option value="1">Monthly target</option></select></div>' +
+        '</div>' +
+        '<div class="d-field"><label>DonationForMasjid Link (optional)</label><input id="cp_dfm" placeholder="https://donationformasjid.com/your-mosque"></div>' +
+        '<div style="display:flex;gap:8px;margin-top:16px"><button class="d-btn d-btn--primary" id="cp-save" onclick="saveCampaign()"><span class="btn-text">Create Campaign</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="navigate(\'/campaigns\')">Cancel</button></div>' +
+        '</div>'
+    ));
+}
+
+async function saveCampaign() {
+    btn('#cp-save', true);
+    var recur = parseInt($('#cp_recur').value);
+    var res = await api('admin/campaigns', {method:'POST', body:{
+        title: $('#cp_title').value,
+        description: $('#cp_desc').value,
+        category: $('#cp_cat').value,
+        target_pence: parseInt($('#cp_target').value || 0) * 100,
+        recurring: recur,
+        recurring_interval: recur ? 'monthly' : '',
+        dfm_link: $('#cp_dfm').value
+    }});
+    btn('#cp-save', false);
+    if (res.ok) { toast('Campaign created!'); navigate('/campaigns'); }
+    else toast(res.error || 'Failed.', 'error');
+}
+
+async function deleteCampaign(id) {
+    if (!confirm('Delete this campaign?')) return;
+    await api('admin/campaigns/' + id, {method:'DELETE'});
+    toast('Deleted.');
+    renderCampaigns();
+}
+
 async function renderSettings() {
     if (!mosque) await loadMosque();
     render(shell(

@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '1.2.0';
+    const SCHEMA_VERSION = '1.3.0';
 
     /**
      * Return the full table name for a given short name.
@@ -328,6 +328,8 @@ class YNJ_DB {
             donor_count int(11) NOT NULL DEFAULT 0,
             category varchar(50) NOT NULL DEFAULT 'general',
             dfm_link varchar(500) NOT NULL DEFAULT '',
+            recurring tinyint(1) NOT NULL DEFAULT 0,
+            recurring_interval varchar(20) NOT NULL DEFAULT '',
             status varchar(20) NOT NULL DEFAULT 'active',
             start_date date DEFAULT NULL,
             end_date date DEFAULT NULL,
