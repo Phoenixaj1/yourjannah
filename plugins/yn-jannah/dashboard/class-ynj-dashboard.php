@@ -207,6 +207,7 @@ function route() {
     if (token && hash.startsWith('/auth')) return navigate('/');
 
     var routes = {
+        '/setup': renderSetup,
         '/': renderDashboard,
         '/prayers': renderPrayers,
         '/announcements': renderAnnouncements,
@@ -265,10 +266,133 @@ async function doRegister() {
     else toast(res.error || 'Registration failed.', 'error');
 }
 
+// ── Setup Wizard ──
+var setupStep = 1;
+
+function needsSetup() {
+    if (!mosque) return false;
+    // Consider setup needed if no phone AND no description (fresh registration)
+    return !mosque.setup_complete && (!mosque.phone || !mosque.description);
+}
+
+async function renderSetup() {
+    if (!mosque) await loadMosque();
+    var slug = mosque.slug || '';
+    var url = 'yourjannah.com/mosque/' + slug;
+
+    var steps = [
+        { num:1, title:'Mosque Details', icon:'\ud83d\udd4c' },
+        { num:2, title:'Prayer Times', icon:'\ud83d\udcff' },
+        { num:3, title:'First Announcement', icon:'\ud83d\udce2' },
+        { num:4, title:'Donations & Funding', icon:'\u2764\ufe0f' },
+        { num:5, title:'Invite Congregation', icon:'\ud83d\ude80' }
+    ];
+
+    var stepNav = steps.map(function(s) {
+        var cls = s.num === setupStep ? 'background:var(--primary);color:#fff' : (s.num < setupStep ? 'background:var(--primary-light);color:var(--primary)' : 'background:#f3f4f6;color:var(--text-dim)');
+        return '<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;' + cls + '">' + s.icon + ' ' + s.title + '</div>';
+    }).join('');
+
+    var content = '';
+
+    if (setupStep === 1) {
+        content = '<h2 style="margin-bottom:4px">\ud83d\udd4c Mosque Details</h2><p style="color:var(--text-dim);margin-bottom:20px">Let\'s get your mosque set up. This info appears on your public page.</p>' +
+            '<div class="d-field"><label>Mosque Name</label><input type="text" id="w_name" value="' + esc(mosque.name||'') + '"></div>' +
+            '<div class="d-field"><label>Address</label><input type="text" id="w_address" value="' + esc(mosque.address||'') + '"></div>' +
+            '<div class="d-grid d-grid-2"><div class="d-field"><label>City</label><input type="text" id="w_city" value="' + esc(mosque.city||'') + '"></div><div class="d-field"><label>Postcode</label><input type="text" id="w_postcode" value="' + esc(mosque.postcode||'') + '"></div></div>' +
+            '<div class="d-grid d-grid-2"><div class="d-field"><label>Phone</label><input type="tel" id="w_phone" value="' + esc(mosque.phone||'') + '" placeholder="020 1234 5678"></div><div class="d-field"><label>Website</label><input type="url" id="w_website" value="' + esc(mosque.website||'') + '" placeholder="https://..."></div></div>' +
+            '<div class="d-field"><label>Description</label><textarea id="w_desc" rows="3" placeholder="Tell the community about your mosque...">' + esc(mosque.description||'') + '</textarea></div>';
+    } else if (setupStep === 2) {
+        content = '<h2 style="margin-bottom:4px">\ud83d\udcff Prayer Times</h2><p style="color:var(--text-dim);margin-bottom:20px">Prayer times are auto-calculated from your location via Aladhan. You can set jamat time overrides from the Prayer Times section later.</p>' +
+            '<div class="d-card" style="background:var(--primary-light);border:1px solid var(--primary);padding:16px;text-align:center">' +
+            '<p style="font-size:14px;font-weight:700;color:var(--primary-dark)">\u2705 Prayer times will be auto-calculated</p>' +
+            '<p style="font-size:13px;color:var(--text-dim);margin-top:4px">Based on your mosque\'s location. You can add jamat times after setup.</p></div>' +
+            '<p style="margin-top:16px;font-size:13px;color:var(--text-dim)">Want to import a custom timetable? You can do this from <strong>Prayer Times</strong> in the dashboard after setup.</p>';
+    } else if (setupStep === 3) {
+        content = '<h2 style="margin-bottom:4px">\ud83d\udce2 Welcome Announcement</h2><p style="color:var(--text-dim);margin-bottom:20px">Post a welcome message so your congregation sees activity when they visit.</p>' +
+            '<div class="d-field"><label>Title</label><input type="text" id="w_ann_title" value="Welcome to ' + esc(mosque.name||'our mosque') + ' on YourJannah"></div>' +
+            '<div class="d-field"><label>Message</label><textarea id="w_ann_body" rows="4">Assalamu alaikum! We\'re now on YourJannah. You can find our prayer times, events, classes, and more here. Subscribe to get updates and reminders. Jazakallah khayr.</textarea></div>' +
+            '<p style="font-size:12px;color:var(--text-dim);margin-top:8px">You can edit or skip this. It will be pinned to the top of your feed.</p>';
+    } else if (setupStep === 4) {
+        content = '<h2 style="margin-bottom:4px">\u2764\ufe0f Donations & Funding</h2><p style="color:var(--text-dim);margin-bottom:20px">Help your congregation support the masjid. You can set these up now or later.</p>' +
+            '<div class="d-card" style="margin-bottom:12px"><h3 style="margin-bottom:8px">\ud83c\udfc5 Patron Memberships</h3><p style="font-size:13px;color:var(--text-dim)">Congregation members can become monthly patrons at \u00a35, \u00a310, or \u00a320/month. This creates steady recurring income.</p><p style="font-size:12px;color:var(--primary);margin-top:8px;font-weight:600">\u2705 Already enabled \u2014 visible on your mosque page</p></div>' +
+            '<div class="d-card" style="margin-bottom:12px"><h3 style="margin-bottom:8px">\u2b50 Business Sponsors</h3><p style="font-size:13px;color:var(--text-dim)">Local businesses can sponsor your mosque at \u00a330-\u00a3100/month. 90% goes to the masjid.</p><p style="font-size:12px;color:var(--primary);margin-top:8px;font-weight:600">\u2705 Already enabled \u2014 businesses can sign up at your sponsors page</p></div>' +
+            '<div class="d-card"><h3 style="margin-bottom:8px">\ud83d\udcb0 Fundraising Campaigns</h3><p style="font-size:13px;color:var(--text-dim)">Create campaigns for specific causes (renovation, Ramadan, equipment). Add your first campaign from the dashboard after setup.</p></div>';
+    } else if (setupStep === 5) {
+        content = '<h2 style="margin-bottom:4px">\ud83d\ude80 Share With Your Congregation</h2><p style="color:var(--text-dim);margin-bottom:20px">Get your community on YourJannah. Share your mosque page link.</p>' +
+            '<div class="d-card" style="text-align:center;padding:24px">' +
+            '<p style="font-size:13px;color:var(--text-dim);margin-bottom:8px">Your mosque page</p>' +
+            '<p style="font-size:18px;font-weight:900;color:var(--primary);word-break:break-all">' + url + '</p>' +
+            '<div style="margin:16px auto;width:200px;height:200px;background:#f3f4f6;border-radius:12px;display:flex;align-items:center;justify-content:center" id="w-qr"><img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent('https://' + url) + '" alt="QR Code" style="border-radius:8px"></div>' +
+            '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px">' +
+            '<a href="https://wa.me/?text=' + encodeURIComponent('Assalamu alaikum! Our mosque is now on YourJannah. Find prayer times, events, and more: https://' + url) + '" target="_blank" class="d-btn" style="background:#25D366;color:#fff">\ud83d\udcf1 WhatsApp</a>' +
+            '<button class="d-btn d-btn--secondary" onclick="navigator.clipboard.writeText(\'https://' + url + '\');toast(\'Link copied!\')">Copy Link</button>' +
+            '</div></div>' +
+            '<p style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-dim)">\ud83d\udca1 Tip: Print the QR code and display it at the masjid entrance</p>';
+    }
+
+    var isLast = setupStep === 5;
+    var buttons = '<div style="display:flex;gap:8px;margin-top:24px">';
+    if (setupStep > 1) buttons += '<button class="d-btn d-btn--secondary" onclick="wizardBack()">Back</button>';
+    buttons += '<button class="d-btn d-btn--primary" style="flex:1" id="w-next" onclick="wizardNext()">' + (isLast ? '\u2705 Finish Setup' : 'Next \u2192') + '</button>';
+    buttons += '</div>';
+
+    render(
+        '<div style="max-width:600px;margin:0 auto;padding:20px">' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px;justify-content:center">' + stepNav + '</div>' +
+        '<div class="d-card" style="padding:24px">' + content + buttons + '</div>' +
+        '<p style="text-align:center;margin-top:16px"><a href="#" onclick="skipSetup();return false;" style="font-size:13px;color:var(--text-dim)">Skip setup \u2014 I\'ll configure later</a></p>' +
+        '</div>'
+    );
+}
+
+async function wizardNext() {
+    btn('#w-next', true);
+
+    if (setupStep === 1) {
+        // Save mosque details
+        var body = { name:$('#w_name')?.value, address:$('#w_address')?.value, city:$('#w_city')?.value, postcode:$('#w_postcode')?.value, phone:$('#w_phone')?.value, website:$('#w_website')?.value, description:$('#w_desc')?.value };
+        var res = await api('admin/me', { method:'PUT', body:body });
+        if (res.ok) { await loadMosque(); } else { btn('#w-next', false); toast(res.error||'Failed to save.','error'); return; }
+    } else if (setupStep === 3) {
+        // Post the welcome announcement
+        var title = $('#w_ann_title')?.value;
+        var body = $('#w_ann_body')?.value;
+        if (title && body) {
+            await api('admin/announcements', { method:'POST', body:{ title:title, body:body, status:'published', pinned:1 } });
+        }
+    }
+
+    btn('#w-next', false);
+
+    if (setupStep === 5) {
+        // Mark setup complete
+        await api('admin/me', { method:'PUT', body:{ setup_complete:1 } });
+        await loadMosque();
+        toast('Setup complete! Welcome to YourJannah \ud83c\udf89');
+        navigate('/');
+    } else {
+        setupStep++;
+        renderSetup();
+    }
+}
+
+function wizardBack() {
+    if (setupStep > 1) { setupStep--; renderSetup(); }
+}
+
+async function skipSetup() {
+    await api('admin/me', { method:'PUT', body:{ setup_complete:1 } });
+    await loadMosque();
+    navigate('/');
+}
+
 // ── Dashboard ──
 async function renderDashboard() {
-    render(shell('<div class="d-header"><h1>Dashboard</h1></div><div class="d-card">Loading...</div>'));
     if (!mosque) await loadMosque();
+    // Redirect to setup wizard if mosque is new
+    if (needsSetup()) { navigate('/setup'); return; }
+    render(shell('<div class="d-header"><h1>Dashboard</h1></div><div class="d-card">Loading...</div>'));
     var subs = await api('admin/subscribers');
     var enquiries = await api('admin/enquiries?status=new');
     var members = await api('admin/members/count');

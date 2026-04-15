@@ -128,6 +128,7 @@ class YNJ_DB {
             admin_token_last_used datetime DEFAULT NULL,
             dfm_slug varchar(100) NOT NULL DEFAULT '',
             dfm_mosque_id bigint(20) unsigned DEFAULT NULL,
+            setup_complete tinyint(1) NOT NULL DEFAULT 0,
             status varchar(20) NOT NULL DEFAULT 'active',
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

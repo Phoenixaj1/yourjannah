@@ -310,14 +310,14 @@ class YNJ_API_Admin {
         $allowed = [
             'name', 'address', 'city', 'postcode', 'country', 'timezone',
             'phone', 'email', 'website', 'logo_url', 'photo_url', 'description',
-            'has_women_section', 'has_wudu', 'has_parking', 'capacity',
+            'has_women_section', 'has_wudu', 'has_parking', 'capacity', 'setup_complete',
         ];
 
         $update = [];
         foreach ( $allowed as $key ) {
             if ( ! isset( $data[ $key ] ) ) continue;
 
-            if ( in_array( $key, [ 'has_women_section', 'has_wudu', 'has_parking', 'capacity' ], true ) ) {
+            if ( in_array( $key, [ 'has_women_section', 'has_wudu', 'has_parking', 'capacity', 'setup_complete' ], true ) ) {
                 $update[ $key ] = absint( $data[ $key ] );
             } elseif ( in_array( $key, [ 'logo_url', 'photo_url', 'website' ], true ) ) {
                 $update[ $key ] = esc_url_raw( $data[ $key ] );
@@ -900,6 +900,7 @@ class YNJ_API_Admin {
             'has_parking'       => (bool) $mosque->has_parking,
             'capacity'          => (int) $mosque->capacity,
             'status'            => $mosque->status,
+            'setup_complete'    => (bool) ( $mosque->setup_complete ?? 0 ),
             'created_at'        => $mosque->created_at,
         ];
     }
