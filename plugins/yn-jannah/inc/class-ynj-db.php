@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '1.9.0';
+    const SCHEMA_VERSION = '2.0.0';
 
     /**
      * Return the full table name for a given short name.
@@ -574,7 +574,26 @@ class YNJ_DB {
             KEY stripe_subscription_id (stripe_subscription_id)
         ) $charset_collate;";
 
-        // 15. Subscribers
+        // 15a. User Subscriptions (multi-mosque + notification preferences)
+        $tables[] = "CREATE TABLE {$t('user_subscriptions')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            notify_events tinyint(1) NOT NULL DEFAULT 1,
+            notify_classes tinyint(1) NOT NULL DEFAULT 1,
+            notify_announcements tinyint(1) NOT NULL DEFAULT 1,
+            notify_fundraising tinyint(1) NOT NULL DEFAULT 0,
+            notify_live tinyint(1) NOT NULL DEFAULT 1,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            subscribed_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY user_mosque (user_id, mosque_id),
+            KEY user_id (user_id),
+            KEY mosque_id (mosque_id),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 15b. Subscribers (anonymous push — legacy)
         $tables[] = "CREATE TABLE {$t('subscribers')} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
@@ -643,6 +662,7 @@ class YNJ_DB {
             'madrassah_fees',
             'madrassah_reports',
             'patrons',
+            'user_subscriptions',
             'users',
             'subscribers',
         ];

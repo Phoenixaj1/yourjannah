@@ -168,6 +168,11 @@ class YNJ_API_Announcements {
         // Send push notification if publishing
         if ( $publish ) {
             YNJ_Push::send_to_mosque( (int) $mosque->id, $title, wp_strip_all_tags( $body ) );
+            do_action( 'ynj_new_announcement', (int) $mosque->id, [
+                'title' => $title,
+                'body'  => wp_strip_all_tags( $body ),
+                'type'  => sanitize_text_field( $data['type'] ?? 'general' ),
+            ] );
         }
 
         $announcement = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $id ) );

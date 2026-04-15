@@ -275,6 +275,14 @@ class YNJ_API_Classes {
         ] );
         $id = (int) $wpdb->insert_id;
         if ( ! $id ) return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Failed.' ], 500 );
+
+        // Notify subscribers
+        do_action( 'ynj_new_class', (int) $mosque->id, [
+            'title'    => $title,
+            'category' => sanitize_text_field( $d['category'] ?? '' ),
+            'class_id' => $id,
+        ] );
+
         return new \WP_REST_Response( [ 'ok' => true, 'id' => $id ], 201 );
     }
 

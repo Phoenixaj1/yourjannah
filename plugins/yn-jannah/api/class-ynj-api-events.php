@@ -283,6 +283,17 @@ class YNJ_API_Events {
 
         $event = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $id ) );
 
+        // Notify subscribers if published
+        $status = sanitize_text_field( $data['status'] ?? 'draft' );
+        if ( $status === 'published' ) {
+            do_action( 'ynj_new_event', (int) $mosque->id, [
+                'title'      => $insert['title'],
+                'event_date' => $insert['event_date'] ?? '',
+                'event_type' => $insert['event_type'] ?? '',
+                'event_id'   => $id,
+            ] );
+        }
+
         return new \WP_REST_Response( [
             'ok'    => true,
             'event' => self::format( $event ),

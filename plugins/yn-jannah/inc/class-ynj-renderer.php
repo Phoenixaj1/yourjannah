@@ -1922,7 +1922,7 @@ class YNJ_Renderer {
         self::page_head( 'Events — YourJannah', 'Upcoming events at your mosque.' );
         ?>
         <style>
-        .ynj-ev-card{background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-radius:16px;border:1px solid rgba(255,255,255,.6);margin-bottom:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.04);transition:transform .15s;}
+        .ynj-ev-card{background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-radius:16px;border:1px solid rgba(255,255,255,.6);overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.04);transition:transform .15s;}
         .ynj-ev-card:hover{transform:translateY(-1px);}
         .ynj-ev-card--live{border:2px solid #dc2626;box-shadow:0 4px 20px rgba(220,38,38,.1);}
         .ynj-ev-img{width:100%;height:140px;object-fit:cover;background:#e8f4f8;display:flex;align-items:center;justify-content:center;font-size:48px;}
@@ -1955,6 +1955,9 @@ class YNJ_Renderer {
         .ynj-ev-filter::-webkit-scrollbar{display:none;}
         .ynj-ev-chip{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid #ddd;background:#fff;color:<?php echo self::COLOR_TEXT; ?>;cursor:pointer;white-space:nowrap;transition:all .15s;}
         .ynj-ev-chip--active{background:<?php echo self::COLOR_ACCENT; ?>;color:#fff;border-color:<?php echo self::COLOR_ACCENT; ?>;}
+        #ev-feed{display:grid;grid-template-columns:1fr;gap:14px;}
+        @media(min-width:700px){#ev-feed{grid-template-columns:1fr 1fr;}}
+        .ynj-ev-empty{grid-column:1/-1;}
         </style>
         <?php self::render_header( 'events', $slug ); ?>
         <main class="ynj-main">

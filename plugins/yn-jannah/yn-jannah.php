@@ -43,6 +43,7 @@ spl_autoload_register(function($class) {
         'YNJ_API_Classes'     => 'api/class-ynj-api-classes.php',
         'YNJ_API_Patrons'     => 'api/class-ynj-api-patrons.php',
         'YNJ_API_Madrassah'   => 'api/class-ynj-api-madrassah.php',
+        'YNJ_API_Subscriptions' => 'api/class-ynj-api-subscriptions.php',
     ];
     if (isset($map[$class])) {
         require_once YNJ_DIR . $map[$class];
@@ -79,6 +80,7 @@ add_action('rest_api_init', function() {
     YNJ_API_Classes::register();
     YNJ_API_Patrons::register();
     YNJ_API_Madrassah::register();
+    YNJ_API_Subscriptions::register();
 });
 
 // Admin menu
@@ -116,4 +118,51 @@ add_action('ynj_new_sponsor', ['YNJ_Notify', 'on_sponsor'], 10, 2);
 add_action('ynj_new_service_listing', ['YNJ_Notify', 'on_service_listing'], 10, 2);
 add_action('ynj_payment_received', ['YNJ_Notify', 'on_payment'], 10, 3);
 add_action('ynj_new_patron', ['YNJ_Notify', 'on_patron'], 10, 2);
+
+// Push notifications to subscribed users on new content
+add_action('ynj_new_announcement', function($mosque_id, $data) {
+    $subs = YNJ_API_Subscriptions::get_subscribers_for($mosque_id, 'notify_announcements');
+    if (empty($subs)) return;
+    $payload = wp_json_encode([
+        'title' => $data['title'] ?? 'New Announcement',
+        'body'  => $data['body'] ?? '',
+        'icon'  => '/wp-content/plugins/yn-jannah/assets/icons/icon-192.png',
+        'url'   => '/',
+    ]);
+    foreach ($subs as $u) {
+        YNJ_Push::send_push($u->push_endpoint, $u->push_p256dh, $u->push_auth, $payload);
+    }
+}, 10, 2);
+
+add_action('ynj_new_event', function($mosque_id, $data) {
+    $subs = YNJ_API_Subscriptions::get_subscribers_for($mosque_id, 'notify_events');
+    if (empty($subs)) return;
+    global $wpdb;
+    $mosque_name = $wpdb->get_var($wpdb->prepare("SELECT name FROM " . YNJ_DB::table('mosques') . " WHERE id = %d", $mosque_id)) ?: '';
+    $payload = wp_json_encode([
+        'title' => 'New Event: ' . ($data['title'] ?? ''),
+        'body'  => ($data['event_date'] ?? '') . ' at ' . $mosque_name,
+        'icon'  => '/wp-content/plugins/yn-jannah/assets/icons/icon-192.png',
+        'url'   => '/',
+    ]);
+    foreach ($subs as $u) {
+        YNJ_Push::send_push($u->push_endpoint, $u->push_p256dh, $u->push_auth, $payload);
+    }
+}, 10, 2);
+
+add_action('ynj_new_class', function($mosque_id, $data) {
+    $subs = YNJ_API_Subscriptions::get_subscribers_for($mosque_id, 'notify_classes');
+    if (empty($subs)) return;
+    global $wpdb;
+    $mosque_name = $wpdb->get_var($wpdb->prepare("SELECT name FROM " . YNJ_DB::table('mosques') . " WHERE id = %d", $mosque_id)) ?: '';
+    $payload = wp_json_encode([
+        'title' => 'New Class: ' . ($data['title'] ?? ''),
+        'body'  => 'at ' . $mosque_name,
+        'icon'  => '/wp-content/plugins/yn-jannah/assets/icons/icon-192.png',
+        'url'   => '/',
+    ]);
+    foreach ($subs as $u) {
+        YNJ_Push::send_push($u->push_endpoint, $u->push_p256dh, $u->push_auth, $payload);
+    }
+}, 10, 2);
 // deploy trigger
