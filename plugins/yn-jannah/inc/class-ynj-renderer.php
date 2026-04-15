@@ -73,6 +73,9 @@ class YNJ_Renderer {
                     </div>
                     <span class="ynj-travel-dist" id="travel-dist"></span>
                 </div>
+                <button class="ynj-mode-toggle" id="mode-toggle" onclick="toggleTravelMode()" type="button" style="display:none;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2"/><path d="M10 22l2-7 3 3v7M14 13l2-3-3-3-2 4"/></svg> Walking
+                </button>
                 <div class="ynj-nav-buttons" id="nav-buttons" style="display:none;">
                     <a class="ynj-btn ynj-btn--navigate" id="navigate-walk" href="#" target="_blank" rel="noopener">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2"/><path d="M10 22l2-7 3 3v7M14 13l2-3-3-3-2 4"/></svg>
@@ -232,6 +235,7 @@ class YNJ_Renderer {
                         `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
 
                     if (userLat != null) {
+                        document.getElementById('mode-toggle').style.display = '';
                         calcTravelFromCoords(lat, lng);
                     } else {
                         showPostcodePrompt(lat, lng);
@@ -263,6 +267,7 @@ class YNJ_Renderer {
                                 `https://www.google.com/maps/dir/?api=1&destination=${m.latitude},${m.longitude}&travelmode=driving`;
 
                             if (userLat) {
+                                document.getElementById('mode-toggle').style.display = '';
                                 calcTravelFromCoords(m.latitude, m.longitude);
                             } else {
                                 // No GPS yet — show postcode prompt in travel area
@@ -546,15 +551,36 @@ class YNJ_Renderer {
             }
 
             /* ---- Travel Calculation ---- */
+            let travelMode = localStorage.getItem('ynj_travel_mode') || 'walk'; // 'walk' or 'drive'
+
             function calcTravelFromCoords(mLat, mLng) {
                 const km = haversine(userLat, userLng, mLat, mLng);
-                travelMinutes = Math.max(1, Math.round(km * 12)); // ~5km/h walking
                 const mi = km * 0.621;
+                // Walk: ~5km/h (12 min/km), Drive: ~30km/h (2 min/km) urban avg
+                travelMinutes = travelMode === 'drive'
+                    ? Math.max(1, Math.round(km * 2))
+                    : Math.max(1, Math.round(km * 12));
+                const modeLabel = travelMode === 'drive' ? 'drive' : 'walk';
                 const distText = mi < 0.5 ? `${Math.round(km*1000)}m` : `${mi.toFixed(1)} mi`;
-                document.getElementById('travel-dist').textContent = `${distText} · ~${travelMinutes} min walk`;
+                document.getElementById('travel-dist').textContent = `${distText} · ~${travelMinutes} min ${modeLabel}`;
                 document.getElementById('hero-travel').style.display = '';
                 updateLeaveBy();
+                updateModeToggle();
             }
+
+            function updateModeToggle() {
+                const el = document.getElementById('mode-toggle');
+                if (!el) return;
+                el.innerHTML = travelMode === 'walk'
+                    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2"/><path d="M10 22l2-7 3 3v7M14 13l2-3-3-3-2 4"/></svg> Walking'
+                    : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17h14M7 11l2-5h6l2 5M4 17v-3a1 1 0 011-1h14a1 1 0 011 1v3"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/></svg> Driving';
+            }
+
+            window.toggleTravelMode = function() {
+                travelMode = travelMode === 'walk' ? 'drive' : 'walk';
+                localStorage.setItem('ynj_travel_mode', travelMode);
+                if (userLat && mosqueLat) calcTravelFromCoords(mosqueLat, mosqueLng);
+            };
 
             function showPostcodePrompt(mLat, mLng) {
                 // Check localStorage for saved postcode first
@@ -612,6 +638,7 @@ class YNJ_Renderer {
                                     <span id="leave-by-text">Calculating...</span>
                                 </div>
                                 <span class="ynj-travel-dist" id="travel-dist"></span>`;
+                            document.getElementById('mode-toggle').style.display = '';
                             calcTravelFromCoords(mLat, mLng);
                         } else {
                             travelEl.innerHTML = '<span style="font-size:12px;opacity:.7;">Postcode not found. <a href="#" onclick="localStorage.removeItem(\'ynj_user_postcode\');location.reload();return false;" style="color:#fff;text-decoration:underline;">Try again</a></span>';
@@ -2538,6 +2565,17 @@ img,svg{display:block;max-width:100%;}
 .ynj-leave-by{display:flex;align-items:center;gap:4px;font-weight:600;}
 .ynj-leave-by svg{display:inline;}
 .ynj-travel-dist{opacity:.7;}
+
+/* Mode toggle */
+.ynj-mode-toggle{
+    display:inline-flex;align-items:center;gap:5px;
+    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);
+    color:rgba(255,255,255,.85);border-radius:20px;padding:5px 14px;
+    font-size:11px;font-weight:600;cursor:pointer;position:relative;z-index:1;
+    margin:6px auto 4px;font-family:inherit;letter-spacing:.3px;
+}
+.ynj-mode-toggle:active{background:rgba(255,255,255,.25);}
+.ynj-mode-toggle svg{display:inline;}
 
 /* Navigate buttons */
 .ynj-nav-buttons{display:flex;gap:10px;justify-content:center;position:relative;z-index:1;}
