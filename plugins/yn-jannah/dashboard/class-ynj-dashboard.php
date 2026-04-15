@@ -466,7 +466,7 @@ async function renderCampaigns() {
         var target = c.target_pence > 0 ? '£' + (c.target_pence/100).toLocaleString() : '';
         var raised = '£' + (c.raised_pence/100).toLocaleString();
         var recur = c.recurring ? '<span class="d-badge d-badge--blue">Monthly</span>' : '';
-        return '<tr><td><strong>'+esc(c.title)+'</strong> '+recur+'</td><td>'+esc(c.category)+'</td><td>'+raised+(target?' / '+target:'')+'</td><td><div style="background:#e5e7eb;border-radius:4px;height:8px;width:80px;display:inline-block;vertical-align:middle"><div style="background:#16a34a;border-radius:4px;height:100%;width:'+pct+'%"></div></div> '+pct+'%</td><td>'+c.donor_count+'</td><td><button class="d-btn d-btn--danger d-btn--sm" onclick="deleteCampaign('+c.id+')">Del</button></td></tr>';
+        return '<tr><td><strong>'+esc(c.title)+'</strong> '+recur+(c.dfm_link?'<br><a href="'+esc(c.dfm_link)+'" target="_blank" style="font-size:11px;color:var(--primary)">DFM link ↗</a>':'')+'</td><td>'+esc(c.category)+'</td><td>'+raised+(target?' / '+target:'')+'</td><td><div style="background:#e5e7eb;border-radius:4px;height:8px;width:80px;display:inline-block;vertical-align:middle"><div style="background:#16a34a;border-radius:4px;height:100%;width:'+pct+'%"></div></div> '+pct+'%</td><td>'+c.donor_count+'</td><td><button class="d-btn d-btn--secondary d-btn--sm" onclick="editCampaign('+c.id+','+c.raised_pence+','+c.donor_count+')">Update</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="deleteCampaign('+c.id+')">Del</button></td></tr>';
     }).join('');
     render(shell(
         '<div class="d-header"><h1>Fundraising Campaigns</h1><button class="d-btn d-btn--primary d-btn--sm" onclick="navigate(\'/campaigns/new\')">+ New Campaign</button></div>' +
@@ -509,6 +509,20 @@ async function saveCampaign() {
     }});
     btn('#cp-save', false);
     if (res.ok) { toast('Campaign created!'); navigate('/campaigns'); }
+    else toast(res.error || 'Failed.', 'error');
+}
+
+async function editCampaign(id, currentRaised, currentDonors) {
+    var raisedPounds = prompt('Raised amount in £ (current: £' + (currentRaised/100).toLocaleString() + '):', (currentRaised/100));
+    if (raisedPounds === null) return;
+    var donors = prompt('Number of donors (current: ' + currentDonors + '):', currentDonors);
+    if (donors === null) return;
+
+    var res = await api('admin/campaigns/' + id, {method:'PUT', body:{
+        raised_pence: Math.round(parseFloat(raisedPounds) * 100),
+        donor_count: parseInt(donors) || 0
+    }});
+    if (res.ok) { toast('Campaign updated!'); renderCampaigns(); }
     else toast(res.error || 'Failed.', 'error');
 }
 
