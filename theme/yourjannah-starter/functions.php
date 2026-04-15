@@ -11,7 +11,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YNJ_THEME_VERSION', '1.0.2' );
+define( 'YNJ_THEME_VERSION', '1.0.3' );
 define( 'YNJ_THEME_DIR', get_stylesheet_directory() );
 define( 'YNJ_THEME_URI', get_stylesheet_directory_uri() );
 
@@ -105,7 +105,7 @@ add_action( 'wp_enqueue_scripts', function() {
 
     // Pass data to JS (REST URL, nonce, site URL, VAPID key)
     $vapid = class_exists( 'YNJ_Push' ) ? YNJ_Push::get_public_key() : '';
-    $mosque_slug = ''; // Will be set per-page
+    $mosque_slug = get_query_var( 'ynj_mosque_slug', '' );
 
     wp_localize_script( 'ynj-theme', 'ynjData', [
         'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
@@ -120,10 +120,10 @@ add_action( 'wp_enqueue_scripts', function() {
     ] );
 
     // Homepage script (prayer card, feed, mosque selector, GPS)
-    // Only load on actual homepage (not sub-pages with custom rewrite rules)
-    $page_type = get_query_var( 'ynj_page_type' );
-    $mosque_slug = get_query_var( 'ynj_mosque_slug' );
-    if ( is_front_page() || ( ! $page_type && ! $mosque_slug ) ) {
+    // Only load on actual homepage — check URI directly since query vars may not be set during enqueue
+    $request_path = trim( wp_parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH ), '/' );
+    $is_homepage = ( $request_path === '' || $request_path === '/' || is_front_page() );
+    if ( $is_homepage ) {
         wp_enqueue_script(
             'ynj-homepage',
             YNJ_THEME_URI . '/assets/js/homepage.js',
@@ -160,6 +160,22 @@ add_action( 'wp_head', function() {
     echo '<meta name="theme-color" content="#0a1628">' . "\n";
     echo '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n";
     echo '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">' . "\n";
+
+    // Output ynjData early in <head> so inline template scripts can use it
+    $vapid = class_exists( 'YNJ_Push' ) ? YNJ_Push::get_public_key() : '';
+    $mosque_slug = get_query_var( 'ynj_mosque_slug', '' );
+    $data = [
+        'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
+        'restUrl'    => rest_url( 'ynj/v1/' ),
+        'nonce'      => wp_create_nonce( 'wp_rest' ),
+        'siteUrl'    => home_url( '/' ),
+        'themeUrl'   => YNJ_THEME_URI . '/',
+        'vapidKey'   => $vapid,
+        'mosqueSlug' => $mosque_slug,
+        'isLoggedIn' => is_user_logged_in(),
+        'userToken'  => '',
+    ];
+    echo '<script>var ynjData = ' . wp_json_encode( $data ) . ';</script>' . "\n";
 }, 1 );
 
 // ================================================================
