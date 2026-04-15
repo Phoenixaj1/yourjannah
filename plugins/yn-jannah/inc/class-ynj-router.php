@@ -33,6 +33,29 @@ class YNJ_Router {
             return;
         }
 
+        // If the yourjannah-starter theme is active, let WordPress handle routing
+        // via template_include filter in functions.php (Phase 3 migration).
+        // This check allows gradual migration: as pages are converted to templates,
+        // the router stops handling them and WP takes over.
+        if ( get_stylesheet() === 'yourjannah-starter' ) {
+            // Only handle static assets and service worker via this router.
+            // All page rendering delegated to WordPress template system.
+            $path = self::get_request_path();
+
+            if ( '/sw.js' === $path ) {
+                self::serve_service_worker();
+                return;
+            }
+            if ( '/manifest.json' === $path ) {
+                self::serve_manifest();
+                return;
+            }
+
+            // Let WordPress handle everything else
+            return;
+        }
+
+        // Legacy routing (when old theme or no theme is active)
         // Reset status to 200 for our custom routes (WP defaults to 404 for unknown paths)
         status_header( 200 );
 
