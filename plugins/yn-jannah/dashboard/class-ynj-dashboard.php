@@ -632,6 +632,8 @@ async function addEid() {
 }
 
 // ── Announcements ──
+var annData = [];
+var editingAnnId = null;
 async function renderAnnouncements() {
     if (!mosque) await loadMosque();
     render(shell('<div class="d-header"><h1>Announcements</h1></div><div class="d-card">Loading...</div>'));
@@ -639,43 +641,66 @@ async function renderAnnouncements() {
     // Fallback: use public endpoint
     if (!res.announcements) { res = await api('mosques/' + mosque.id + '/announcements'); }
     var list = res.announcements || [];
+    annData = list;
     var rows = list.map(function(a) {
-        return '<tr><td><strong>'+esc(a.title)+'</strong></td><td><span class="d-badge d-badge--'+(a.status==='published'?'green':'gray')+'">'+esc(a.status)+'</span></td><td>'+(a.pinned?'📌':'')+'</td><td>'+fmtDate(a.published_at)+'</td><td>'+(a.push_sent?'✅':'—')+'</td><td><button class="d-btn d-btn--danger d-btn--sm" onclick="deleteAnn('+a.id+')">Delete</button></td></tr>';
+        return '<tr><td><strong>'+esc(a.title)+'</strong></td><td><span class="d-badge d-badge--'+(a.status==='published'?'green':'gray')+'">'+esc(a.status)+'</span></td><td>'+(a.pinned?'📌':'')+'</td><td>'+fmtDate(a.published_at)+'</td><td>'+(a.push_sent?'✅':'—')+'</td><td><button class="d-btn d-btn--secondary d-btn--sm" onclick="editAnn('+a.id+')">Edit</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="deleteAnn('+a.id+')">Delete</button></td></tr>';
     }).join('');
     render(shell(
         '<div class="d-header"><h1>Announcements</h1><button class="d-btn d-btn--primary d-btn--sm" onclick="showAnnForm()">+ New</button></div>' +
-        '<div class="d-card" id="ann-form" style="display:none"><h3 style="margin-bottom:12px">New Announcement</h3>' +
+        '<div class="d-card" id="ann-form" style="display:none"><h3 id="ann-form-title" style="margin-bottom:12px">New Announcement</h3>' +
         '<div class="d-field"><label>Title</label><input type="text" id="ann_title"></div>' +
         '<div class="d-field"><label>Body</label><textarea id="ann_body" rows="4"></textarea></div>' +
         '<div class="d-grid d-grid-3"><div class="d-field"><label>Type</label><select id="ann_type"><option>general</option><option>urgent</option><option>event</option></select></div><div class="d-field"><label>Pinned</label><select id="ann_pinned"><option value="0">No</option><option value="1">Yes</option></select></div><div class="d-field"><label>Publish</label><select id="ann_publish"><option value="1">Now</option><option value="0">Draft</option></select></div></div>' +
-        '<div style="display:flex;gap:8px"><button class="d-btn d-btn--primary" id="ann-save" onclick="saveAnn()"><span class="btn-text">Save & Publish</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="$(\'#ann-form\').style.display=\'none\'">Cancel</button></div></div>' +
+        '<div style="display:flex;gap:8px"><button class="d-btn d-btn--primary" id="ann-save" onclick="saveAnn()"><span class="btn-text">Save</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="cancelAnnForm()">Cancel</button></div></div>' +
         '<div class="d-card"><table class="d-table"><thead><tr><th>Title</th><th>Status</th><th>Pin</th><th>Date</th><th>Push</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" style="color:var(--text-dim)">No announcements yet.</td></tr>')+'</tbody></table></div>'
     ));
 }
-function showAnnForm(){$('#ann-form').style.display='';}
+function showAnnForm(){ editingAnnId=null; $('#ann-form-title').textContent='New Announcement'; $('#ann_title').value=''; $('#ann_body').value=''; $('#ann_type').value='general'; $('#ann_pinned').value='0'; $('#ann_publish').value='1'; $('#ann-form').style.display=''; }
+function cancelAnnForm(){ editingAnnId=null; $('#ann-form').style.display='none'; }
+function editAnn(id) {
+    var a = annData.find(function(x){return x.id===id;});
+    if (!a) { toast('Not found.','error'); return; }
+    editingAnnId = id;
+    $('#ann-form').style.display = '';
+    $('#ann-form-title').textContent = 'Edit Announcement';
+    $('#ann_title').value = a.title || '';
+    $('#ann_body').value = a.body || '';
+    $('#ann_type').value = a.type || 'general';
+    $('#ann_pinned').value = a.pinned ? '1' : '0';
+    $('#ann_publish').value = a.status === 'published' ? '1' : '0';
+}
 async function saveAnn(){
     btn('#ann-save',true);
-    var res=await api('admin/announcements',{method:'POST',body:{title:$('#ann_title').value,body:$('#ann_body').value,type:$('#ann_type').value,pinned:parseInt($('#ann_pinned').value),publish:parseInt($('#ann_publish').value)}});
-    btn('#ann-save',false);
-    if(res.ok){toast('Announcement created!');renderAnnouncements();}else toast(res.error||'Failed.','error');
+    if (editingAnnId) {
+        var res=await api('admin/announcements/'+editingAnnId,{method:'PUT',body:{title:$('#ann_title').value,body:$('#ann_body').value,type:$('#ann_type').value,pinned:parseInt($('#ann_pinned').value),publish:parseInt($('#ann_publish').value)}});
+        btn('#ann-save',false);
+        if(res.ok){toast('Announcement updated!');editingAnnId=null;renderAnnouncements();}else toast(res.error||'Failed.','error');
+    } else {
+        var res=await api('admin/announcements',{method:'POST',body:{title:$('#ann_title').value,body:$('#ann_body').value,type:$('#ann_type').value,pinned:parseInt($('#ann_pinned').value),publish:parseInt($('#ann_publish').value)}});
+        btn('#ann-save',false);
+        if(res.ok){toast('Announcement created!');renderAnnouncements();}else toast(res.error||'Failed.','error');
+    }
 }
 async function deleteAnn(id){if(!confirm('Delete this announcement?'))return;await api('admin/announcements/'+id,{method:'DELETE'});toast('Deleted.');renderAnnouncements();}
 
 // ── Events ──
+var eventsData = [];
+var editingEventId = null;
 async function renderEvents() {
     if (!mosque) await loadMosque();
     render(shell('<div class="d-header"><h1>Events</h1></div><div class="d-card">Loading...</div>'));
     var res = await api('admin/events') || {};
     if (!res.events) { res = await api('mosques/' + mosque.id + '/events'); }
     var list = res.events || [];
+    eventsData = list;
     var rows = list.map(function(e) {
         var liveBadge = e.is_online ? (e.is_live ? '<span class="d-badge d-badge--red">LIVE</span>' : '<span class="d-badge d-badge--blue">Online</span>') : '';
         var liveBtn = e.is_online ? (e.is_live ? '<button class="d-btn d-btn--secondary d-btn--sm" onclick="toggleLive('+e.id+',0)">End</button>' : '<button class="d-btn d-btn--primary d-btn--sm" onclick="toggleLive('+e.id+',1)" style="background:#dc2626">Go Live</button>') : '';
-        return '<tr><td><strong>'+esc(e.title)+'</strong> '+liveBadge+'</td><td>'+esc(e.event_date||'')+'</td><td>'+fmtTime(e.start_time)+'</td><td>'+esc(e.event_type||'')+'</td><td>'+e.registered_count+'/'+(e.max_capacity||'∞')+'</td><td><span class="d-badge d-badge--'+(e.status==='published'?'green':'gray')+'">'+esc(e.status)+'</span></td><td>'+liveBtn+' <button class="d-btn d-btn--danger d-btn--sm" onclick="deleteEvent('+e.id+')">Del</button></td></tr>';
+        return '<tr><td><strong>'+esc(e.title)+'</strong> '+liveBadge+'</td><td>'+esc(e.event_date||'')+'</td><td>'+fmtTime(e.start_time)+'</td><td>'+esc(e.event_type||'')+'</td><td>'+e.registered_count+'/'+(e.max_capacity||'∞')+'</td><td><span class="d-badge d-badge--'+(e.status==='published'?'green':'gray')+'">'+esc(e.status)+'</span></td><td>'+liveBtn+' <button class="d-btn d-btn--secondary d-btn--sm" onclick="editEvent('+e.id+')">Edit</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="deleteEvent('+e.id+')">Del</button></td></tr>';
     }).join('');
     render(shell(
         '<div class="d-header"><h1>Events</h1><button class="d-btn d-btn--primary d-btn--sm" onclick="showEventForm()">+ New Event</button></div>' +
-        '<div class="d-card" id="ev-form" style="display:none"><h3 style="margin-bottom:12px">New Event</h3>' +
+        '<div class="d-card" id="ev-form" style="display:none"><h3 id="ev-form-title" style="margin-bottom:12px">New Event</h3>' +
         '<div class="d-field"><label>Title</label><input type="text" id="ev_title"></div>' +
         '<div class="d-field"><label>Description</label><textarea id="ev_desc" rows="3"></textarea></div>' +
         '<div class="d-grid d-grid-3"><div class="d-field"><label>Date</label><input type="date" id="ev_date"></div><div class="d-field"><label>Start</label><input type="time" id="ev_start"></div><div class="d-field"><label>End</label><input type="time" id="ev_end"></div></div>' +
@@ -683,16 +708,44 @@ async function renderEvents() {
         '<div class="d-grid d-grid-2"><div class="d-field"><label>Ticket Price (pence, 0=free)</label><input type="number" id="ev_price" value="0"></div><div class="d-field"><label>Status</label><select id="ev_status"><option>published</option><option>draft</option></select></div></div>' +
         '<div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px"><h4 style="margin-bottom:12px;font-size:13px">🔴 Online / Live Event (optional)</h4>' +
         '<div class="d-grid d-grid-3"><div class="d-field"><label>Online Event?</label><select id="ev_online"><option value="0">No — In Person</option><option value="1">Yes — Online/Live</option></select></div><div class="d-field"><label>Live Stream URL</label><input id="ev_live_url" placeholder="https://youtube.com/live/..."></div><div class="d-field"><label>Donation Target (£)</label><input type="number" id="ev_don_target" value="0" placeholder="0 = no target"></div></div></div>' +
-        '<div style="display:flex;gap:8px"><button class="d-btn d-btn--primary" id="ev-save" onclick="saveEvent()"><span class="btn-text">Create Event</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="$(\'#ev-form\').style.display=\'none\'">Cancel</button></div></div>' +
+        '<div style="display:flex;gap:8px"><button class="d-btn d-btn--primary" id="ev-save" onclick="saveEvent()"><span class="btn-text">Save Event</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="cancelEventForm()">Cancel</button></div></div>' +
         '<div class="d-card"><table class="d-table"><thead><tr><th>Title</th><th>Date</th><th>Time</th><th>Type</th><th>RSVP</th><th>Status</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="7" style="color:var(--text-dim)">No events.</td></tr>')+'</tbody></table></div>'
     ));
 }
-function showEventForm(){$('#ev-form').style.display='';}
+function showEventForm(){ editingEventId=null; $('#ev-form-title').textContent='New Event'; $('#ev_title').value=''; $('#ev_desc').value=''; $('#ev_date').value=''; $('#ev_start').value=''; $('#ev_end').value=''; $('#ev_location').value=''; $('#ev_type').value='talk'; $('#ev_cap').value='0'; $('#ev_price').value='0'; $('#ev_status').value='published'; $('#ev_online').value='0'; $('#ev_live_url').value=''; $('#ev_don_target').value='0'; $('#ev-form').style.display=''; }
+function cancelEventForm(){ editingEventId=null; $('#ev-form').style.display='none'; }
+function editEvent(id) {
+    var e = eventsData.find(function(x){return x.id===id;});
+    if (!e) { toast('Not found.','error'); return; }
+    editingEventId = id;
+    $('#ev-form').style.display = '';
+    $('#ev-form-title').textContent = 'Edit Event';
+    $('#ev_title').value = e.title || '';
+    $('#ev_desc').value = e.description || '';
+    $('#ev_date').value = e.event_date || '';
+    $('#ev_start').value = (e.start_time||'').substring(0,5);
+    $('#ev_end').value = (e.end_time||'').substring(0,5);
+    $('#ev_location').value = e.location || '';
+    $('#ev_type').value = e.event_type || 'talk';
+    $('#ev_cap').value = e.max_capacity || 0;
+    $('#ev_price').value = e.ticket_price_pence || 0;
+    $('#ev_status').value = e.status || 'published';
+    $('#ev_online').value = e.is_online ? '1' : '0';
+    $('#ev_live_url').value = e.live_url || '';
+    $('#ev_don_target').value = e.donation_target_pence ? Math.round(e.donation_target_pence/100) : 0;
+}
 async function saveEvent(){
     btn('#ev-save',true);
-    var res=await api('admin/events',{method:'POST',body:{title:$('#ev_title').value,description:$('#ev_desc').value,event_date:$('#ev_date').value,start_time:$('#ev_start').value+':00',end_time:$('#ev_end').value+':00',location:$('#ev_location').value,event_type:$('#ev_type').value,max_capacity:parseInt($('#ev_cap').value),ticket_price_pence:parseInt($('#ev_price').value),requires_booking:1,status:$('#ev_status').value,is_online:parseInt($('#ev_online').value),live_url:$('#ev_live_url').value,donation_target_pence:parseInt($('#ev_don_target').value||0)*100}});
-    btn('#ev-save',false);
-    if(res.ok){toast('Event created!');renderEvents();}else toast(res.error||'Failed.','error');
+    var body = {title:$('#ev_title').value,description:$('#ev_desc').value,event_date:$('#ev_date').value,start_time:$('#ev_start').value+':00',end_time:$('#ev_end').value+':00',location:$('#ev_location').value,event_type:$('#ev_type').value,max_capacity:parseInt($('#ev_cap').value),ticket_price_pence:parseInt($('#ev_price').value),requires_booking:1,status:$('#ev_status').value,is_online:parseInt($('#ev_online').value),live_url:$('#ev_live_url').value,donation_target_pence:parseInt($('#ev_don_target').value||0)*100};
+    if (editingEventId) {
+        var res=await api('admin/events/'+editingEventId,{method:'PUT',body:body});
+        btn('#ev-save',false);
+        if(res.ok){toast('Event updated!');editingEventId=null;renderEvents();}else toast(res.error||'Failed.','error');
+    } else {
+        var res=await api('admin/events',{method:'POST',body:body});
+        btn('#ev-save',false);
+        if(res.ok){toast('Event created!');renderEvents();}else toast(res.error||'Failed.','error');
+    }
 }
 async function toggleLive(id, live) {
     var res = await api('admin/events/'+id, {method:'PUT', body:{is_live:live}});
@@ -710,7 +763,10 @@ async function renderBookings() {
     var rows = list.map(function(b) {
         var type = b.event_id ? 'Event' : (b.room_id ? 'Room' : '—');
         var badge = b.status==='confirmed'?'green':(b.status==='pending'||b.status==='pending_payment'?'yellow':'red');
-        return '<tr><td><strong>'+esc(b.user_name)+'</strong><br><span style="font-size:11px;color:var(--text-dim)">'+esc(b.user_email)+'</span></td><td>'+type+'</td><td>'+esc(b.booking_date)+'</td><td>'+fmtTime(b.start_time)+' — '+fmtTime(b.end_time)+'</td><td><span class="d-badge d-badge--'+badge+'">'+esc(b.status)+'</span></td><td>'+(b.status==='pending'?'<button class="d-btn d-btn--primary d-btn--sm" onclick="updateBooking('+b.id+',\'confirmed\')">Approve</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="updateBooking('+b.id+',\'cancelled\')">Reject</button>':'')+'</td></tr>';
+        var btns = '';
+        if (b.status==='pending' || b.status==='pending_payment') { btns = '<button class="d-btn d-btn--primary d-btn--sm" onclick="updateBooking('+b.id+',\'confirmed\')">Confirm</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="updateBooking('+b.id+',\'cancelled\')">Reject</button>'; }
+        else if (b.status==='confirmed') { btns = '<button class="d-btn d-btn--danger d-btn--sm" onclick="updateBooking('+b.id+',\'cancelled\')">Cancel</button>'; }
+        return '<tr><td><strong>'+esc(b.user_name)+'</strong><br><span style="font-size:11px;color:var(--text-dim)">'+esc(b.user_email)+'</span></td><td>'+type+'</td><td>'+esc(b.booking_date)+'</td><td>'+fmtTime(b.start_time)+' — '+fmtTime(b.end_time)+'</td><td><span class="d-badge d-badge--'+badge+'">'+esc(b.status)+'</span></td><td>'+btns+'</td></tr>';
     }).join('');
     render(shell(
         '<div class="d-header"><h1>Bookings</h1></div>' +
@@ -720,30 +776,53 @@ async function renderBookings() {
 async function updateBooking(id,status){await api('admin/bookings/'+id,{method:'PUT',body:{status:status}});toast('Booking '+status+'.');renderBookings();}
 
 // ── Rooms ──
+var roomsData = [];
+var editingRoomId = null;
 async function renderRooms() {
     if (!mosque) await loadMosque();
     render(shell('<div class="d-header"><h1>Rooms</h1></div><div class="d-card">Loading...</div>'));
     var res = await api('admin/rooms');
     var list = res.rooms || [];
+    roomsData = list;
     var rows = list.map(function(r) {
-        return '<tr><td><strong>'+esc(r.name)+'</strong></td><td>'+r.capacity+'</td><td>£'+(r.hourly_rate_pence/100).toFixed(0)+'/hr</td><td>£'+(r.daily_rate_pence/100).toFixed(0)+'/day</td><td><span class="d-badge d-badge--'+(r.status==='active'?'green':'gray')+'">'+esc(r.status)+'</span></td><td><button class="d-btn d-btn--danger d-btn--sm" onclick="deleteRoom('+r.id+')">Del</button></td></tr>';
+        return '<tr><td><strong>'+esc(r.name)+'</strong></td><td>'+r.capacity+'</td><td>£'+(r.hourly_rate_pence/100).toFixed(0)+'/hr</td><td>£'+(r.daily_rate_pence/100).toFixed(0)+'/day</td><td><span class="d-badge d-badge--'+(r.status==='active'?'green':'gray')+'">'+esc(r.status)+'</span></td><td><button class="d-btn d-btn--secondary d-btn--sm" onclick="editRoom('+r.id+')">Edit</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="deleteRoom('+r.id+')">Del</button></td></tr>';
     }).join('');
     render(shell(
         '<div class="d-header"><h1>Rooms</h1><button class="d-btn d-btn--primary d-btn--sm" onclick="showRoomForm()">+ Add Room</button></div>' +
-        '<div class="d-card" id="rm-form" style="display:none"><h3 style="margin-bottom:12px">Add Room</h3>' +
+        '<div class="d-card" id="rm-form" style="display:none"><h3 id="rm-form-title" style="margin-bottom:12px">Add Room</h3>' +
         '<div class="d-field"><label>Name</label><input type="text" id="rm_name"></div>' +
         '<div class="d-field"><label>Description</label><textarea id="rm_desc" rows="2"></textarea></div>' +
         '<div class="d-grid d-grid-3"><div class="d-field"><label>Capacity</label><input type="number" id="rm_cap" value="0"></div><div class="d-field"><label>Hourly Rate (pence)</label><input type="number" id="rm_hourly" value="0"></div><div class="d-field"><label>Daily Rate (pence)</label><input type="number" id="rm_daily" value="0"></div></div>' +
-        '<div style="display:flex;gap:8px"><button class="d-btn d-btn--primary" id="rm-save" onclick="saveRoom()"><span class="btn-text">Add Room</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="$(\'#rm-form\').style.display=\'none\'">Cancel</button></div></div>' +
+        '<div style="display:flex;gap:8px"><button class="d-btn d-btn--primary" id="rm-save" onclick="saveRoom()"><span class="btn-text">Save Room</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="cancelRoomForm()">Cancel</button></div></div>' +
         '<div class="d-card"><table class="d-table"><thead><tr><th>Name</th><th>Capacity</th><th>Hourly</th><th>Daily</th><th>Status</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" style="color:var(--text-dim)">No rooms.</td></tr>')+'</tbody></table></div>'
     ));
 }
-function showRoomForm(){$('#rm-form').style.display='';}
+function showRoomForm(){ editingRoomId=null; $('#rm-form-title').textContent='Add Room'; $('#rm_name').value=''; $('#rm_desc').value=''; $('#rm_cap').value='0'; $('#rm_hourly').value='0'; $('#rm_daily').value='0'; $('#rm-form').style.display=''; }
+function cancelRoomForm(){ editingRoomId=null; $('#rm-form').style.display='none'; }
+function editRoom(id) {
+    var r = roomsData.find(function(x){return x.id===id;});
+    if (!r) { toast('Not found.','error'); return; }
+    editingRoomId = id;
+    $('#rm-form').style.display = '';
+    $('#rm-form-title').textContent = 'Edit Room';
+    $('#rm_name').value = r.name || '';
+    $('#rm_desc').value = r.description || '';
+    $('#rm_cap').value = r.capacity || 0;
+    $('#rm_hourly').value = r.hourly_rate_pence || 0;
+    $('#rm_daily').value = r.daily_rate_pence || 0;
+}
 async function saveRoom(){
     btn('#rm-save',true);
-    var res=await api('admin/rooms',{method:'POST',body:{name:$('#rm_name').value,description:$('#rm_desc').value,capacity:parseInt($('#rm_cap').value),hourly_rate_pence:parseInt($('#rm_hourly').value),daily_rate_pence:parseInt($('#rm_daily').value)}});
-    btn('#rm-save',false);
-    if(res.ok){toast('Room added!');renderRooms();}else toast(res.error||'Failed.','error');
+    var body = {name:$('#rm_name').value,description:$('#rm_desc').value,capacity:parseInt($('#rm_cap').value),hourly_rate_pence:parseInt($('#rm_hourly').value),daily_rate_pence:parseInt($('#rm_daily').value)};
+    if (editingRoomId) {
+        var res=await api('admin/rooms/'+editingRoomId,{method:'PUT',body:body});
+        btn('#rm-save',false);
+        if(res.ok){toast('Room updated!');editingRoomId=null;renderRooms();}else toast(res.error||'Failed.','error');
+    } else {
+        var res=await api('admin/rooms',{method:'POST',body:body});
+        btn('#rm-save',false);
+        if(res.ok){toast('Room added!');renderRooms();}else toast(res.error||'Failed.','error');
+    }
 }
 async function deleteRoom(id){if(!confirm('Delete this room?'))return;await api('admin/rooms/'+id,{method:'DELETE'});toast('Deleted.');renderRooms();}
 
@@ -754,9 +833,14 @@ async function renderEnquiries() {
     var res = await api('admin/enquiries');
     var list = res.enquiries || [];
     var rows = list.map(function(e) {
-        var badge = e.status==='new'?'blue':(e.status==='read'?'yellow':(e.status==='replied'?'green':'gray'));
-        return '<tr><td><strong>'+esc(e.name)+'</strong><br><span style="font-size:11px;color:var(--text-dim)">'+esc(e.email)+'</span></td><td>'+esc(e.subject||'—')+'</td><td><span class="d-badge d-badge--'+badge+'">'+esc(e.status)+'</span></td><td>'+fmtDate(e.created_at)+'</td><td>'+(e.status==='new'?'<button class="d-btn d-btn--secondary d-btn--sm" onclick="markEnquiry('+e.id+',\'read\')">Read</button> ':'')+(e.status!=='replied'?'<button class="d-btn d-btn--primary d-btn--sm" onclick="markEnquiry('+e.id+',\'replied\')">Replied</button>':'')+'</td></tr>' +
-        '<tr><td colspan="5" style="padding:8px 12px;background:#f9fafb;font-size:13px;color:var(--text-dim)">'+esc(e.message)+'</td></tr>';
+        var badge = e.status==='new'?'blue':(e.status==='read'?'yellow':(e.status==='replied'?'green':(e.status==='resolved'?'gray':'gray')));
+        var actions = '';
+        if (e.status==='new') actions += '<button class="d-btn d-btn--secondary d-btn--sm" onclick="markEnquiry('+e.id+',\'read\')">Mark Read</button> ';
+        if (e.status!=='replied' && e.status!=='resolved') actions += '<button class="d-btn d-btn--primary d-btn--sm" onclick="markEnquiry('+e.id+',\'replied\')">Mark Replied</button> ';
+        if (e.status!=='resolved') actions += '<button class="d-btn d-btn--secondary d-btn--sm" onclick="markEnquiry('+e.id+',\'resolved\')" style="color:#16a34a">Resolve</button> ';
+        return '<tr><td><strong>'+esc(e.name)+'</strong><br><span style="font-size:11px;color:var(--text-dim)">'+esc(e.email)+'</span></td><td>'+esc(e.subject||'—')+'</td><td><span class="d-badge d-badge--'+badge+'">'+esc(e.status)+'</span></td><td>'+fmtDate(e.created_at)+'</td><td>'+actions+'</td></tr>' +
+        '<tr><td colspan="5" style="padding:8px 12px;background:#f9fafb;font-size:13px;color:var(--text-dim)">'+esc(e.message)+(e.admin_notes ? '<br><strong style="color:var(--primary)">Admin notes:</strong> '+esc(e.admin_notes) : '')+'</td></tr>' +
+        '<tr><td colspan="5" style="padding:4px 12px 8px;background:#f9fafb;border-bottom:2px solid var(--border)"><div style="display:flex;gap:6px;align-items:center"><input id="enq_note_'+e.id+'" placeholder="Add admin notes..." value="'+esc(e.admin_notes||'')+'" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit"><button class="d-btn d-btn--secondary d-btn--sm" onclick="saveEnquiryNote('+e.id+')">Save Note</button></div></td></tr>';
     }).join('');
     render(shell(
         '<div class="d-header"><h1>Enquiries</h1></div>' +
@@ -764,6 +848,7 @@ async function renderEnquiries() {
     ));
 }
 async function markEnquiry(id,status){await api('admin/enquiries/'+id,{method:'PUT',body:{status:status}});toast('Marked as '+status+'.');renderEnquiries();}
+async function saveEnquiryNote(id){var note=$('#enq_note_'+id);if(!note)return;var res=await api('admin/enquiries/'+id,{method:'PUT',body:{admin_notes:note.value}});if(res.ok)toast('Note saved.');else toast(res.error||'Failed.','error');}
 
 // ── Subscribers ──
 async function renderSubscribers() {
@@ -788,16 +873,19 @@ function exportCSV(){
     var blob=new Blob([csv.join('\n')],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='subscribers.csv';a.click();
 }
 // ── Classes ──
+var classesData = [];
+var editingClassId = null;
 async function renderClasses() {
     if (!mosque) await loadMosque();
     render(shell('<div class="d-header"><h1>Classes</h1></div><div class="d-card">Loading...</div>'));
     var res = await api('admin/classes');
     var list = res.classes || [];
+    classesData = list;
     var rows = list.map(function(c) {
         var price = c.price_pence > 0 ? '£'+(c.price_pence/100) : 'Free';
         var pt = c.price_type === 'per_session' ? '/session' : (c.price_type === 'monthly' ? '/mo' : '');
         var online = c.is_online ? '<span class="d-badge d-badge--blue">Online</span>' : '';
-        return '<tr><td><strong>'+esc(c.title)+'</strong> '+online+'</td><td>'+esc(c.category)+'</td><td>'+esc(c.instructor_name||'—')+'</td><td>'+price+pt+'</td><td>'+c.enrolled_count+'/'+(c.max_capacity||'∞')+'</td><td>'+esc(c.schedule_text||c.day_of_week||'—')+'</td><td><button class="d-btn d-btn--danger d-btn--sm" onclick="deleteClass('+c.id+')">Del</button></td></tr>';
+        return '<tr><td><strong>'+esc(c.title)+'</strong> '+online+'</td><td>'+esc(c.category)+'</td><td>'+esc(c.instructor_name||'—')+'</td><td>'+price+pt+'</td><td>'+c.enrolled_count+'/'+(c.max_capacity||'∞')+'</td><td>'+esc(c.schedule_text||c.day_of_week||'—')+'</td><td><button class="d-btn d-btn--secondary d-btn--sm" onclick="editClass('+c.id+')">Edit</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="deleteClass('+c.id+')">Del</button></td></tr>';
     }).join('');
     render(shell(
         '<div class="d-header"><h1>Classes & Courses</h1><div style="display:flex;gap:8px"><button class="d-btn d-btn--primary d-btn--sm" onclick="navigate(\'/classes/new\')">+ New Class</button><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/enrolments\')">Enrolments</button></div></div>' +
@@ -807,23 +895,40 @@ async function renderClasses() {
         '</div>'
     ));
 }
+function editClass(id) { editingClassId = id; navigate('/classes/new'); }
 async function renderClassForm() {
     if (!mosque) await loadMosque();
+    var isEdit = !!editingClassId;
+    var c = isEdit ? classesData.find(function(x){return x.id===editingClassId;}) : null;
+    if (isEdit && !c) {
+        // Fetch from API if not in local cache
+        var r = await api('admin/classes');
+        classesData = r.classes || [];
+        c = classesData.find(function(x){return x.id===editingClassId;});
+    }
     render(shell(
-        '<div class="d-header"><h1>New Class</h1></div><div class="d-card">' +
-        '<div class="d-field"><label>Title</label><input id="cl_title" placeholder="e.g. Tajweed for Beginners"></div>' +
-        '<div class="d-field"><label>Description</label><textarea id="cl_desc" rows="3"></textarea></div>' +
-        '<div class="d-grid d-grid-3"><div class="d-field"><label>Category</label><select id="cl_cat"><option>Quran</option><option>Arabic</option><option>Tajweed</option><option>Islamic Studies</option><option>Fiqh</option><option>Seerah</option><option>Business</option><option>SEO</option><option>Marketing</option><option>Finance</option><option>Health</option><option>Fitness</option><option>Cooking</option><option>Parenting</option><option>Youth</option><option>Sisters</option></select></div><div class="d-field"><label>Instructor</label><input id="cl_instructor" placeholder="Sheikh Ahmad"></div><div class="d-field"><label>Type</label><select id="cl_type"><option value="course">Course</option><option value="workshop">Workshop</option><option value="drop_in">Drop-in</option><option value="seminar">Seminar</option></select></div></div>' +
-        '<div class="d-grid d-grid-3"><div class="d-field"><label>Day</label><select id="cl_day"><option value="">Any</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option></select></div><div class="d-field"><label>Start Time</label><input type="time" id="cl_start"></div><div class="d-field"><label>End Time</label><input type="time" id="cl_end"></div></div>' +
-        '<div class="d-grid d-grid-3"><div class="d-field"><label>Start Date</label><input type="date" id="cl_sdate"></div><div class="d-field"><label>Sessions</label><input type="number" id="cl_sessions" value="1"></div><div class="d-field"><label>Capacity (0=unlimited)</label><input type="number" id="cl_cap" value="0"></div></div>' +
-        '<div class="d-grid d-grid-3"><div class="d-field"><label>Price (pence, 0=free)</label><input type="number" id="cl_price" value="0"></div><div class="d-field"><label>Price Type</label><select id="cl_ptype"><option value="one_off">One-off / Full course</option><option value="per_session">Per session</option><option value="monthly">Monthly</option></select></div><div class="d-field"><label>Online?</label><select id="cl_online"><option value="0">In Person</option><option value="1">Online</option></select></div></div>' +
-        '<div class="d-grid d-grid-2"><div class="d-field"><label>Location</label><input id="cl_location" placeholder="Main Hall / Online"></div><div class="d-field"><label>Live URL (if online)</label><input id="cl_url" placeholder="https://zoom.us/..."></div></div>' +
-        '<div style="display:flex;gap:8px;margin-top:16px"><button class="d-btn d-btn--primary" id="cl-save" onclick="saveClass()"><span class="btn-text">Create Class</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="navigate(\'/classes\')">Cancel</button></div></div>'
+        '<div class="d-header"><h1>'+(isEdit?'Edit Class':'New Class')+'</h1></div><div class="d-card">' +
+        '<div class="d-field"><label>Title</label><input id="cl_title" placeholder="e.g. Tajweed for Beginners" value="'+esc(c?c.title:'')+'"></div>' +
+        '<div class="d-field"><label>Description</label><textarea id="cl_desc" rows="3">'+esc(c?c.description:'')+'</textarea></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Category</label><select id="cl_cat"><option>Quran</option><option>Arabic</option><option>Tajweed</option><option>Islamic Studies</option><option>Fiqh</option><option>Seerah</option><option>Business</option><option>SEO</option><option>Marketing</option><option>Finance</option><option>Health</option><option>Fitness</option><option>Cooking</option><option>Parenting</option><option>Youth</option><option>Sisters</option></select></div><div class="d-field"><label>Instructor</label><input id="cl_instructor" placeholder="Sheikh Ahmad" value="'+esc(c?c.instructor_name:'')+'"></div><div class="d-field"><label>Type</label><select id="cl_type"><option value="course">Course</option><option value="workshop">Workshop</option><option value="drop_in">Drop-in</option><option value="seminar">Seminar</option></select></div></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Day</label><select id="cl_day"><option value="">Any</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option></select></div><div class="d-field"><label>Start Time</label><input type="time" id="cl_start" value="'+esc(c?(c.start_time||'').substring(0,5):'')+'"></div><div class="d-field"><label>End Time</label><input type="time" id="cl_end" value="'+esc(c?(c.end_time||'').substring(0,5):'')+'"></div></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Start Date</label><input type="date" id="cl_sdate" value="'+esc(c?c.start_date||'':'')+'"></div><div class="d-field"><label>Sessions</label><input type="number" id="cl_sessions" value="'+(c?c.total_sessions||1:1)+'"></div><div class="d-field"><label>Capacity (0=unlimited)</label><input type="number" id="cl_cap" value="'+(c?c.max_capacity||0:0)+'"></div></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Price (pence, 0=free)</label><input type="number" id="cl_price" value="'+(c?c.price_pence||0:0)+'"></div><div class="d-field"><label>Price Type</label><select id="cl_ptype"><option value="one_off">One-off / Full course</option><option value="per_session">Per session</option><option value="monthly">Monthly</option></select></div><div class="d-field"><label>Online?</label><select id="cl_online"><option value="0">In Person</option><option value="1">Online</option></select></div></div>' +
+        '<div class="d-grid d-grid-2"><div class="d-field"><label>Location</label><input id="cl_location" placeholder="Main Hall / Online" value="'+esc(c?c.location||'':'')+'"></div><div class="d-field"><label>Live URL (if online)</label><input id="cl_url" placeholder="https://zoom.us/..." value="'+esc(c?c.live_url||'':'')+'"></div></div>' +
+        '<div style="display:flex;gap:8px;margin-top:16px"><button class="d-btn d-btn--primary" id="cl-save" onclick="saveClass()"><span class="btn-text">'+(isEdit?'Update Class':'Create Class')+'</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="editingClassId=null;navigate(\'/classes\')">Cancel</button></div></div>'
     ));
+    // Set select values after render
+    if (c) {
+        if (c.category) $('#cl_cat').value = c.category;
+        if (c.class_type) $('#cl_type').value = c.class_type;
+        if (c.day_of_week) $('#cl_day').value = c.day_of_week;
+        if (c.price_type) $('#cl_ptype').value = c.price_type;
+        $('#cl_online').value = c.is_online ? '1' : '0';
+    }
 }
 async function saveClass() {
     btn('#cl-save',true);
-    var res = await api('admin/classes',{method:'POST',body:{
+    var body = {
         title:$('#cl_title').value, description:$('#cl_desc').value,
         category:$('#cl_cat').value, instructor_name:$('#cl_instructor').value,
         class_type:$('#cl_type').value, day_of_week:$('#cl_day').value,
@@ -832,9 +937,16 @@ async function saveClass() {
         max_capacity:parseInt($('#cl_cap').value), price_pence:parseInt($('#cl_price').value),
         price_type:$('#cl_ptype').value, is_online:parseInt($('#cl_online').value),
         location:$('#cl_location').value, live_url:$('#cl_url').value
-    }});
-    btn('#cl-save',false);
-    if(res.ok){toast('Class created!');navigate('/classes');}else toast(res.error||'Failed.','error');
+    };
+    if (editingClassId) {
+        var res = await api('admin/classes/'+editingClassId,{method:'PUT',body:body});
+        btn('#cl-save',false);
+        if(res.ok){toast('Class updated!');editingClassId=null;navigate('/classes');}else toast(res.error||'Failed.','error');
+    } else {
+        var res = await api('admin/classes',{method:'POST',body:body});
+        btn('#cl-save',false);
+        if(res.ok){toast('Class created!');navigate('/classes');}else toast(res.error||'Failed.','error');
+    }
 }
 async function deleteClass(id){if(!confirm('Delete?'))return;await api('admin/classes/'+id,{method:'DELETE'});toast('Deleted.');renderClasses();}
 async function renderEnrolments() {
@@ -854,17 +966,20 @@ async function renderEnrolments() {
 }
 
 // ── Fundraising Campaigns ──
+var campaignsData = [];
+var editingCampaignId = null;
 async function renderCampaigns() {
     if (!mosque) await loadMosque();
     render(shell('<div class="d-header"><h1>Fundraising</h1></div><div class="d-card">Loading...</div>'));
     var res = await api('mosques/' + mosque.id + '/campaigns');
     var list = res.campaigns || [];
+    campaignsData = list;
     var rows = list.map(function(c) {
         var pct = c.percentage || 0;
         var target = c.target_pence > 0 ? '£' + (c.target_pence/100).toLocaleString() : '';
         var raised = '£' + (c.raised_pence/100).toLocaleString();
         var recur = c.recurring ? '<span class="d-badge d-badge--blue">Monthly</span>' : '';
-        return '<tr><td><strong>'+esc(c.title)+'</strong> '+recur+(c.dfm_link?'<br><a href="'+esc(c.dfm_link)+'" target="_blank" style="font-size:11px;color:var(--primary)">DFM link ↗</a>':'')+'</td><td>'+esc(c.category)+'</td><td>'+raised+(target?' / '+target:'')+'</td><td><div style="background:#e5e7eb;border-radius:4px;height:8px;width:80px;display:inline-block;vertical-align:middle"><div style="background:#16a34a;border-radius:4px;height:100%;width:'+pct+'%"></div></div> '+pct+'%</td><td>'+c.donor_count+'</td><td><button class="d-btn d-btn--secondary d-btn--sm" onclick="editCampaign('+c.id+','+c.raised_pence+','+c.donor_count+')">Update</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="deleteCampaign('+c.id+')">Del</button></td></tr>';
+        return '<tr><td><strong>'+esc(c.title)+'</strong> '+recur+(c.dfm_link?'<br><a href="'+esc(c.dfm_link)+'" target="_blank" style="font-size:11px;color:var(--primary)">DFM link ↗</a>':'')+'</td><td>'+esc(c.category)+'</td><td>'+raised+(target?' / '+target:'')+'</td><td><div style="background:#e5e7eb;border-radius:4px;height:8px;width:80px;display:inline-block;vertical-align:middle"><div style="background:#16a34a;border-radius:4px;height:100%;width:'+pct+'%"></div></div> '+pct+'%</td><td>'+c.donor_count+'</td><td><button class="d-btn d-btn--secondary d-btn--sm" onclick="editCampaign('+c.id+')">Edit</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="deleteCampaign('+c.id+')">Del</button></td></tr>';
     }).join('');
     render(shell(
         '<div class="d-header"><h1>Fundraising Campaigns</h1><button class="d-btn d-btn--primary d-btn--sm" onclick="navigate(\'/campaigns/new\')">+ New Campaign</button></div>' +
@@ -875,28 +990,47 @@ async function renderCampaigns() {
     ));
 }
 
+function editCampaign(id) { editingCampaignId = id; navigate('/campaigns/new'); }
+
 async function renderCampaignForm() {
     if (!mosque) await loadMosque();
+    var isEdit = !!editingCampaignId;
+    var c = null;
+    if (isEdit) {
+        c = campaignsData.find(function(x){return x.id===editingCampaignId;});
+        if (!c) {
+            var r = await api('mosques/' + mosque.id + '/campaigns');
+            campaignsData = r.campaigns || [];
+            c = campaignsData.find(function(x){return x.id===editingCampaignId;});
+        }
+    }
     render(shell(
-        '<div class="d-header"><h1>New Campaign</h1></div>' +
+        '<div class="d-header"><h1>'+(isEdit?'Edit Campaign':'New Campaign')+'</h1></div>' +
         '<div class="d-card">' +
-        '<div class="d-field"><label>Title</label><input id="cp_title" placeholder="e.g. New Roof Fund"></div>' +
-        '<div class="d-field"><label>Description</label><textarea id="cp_desc" rows="3" placeholder="Tell donors what this is for and why it matters"></textarea></div>' +
+        '<div class="d-field"><label>Title</label><input id="cp_title" placeholder="e.g. New Roof Fund" value="'+esc(c?c.title:'')+'"></div>' +
+        '<div class="d-field"><label>Description</label><textarea id="cp_desc" rows="3" placeholder="Tell donors what this is for and why it matters">'+esc(c?c.description:'')+'</textarea></div>' +
         '<div class="d-grid d-grid-3">' +
         '<div class="d-field"><label>Category</label><select id="cp_cat"><option>general</option><option>welfare</option><option>expansion</option><option>renovation</option><option>education</option><option>youth</option><option>emergency</option><option>equipment</option><option>heating</option><option>parking</option></select></div>' +
-        '<div class="d-field"><label>Target (£)</label><input type="number" id="cp_target" placeholder="50000"></div>' +
+        '<div class="d-field"><label>Target (£)</label><input type="number" id="cp_target" placeholder="50000" value="'+(c?Math.round((c.target_pence||0)/100):'')+'"></div>' +
         '<div class="d-field"><label>Type</label><select id="cp_recur"><option value="0">One-off target</option><option value="1">Monthly target</option></select></div>' +
         '</div>' +
-        '<div class="d-field"><label>DonationForMasjid Link (optional)</label><input id="cp_dfm" placeholder="https://donationformasjid.com/your-mosque"></div>' +
-        '<div style="display:flex;gap:8px;margin-top:16px"><button class="d-btn d-btn--primary" id="cp-save" onclick="saveCampaign()"><span class="btn-text">Create Campaign</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="navigate(\'/campaigns\')">Cancel</button></div>' +
+        '<div class="d-field"><label>DonationForMasjid Link (optional)</label><input id="cp_dfm" placeholder="https://donationformasjid.com/your-mosque" value="'+esc(c?c.dfm_link||'':'')+'"></div>' +
+        (isEdit ? '<div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px"><h4 style="margin-bottom:12px;font-size:13px">Fundraising Progress</h4>' +
+        '<div class="d-grid d-grid-2"><div class="d-field"><label>Raised (£)</label><input type="number" id="cp_raised" value="'+(c?((c.raised_pence||0)/100).toFixed(2):'0')+'"></div><div class="d-field"><label>Donor Count</label><input type="number" id="cp_donors" value="'+(c?c.donor_count||0:0)+'"></div></div></div>' : '') +
+        '<div style="display:flex;gap:8px;margin-top:16px"><button class="d-btn d-btn--primary" id="cp-save" onclick="saveCampaign()"><span class="btn-text">'+(isEdit?'Update Campaign':'Create Campaign')+'</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="editingCampaignId=null;navigate(\'/campaigns\')">Cancel</button></div>' +
         '</div>'
     ));
+    // Set select values after render
+    if (c) {
+        if (c.category) $('#cp_cat').value = c.category;
+        $('#cp_recur').value = c.recurring ? '1' : '0';
+    }
 }
 
 async function saveCampaign() {
     btn('#cp-save', true);
     var recur = parseInt($('#cp_recur').value);
-    var res = await api('admin/campaigns', {method:'POST', body:{
+    var body = {
         title: $('#cp_title').value,
         description: $('#cp_desc').value,
         category: $('#cp_cat').value,
@@ -904,24 +1038,23 @@ async function saveCampaign() {
         recurring: recur,
         recurring_interval: recur ? 'monthly' : '',
         dfm_link: $('#cp_dfm').value
-    }});
-    btn('#cp-save', false);
-    if (res.ok) { toast('Campaign created!'); navigate('/campaigns'); }
-    else toast(res.error || 'Failed.', 'error');
-}
-
-async function editCampaign(id, currentRaised, currentDonors) {
-    var raisedPounds = prompt('Raised amount in £ (current: £' + (currentRaised/100).toLocaleString() + '):', (currentRaised/100));
-    if (raisedPounds === null) return;
-    var donors = prompt('Number of donors (current: ' + currentDonors + '):', currentDonors);
-    if (donors === null) return;
-
-    var res = await api('admin/campaigns/' + id, {method:'PUT', body:{
-        raised_pence: Math.round(parseFloat(raisedPounds) * 100),
-        donor_count: parseInt(donors) || 0
-    }});
-    if (res.ok) { toast('Campaign updated!'); renderCampaigns(); }
-    else toast(res.error || 'Failed.', 'error');
+    };
+    if (editingCampaignId) {
+        // Include raised/donors fields for edit
+        var raisedEl = $('#cp_raised');
+        var donorsEl = $('#cp_donors');
+        if (raisedEl) body.raised_pence = Math.round(parseFloat(raisedEl.value || 0) * 100);
+        if (donorsEl) body.donor_count = parseInt(donorsEl.value) || 0;
+        var res = await api('admin/campaigns/' + editingCampaignId, {method:'PUT', body:body});
+        btn('#cp-save', false);
+        if (res.ok) { toast('Campaign updated!'); editingCampaignId = null; navigate('/campaigns'); }
+        else toast(res.error || 'Failed.', 'error');
+    } else {
+        var res = await api('admin/campaigns', {method:'POST', body:body});
+        btn('#cp-save', false);
+        if (res.ok) { toast('Campaign created!'); navigate('/campaigns'); }
+        else toast(res.error || 'Failed.', 'error');
+    }
 }
 
 async function deleteCampaign(id) {
@@ -932,16 +1065,19 @@ async function deleteCampaign(id) {
 }
 
 // ── Masjid Services ──
+var masjidSvcData = [];
+var editingMasjidSvcId = null;
 async function renderMasjidServices() {
     if (!mosque) await loadMosque();
     render(shell('<div class="d-header"><h1>Masjid Services</h1></div><div class="d-card">Loading...</div>'));
     var res = await api('admin/masjid-services');
     var list = res.services || [];
+    masjidSvcData = list;
     var catLabels = {nikkah:'Nikkah',funeral:'Funeral',counselling:'Counselling',quran:'Quran Classes',revert:'Revert Support',ruqyah:'Ruqyah',aqiqah:'Aqiqah',circumcision:'Circumcision',walima:'Walima/Catering',hire:'Venue Hire',imam:'Imam Services',certificate:'Certificates',general:'General'};
     var rows = list.map(function(s) {
         var cat = catLabels[s.category] || s.category;
         var price = s.price_pence > 0 ? '\u00a3'+(s.price_pence/100).toFixed(0) : (s.price_label || 'Free/Contact');
-        return '<tr><td><strong>'+esc(s.title)+'</strong></td><td><span class="d-badge d-badge--blue">'+esc(cat)+'</span></td><td>'+price+'</td><td>'+(s.requires_approval?'\u2705':'\u274c')+'</td><td>'+esc(s.availability||'\u2014')+'</td><td><button class="d-btn d-btn--danger d-btn--sm" onclick="delMasjidSvc('+s.id+')">Del</button></td></tr>';
+        return '<tr><td><strong>'+esc(s.title)+'</strong></td><td><span class="d-badge d-badge--blue">'+esc(cat)+'</span></td><td>'+price+'</td><td>'+(s.requires_approval?'\u2705':'\u274c')+'</td><td>'+esc(s.availability||'\u2014')+'</td><td><button class="d-btn d-btn--secondary d-btn--sm" onclick="editMasjidSvc('+s.id+')">Edit</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="delMasjidSvc('+s.id+')">Del</button></td></tr>';
     }).join('');
     render(shell(
         '<div class="d-header"><h1>\ud83d\udd4c Masjid Services</h1><div style="display:flex;gap:8px"><button class="d-btn d-btn--primary d-btn--sm" onclick="navigate(\'/masjid-services/new\')">+ Add Service</button><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/masjid-service-enquiries\')">View Enquiries</button></div></div>' +
@@ -959,25 +1095,39 @@ async function delMasjidSvc(id) {
     toast('Deleted.'); renderMasjidServices();
 }
 
+function editMasjidSvc(id) { editingMasjidSvcId = id; navigate('/masjid-services/new'); }
+
 async function renderMasjidServiceForm() {
     if (!mosque) await loadMosque();
+    var isEdit = !!editingMasjidSvcId;
+    var s = null;
+    if (isEdit) {
+        s = masjidSvcData.find(function(x){return x.id===editingMasjidSvcId;});
+        if (!s) {
+            var r = await api('admin/masjid-services');
+            masjidSvcData = r.services || [];
+            s = masjidSvcData.find(function(x){return x.id===editingMasjidSvcId;});
+        }
+    }
     var cats = '<option value="nikkah">Nikkah / Marriage</option><option value="funeral">Funeral / Janazah</option><option value="counselling">Counselling</option><option value="quran">Quran Classes</option><option value="revert">Revert Support</option><option value="ruqyah">Ruqyah</option><option value="aqiqah">Aqiqah</option><option value="circumcision">Circumcision</option><option value="walima">Walima / Catering</option><option value="hire">Venue / Hall Hire</option><option value="imam">Imam Services</option><option value="certificate">Certificates</option><option value="general">General</option>';
     render(shell(
-        '<div class="d-header"><h1>Add Masjid Service</h1><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/masjid-services\')">\u2190 Back</button></div>' +
+        '<div class="d-header"><h1>'+(isEdit?'Edit Masjid Service':'Add Masjid Service')+'</h1><button class="d-btn d-btn--secondary d-btn--sm" onclick="editingMasjidSvcId=null;navigate(\'/masjid-services\')">\u2190 Back</button></div>' +
         '<div class="d-card">' +
-        '<div class="d-grid d-grid-2"><div class="d-field"><label>Service Name</label><input id="ms_title" placeholder="e.g. Nikkah Ceremony"></div><div class="d-field"><label>Category</label><select id="ms_cat">'+cats+'</select></div></div>' +
-        '<div class="d-field"><label>Description</label><textarea id="ms_desc" rows="3" placeholder="Describe what this service includes, requirements, etc."></textarea></div>' +
-        '<div class="d-grid d-grid-3"><div class="d-field"><label>Price (\u00a3) — leave 0 for free/contact</label><input type="number" id="ms_price" value="0"></div><div class="d-field"><label>Price Label (optional)</label><input id="ms_pricelbl" placeholder="e.g. From \u00a3150, Contact for quote"></div><div class="d-field"><label>Availability</label><input id="ms_avail" placeholder="e.g. Mon-Fri 9am-5pm, By appointment"></div></div>' +
-        '<div class="d-grid d-grid-2"><div class="d-field"><label>Contact Phone</label><input id="ms_phone" placeholder="Direct phone for this service"></div><div class="d-field"><label>Contact Email</label><input id="ms_email" placeholder="Direct email for this service"></div></div>' +
-        '<div class="d-field"><label><input type="checkbox" id="ms_approval" checked style="margin-right:6px">Requires masjid approval before confirmation</label></div>' +
-        '<button class="d-btn d-btn--primary" id="ms-save" onclick="saveMasjidSvc()"><span class="btn-text">Add Service</span><span class="spinner"></span></button>' +
+        '<div class="d-grid d-grid-2"><div class="d-field"><label>Service Name</label><input id="ms_title" placeholder="e.g. Nikkah Ceremony" value="'+esc(s?s.title:'')+'"></div><div class="d-field"><label>Category</label><select id="ms_cat">'+cats+'</select></div></div>' +
+        '<div class="d-field"><label>Description</label><textarea id="ms_desc" rows="3" placeholder="Describe what this service includes, requirements, etc.">'+esc(s?s.description:'')+'</textarea></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Price (\u00a3) — leave 0 for free/contact</label><input type="number" id="ms_price" value="'+(s?((s.price_pence||0)/100).toFixed(0):'0')+'"></div><div class="d-field"><label>Price Label (optional)</label><input id="ms_pricelbl" placeholder="e.g. From \u00a3150, Contact for quote" value="'+esc(s?s.price_label||'':'')+'"></div><div class="d-field"><label>Availability</label><input id="ms_avail" placeholder="e.g. Mon-Fri 9am-5pm, By appointment" value="'+esc(s?s.availability||'':'')+'"></div></div>' +
+        '<div class="d-grid d-grid-2"><div class="d-field"><label>Contact Phone</label><input id="ms_phone" placeholder="Direct phone for this service" value="'+esc(s?s.contact_phone||'':'')+'"></div><div class="d-field"><label>Contact Email</label><input id="ms_email" placeholder="Direct email for this service" value="'+esc(s?s.contact_email||'':'')+'"></div></div>' +
+        '<div class="d-field"><label><input type="checkbox" id="ms_approval" '+(s?(s.requires_approval?'checked':''):'checked')+' style="margin-right:6px">Requires masjid approval before confirmation</label></div>' +
+        '<button class="d-btn d-btn--primary" id="ms-save" onclick="saveMasjidSvc()"><span class="btn-text">'+(isEdit?'Update Service':'Add Service')+'</span><span class="spinner"></span></button>' +
         '</div>'
     ));
+    // Set select value after render
+    if (s && s.category) $('#ms_cat').value = s.category;
 }
 
 async function saveMasjidSvc() {
     btn('#ms-save',true);
-    var res = await api('admin/masjid-services',{method:'POST',body:{
+    var body = {
         title:$('#ms_title').value,
         category:$('#ms_cat').value,
         description:$('#ms_desc').value,
@@ -987,10 +1137,18 @@ async function saveMasjidSvc() {
         contact_phone:$('#ms_phone').value,
         contact_email:$('#ms_email').value,
         requires_approval:$('#ms_approval').checked?1:0
-    }});
-    btn('#ms-save',false);
-    if(res.ok){toast('Service added!');navigate('/masjid-services');}
-    else toast(res.error||'Failed.','error');
+    };
+    if (editingMasjidSvcId) {
+        var res = await api('admin/masjid-services/'+editingMasjidSvcId,{method:'PUT',body:body});
+        btn('#ms-save',false);
+        if(res.ok){toast('Service updated!');editingMasjidSvcId=null;navigate('/masjid-services');}
+        else toast(res.error||'Failed.','error');
+    } else {
+        var res = await api('admin/masjid-services',{method:'POST',body:body});
+        btn('#ms-save',false);
+        if(res.ok){toast('Service added!');navigate('/masjid-services');}
+        else toast(res.error||'Failed.','error');
+    }
 }
 
 async function renderMasjidServiceEnquiries() {
