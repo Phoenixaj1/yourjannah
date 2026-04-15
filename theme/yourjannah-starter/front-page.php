@@ -110,20 +110,7 @@ get_header();
 
     <!-- Feed -->
     <section id="feed-section">
-        <!-- Radius selector: this masjid only (default) or widen radius -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-            <h3 style="font-size:16px;font-weight:700;margin:0;"><?php esc_html_e( 'What\'s Happening', 'yourjannah' ); ?></h3>
-            <div style="display:flex;align-items:center;gap:6px;">
-                <span class="ynj-feed-count" id="feed-count" style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:#00ADEF;color:#fff;font-size:11px;font-weight:700;">0</span>
-                <select id="feed-radius" style="padding:7px 12px;border-radius:10px;border:1px solid rgba(0,0,0,.1);font-size:13px;font-weight:600;background:rgba(255,255,255,.9);color:#0a1628;cursor:pointer;-webkit-appearance:auto;" onchange="onRadiusChange()">
-                    <option value="0" selected><?php esc_html_e( 'This Masjid Only', 'yourjannah' ); ?></option>
-                    <option value="5"><?php esc_html_e( 'Within 5 miles', 'yourjannah' ); ?></option>
-                    <option value="10"><?php esc_html_e( 'Within 10 miles', 'yourjannah' ); ?></option>
-                    <option value="25"><?php esc_html_e( 'Within 25 miles', 'yourjannah' ); ?></option>
-                    <option value="9999"><?php esc_html_e( 'Nationwide', 'yourjannah' ); ?></option>
-                </select>
-            </div>
-        </div>
+        <h3 style="font-size:16px;font-weight:700;margin:0 0 10px;"><?php esc_html_e( 'What\'s Happening', 'yourjannah' ); ?></h3>
 
         <div class="ynj-filter-chips" id="feed-filters">
             <button class="ynj-chip ynj-chip--active" data-filter="all" onclick="filterFeed('all')">All</button>

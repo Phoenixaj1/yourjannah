@@ -46,6 +46,7 @@ $slug = ynj_mosque_slug();
 .ynj-ev-chip--active{background:#00ADEF;color:#fff;border-color:#00ADEF;}
 #ev-feed{display:grid;grid-template-columns:1fr;gap:14px;}
 @media(min-width:700px){#ev-feed{grid-template-columns:1fr 1fr;}}
+.ynj-ev-mosque-tag{font-size:11px;color:#00ADEF;font-weight:600;margin-top:4px;}
 .ynj-ev-empty{grid-column:1/-1;}
 </style>
 
@@ -71,7 +72,10 @@ $slug = ynj_mosque_slug();
     const slug = <?php echo wp_json_encode( $slug ); ?>;
     const API  = ynjData.restUrl;
     let allEvents = [];
+    let nearbyEvents = [];
+    let nearbyLoaded = false;
     let currentFilter = 'all';
+    let mosqueLat = null, mosqueLng = null;
 
     document.querySelectorAll('[data-nav-mosque]').forEach(el => {
         el.href = el.dataset.navMosque.replace('{slug}', slug);
@@ -148,20 +152,31 @@ $slug = ynj_mosque_slug();
 
     function renderAll() {
         const feed = document.getElementById('ev-feed');
-        let filtered = allEvents;
+        const radius = parseInt((document.getElementById('ynj-radius')||{}).value) || 0;
+        let combined = radius > 0 ? allEvents.concat(nearbyEvents) : allEvents;
+        combined.sort((a,b) => (a.event_date||'').localeCompare(b.event_date||''));
+
+        let filtered = combined;
         if (currentFilter !== 'all') {
             const types = currentFilter.split(',');
             if (currentFilter === '_live') {
-                filtered = allEvents.filter(e => e.is_live && e.live_url);
+                filtered = combined.filter(e => e.is_live && e.live_url);
             } else {
-                filtered = allEvents.filter(e => types.includes(e.event_type));
+                filtered = combined.filter(e => types.includes(e.event_type));
             }
         }
         if (!filtered.length) {
-            feed.innerHTML = '<div class="ynj-ev-empty"><div>📅</div><h3>No Events Found</h3><p class="ynj-text-muted">' + (currentFilter === 'all' ? 'No upcoming events at this mosque. Check back soon!' : 'No events match this filter. Try "All".') + '</p></div>';
+            feed.innerHTML = '<div class="ynj-ev-empty"><div>📅</div><h3>No Events Found</h3><p class="ynj-text-muted">' + (currentFilter === 'all' ? 'No upcoming events. Check back soon!' : 'No events match this filter. Try "All".') + '</p></div>';
             return;
         }
-        feed.innerHTML = filtered.map(renderEvent).join('');
+        feed.innerHTML = filtered.map(e => {
+            let card = renderEvent(e);
+            if (e._mosque_name) {
+                const dist = e._distance ? ' · ' + (e._distance < 1.6 ? (e._distance*0.621).toFixed(1) : Math.round(e._distance*0.621)) + ' mi' : '';
+                card = card.replace('</div></div>', '<div class="ynj-ev-mosque-tag">🕌 ' + e._mosque_name + dist + '</div></div></div>');
+            }
+            return card;
+        }).join('');
     }
 
     window.filterEv = function(filter) {
@@ -177,6 +192,7 @@ $slug = ynj_mosque_slug();
         .then(r => r.json())
         .then(resp => {
             const m = resp.mosque || resp;
+            mosqueLat = m.latitude; mosqueLng = m.longitude;
             document.getElementById('ev-title').textContent = (m.name || 'Your Mosque') + ' Events';
         }).catch(() => {});
 
@@ -190,6 +206,33 @@ $slug = ynj_mosque_slug();
         .catch(() => {
             document.getElementById('ev-feed').innerHTML = '<div class="ynj-ev-empty"><div>😕</div><h3>Could Not Load</h3><p class="ynj-text-muted">Please check your connection and try again.</p></div>';
         });
+
+    // Radius change — load nearby events
+    window.onRadiusChange = function() {
+        const radius = parseInt((document.getElementById('ynj-radius')||{}).value) || 0;
+        if (radius === 0) { nearbyEvents = []; renderAll(); return; }
+        if (nearbyLoaded) { renderAll(); return; }
+        if (!mosqueLat) { renderAll(); return; }
+
+        document.getElementById('ev-feed').innerHTML = '<p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading nearby events...</p>';
+        const radiusKm = radius === 9999 ? 9999 : radius * 1.609;
+        fetch(API + 'mosques/nearest?lat=' + mosqueLat + '&lng=' + mosqueLng + '&limit=10&radius_km=' + radiusKm)
+            .then(r => r.json())
+            .then(data => {
+                const mosques = (data.mosques || []).filter(m => m.slug !== slug);
+                return Promise.all(mosques.slice(0,8).map(m =>
+                    fetch(API + 'mosques/' + m.slug + '/events?upcoming=1').then(r => r.json())
+                        .then(d => (d.events||[]).map(e => Object.assign(e, {_mosque_name:m.name, _distance:m.distance})))
+                        .catch(() => [])
+                ));
+            })
+            .then(results => {
+                nearbyEvents = (results||[]).flat();
+                nearbyLoaded = true;
+                renderAll();
+            })
+            .catch(() => { nearbyLoaded = true; renderAll(); });
+    };
 })();
 </script>
 <?php get_footer(); ?>

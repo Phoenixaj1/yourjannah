@@ -29,6 +29,10 @@ $slug = ynj_mosque_slug();
     const slug = <?php echo wp_json_encode( $slug ); ?>;
     const API = ynjData.restUrl;
     let mosqueId = null;
+    let mosqueLat = null, mosqueLng = null;
+    let localBiz = [];
+    let nearbyBiz = [];
+    let nearbyLoaded = false;
 
     document.querySelectorAll('[data-nav-mosque]').forEach(el => {
         el.href = el.dataset.navMosque.replace('{slug}', slug);
@@ -68,19 +72,48 @@ $slug = ynj_mosque_slug();
         </div>`;
     }
 
+    function renderList() {
+        const list = document.getElementById('local-biz-list');
+        const radius = parseInt((document.getElementById('ynj-radius')||{}).value) || 0;
+        const all = radius > 0 ? localBiz.concat(nearbyBiz) : localBiz;
+        if (!all.length) { list.innerHTML = '<p class="ynj-text-muted">No sponsors yet. Be the first!</p>'; return; }
+        list.innerHTML = all.map((b,i) => renderBiz(b, radius > 0 ? null : i+1, !!b.mosque_name)).join('');
+    }
+
     // Load mosque sponsors
     fetch(API + 'mosques/' + slug)
         .then(r => r.json())
-        .then(resp => { const m = resp.mosque||resp; mosqueId = m.id; })
+        .then(resp => { const m = resp.mosque||resp; mosqueId = m.id; mosqueLat = m.latitude; mosqueLng = m.longitude; })
         .then(() => fetch(API + 'mosques/' + slug + '/directory'))
         .then(r => r.json())
         .then(data => {
-            const biz = data.businesses || [];
-            const list = document.getElementById('local-biz-list');
-            if (!biz.length) { list.innerHTML = '<p class="ynj-text-muted">No sponsors yet. Be the first!</p>'; return; }
-            list.innerHTML = biz.map((b,i) => renderBiz(b, i+1, false)).join('');
+            localBiz = data.businesses || [];
+            renderList();
         })
         .catch(() => { document.getElementById('local-biz-list').innerHTML = '<p class="ynj-text-muted">Could not load.</p>'; });
+
+    // Radius change
+    window.onRadiusChange = function() {
+        const radius = parseInt((document.getElementById('ynj-radius')||{}).value) || 0;
+        if (radius === 0) { nearbyBiz = []; renderList(); return; }
+        if (nearbyLoaded) { renderList(); return; }
+        if (!mosqueLat) { renderList(); return; }
+
+        document.getElementById('local-biz-list').innerHTML = '<p class="ynj-text-muted">Loading nearby sponsors...</p>';
+        const radiusKm = radius === 9999 ? 9999 : radius * 1.609;
+        fetch(API + 'mosques/nearest?lat=' + mosqueLat + '&lng=' + mosqueLng + '&limit=10&radius_km=' + radiusKm)
+            .then(r => r.json())
+            .then(data => {
+                const mosques = (data.mosques || []).filter(m => m.slug !== slug);
+                return Promise.all(mosques.slice(0,8).map(m =>
+                    fetch(API + 'mosques/' + m.slug + '/directory').then(r => r.json())
+                        .then(d => (d.businesses||[]).map(b => Object.assign(b, {mosque_name:m.name, distance_km:m.distance})))
+                        .catch(() => [])
+                ));
+            })
+            .then(results => { nearbyBiz = (results||[]).flat(); nearbyLoaded = true; renderList(); })
+            .catch(() => { nearbyLoaded = true; renderList(); });
+    };
 })();
 </script>
 <?php get_footer(); ?>

@@ -439,10 +439,13 @@
             let nearbyLoaded = false;
 
             function loadFeed(slug) {
+                var feedEl = document.getElementById('feed-list');
+                if (feedEl) feedEl.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">Loading...</p>';
+
                 Promise.all([
-                    fetch(`${API}/mosques/${slug}/announcements`).then(r => r.json()).catch(() => ({announcements:[]})),
-                    fetch(`${API}/mosques/${slug}/events?upcoming=1`).then(r => r.json()).catch(() => ({events:[]})),
-                    fetch(`${API}/mosques/${slug}/classes`).then(r => r.json()).catch(() => ({classes:[]}))
+                    fetch(`${API}/mosques/${slug}/announcements`).then(r => r.ok ? r.json() : {announcements:[]}).catch(() => ({announcements:[]})),
+                    fetch(`${API}/mosques/${slug}/events?upcoming=1`).then(r => r.ok ? r.json() : {events:[]}).catch(() => ({events:[]})),
+                    fetch(`${API}/mosques/${slug}/classes`).then(r => r.ok ? r.json() : {classes:[]}).catch(() => ({classes:[]}))
                 ]).then(([aData, eData, cData]) => {
                     allFeedItems = [];
                     (aData.announcements || []).forEach(a => {
@@ -475,6 +478,9 @@
                     });
                     sortFeedItems(allFeedItems);
                     renderFeed();
+                }).catch(function(err) {
+                    console.error('Feed load error:', err);
+                    if (feedEl) feedEl.innerHTML = '<p class="ynj-text-muted" style="padding:12px;text-align:center;">No announcements or events yet.</p>';
                 });
             }
 
@@ -530,7 +536,7 @@
             };
 
             window.onRadiusChange = function() {
-                const sel = document.getElementById('feed-radius');
+                const sel = document.getElementById('ynj-radius');
                 currentRadius = parseInt(sel.value) || 0;
                 if (currentRadius === 0) {
                     // Back to this masjid only

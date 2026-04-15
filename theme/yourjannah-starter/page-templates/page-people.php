@@ -29,6 +29,10 @@ $slug = ynj_mosque_slug();
     const slug = <?php echo wp_json_encode( $slug ); ?>;
     const API = ynjData.restUrl;
     let mosqueId = null;
+    let mosqueLat = null, mosqueLng = null;
+    let localSvcs = [];
+    let nearbySvcs = [];
+    let nearbyLoaded = false;
 
     document.querySelectorAll('[data-nav-mosque]').forEach(el => {
         el.href = el.dataset.navMosque.replace('{slug}', slug);
@@ -59,24 +63,53 @@ $slug = ynj_mosque_slug();
         </div>`;
     }
 
+    function renderList() {
+        const list = document.getElementById('local-svc-list');
+        const radius = parseInt((document.getElementById('ynj-radius')||{}).value) || 0;
+        const all = radius > 0 ? localSvcs.concat(nearbySvcs) : localSvcs;
+        if (!all.length) { list.innerHTML = '<p class="ynj-text-muted">No services listed yet.</p>'; return; }
+        list.innerHTML = all.map(s => renderCard(s, !!s.mosque_name)).join('');
+    }
+
     // Load mosque services
     fetch(API + 'mosques/' + slug)
         .then(r => r.json())
         .then(resp => {
             const m = resp.mosque || resp;
-            mosqueId = m.id;
+            mosqueId = m.id; mosqueLat = m.latitude; mosqueLng = m.longitude;
         })
         .then(() => fetch(API + 'mosques/' + slug + '/directory'))
         .then(r => r.json())
         .then(data => {
-            const list = document.getElementById('local-svc-list');
-            const svcs = data.services || [];
-            if (!svcs.length) { list.innerHTML = '<p class="ynj-text-muted">No services listed at this mosque yet.</p>'; return; }
-            list.innerHTML = svcs.map(s => renderCard(s, false)).join('');
+            localSvcs = data.services || [];
+            renderList();
         })
         .catch(() => {
             document.getElementById('local-svc-list').innerHTML = '<p class="ynj-text-muted">Could not load services.</p>';
         });
+
+    // Radius change
+    window.onRadiusChange = function() {
+        const radius = parseInt((document.getElementById('ynj-radius')||{}).value) || 0;
+        if (radius === 0) { nearbySvcs = []; renderList(); return; }
+        if (nearbyLoaded) { renderList(); return; }
+        if (!mosqueLat) { renderList(); return; }
+
+        document.getElementById('local-svc-list').innerHTML = '<p class="ynj-text-muted">Loading nearby services...</p>';
+        const radiusKm = radius === 9999 ? 9999 : radius * 1.609;
+        fetch(API + 'mosques/nearest?lat=' + mosqueLat + '&lng=' + mosqueLng + '&limit=10&radius_km=' + radiusKm)
+            .then(r => r.json())
+            .then(data => {
+                const mosques = (data.mosques || []).filter(m => m.slug !== slug);
+                return Promise.all(mosques.slice(0,8).map(m =>
+                    fetch(API + 'mosques/' + m.slug + '/directory').then(r => r.json())
+                        .then(d => (d.services||[]).map(s => Object.assign(s, {mosque_name:m.name, mosque_city:m.city||'', distance_km:m.distance})))
+                        .catch(() => [])
+                ));
+            })
+            .then(results => { nearbySvcs = (results||[]).flat(); nearbyLoaded = true; renderList(); })
+            .catch(() => { nearbyLoaded = true; renderList(); });
+    };
 })();
 </script>
 <?php get_footer(); ?>

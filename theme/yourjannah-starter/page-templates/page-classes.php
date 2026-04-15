@@ -97,6 +97,10 @@ $slug = ynj_mosque_slug();
 (function(){
     const slug = <?php echo wp_json_encode( $slug ); ?>;
     const API = ynjData.restUrl;
+    let mosqueLat = null, mosqueLng = null;
+    let localClasses = [];
+    let nearbyClasses = [];
+    let nearbyLoaded = false;
     document.querySelectorAll('[data-nav-mosque]').forEach(el => el.href = el.dataset.navMosque.replace('{slug}', slug));
 
     // Submit class proposal as enquiry
@@ -138,9 +142,10 @@ $slug = ynj_mosque_slug();
         }
     };
 
-    // Set WhatsApp link from mosque phone
+    // Set WhatsApp link from mosque phone + store coords
     fetch(API + 'mosques/' + slug).then(r=>r.json()).then(resp => {
         const m = resp.mosque || resp;
+        mosqueLat = m.latitude; mosqueLng = m.longitude;
         if (m.phone) {
             const phone = m.phone.replace(/[^0-9+]/g,'').replace(/^0/,'+44');
             document.getElementById('whatsapp-teach').href = `https://wa.me/${phone}?text=${encodeURIComponent('Assalamu alaikum, I would like to teach a course at your masjid. Can we discuss?')}`;
@@ -153,11 +158,44 @@ $slug = ynj_mosque_slug();
         const cat = document.getElementById('cls-cat').value;
         const url = API + 'mosques/' + slug + '/classes' + (cat ? '?category=' + encodeURIComponent(cat) : '');
         fetch(url).then(r=>r.json()).then(data => {
-            const el = document.getElementById('classes-list');
-            const classes = data.classes || [];
-            if (!classes.length) { el.innerHTML = '<p class="ynj-text-muted" style="padding:20px;text-align:center;">No classes available. Check back soon.</p>'; return; }
-            el.innerHTML = classes.map(renderClassCard).join('');
+            localClasses = data.classes || [];
+            renderClassList();
         });
+    };
+
+    function renderClassList() {
+        const el = document.getElementById('classes-list');
+        const radius = parseInt((document.getElementById('ynj-radius')||{}).value) || 0;
+        const all = radius > 0 ? localClasses.concat(nearbyClasses) : localClasses;
+        if (!all.length) { el.innerHTML = '<p class="ynj-text-muted" style="padding:20px;text-align:center;">No classes available. Check back soon.</p>'; return; }
+        el.innerHTML = all.map(c => {
+            let card = renderClassCard(c);
+            if (c._mosque_name) card = card.replace('</div>\n', '<div style="font-size:11px;color:#00ADEF;font-weight:600;margin-top:6px;">🕌 ' + c._mosque_name + '</div>\n</div>\n');
+            return card;
+        }).join('');
+    }
+
+    // Radius change
+    window.onRadiusChange = function() {
+        const radius = parseInt((document.getElementById('ynj-radius')||{}).value) || 0;
+        if (radius === 0) { nearbyClasses = []; renderClassList(); return; }
+        if (nearbyLoaded) { renderClassList(); return; }
+        if (!mosqueLat) { renderClassList(); return; }
+
+        document.getElementById('classes-list').innerHTML = '<p class="ynj-text-muted" style="padding:20px;text-align:center;">Loading nearby classes...</p>';
+        const radiusKm = radius === 9999 ? 9999 : radius * 1.609;
+        fetch(API + 'mosques/nearest?lat=' + mosqueLat + '&lng=' + mosqueLng + '&limit=10&radius_km=' + radiusKm)
+            .then(r => r.json())
+            .then(data => {
+                const mosques = (data.mosques || []).filter(m => m.slug !== slug);
+                return Promise.all(mosques.slice(0,8).map(m =>
+                    fetch(API + 'mosques/' + m.slug + '/classes').then(r => r.json())
+                        .then(d => (d.classes||[]).map(c => Object.assign(c, {_mosque_name:m.name})))
+                        .catch(() => [])
+                ));
+            })
+            .then(results => { nearbyClasses = (results||[]).flat(); nearbyLoaded = true; renderClassList(); })
+            .catch(() => { nearbyLoaded = true; renderClassList(); });
     };
 
     function renderClassCard(c) {
