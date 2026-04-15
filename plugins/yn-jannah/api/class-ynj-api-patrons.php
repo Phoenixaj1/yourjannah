@@ -46,7 +46,7 @@ class YNJ_API_Patrons {
         register_rest_route( self::NS, '/admin/patrons', [
             'methods'             => 'GET',
             'callback'            => [ __CLASS__, 'admin_list' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
     }
 

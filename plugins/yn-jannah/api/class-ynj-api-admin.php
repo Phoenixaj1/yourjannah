@@ -217,8 +217,9 @@ class YNJ_API_Admin {
         $data   = $request->get_json_params();
         $result = YNJ_Auth::register( $data );
 
-        if ( ! $result['ok'] ) {
-            return new \WP_REST_Response( $result, 400 );
+        if ( is_wp_error( $result ) ) {
+            $status = $result->get_error_data()['status'] ?? 400;
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => $result->get_error_message() ], $status );
         }
 
         // Auto-geocode postcode on registration
@@ -245,17 +246,17 @@ class YNJ_API_Admin {
         }
 
         $data   = $request->get_json_params();
-        $result = YNJ_Auth::login( $data );
+        $result = YNJ_Auth::login( $data['email'] ?? '', $data['password'] ?? '' );
 
-        if ( ! $result['ok'] ) {
-            $status = ( $result['error'] ?? '' ) === 'Invalid email or password.' ? 401 : 400;
-            return new \WP_REST_Response( $result, $status );
+        if ( is_wp_error( $result ) ) {
+            $status = $result->get_error_data()['status'] ?? 400;
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => $result->get_error_message() ], $status );
         }
 
         return new \WP_REST_Response( [
             'ok'      => true,
             'token'   => $result['token'],
-            'mosque'  => $result['mosque'] ?? null,
+            'mosque_id' => $result['mosque_id'] ?? null,
         ] );
     }
 

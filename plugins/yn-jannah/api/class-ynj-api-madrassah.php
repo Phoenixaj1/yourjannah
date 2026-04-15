@@ -20,73 +20,73 @@ class YNJ_API_Madrassah {
         // Terms
         register_rest_route( self::NS, '/admin/madrassah/terms', [
             'methods' => 'GET', 'callback' => [ __CLASS__, 'admin_terms' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
         register_rest_route( self::NS, '/admin/madrassah/terms', [
             'methods' => 'POST', 'callback' => [ __CLASS__, 'admin_create_term' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
         register_rest_route( self::NS, '/admin/madrassah/terms/(?P<id>\d+)', [
             'methods' => 'PUT', 'callback' => [ __CLASS__, 'admin_update_term' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
         register_rest_route( self::NS, '/admin/madrassah/terms/(?P<id>\d+)', [
             'methods' => 'DELETE', 'callback' => [ __CLASS__, 'admin_delete_term' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
         // Students
         register_rest_route( self::NS, '/admin/madrassah/students', [
             'methods' => 'GET', 'callback' => [ __CLASS__, 'admin_students' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
         register_rest_route( self::NS, '/admin/madrassah/students', [
             'methods' => 'POST', 'callback' => [ __CLASS__, 'admin_add_student' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
         register_rest_route( self::NS, '/admin/madrassah/students/(?P<id>\d+)', [
             'methods' => 'PUT', 'callback' => [ __CLASS__, 'admin_update_student' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
         register_rest_route( self::NS, '/admin/madrassah/students/(?P<id>\d+)', [
             'methods' => 'DELETE', 'callback' => [ __CLASS__, 'admin_delete_student' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
         // Attendance
         register_rest_route( self::NS, '/admin/madrassah/attendance', [
             'methods' => 'GET', 'callback' => [ __CLASS__, 'admin_attendance' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
         register_rest_route( self::NS, '/admin/madrassah/attendance', [
             'methods' => 'POST', 'callback' => [ __CLASS__, 'admin_mark_attendance' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
         // Reports
         register_rest_route( self::NS, '/admin/madrassah/reports', [
             'methods' => 'GET', 'callback' => [ __CLASS__, 'admin_reports' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
         register_rest_route( self::NS, '/admin/madrassah/reports', [
             'methods' => 'POST', 'callback' => [ __CLASS__, 'admin_create_report' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
         // Fees
         register_rest_route( self::NS, '/admin/madrassah/fees', [
             'methods' => 'GET', 'callback' => [ __CLASS__, 'admin_fees' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
         register_rest_route( self::NS, '/admin/madrassah/fees/generate', [
             'methods' => 'POST', 'callback' => [ __CLASS__, 'admin_generate_fees' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
         // Dashboard stats
         register_rest_route( self::NS, '/admin/madrassah/stats', [
             'methods' => 'GET', 'callback' => [ __CLASS__, 'admin_stats' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
         // ── Parent endpoints (user auth) ──

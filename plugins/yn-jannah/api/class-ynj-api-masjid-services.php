@@ -53,29 +53,29 @@ class YNJ_API_Masjid_Services {
         // Admin: CRUD
         register_rest_route( self::NS, '/admin/masjid-services', [
             'methods' => 'GET', 'callback' => [ __CLASS__, 'admin_list' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
         register_rest_route( self::NS, '/admin/masjid-services', [
             'methods' => 'POST', 'callback' => [ __CLASS__, 'admin_create' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
         register_rest_route( self::NS, '/admin/masjid-services/(?P<id>\d+)', [
             'methods' => 'PUT', 'callback' => [ __CLASS__, 'admin_update' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
         register_rest_route( self::NS, '/admin/masjid-services/(?P<id>\d+)', [
             'methods' => 'DELETE', 'callback' => [ __CLASS__, 'admin_delete' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
         // Admin: enquiries
         register_rest_route( self::NS, '/admin/masjid-service-enquiries', [
             'methods' => 'GET', 'callback' => [ __CLASS__, 'admin_enquiries' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
         register_rest_route( self::NS, '/admin/masjid-service-enquiries/(?P<id>\d+)', [
             'methods' => 'PUT', 'callback' => [ __CLASS__, 'admin_update_enquiry' ],
-            'permission_callback' => [ 'YNJ_Auth', 'check' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
         // Categories list
