@@ -69,6 +69,7 @@ class YNJ_DB {
             [ self::table( 'madrassah_attendance' ),  'idx_att_student_date',           'student_id, attendance_date' ],
             [ self::table( 'madrassah_fees' ),        'idx_fees_mosque_status',         'mosque_id, status' ],
             [ self::table( 'user_subscriptions' ),    'idx_usub_user_status',           'user_id, status' ],
+            [ self::table( 'user_subscriptions' ),    'idx_usub_mosque',                'mosque_id' ],
             [ self::table( 'patrons' ),               'idx_patrons_mosque_status',      'mosque_id, status' ],
         ];
 

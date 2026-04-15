@@ -116,34 +116,56 @@ class YNJ_Platform_Admin {
     public static function page_mosques() {
         global $wpdb;
         $table = YNJ_DB::table( 'mosques' );
+        $sub_table = YNJ_DB::table( 'user_subscriptions' );
         $search = sanitize_text_field( $_GET['s'] ?? '' );
-        $where = "status = 'active'";
+        $paged  = max( 1, absint( $_GET['paged'] ?? 1 ) );
+        $per_page = 50;
+        $offset = ( $paged - 1 ) * $per_page;
+
+        $where = "m.status = 'active'";
         if ( $search ) {
             $like = '%' . $wpdb->esc_like( $search ) . '%';
-            $where .= $wpdb->prepare( " AND (name LIKE %s OR city LIKE %s OR postcode LIKE %s)", $like, $like, $like );
+            $where .= $wpdb->prepare( " AND (m.name LIKE %s OR m.city LIKE %s OR m.postcode LIKE %s)", $like, $like, $like );
         }
-        $mosques = $wpdb->get_results( "SELECT * FROM $table WHERE $where ORDER BY created_at DESC LIMIT 200" );
 
-        // Get member counts per mosque
-        $user_table = YNJ_DB::table( 'users' );
+        // Single query with LEFT JOIN for member count — no N+1
+        $mosques = $wpdb->get_results( $wpdb->prepare(
+            "SELECT m.*, IFNULL(sub.cnt, 0) AS member_count
+             FROM $table m
+             LEFT JOIN (SELECT mosque_id, COUNT(*) as cnt FROM $sub_table GROUP BY mosque_id) sub ON sub.mosque_id = m.id
+             WHERE $where
+             ORDER BY m.created_at DESC
+             LIMIT %d OFFSET %d",
+            $per_page, $offset
+        ) );
+
+        $total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table m WHERE $where" );
+        $total_pages = ceil( $total / $per_page );
         ?>
         <div class="wrap">
-            <h1>🕌 All Mosques (<?php echo count( $mosques ); ?>)</h1>
+            <h1>🕌 All Mosques (<?php echo esc_html( $total ); ?>)</h1>
             <form method="get" style="margin:16px 0;">
                 <input type="hidden" name="page" value="ynj-mosques">
                 <input type="search" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="Search mosques..." class="regular-text">
                 <?php submit_button( 'Search', 'secondary', '', false ); ?>
             </form>
+            <?php if ( $total_pages > 1 ) : ?>
+            <div class="tablenav"><div class="tablenav-pages">
+                <span class="displaying-num"><?php echo esc_html( $total ); ?> items</span>
+                <?php for ( $i = 1; $i <= $total_pages; $i++ ) : ?>
+                    <?php if ( $i === $paged ) : ?><span class="tablenav-pages-navspan button disabled"><?php echo $i; ?></span>
+                    <?php else : ?><a class="button" href="<?php echo esc_url( add_query_arg( 'paged', $i ) ); ?>"><?php echo $i; ?></a>
+                    <?php endif; ?>
+                <?php endfor; ?>
+            </div></div>
+            <?php endif; ?>
             <table class="wp-list-table widefat striped">
                 <thead>
                     <tr><th>Name</th><th>City</th><th>Postcode</th><th>Admin Email</th><th>Members</th><th>Status</th><th>Created</th></tr>
                 </thead>
                 <tbody>
                 <?php foreach ( $mosques as $m ) :
-                    $members = (int) $wpdb->get_var( $wpdb->prepare(
-                        "SELECT COUNT(*) FROM " . YNJ_DB::table( 'user_subscriptions' ) . " WHERE mosque_id = %d AND status = 'active'",
-                        $m->id
-                    ) );
+                    $members = (int) $m->member_count;
                 ?>
                 <tr>
                     <td><strong><a href="<?php echo esc_url( home_url( '/mosque/' . $m->slug ) ); ?>" target="_blank"><?php echo esc_html( $m->name ); ?></a></strong></td>
@@ -170,6 +192,9 @@ class YNJ_Platform_Admin {
         $table = YNJ_DB::table( 'users' );
         $mosque_filter = absint( $_GET['mosque_id'] ?? 0 );
         $search = sanitize_text_field( $_GET['s'] ?? '' );
+        $paged = max( 1, absint( $_GET['paged'] ?? 1 ) );
+        $per_page = 50;
+        $offset = ( $paged - 1 ) * $per_page;
 
         $where = "u.status = 'active'";
         if ( $mosque_filter ) {
@@ -181,15 +206,18 @@ class YNJ_Platform_Admin {
         }
 
         $mt = YNJ_DB::table( 'mosques' );
-        $users = $wpdb->get_results(
-            "SELECT u.*, m.name AS mosque_name FROM $table u LEFT JOIN $mt m ON m.id = u.favourite_mosque_id WHERE $where ORDER BY u.created_at DESC LIMIT 200"
-        );
+        $users = $wpdb->get_results( $wpdb->prepare(
+            "SELECT u.*, m.name AS mosque_name FROM $table u LEFT JOIN $mt m ON m.id = u.favourite_mosque_id WHERE $where ORDER BY u.created_at DESC LIMIT %d OFFSET %d",
+            $per_page, $offset
+        ) );
+        $total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table u WHERE $where" );
+        $total_pages = ceil( $total / $per_page );
 
         // Mosque filter dropdown
-        $mosques = $wpdb->get_results( "SELECT id, name FROM " . YNJ_DB::table( 'mosques' ) . " WHERE status = 'active' ORDER BY name" );
+        $mosques = $wpdb->get_results( "SELECT id, name FROM " . YNJ_DB::table( 'mosques' ) . " WHERE status = 'active' ORDER BY name LIMIT 1000" );
         ?>
         <div class="wrap">
-            <h1>👥 All Members (<?php echo count( $users ); ?>)</h1>
+            <h1>👥 All Members (<?php echo esc_html( $total ); ?>)</h1>
             <form method="get" style="margin:16px 0;display:flex;gap:8px;align-items:center;">
                 <input type="hidden" name="page" value="ynj-members">
                 <select name="mosque_id">
@@ -218,6 +246,17 @@ class YNJ_Platform_Admin {
                 <?php endforeach; ?>
                 </tbody>
             </table>
+            <?php if ( $total_pages > 1 ) : ?>
+            <div class="tablenav"><div class="tablenav-pages">
+                <span class="displaying-num"><?php echo esc_html( $total ); ?> members</span>
+                <?php for ( $i = 1; $i <= min( $total_pages, 20 ); $i++ ) : ?>
+                    <?php if ( $i === $paged ) : ?><span class="tablenav-pages-navspan button disabled"><?php echo $i; ?></span>
+                    <?php else : ?><a class="button" href="<?php echo esc_url( add_query_arg( 'paged', $i ) ); ?>"><?php echo $i; ?></a>
+                    <?php endif; ?>
+                <?php endfor; ?>
+                <?php if ( $total_pages > 20 ) : ?><span>...</span><a class="button" href="<?php echo esc_url( add_query_arg( 'paged', $total_pages ) ); ?>"><?php echo $total_pages; ?></a><?php endif; ?>
+            </div></div>
+            <?php endif; ?>
         </div>
         <?php
     }
@@ -289,55 +328,77 @@ class YNJ_Platform_Admin {
         global $wpdb;
         $ut = YNJ_DB::table( 'users' );
         $pt = YNJ_DB::table( 'patrons' );
+        $st = YNJ_DB::table( 'user_subscriptions' );
 
-        $recipients = [];
-
+        // Build the base query — we'll batch with LIMIT/OFFSET
         if ( $segment === 'all' ) {
-            $recipients = $wpdb->get_results( "SELECT name, email, push_endpoint, push_p256dh, push_auth FROM $ut WHERE status = 'active' AND email != ''" );
+            $base_query = "SELECT name, email, push_endpoint, push_p256dh, push_auth FROM $ut WHERE status = 'active' AND email != ''";
         } elseif ( $segment === 'mosque' && $mosque_id ) {
-            $st = YNJ_DB::table( 'user_subscriptions' );
-            $recipients = $wpdb->get_results( $wpdb->prepare(
+            $base_query = $wpdb->prepare(
                 "SELECT u.name, u.email, u.push_endpoint, u.push_p256dh, u.push_auth
                  FROM $st s INNER JOIN $ut u ON u.id = s.user_id
-                 WHERE s.mosque_id = %d AND s.status = 'active' AND u.status = 'active'",
+                 WHERE s.mosque_id = %d AND u.status = 'active'",
                 $mosque_id
-            ) );
-        } elseif ( $segment === 'patrons' ) {
-            $recipients = $wpdb->get_results(
-                "SELECT u.name, u.email, u.push_endpoint, u.push_p256dh, u.push_auth
-                 FROM $pt p INNER JOIN $ut u ON u.email = p.user_email
-                 WHERE p.status = 'active' AND u.status = 'active'"
             );
+        } elseif ( $segment === 'patrons' ) {
+            $base_query = "SELECT u.name, u.email, u.push_endpoint, u.push_p256dh, u.push_auth
+                 FROM $pt p INNER JOIN $ut u ON u.email = p.user_email
+                 WHERE p.status = 'active' AND u.status = 'active'";
+        } else {
+            return 0;
         }
 
-        $count = 0;
-        foreach ( $recipients as $r ) {
-            if ( $method === 'push' && $r->push_endpoint ) {
-                $payload = wp_json_encode( [
-                    'title' => $subject,
-                    'body'  => wp_strip_all_tags( $body ),
-                    'icon'  => '/wp-content/plugins/yn-jannah/assets/icons/icon-192.png',
-                    'url'   => '/',
-                ] );
-                YNJ_Push::send_push( $r->push_endpoint, $r->push_p256dh, $r->push_auth, $payload );
-                $count++;
-            } elseif ( $method === 'email' && is_email( $r->email ) ) {
-                $html = '<div style="font-family:Inter,system-ui,sans-serif;max-width:600px;margin:0 auto;">'
-                    . '<div style="background:linear-gradient(135deg,#0a1628,#00ADEF);color:#fff;padding:20px;border-radius:12px 12px 0 0;text-align:center;">'
-                    . '<h2 style="margin:0;">YourJannah</h2></div>'
-                    . '<div style="background:#fff;border:1px solid #e5e5e5;border-top:none;padding:24px;border-radius:0 0 12px 12px;">'
-                    . '<h3>' . esc_html( $subject ) . '</h3>'
-                    . wp_kses_post( $body )
-                    . '</div></div>';
+        // HTML email template (built once)
+        $html_tpl = '<div style="font-family:Inter,system-ui,sans-serif;max-width:600px;margin:0 auto;">'
+            . '<div style="background:linear-gradient(135deg,#0a1628,#00ADEF);color:#fff;padding:20px;border-radius:12px 12px 0 0;text-align:center;">'
+            . '<h2 style="margin:0;">YourJannah</h2></div>'
+            . '<div style="background:#fff;border:1px solid #e5e5e5;border-top:none;padding:24px;border-radius:0 0 12px 12px;">'
+            . '<h3>' . esc_html( $subject ) . '</h3>'
+            . wp_kses_post( $body )
+            . '</div></div>';
 
-                add_filter( 'wp_mail_content_type', function() { return 'text/html'; } );
-                wp_mail( $r->email, $subject . ' — YourJannah', $html );
-                remove_filter( 'wp_mail_content_type', function() { return 'text/html'; } );
-                $count++;
+        $push_payload = wp_json_encode( [
+            'title' => $subject,
+            'body'  => wp_strip_all_tags( $body ),
+            'icon'  => '/wp-content/plugins/yn-jannah/assets/icons/icon-192.png',
+            'url'   => '/',
+        ] );
+
+        // Process in batches of 200 to avoid memory issues
+        $batch_size = 200;
+        $offset = 0;
+        $count = 0;
+        $content_type_set = false;
+
+        do {
+            $batch = $wpdb->get_results( $base_query . $wpdb->prepare( " LIMIT %d OFFSET %d", $batch_size, $offset ) );
+
+            foreach ( $batch as $r ) {
+                if ( $method === 'push' && $r->push_endpoint ) {
+                    YNJ_Push::send_push( $r->push_endpoint, $r->push_p256dh, $r->push_auth, $push_payload );
+                    $count++;
+                } elseif ( $method === 'email' && is_email( $r->email ) ) {
+                    if ( ! $content_type_set ) {
+                        add_filter( 'wp_mail_content_type', [ __CLASS__, '_html_content_type' ] );
+                        $content_type_set = true;
+                    }
+                    wp_mail( $r->email, $subject . ' — YourJannah', $html_tpl );
+                    $count++;
+                }
             }
+
+            $offset += $batch_size;
+        } while ( count( $batch ) === $batch_size );
+
+        if ( $content_type_set ) {
+            remove_filter( 'wp_mail_content_type', [ __CLASS__, '_html_content_type' ] );
         }
 
         return $count;
+    }
+
+    public static function _html_content_type() {
+        return 'text/html';
     }
 
     // ================================================================
