@@ -959,8 +959,3 @@
 
             init();
         })();
-        </script>
-
-        </body>
-        </html>
-        <?php
