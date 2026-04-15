@@ -155,7 +155,7 @@ class YNJ_Stripe {
                 'cancel_url'  => $cancel,
             ];
 
-            // Revenue note: 80% goes to mosque, 20% platform fee.
+            // Revenue note: 90% goes to mosque, 10% platform fee.
             // Currently all payments go to YourJannah Stripe account.
             // Mosque share paid out manually until Stripe Connect is set up.
 
