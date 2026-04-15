@@ -4955,7 +4955,7 @@ img,svg{display:block;max-width:100%;}
         <header class="ynj-header">
             <div class="ynj-header__inner">
                 <a href="/" class="ynj-logo">
-                    <img src="<?php echo YNJ_URL; ?>assets/icons/logo.jpg" alt="YourJannah" style="width:32px;height:32px;border-radius:6px;object-fit:cover;">
+                    <img src="<?php echo YNJ_URL; ?>assets/icons/logo.png" alt="YourJannah" style="width:32px;height:32px;border-radius:6px;object-fit:cover;">
                     <span>YourJannah</span>
                 </a>
                 <nav class="ynj-header__nav" id="desktop-nav">
