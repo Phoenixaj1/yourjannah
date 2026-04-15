@@ -121,6 +121,13 @@ class YNJ_Renderer {
                 </div>
             </section>
 
+            <!-- Location bar (always visible, compact) -->
+            <div class="ynj-location-bar" id="location-bar">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;color:#6b8fa3;"><circle cx="12" cy="10" r="3"/><path d="M12 2C7.6 2 4 5.4 4 9.5 4 14.3 12 22 12 22s8-7.7 8-12.5C20 5.4 16.4 2 12 2z"/></svg>
+                <input type="text" id="location-postcode" placeholder="Your postcode for travel times" class="ynj-location-bar__input" maxlength="8">
+                <button id="location-update" class="ynj-location-bar__btn" onclick="updatePostcode()">Update</button>
+            </div>
+
             <!-- Today's Prayer Overview -->
             <section class="ynj-card ynj-card--compact" id="prayer-overview" style="display:none;padding:14px 18px;">
                 <div class="ynj-prayer-overview" id="prayer-overview-grid"></div>
@@ -600,11 +607,36 @@ class YNJ_Renderer {
                     if (item.date) meta.push(`<span>${timeAgo(item.date)}</span>`);
                 }
                 const mosqueTag = item.mosque_name ? `<div class="ynj-feed-card__mosque">🕌 ${item.mosque_name}</div>` : '';
-                return `<div class="ynj-feed-card ${cardClass}">
-                    <div class="ynj-feed-card__top">${badge}<h4>${item.title}</h4></div>
-                    ${snippet ? `<div class="ynj-feed-card__body">${snippet}</div>` : ''}
-                    <div class="ynj-feed-card__meta">${meta.join(' ')}</div>
-                    ${mosqueTag}
+
+                // Calendar date strip
+                let dateStrip = '';
+                const dateStr = item.date || item.start_date || '';
+                if (dateStr && item.type !== 'announcement') {
+                    const d = new Date(dateStr + 'T00:00:00');
+                    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+                    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                    dateStrip = `<div class="ynj-feed-card__date">
+                        <span class="ynj-feed-card__date-day">${days[d.getDay()]}</span>
+                        <span class="ynj-feed-card__date-num">${d.getDate()}</span>
+                        <span class="ynj-feed-card__date-month">${months[d.getMonth()]}</span>
+                    </div>`;
+                } else if (item.type === 'announcement') {
+                    dateStrip = `<div class="ynj-feed-card__date" style="background:${item.pinned ? '#dcfce7' : '#e8f4f8'};">
+                        <span style="font-size:18px;">${item.pinned ? '📌' : '📢'}</span>
+                    </div>`;
+                }
+
+                const liveClass = item.type === 'live' ? ' ynj-feed-card--live' : '';
+                const classClass = item.type === 'class' ? ' ynj-feed-card--class' : '';
+
+                return `<div class="ynj-feed-card ${cardClass}${liveClass}${classClass}">
+                    ${dateStrip}
+                    <div class="ynj-feed-card__content">
+                        <div class="ynj-feed-card__top">${badge}<h4>${item.title}</h4></div>
+                        ${snippet ? `<div class="ynj-feed-card__body">${snippet}</div>` : ''}
+                        <div class="ynj-feed-card__meta">${meta.join(' ')}</div>
+                        ${mosqueTag}
+                    </div>
                 </div>`;
             }
 
@@ -642,7 +674,19 @@ class YNJ_Renderer {
                             day_of_week:c.day_of_week||''
                         });
                     });
-                    allLocalItems.sort((a,b) => { if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1; if(a.type==='live'&&b.type!=='live')return -1; if(a.type!=='live'&&b.type==='live')return 1; return (b.date||'').localeCompare(a.date||''); });
+                    allLocalItems.sort((a,b) => {
+                        // Pinned announcements always first
+                        if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1;
+                        // Live events next
+                        if(a.type==='live'&&b.type!=='live')return -1; if(a.type!=='live'&&b.type==='live')return 1;
+                        // Announcements after live but before events
+                        if(a.type==='announcement'&&b.type!=='announcement')return -1;
+                        if(a.type!=='announcement'&&b.type==='announcement')return 1;
+                        // Events and classes: nearest date first (ascending)
+                        if(a.type!=='announcement'&&b.type!=='announcement') return (a.date||'9').localeCompare(b.date||'9');
+                        // Announcements: newest first (descending)
+                        return (b.date||'').localeCompare(a.date||'');
+                    });
                     renderLocalFeed('all');
                 });
             }
@@ -853,6 +897,31 @@ class YNJ_Renderer {
                     });
                 });
             }
+
+            /* ---- Location Bar ---- */
+            (function initLocationBar() {
+                const saved = localStorage.getItem('ynj_user_postcode');
+                const input = document.getElementById('location-postcode');
+                if (saved) input.value = saved;
+                if (userLat) {
+                    // GPS active — show as detected
+                    input.placeholder = 'GPS detected — or enter postcode';
+                }
+            })();
+
+            window.updatePostcode = function() {
+                const pc = document.getElementById('location-postcode').value.trim().replace(/\s+/g, '');
+                if (pc.length < 3) return;
+                localStorage.setItem('ynj_user_postcode', pc);
+                document.getElementById('location-update').textContent = '...';
+                geocodePostcode(pc, mosqueLat, mosqueLng);
+                setTimeout(() => { document.getElementById('location-update').textContent = 'Update'; }, 2000);
+            };
+
+            // Allow enter key
+            document.getElementById('location-postcode').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') updatePostcode();
+            });
 
             /* ---- Prayer Overview ---- */
             function renderPrayerOverview() {
@@ -3574,6 +3643,24 @@ img,svg{display:block;max-width:100%;}
 .ynj-donate-btn:active{transform:scale(.97);}
 .ynj-donate-btn svg{display:inline;}
 
+/* Location Bar */
+.ynj-location-bar{
+    display:flex;align-items:center;gap:8px;
+    background:rgba(255,255,255,.6);border:1px solid #e0e8ed;border-radius:10px;
+    padding:6px 12px;margin-bottom:8px;
+}
+.ynj-location-bar__input{
+    flex:1;border:none;background:none;font-size:13px;font-family:inherit;
+    outline:none;color:<?php echo self::COLOR_TEXT; ?>;text-transform:uppercase;min-width:0;
+}
+.ynj-location-bar__input::placeholder{text-transform:none;color:#a0b4c0;}
+.ynj-location-bar__btn{
+    border:none;background:<?php echo self::COLOR_ACCENT; ?>;color:#fff;
+    border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;
+    cursor:pointer;font-family:inherit;white-space:nowrap;
+}
+.ynj-location-bar__btn:active{opacity:.8;}
+
 /* Prayer Overview */
 .ynj-card--compact{margin-bottom:10px;}
 .ynj-prayer-overview{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;text-align:center;}
@@ -3640,17 +3727,32 @@ img,svg{display:block;max-width:100%;}
 .ynj-feed{display:flex;flex-direction:column;gap:10px;}
 .ynj-feed-card{
     background:rgba(255,255,255,.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-    border-radius:14px;padding:14px 16px;border:1px solid rgba(255,255,255,.6);
+    border-radius:14px;border:1px solid rgba(255,255,255,.6);
     box-shadow:0 1px 6px rgba(0,0,0,.04);
+    display:flex;overflow:hidden;
 }
-.ynj-feed-card--event{border-left:3px solid #f59e0b;}
-.ynj-feed-card--announcement{border-left:3px solid <?php echo self::COLOR_ACCENT; ?>;}
-.ynj-feed-card--pinned{border-left:3px solid #16a34a;}
-.ynj-feed-card__top{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-.ynj-feed-card__top h4{font-size:14px;font-weight:600;flex:1;min-width:0;}
-.ynj-feed-card__body{font-size:13px;color:#555;line-height:1.45;margin-bottom:6px;}
-.ynj-feed-card__meta{display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}
-.ynj-feed-card__mosque{font-size:11px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;margin-top:4px;}
+.ynj-feed-card--event{border-left:none;}
+.ynj-feed-card--announcement{border-left:none;}
+.ynj-feed-card--pinned{border-left:none;}
+.ynj-feed-card__date{
+    width:56px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:10px 4px;text-align:center;background:#f0f8fc;
+}
+.ynj-feed-card__date-day{font-size:9px;font-weight:700;text-transform:uppercase;color:<?php echo self::COLOR_TEXT_MUTED; ?>;letter-spacing:.5px;}
+.ynj-feed-card__date-num{font-size:22px;font-weight:800;color:<?php echo self::COLOR_PRIMARY; ?>;line-height:1;}
+.ynj-feed-card__date-month{font-size:9px;font-weight:600;color:<?php echo self::COLOR_TEXT_MUTED; ?>;text-transform:uppercase;}
+.ynj-feed-card--pinned .ynj-feed-card__date{background:#dcfce7;}
+.ynj-feed-card--live .ynj-feed-card__date{background:#fee2e2;}
+.ynj-feed-card--live .ynj-feed-card__date-num{color:#dc2626;}
+.ynj-feed-card--class .ynj-feed-card__date{background:#ede9fe;}
+.ynj-feed-card--class .ynj-feed-card__date-num{color:#7c3aed;}
+.ynj-feed-card__content{flex:1;padding:12px 14px;min-width:0;}
+.ynj-feed-card__top{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.ynj-feed-card__top h4{font-size:14px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ynj-feed-card__body{font-size:12px;color:#666;line-height:1.4;margin-bottom:5px;}
+.ynj-feed-card__meta{display:flex;flex-wrap:wrap;gap:6px;font-size:11px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}
+.ynj-feed-card__meta a{font-weight:700;}
+.ynj-feed-card__mosque{font-size:11px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;margin-top:3px;}
 
 /* Legacy feed (other pages) */
 .ynj-feed-item{padding:14px 0;border-bottom:1px solid #f0f0ec;}
