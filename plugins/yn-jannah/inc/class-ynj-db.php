@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '1.3.0';
+    const SCHEMA_VERSION = '1.4.0';
 
     /**
      * Return the full table name for a given short name.
@@ -198,12 +198,21 @@ class YNJ_DB {
             registered_count int(11) NOT NULL DEFAULT 0,
             requires_booking tinyint(1) NOT NULL DEFAULT 0,
             ticket_price_pence int(11) NOT NULL DEFAULT 0,
+            is_online tinyint(1) NOT NULL DEFAULT 0,
+            is_live tinyint(1) NOT NULL DEFAULT 0,
+            live_url varchar(500) NOT NULL DEFAULT '',
+            live_started_at datetime DEFAULT NULL,
+            live_ended_at datetime DEFAULT NULL,
+            donation_target_pence bigint(20) NOT NULL DEFAULT 0,
+            donation_raised_pence bigint(20) NOT NULL DEFAULT 0,
+            donation_count int(11) NOT NULL DEFAULT 0,
             status varchar(20) NOT NULL DEFAULT 'draft',
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             KEY mosque_id (mosque_id),
             KEY status (status),
-            KEY event_date (event_date)
+            KEY event_date (event_date),
+            KEY is_live (is_live)
         ) $charset_collate;";
 
         // 7. Bookings

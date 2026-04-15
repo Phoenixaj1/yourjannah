@@ -358,7 +358,9 @@ async function renderEvents() {
     if (!res.events) { res = await api('mosques/' + mosque.id + '/events'); }
     var list = res.events || [];
     var rows = list.map(function(e) {
-        return '<tr><td><strong>'+esc(e.title)+'</strong></td><td>'+esc(e.event_date||'')+'</td><td>'+fmtTime(e.start_time)+'</td><td>'+esc(e.event_type||'')+'</td><td>'+e.registered_count+'/'+(e.max_capacity||'∞')+'</td><td><span class="d-badge d-badge--'+(e.status==='published'?'green':'gray')+'">'+esc(e.status)+'</span></td><td><button class="d-btn d-btn--danger d-btn--sm" onclick="deleteEvent('+e.id+')">Del</button></td></tr>';
+        var liveBadge = e.is_online ? (e.is_live ? '<span class="d-badge d-badge--red">LIVE</span>' : '<span class="d-badge d-badge--blue">Online</span>') : '';
+        var liveBtn = e.is_online ? (e.is_live ? '<button class="d-btn d-btn--secondary d-btn--sm" onclick="toggleLive('+e.id+',0)">End</button>' : '<button class="d-btn d-btn--primary d-btn--sm" onclick="toggleLive('+e.id+',1)" style="background:#dc2626">Go Live</button>') : '';
+        return '<tr><td><strong>'+esc(e.title)+'</strong> '+liveBadge+'</td><td>'+esc(e.event_date||'')+'</td><td>'+fmtTime(e.start_time)+'</td><td>'+esc(e.event_type||'')+'</td><td>'+e.registered_count+'/'+(e.max_capacity||'∞')+'</td><td><span class="d-badge d-badge--'+(e.status==='published'?'green':'gray')+'">'+esc(e.status)+'</span></td><td>'+liveBtn+' <button class="d-btn d-btn--danger d-btn--sm" onclick="deleteEvent('+e.id+')">Del</button></td></tr>';
     }).join('');
     render(shell(
         '<div class="d-header"><h1>Events</h1><button class="d-btn d-btn--primary d-btn--sm" onclick="showEventForm()">+ New Event</button></div>' +
@@ -368,6 +370,8 @@ async function renderEvents() {
         '<div class="d-grid d-grid-3"><div class="d-field"><label>Date</label><input type="date" id="ev_date"></div><div class="d-field"><label>Start</label><input type="time" id="ev_start"></div><div class="d-field"><label>End</label><input type="time" id="ev_end"></div></div>' +
         '<div class="d-grid d-grid-3"><div class="d-field"><label>Location</label><input type="text" id="ev_location"></div><div class="d-field"><label>Type</label><select id="ev_type"><option>talk</option><option>class</option><option>course</option><option>workshop</option><option>community</option><option>sports</option><option>competition</option><option>youth</option></select></div><div class="d-field"><label>Capacity</label><input type="number" id="ev_cap" value="0"></div></div>' +
         '<div class="d-grid d-grid-2"><div class="d-field"><label>Ticket Price (pence, 0=free)</label><input type="number" id="ev_price" value="0"></div><div class="d-field"><label>Status</label><select id="ev_status"><option>published</option><option>draft</option></select></div></div>' +
+        '<div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px"><h4 style="margin-bottom:12px;font-size:13px">🔴 Online / Live Event (optional)</h4>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Online Event?</label><select id="ev_online"><option value="0">No — In Person</option><option value="1">Yes — Online/Live</option></select></div><div class="d-field"><label>Live Stream URL</label><input id="ev_live_url" placeholder="https://youtube.com/live/..."></div><div class="d-field"><label>Donation Target (£)</label><input type="number" id="ev_don_target" value="0" placeholder="0 = no target"></div></div></div>' +
         '<div style="display:flex;gap:8px"><button class="d-btn d-btn--primary" id="ev-save" onclick="saveEvent()"><span class="btn-text">Create Event</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="$(\'#ev-form\').style.display=\'none\'">Cancel</button></div></div>' +
         '<div class="d-card"><table class="d-table"><thead><tr><th>Title</th><th>Date</th><th>Time</th><th>Type</th><th>RSVP</th><th>Status</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="7" style="color:var(--text-dim)">No events.</td></tr>')+'</tbody></table></div>'
     ));
@@ -375,9 +379,14 @@ async function renderEvents() {
 function showEventForm(){$('#ev-form').style.display='';}
 async function saveEvent(){
     btn('#ev-save',true);
-    var res=await api('admin/events',{method:'POST',body:{title:$('#ev_title').value,description:$('#ev_desc').value,event_date:$('#ev_date').value,start_time:$('#ev_start').value+':00',end_time:$('#ev_end').value+':00',location:$('#ev_location').value,event_type:$('#ev_type').value,max_capacity:parseInt($('#ev_cap').value),ticket_price_pence:parseInt($('#ev_price').value),requires_booking:1,status:$('#ev_status').value}});
+    var res=await api('admin/events',{method:'POST',body:{title:$('#ev_title').value,description:$('#ev_desc').value,event_date:$('#ev_date').value,start_time:$('#ev_start').value+':00',end_time:$('#ev_end').value+':00',location:$('#ev_location').value,event_type:$('#ev_type').value,max_capacity:parseInt($('#ev_cap').value),ticket_price_pence:parseInt($('#ev_price').value),requires_booking:1,status:$('#ev_status').value,is_online:parseInt($('#ev_online').value),live_url:$('#ev_live_url').value,donation_target_pence:parseInt($('#ev_don_target').value||0)*100}});
     btn('#ev-save',false);
     if(res.ok){toast('Event created!');renderEvents();}else toast(res.error||'Failed.','error');
+}
+async function toggleLive(id, live) {
+    var res = await api('admin/events/'+id, {method:'PUT', body:{is_live:live}});
+    if (res.ok) { toast(live ? '🔴 Event is now LIVE!' : 'Live ended.'); renderEvents(); }
+    else toast(res.error || 'Failed.', 'error');
 }
 async function deleteEvent(id){if(!confirm('Delete this event?'))return;await api('admin/events/'+id,{method:'DELETE'});toast('Deleted.');renderEvents();}
 

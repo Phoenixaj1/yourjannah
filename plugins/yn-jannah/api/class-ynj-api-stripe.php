@@ -144,6 +144,16 @@ class YNJ_API_Stripe {
                 ], [ 'id' => $item_id ] );
                 error_log( "[YNJ Webhook] Event booking #$item_id confirmed." );
                 break;
+
+            case 'event_donation':
+                $table = YNJ_DB::table( 'events' );
+                $amount = (int) ( $session->amount_total ?? 0 );
+                $wpdb->query( $wpdb->prepare(
+                    "UPDATE $table SET donation_raised_pence = donation_raised_pence + %d, donation_count = donation_count + 1 WHERE id = %d",
+                    $amount, $item_id
+                ) );
+                error_log( "[YNJ Webhook] Event #$item_id donation: +£" . number_format( $amount / 100, 2 ) );
+                break;
         }
     }
 

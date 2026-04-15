@@ -24,6 +24,20 @@ class YNJ_API_Events {
             'permission_callback' => '__return_true',
         ]);
 
+        // POST /events/{id}/donate — donate to an event
+        register_rest_route( self::NS, '/events/(?P<id>\d+)/donate', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'donate_to_event' ],
+            'permission_callback' => '__return_true',
+        ]);
+
+        // GET /events/live — live and upcoming online events across all mosques
+        register_rest_route( self::NS, '/events/live', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'list_live' ],
+            'permission_callback' => '__return_true',
+        ]);
+
         // GET /events/{id} — single event detail
         register_rest_route( self::NS, '/events/(?P<id>\d+)', [
             'methods'             => 'GET',
@@ -63,6 +77,83 @@ class YNJ_API_Events {
     // ================================================================
     // HANDLERS
     // ================================================================
+
+    /**
+     * POST /events/{id}/donate — Create Stripe checkout for event donation.
+     */
+    public static function donate_to_event( \WP_REST_Request $request ) {
+        $id     = absint( $request->get_param( 'id' ) );
+        $data   = $request->get_json_params();
+        $amount = absint( $data['amount_pence'] ?? 0 );
+
+        if ( ! $amount || $amount < 100 ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Minimum donation is £1.' ], 400 );
+        }
+
+        global $wpdb;
+        $table = YNJ_DB::table( 'events' );
+        $event = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM $table WHERE id = %d AND status = 'published'", $id
+        ) );
+        if ( ! $event ) return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Event not found.' ], 404 );
+
+        $mosque = $wpdb->get_row( $wpdb->prepare(
+            "SELECT slug FROM " . YNJ_DB::table( 'mosques' ) . " WHERE id = %d", $event->mosque_id
+        ) );
+        $base = home_url( "/mosque/" . ( $mosque->slug ?? '' ) );
+
+        $session = YNJ_Stripe::create_checkout(
+            'event_donation',
+            $id,
+            $amount,
+            'Donation: ' . $event->title,
+            $base . '/events/' . $id . '?donated=1',
+            $base . '/events/' . $id,
+            [ 'mosque_id' => $event->mosque_id, 'event_id' => $id ]
+        );
+
+        if ( is_wp_error( $session ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => $session->get_error_message() ], 500 );
+        }
+
+        return new \WP_REST_Response( [
+            'ok'           => true,
+            'checkout_url' => $session->url,
+        ] );
+    }
+
+    /**
+     * GET /events/live — Live now + upcoming online events across all mosques.
+     */
+    public static function list_live( \WP_REST_Request $request ) {
+        global $wpdb;
+        $event_table  = YNJ_DB::table( 'events' );
+        $mosque_table = YNJ_DB::table( 'mosques' );
+        $today = date( 'Y-m-d' );
+
+        // Live now: is_live = 1 AND is_online = 1
+        // Upcoming: is_online = 1 AND event_date >= today
+        $results = $wpdb->get_results( $wpdb->prepare(
+            "SELECT e.*, m.name AS mosque_name, m.slug AS mosque_slug, m.city AS mosque_city
+             FROM $event_table e
+             INNER JOIN $mosque_table m ON m.id = e.mosque_id
+             WHERE e.status = 'published' AND e.is_online = 1
+               AND ( e.is_live = 1 OR e.event_date >= %s )
+             ORDER BY e.is_live DESC, e.event_date ASC, e.start_time ASC
+             LIMIT 50",
+            $today
+        ) );
+
+        $events = array_map( function( $r ) {
+            $formatted = self::format( $r );
+            $formatted['mosque_name'] = $r->mosque_name;
+            $formatted['mosque_slug'] = $r->mosque_slug;
+            $formatted['mosque_city'] = $r->mosque_city;
+            return $formatted;
+        }, $results );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'events' => $events ] );
+    }
 
     /**
      * GET /events/{id} — Single event detail.
@@ -175,8 +266,12 @@ class YNJ_API_Events {
             'event_type'       => sanitize_text_field( $data['event_type'] ?? '' ),
             'max_capacity'     => absint( $data['max_capacity'] ?? 0 ),
             'requires_booking' => absint( $data['requires_booking'] ?? 0 ),
-            'ticket_price_pence' => absint( $data['ticket_price_pence'] ?? 0 ),
-            'status'           => sanitize_text_field( $data['status'] ?? 'draft' ),
+            'ticket_price_pence'    => absint( $data['ticket_price_pence'] ?? 0 ),
+            'is_online'             => absint( $data['is_online'] ?? 0 ),
+            'is_live'               => absint( $data['is_live'] ?? 0 ),
+            'live_url'              => esc_url_raw( $data['live_url'] ?? '' ),
+            'donation_target_pence' => absint( $data['donation_target_pence'] ?? 0 ),
+            'status'                => sanitize_text_field( $data['status'] ?? 'draft' ),
         ];
 
         $wpdb->insert( $table, $insert );
@@ -216,7 +311,8 @@ class YNJ_API_Events {
 
         $allowed = [
             'title', 'description', 'image_url', 'event_date', 'start_time', 'end_time',
-            'location', 'event_type', 'max_capacity', 'requires_booking', 'ticket_price_pence', 'status',
+            'location', 'event_type', 'max_capacity', 'requires_booking', 'ticket_price_pence',
+            'is_online', 'is_live', 'live_url', 'donation_target_pence', 'status',
         ];
 
         $update = [];
@@ -228,11 +324,15 @@ class YNJ_API_Events {
                     $update[ $key ] = wp_kses_post( $data[ $key ] );
                     break;
                 case 'image_url':
+                case 'live_url':
                     $update[ $key ] = esc_url_raw( $data[ $key ] );
                     break;
                 case 'max_capacity':
                 case 'requires_booking':
                 case 'ticket_price_pence':
+                case 'is_online':
+                case 'is_live':
+                case 'donation_target_pence':
                     $update[ $key ] = absint( $data[ $key ] );
                     break;
                 default:
@@ -283,22 +383,29 @@ class YNJ_API_Events {
      */
     private static function format( $row ) {
         return [
-            'id'                 => (int) $row->id,
-            'mosque_id'          => (int) $row->mosque_id,
-            'title'              => $row->title,
-            'description'        => $row->description,
-            'image_url'          => $row->image_url,
-            'event_date'         => $row->event_date,
-            'start_time'         => $row->start_time,
-            'end_time'           => $row->end_time,
-            'location'           => $row->location,
-            'event_type'         => $row->event_type,
-            'max_capacity'       => (int) $row->max_capacity,
-            'registered_count'   => (int) $row->registered_count,
-            'requires_booking'   => (bool) $row->requires_booking,
-            'ticket_price_pence' => (int) $row->ticket_price_pence,
-            'status'             => $row->status,
-            'created_at'         => $row->created_at,
+            'id'                    => (int) $row->id,
+            'mosque_id'             => (int) $row->mosque_id,
+            'title'                 => $row->title,
+            'description'           => $row->description,
+            'image_url'             => $row->image_url,
+            'event_date'            => $row->event_date,
+            'start_time'            => $row->start_time,
+            'end_time'              => $row->end_time,
+            'location'              => $row->location,
+            'event_type'            => $row->event_type,
+            'max_capacity'          => (int) $row->max_capacity,
+            'registered_count'      => (int) $row->registered_count,
+            'requires_booking'      => (bool) $row->requires_booking,
+            'ticket_price_pence'    => (int) $row->ticket_price_pence,
+            'is_online'             => (bool) ( $row->is_online ?? 0 ),
+            'is_live'               => (bool) ( $row->is_live ?? 0 ),
+            'live_url'              => $row->live_url ?? '',
+            'live_started_at'       => $row->live_started_at ?? null,
+            'donation_target_pence' => (int) ( $row->donation_target_pence ?? 0 ),
+            'donation_raised_pence' => (int) ( $row->donation_raised_pence ?? 0 ),
+            'donation_count'        => (int) ( $row->donation_count ?? 0 ),
+            'status'                => $row->status,
+            'created_at'            => $row->created_at,
         ];
     }
 }

@@ -87,6 +87,13 @@ class YNJ_Router {
             }
         }
 
+        // ---- Live events ----
+
+        if ( '/live' === $path ) {
+            YNJ_Renderer::render_live_events();
+            exit;
+        }
+
         // ---- User auth pages ----
 
         if ( '/login' === $path ) {
