@@ -182,7 +182,6 @@
                                 `https://www.google.com/maps/dir/?api=1&destination=${m.latitude},${m.longitude}&travelmode=driving`;
 
                             if (userLat) {
-                                document.getElementById('mode-toggle').style.display = '';
                                 calcTravelFromCoords(m.latitude, m.longitude);
                             } else {
                                 // No GPS yet — show postcode prompt in travel area
