@@ -293,7 +293,7 @@ async function renderPrayers() {
         '<h3 style="margin-bottom:8px">Step 1: Import Adhan Times</h3>' +
         '<p style="color:var(--text-dim);font-size:13px;margin-bottom:12px">Automatically fetch adhan (call to prayer) times from the Aladhan API for the whole month. These are calculated from your mosque\'s GPS coordinates.</p>' +
         '<div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">' +
-        '<div class="d-field" style="margin-bottom:0"><label>Month</label><input type="month" id="pt_month" value="'+prayerMonth+'" onchange="prayerMonth=this.value"></div>' +
+        '<div class="d-field" style="margin-bottom:0"><label>Month</label><div style="display:flex;gap:4px;align-items:center"><button class="d-btn d-btn--secondary d-btn--sm" onclick="shiftMonth(-1)" style="padding:4px 8px">\u25c0</button><input type="month" id="pt_month" value="'+prayerMonth+'" onchange="prayerMonth=this.value;monthlyData={};loadMonthGrid()"><button class="d-btn d-btn--secondary d-btn--sm" onclick="shiftMonth(1)" style="padding:4px 8px">\u25b6</button></div></div>' +
         '<div class="d-field" style="margin-bottom:0"><label>Calculation Method</label><select id="pt_method"><option value="15">Moonsighting Committee (UK)</option><option value="2">ISNA</option><option value="3">Muslim World League</option><option value="4">Umm al-Qura</option><option value="5">Egyptian Authority</option><option value="1">Karachi</option></select></div>' +
         '<button class="d-btn d-btn--primary" id="pt-import" onclick="importAdhanTimes()"><span class="btn-text">\u2b07\ufe0f Import Adhan Times</span><span class="spinner"></span></button>' +
         '</div></div>' +
@@ -309,18 +309,36 @@ async function renderPrayers() {
         '<div class="d-field"><label>Maghrib Jamat</label><input type="time" id="jt_maghrib" placeholder="Auto: adhan +5min"></div>' +
         '<div class="d-field"><label>Isha Jamat</label><input type="time" id="jt_isha" value="22:00"></div>' +
         '<div class="d-field"><label>Apply to</label><select id="jt_apply_mode">' +
+        '<optgroup label="Bulk">' +
         '<option value="month">Whole Month</option>' +
-        '<option value="weekdays">Weekdays Only (Mon\u2013Fri)</option>' +
-        '<option value="weekends">Weekends Only (Sat\u2013Sun)</option>' +
+        '<option value="weekdays">Weekdays (Mon\u2013Fri)</option>' +
+        '<option value="weekends">Weekends (Sat\u2013Sun)</option>' +
+        '</optgroup>' +
+        '<optgroup label="By Week">' +
+        '<option value="week1">Week 1 (1st\u20137th)</option>' +
+        '<option value="week2">Week 2 (8th\u201314th)</option>' +
+        '<option value="week3">Week 3 (15th\u201321st)</option>' +
+        '<option value="week4">Week 4 (22nd\u201328th)</option>' +
+        '<option value="week5">Week 5 (29th+)</option>' +
+        '</optgroup>' +
+        '<optgroup label="By Day">' +
         '<option value="mon">Every Monday</option><option value="tue">Every Tuesday</option>' +
         '<option value="wed">Every Wednesday</option><option value="thu">Every Thursday</option>' +
         '<option value="fri">Every Friday</option><option value="sat">Every Saturday</option>' +
         '<option value="sun">Every Sunday</option>' +
+        '</optgroup>' +
+        '<optgroup label="Custom">' +
+        '<option value="custom">Select Dates\u2026</option>' +
+        '</optgroup>' +
         '</select></div>' +
         '</div>' +
         '<div style="display:flex;gap:8px;margin-top:8px">' +
         '<button class="d-btn d-btn--primary" id="pt-bulk" onclick="bulkApplyJamat()"><span class="btn-text">Apply Jamat Times</span><span class="spinner"></span></button>' +
         '<button class="d-btn d-btn--secondary" onclick="saveGridEdits()">Save Grid Edits</button>' +
+        '</div>' +
+        '<div id="custom-dates-picker" style="display:none;margin-top:8px;padding:10px;background:#f9fafb;border-radius:8px;border:1px solid var(--border)">' +
+        '<p style="font-size:12px;font-weight:600;margin-bottom:6px">Select dates to apply:</p>' +
+        '<div id="custom-dates-grid" style="display:flex;flex-wrap:wrap;gap:4px"></div>' +
         '</div>' +
         '<p style="color:var(--text-dim);font-size:11px;margin-top:6px">\ud83d\udca1 Tip: You can also edit jamat times directly in the grid below by clicking on any cell.</p>' +
         '</div>' +
@@ -458,10 +476,72 @@ function renderMonthGrid() {
     el.innerHTML = html;
 }
 
+// Month navigation
+window.shiftMonth = function(delta) {
+    var parts = prayerMonth.split('-');
+    var y = parseInt(parts[0]), m = parseInt(parts[1]) + delta;
+    if (m > 12) { m = 1; y++; }
+    if (m < 1) { m = 12; y--; }
+    prayerMonth = y + '-' + String(m).padStart(2,'0');
+    var el = document.getElementById('pt_month');
+    if (el) el.value = prayerMonth;
+    monthlyData = {};
+    loadMonthGrid();
+};
+
+// Show/hide custom date picker when mode changes
+document.addEventListener('change', function(e) {
+    if (e.target && e.target.id === 'jt_apply_mode') {
+        var picker = document.getElementById('custom-dates-picker');
+        if (!picker) return;
+        if (e.target.value === 'custom') {
+            picker.style.display = '';
+            // Populate date checkboxes
+            var parts = prayerMonth.split('-');
+            var year = parseInt(parts[0]), mon = parseInt(parts[1]);
+            var daysInMonth = new Date(year, mon, 0).getDate();
+            var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            var grid = document.getElementById('custom-dates-grid');
+            if (grid) {
+                var html = '';
+                for (var d = 1; d <= daysInMonth; d++) {
+                    var dt = new Date(year, mon-1, d);
+                    var dn = dayNames[dt.getDay()];
+                    var isFri = dt.getDay() === 5;
+                    html += '<label style="display:inline-flex;align-items:center;gap:3px;padding:4px 8px;border-radius:6px;font-size:11px;cursor:pointer;'+(isFri?'background:#dcfce7;font-weight:600':'background:#fff;border:1px solid #e5e7eb')+'">' +
+                        '<input type="checkbox" class="custom-date-cb" value="'+d+'" style="width:14px;height:14px;accent-color:#00ADEF"> ' +
+                        d + ' ' + dn + '</label>';
+                }
+                html += '<div style="margin-top:6px;display:flex;gap:4px"><button class="d-btn d-btn--sm d-btn--secondary" onclick="selectAllCustomDates(true)">Select All</button><button class="d-btn d-btn--sm d-btn--secondary" onclick="selectAllCustomDates(false)">Deselect All</button></div>';
+                grid.innerHTML = html;
+            }
+        } else {
+            picker.style.display = 'none';
+        }
+    }
+});
+
+window.selectAllCustomDates = function(val) {
+    document.querySelectorAll('.custom-date-cb').forEach(function(cb) { cb.checked = val; });
+};
+
 async function bulkApplyJamat() {
     var mode = $('#jt_apply_mode') ? $('#jt_apply_mode').value : 'month';
     var dayMap = {sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6};
-    var modeLabel = mode === 'month' ? 'whole month' : mode === 'weekdays' ? 'weekdays' : mode === 'weekends' ? 'weekends' : 'every ' + mode.charAt(0).toUpperCase() + mode.slice(1);
+    var weekRanges = {week1:[1,7],week2:[8,14],week3:[15,21],week4:[22,28],week5:[29,31]};
+
+    // Custom date selection
+    var customDays = [];
+    if (mode === 'custom') {
+        document.querySelectorAll('.custom-date-cb:checked').forEach(function(cb) { customDays.push(parseInt(cb.value)); });
+        if (!customDays.length) { toast('Select at least one date.', 'error'); return; }
+    }
+
+    var modeLabel = mode === 'month' ? 'whole month' :
+        mode === 'weekdays' ? 'weekdays' : mode === 'weekends' ? 'weekends' :
+        mode.startsWith('week') ? mode.replace('week', 'Week ') + ' (' + weekRanges[mode][0] + '\u2013' + weekRanges[mode][1] + ')' :
+        mode === 'custom' ? customDays.length + ' selected days' :
+        'every ' + mode.charAt(0).toUpperCase() + mode.slice(1);
     if(!confirm('Apply jamat times to '+modeLabel+' of '+prayerMonth+'?'))return;
     btn('#pt-bulk',true);
 
@@ -485,6 +565,8 @@ async function bulkApplyJamat() {
         if (mode === 'weekdays' && (dow === 0 || dow === 6)) continue;
         if (mode === 'weekends' && dow !== 0 && dow !== 6) continue;
         if (dayMap[mode] !== undefined && dow !== dayMap[mode]) continue;
+        if (weekRanges[mode] && (d < weekRanges[mode][0] || d > weekRanges[mode][1])) continue;
+        if (mode === 'custom' && customDays.indexOf(d) === -1) continue;
 
         var dayTimes = Object.assign({}, times);
         // Auto-calc maghrib jamat as adhan +5min if not set
