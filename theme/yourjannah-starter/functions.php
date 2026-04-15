@@ -107,11 +107,11 @@ add_action( 'wp_enqueue_scripts', function() {
         'userToken'  => '', // Set via localStorage on client
     ] );
 
-    // Prayer card script (homepage + prayers page)
-    if ( is_front_page() || is_page_template( 'page-templates/page-prayers.php' ) ) {
+    // Homepage script (prayer card, feed, mosque selector, GPS)
+    if ( is_front_page() ) {
         wp_enqueue_script(
-            'ynj-prayer',
-            YNJ_THEME_URI . '/assets/js/prayer.js',
+            'ynj-homepage',
+            YNJ_THEME_URI . '/assets/js/homepage.js',
             [ 'ynj-theme' ],
             YNJ_THEME_VERSION,
             true
