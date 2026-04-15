@@ -1,0 +1,15 @@
+/*
+Theme Name: YourJannah
+Theme URI: https://yourjannah.com
+Author: YourNiyyah
+Author URI: https://yourniyyah.com
+Description: Mosque community platform theme — prayer times, events, bookings, business directory, and more. Designed for the YourJannah PWA platform.
+Version: 1.0.0
+Requires at least: 6.0
+Requires PHP: 8.0
+License: Proprietary
+Text Domain: yourjannah
+Tags: mosque, islamic, community, prayer-times, events, bookings
+*/
+
+/* Base styles are loaded via wp_enqueue from assets/css/theme.css */
