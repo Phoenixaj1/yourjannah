@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '1.6.0';
+    const SCHEMA_VERSION = '1.7.0';
 
     /**
      * Return the full table name for a given short name.
@@ -429,6 +429,10 @@ class YNJ_DB {
             phone varchar(50) NOT NULL DEFAULT '',
             password_hash varchar(255) NOT NULL DEFAULT '',
             favourite_mosque_id bigint(20) unsigned DEFAULT NULL,
+            verified_congregation tinyint(1) NOT NULL DEFAULT 0,
+            verified_at datetime DEFAULT NULL,
+            verified_lat decimal(10,7) DEFAULT NULL,
+            verified_lng decimal(10,7) DEFAULT NULL,
             travel_mode varchar(10) NOT NULL DEFAULT 'walk',
             travel_minutes int(11) NOT NULL DEFAULT 0,
             push_endpoint text NOT NULL,

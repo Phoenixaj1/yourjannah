@@ -47,6 +47,13 @@ class YNJ_API_User {
             'permission_callback' => [ 'YNJ_User_Auth', 'user_check' ],
         ] );
 
+        // POST /auth/verify-congregation — GPS verify as mosque member
+        register_rest_route( self::NS, '/auth/verify-congregation', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'verify_congregation' ],
+            'permission_callback' => [ 'YNJ_User_Auth', 'user_check' ],
+        ] );
+
         // POST /auth/push — save push subscription
         register_rest_route( self::NS, '/auth/push', [
             'methods'             => 'POST',
@@ -175,6 +182,73 @@ class YNJ_API_User {
         }, $results );
 
         return new \WP_REST_Response( [ 'ok' => true, 'bookings' => $bookings ] );
+    }
+
+    /**
+     * POST /auth/verify-congregation — GPS-verify user is near their favourite mosque.
+     * Must be within 500m of the mosque to verify.
+     */
+    public static function verify_congregation( \WP_REST_Request $request ) {
+        $user = $request->get_param( '_ynj_user' );
+        $data = $request->get_json_params();
+
+        $lat = (float) ( $data['lat'] ?? 0 );
+        $lng = (float) ( $data['lng'] ?? 0 );
+
+        if ( ! $lat || ! $lng ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'GPS coordinates required.' ], 400 );
+        }
+
+        $mosque_id = $user->favourite_mosque_id;
+        if ( ! $mosque_id ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Set a favourite mosque first.' ], 400 );
+        }
+
+        // Get mosque coordinates
+        global $wpdb;
+        $mosque = $wpdb->get_row( $wpdb->prepare(
+            "SELECT latitude, longitude, name FROM " . YNJ_DB::table( 'mosques' ) . " WHERE id = %d",
+            $mosque_id
+        ) );
+
+        if ( ! $mosque || ! $mosque->latitude ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Mosque location not available.' ], 400 );
+        }
+
+        // Calculate distance using haversine
+        $earth_r = 6371000; // metres
+        $dLat = deg2rad( $lat - (float) $mosque->latitude );
+        $dLng = deg2rad( $lng - (float) $mosque->longitude );
+        $a = sin( $dLat / 2 ) * sin( $dLat / 2 ) +
+            cos( deg2rad( (float) $mosque->latitude ) ) * cos( deg2rad( $lat ) ) *
+            sin( $dLng / 2 ) * sin( $dLng / 2 );
+        $distance_m = $earth_r * 2 * atan2( sqrt( $a ), sqrt( 1 - $a ) );
+
+        // Must be within 500 metres
+        if ( $distance_m > 500 ) {
+            return new \WP_REST_Response( [
+                'ok'       => false,
+                'error'    => 'You need to be at the mosque to verify. You are ' . round( $distance_m ) . 'm away.',
+                'distance' => round( $distance_m ),
+            ], 400 );
+        }
+
+        // Mark as verified
+        $users_table = YNJ_DB::table( 'users' );
+        $wpdb->update( $users_table, [
+            'verified_congregation' => 1,
+            'verified_at'           => current_time( 'mysql', true ),
+            'verified_lat'          => $lat,
+            'verified_lng'          => $lng,
+        ], [ 'id' => $user->id ] );
+
+        return new \WP_REST_Response( [
+            'ok'       => true,
+            'verified' => true,
+            'mosque'   => $mosque->name,
+            'distance' => round( $distance_m ),
+            'message'  => 'Verified as congregation member of ' . $mosque->name,
+        ] );
     }
 
     public static function save_push( \WP_REST_Request $request ) {

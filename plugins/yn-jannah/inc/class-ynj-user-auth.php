@@ -158,8 +158,10 @@ class YNJ_User_Auth {
             'favourite_mosque_id'  => $user->favourite_mosque_id ? (int) $user->favourite_mosque_id : null,
             'travel_mode'          => $user->travel_mode,
             'travel_minutes'       => (int) $user->travel_minutes,
-            'alert_before_minutes' => (int) $user->alert_before_minutes,
-            'created_at'           => $user->created_at,
+            'alert_before_minutes'  => (int) $user->alert_before_minutes,
+            'verified_congregation' => (bool) ( $user->verified_congregation ?? 0 ),
+            'verified_at'           => $user->verified_at ?? null,
+            'created_at'            => $user->created_at,
         ];
     }
 }

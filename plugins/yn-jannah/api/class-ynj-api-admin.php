@@ -741,7 +741,12 @@ class YNJ_API_Admin {
             (int) $mosque->id
         ) );
 
-        return new \WP_REST_Response( [ 'ok' => true, 'count' => $count ] );
+        $verified = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM $users_table WHERE favourite_mosque_id = %d AND status = 'active' AND verified_congregation = 1",
+            (int) $mosque->id
+        ) );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'count' => $count, 'verified' => $verified ] );
     }
 
     // ================================================================
