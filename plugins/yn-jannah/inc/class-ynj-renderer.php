@@ -2452,8 +2452,40 @@ class YNJ_Renderer {
                     const price = e.ticket_price_pence > 0 ? `£${(e.ticket_price_pence/100).toFixed(2)}` : 'Free';
                     const spots = e.spots_remaining !== null ? `${e.spots_remaining} spots remaining` : 'Unlimited capacity';
 
+                    const isLive = e.is_live && e.is_online;
+                    const isOnline = e.is_online;
+                    const liveBadge = isLive ? '<span style="display:inline-flex;align-items:center;gap:4px;background:#dc2626;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;margin-right:6px;"><span style="width:8px;height:8px;background:#fff;border-radius:50%;animation:livePulse 1.5s ease-in-out infinite;"></span>LIVE</span>' : '';
+                    const onlineBadge = isOnline && !isLive ? '<span class="ynj-badge" style="background:#dbeafe;color:#1e40af;">🌐 Online</span>' : '';
+
+                    // Video embed for live events
+                    let videoEmbed = '';
+                    if (isLive && e.live_url) {
+                        const m = e.live_url.match(/(?:youtube\.com\/(?:watch\?v=|live\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                        videoEmbed = m ? `<div style="width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;margin-bottom:16px;"><iframe src="https://www.youtube.com/embed/${m[1]}?autoplay=0" style="width:100%;height:100%;border:none;" allow="autoplay;encrypted-media" allowfullscreen></iframe></div>` : '';
+                    }
+
+                    // Donation section for events with donation targets
+                    const donTarget = e.donation_target_pence > 0 ? '£' + (e.donation_target_pence/100).toLocaleString() : '';
+                    const donRaised = '£' + ((e.donation_raised_pence||0)/100).toLocaleString();
+                    const donCount = e.donation_count || 0;
+                    const donPct = e.donation_target_pence > 0 ? Math.min(100, Math.round((e.donation_raised_pence||0) / e.donation_target_pence * 100)) : 0;
+                    let donateHtml = '';
+                    if (e.donation_target_pence > 0 || isOnline) {
+                        donateHtml = `<div style="margin-top:16px;padding-top:16px;border-top:1px solid #f0f0ec;">
+                            <h4 style="font-size:14px;font-weight:600;margin-bottom:8px;">❤️ Support This Event</h4>
+                            ${e.donation_target_pence > 0 ? `<div style="height:8px;background:#e8f0f4;border-radius:4px;overflow:hidden;margin-bottom:8px;"><div style="height:100%;width:${donPct}%;background:linear-gradient(90deg,#00ADEF,#16a34a);border-radius:4px;"></div></div><div style="display:flex;justify-content:space-between;font-size:12px;color:#6b8fa3;margin-bottom:12px;"><span><strong style="color:#0a1628;">${donRaised}</strong> raised${donTarget ? ' of '+donTarget : ''}</span><span>${donCount} donors</span></div>` : ''}
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <select id="event-don-amt" style="padding:8px;border:1px solid #e0e8ed;border-radius:8px;font-size:13px;">
+                                    <option value="500">£5</option><option value="1000">£10</option><option value="2000" selected>£20</option><option value="5000">£50</option><option value="10000">£100</option>
+                                </select>
+                                <button class="ynj-btn" style="flex:1;justify-content:center;" onclick="donateEvent()">❤️ Donate</button>
+                            </div>
+                        </div>`;
+                    }
+
                     document.getElementById('event-detail').innerHTML = `
-                        <span class="ynj-badge ynj-badge--event">${e.event_type || 'Event'}</span>
+                        ${videoEmbed}
+                        ${liveBadge}${onlineBadge}<span class="ynj-badge ynj-badge--event">${e.event_type || 'Event'}</span>
                         <h2 style="font-size:20px;font-weight:700;margin:8px 0 4px;">${e.title}</h2>
                         <div style="display:flex;flex-wrap:wrap;gap:12px;margin:12px 0;font-size:13px;color:#6b8fa3;">
                             <span>📅 ${e.event_date}</span>
@@ -2461,10 +2493,13 @@ class YNJ_Renderer {
                             ${e.location ? `<span>📍 ${e.location}</span>` : ''}
                         </div>
                         <p style="margin:12px 0;line-height:1.6;">${e.description || ''}</p>
-                        <div style="display:flex;gap:16px;margin-top:16px;">
+                        ${isLive && e.live_url ? `<a href="${e.live_url}" target="_blank" rel="noopener" class="ynj-btn" style="width:100%;justify-content:center;background:#dc2626;margin-bottom:12px;">▶ Watch Live</a>` : ''}
+                        ${isOnline && !isLive && e.live_url ? `<a href="${e.live_url}" target="_blank" rel="noopener" class="ynj-btn ynj-btn--outline" style="width:100%;justify-content:center;margin-bottom:12px;">🔔 Set Reminder — Watch Online</a>` : ''}
+                        <div style="display:flex;gap:16px;margin-top:12px;">
                             <span class="ynj-badge">${price}</span>
                             <span class="ynj-text-muted">${spots}</span>
                         </div>
+                        ${donateHtml}
                     `;
 
                     // Show RSVP section
@@ -2481,6 +2516,17 @@ class YNJ_Renderer {
                 .catch(() => {
                     document.getElementById('event-detail').innerHTML = '<p class="ynj-text-muted">Could not load event.</p>';
                 });
+
+            window.donateEvent = function() {
+                const amt = document.getElementById('event-don-amt').value;
+                fetch(`/wp-json/ynj/v1/events/${eventId}/donate`, {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({amount_pence: parseInt(amt)})
+                }).then(r=>r.json()).then(data => {
+                    if (data.ok && data.checkout_url) window.location.href = data.checkout_url;
+                    else alert(data.error || 'Could not process.');
+                }).catch(() => alert('Network error.'));
+            };
 
             document.getElementById('rsvp-btn').addEventListener('click', async function() {
                 const btn = this; const form = document.getElementById('rsvp-form');
