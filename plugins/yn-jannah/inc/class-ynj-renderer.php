@@ -77,21 +77,23 @@ class YNJ_Renderer {
                     </div>
                     <span class="ynj-travel-dist" id="travel-dist"></span>
                 </div>
-                <div class="ynj-hero-gps" id="hero-gps-prompt">
-                    <button class="ynj-btn ynj-btn--gps" id="hero-gps-btn" type="button" onclick="document.getElementById('gps-btn').click()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
-                        Detect My Location
-                    </button>
-                </div>
-                <div class="ynj-nav-buttons" id="nav-buttons" style="display:none;">
-                    <a class="ynj-btn ynj-btn--navigate" id="navigate-walk" href="#" target="_blank" rel="noopener">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2"/><path d="M10 22l2-7 3 3v7M14 13l2-3-3-3-2 4"/></svg>
-                        Walk
-                    </a>
-                    <a class="ynj-btn ynj-btn--navigate" id="navigate-drive" href="#" target="_blank" rel="noopener">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17h14M7 11l2-5h6l2 5M4 17v-3a1 1 0 011-1h14a1 1 0 011 1v3"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/></svg>
-                        Drive
-                    </a>
+                <div class="ynj-hero-actions">
+                    <div class="ynj-hero-gps" id="hero-gps-prompt">
+                        <button class="ynj-hero-locate" id="hero-gps-btn" type="button" onclick="requestGps()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+                            Detect Location
+                        </button>
+                    </div>
+                    <div class="ynj-nav-buttons" id="nav-buttons" style="display:none;">
+                        <a class="ynj-hero-nav" id="navigate-walk" href="#" target="_blank" rel="noopener">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2"/><path d="M10 22l2-7 3 3v7M14 13l2-3-3-3-2 4"/></svg>
+                            Walk
+                        </a>
+                        <a class="ynj-hero-nav" id="navigate-drive" href="#" target="_blank" rel="noopener">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17h14M7 11l2-5h6l2 5M4 17v-3a1 1 0 011-1h14a1 1 0 011 1v3"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/></svg>
+                            Drive
+                        </a>
+                    </div>
                 </div>
             </section>
 
@@ -295,7 +297,7 @@ class YNJ_Renderer {
 
                 // Travel & navigate
                 if (lat && lng) {
-                    document.getElementById('nav-buttons').style.display = '';
+                    document.getElementById('nav-buttons').style.display = ''; document.getElementById('hero-gps-prompt').style.display = 'none';
                     document.getElementById('navigate-walk').href =
                         `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`;
                     document.getElementById('navigate-drive').href =
@@ -354,7 +356,7 @@ class YNJ_Renderer {
                         // Always show navigate if we have mosque coords
                         if (m.latitude && m.longitude) {
                             mosqueLat = m.latitude; mosqueLng = m.longitude;
-                            document.getElementById('nav-buttons').style.display = '';
+                            document.getElementById('nav-buttons').style.display = ''; document.getElementById('hero-gps-prompt').style.display = 'none';
                             document.getElementById('navigate-walk').href =
                                 `https://www.google.com/maps/dir/?api=1&destination=${m.latitude},${m.longitude}&travelmode=walking`;
                             document.getElementById('navigate-drive').href =
@@ -396,7 +398,7 @@ class YNJ_Renderer {
                             const distText = km < 1 ? `${Math.round(km*1000)}m` : `${km.toFixed(1)}km`;
                             document.getElementById('travel-dist').textContent = `${distText} · ~${travelMinutes} min walk`;
                             document.getElementById('hero-travel').style.display = '';
-                            document.getElementById('nav-buttons').style.display = '';
+                            document.getElementById('nav-buttons').style.display = ''; document.getElementById('hero-gps-prompt').style.display = 'none';
                             document.getElementById('navigate-walk').href =
                                 `https://www.google.com/maps/dir/?api=1&destination=${m.latitude},${m.longitude}&travelmode=walking`;
                             document.getElementById('navigate-drive').href =
@@ -4494,30 +4496,52 @@ img,svg{display:block;max-width:100%;}
     box-shadow:0 2px 12px rgba(0,173,239,.08);border:1px solid rgba(255,255,255,.6);
 }
 .ynj-card--hero{
-    background:linear-gradient(180deg,#0a1628 0%,#1a3a5c 40%,#00ADEF 80%,#7dd3fc 100%);
-    color:#fff;text-align:center;padding:28px 20px 24px;border-radius:18px;
-    position:relative;overflow:hidden;
+    background:linear-gradient(160deg,#0a1628 0%,#122a4a 35%,#0e4d7a 65%,#00ADEF 100%);
+    color:#fff;text-align:center;padding:32px 24px 28px;border-radius:20px;
+    position:relative;overflow:hidden;box-shadow:0 8px 32px rgba(0,20,40,.25);
 }
 .ynj-card--hero::before{
-    content:'';position:absolute;top:40%;left:-20%;width:140%;height:60%;
-    background:radial-gradient(ellipse,rgba(255,255,255,.15) 0%,transparent 70%);
-    animation:clouds 8s ease-in-out infinite alternate;
+    content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+    background:radial-gradient(circle at 30% 80%,rgba(0,173,239,.2) 0%,transparent 50%),
+               radial-gradient(circle at 80% 20%,rgba(255,255,255,.06) 0%,transparent 40%);
+    pointer-events:none;
 }
-@keyframes clouds{0%{transform:translateX(-5%) translateY(0)}100%{transform:translateX(5%) translateY(-8px)}}
 .ynj-card__title{font-size:15px;font-weight:600;margin-bottom:14px;color:<?php echo self::COLOR_TEXT; ?>;}
 
 /* Hero card elements */
-.ynj-label{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;opacity:.7;}
-.ynj-hero-prayer{font-size:24px;font-weight:700;margin:6px 0 2px;position:relative;z-index:1;}
-.ynj-hero-time{font-size:16px;font-weight:500;opacity:.85;position:relative;z-index:1;}
-.ynj-countdown{font-size:38px;font-weight:700;letter-spacing:2px;margin:8px 0;font-variant-numeric:tabular-nums;position:relative;z-index:1;}
+.ynj-label{font-size:10px;text-transform:uppercase;letter-spacing:2px;opacity:.5;font-weight:600;position:relative;z-index:1;}
+.ynj-hero-prayer{font-size:28px;font-weight:800;margin:8px 0 4px;position:relative;z-index:1;text-shadow:0 2px 8px rgba(0,0,0,.15);}
+.ynj-hero-time{font-size:14px;font-weight:500;opacity:.7;position:relative;z-index:1;}
+.ynj-countdown{font-size:48px;font-weight:800;letter-spacing:3px;margin:12px 0;font-variant-numeric:tabular-nums;position:relative;z-index:1;text-shadow:0 2px 12px rgba(0,0,0,.2);}
 .ynj-hero-travel{
     display:flex;align-items:center;justify-content:center;gap:16px;
-    margin:10px 0 16px;font-size:13px;opacity:.85;position:relative;z-index:1;
+    margin:8px 0 0;font-size:13px;opacity:.8;position:relative;z-index:1;
+    background:rgba(255,255,255,.08);border-radius:10px;padding:8px 16px;
+    backdrop-filter:blur(4px);
 }
 .ynj-leave-by{display:flex;align-items:center;gap:4px;font-weight:600;}
 .ynj-leave-by svg{display:inline;}
 .ynj-travel-dist{opacity:.7;}
+.ynj-hero-actions{position:relative;z-index:1;margin-top:16px;}
+.ynj-hero-locate{
+    display:inline-flex;align-items:center;gap:8px;
+    background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+    color:#fff;border-radius:50px;padding:10px 24px;font-size:13px;font-weight:600;
+    cursor:pointer;transition:all .2s;font-family:inherit;backdrop-filter:blur(4px);
+}
+.ynj-hero-locate:hover{background:rgba(255,255,255,.25);}
+.ynj-hero-locate:active{transform:scale(.97);}
+.ynj-hero-locate svg{display:inline;}
+.ynj-nav-buttons{display:flex;gap:10px;justify-content:center;}
+.ynj-hero-nav{
+    display:inline-flex;align-items:center;gap:6px;
+    background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);
+    color:#fff;border-radius:50px;padding:10px 22px;font-size:13px;font-weight:600;
+    cursor:pointer;transition:all .2s;text-decoration:none;backdrop-filter:blur(4px);
+}
+.ynj-hero-nav:hover{background:rgba(255,255,255,.25);}
+.ynj-hero-nav:active{transform:scale(.97);}
+.ynj-hero-nav svg{display:inline;}
 
 /* Sponsor Ticker */
 .ynj-ticker{
@@ -4565,8 +4589,8 @@ img,svg{display:block;max-width:100%;}
 .ynj-btn--navigate svg{display:inline;}
 
 /* Urgency states */
-.ynj-hero--urgent{background:linear-gradient(180deg,#92400e 0%,#d97706 40%,#f59e0b 100%) !important;}
-.ynj-hero--critical{background:linear-gradient(180deg,#991b1b 0%,#dc2626 40%,#ef4444 100%) !important;}
+.ynj-hero--urgent{background:linear-gradient(160deg,#451a03 0%,#92400e 35%,#d97706 100%) !important;}
+.ynj-hero--critical{background:linear-gradient(160deg,#450a0a 0%,#991b1b 35%,#dc2626 100%) !important;}
 .ynj-hero--critical .ynj-leave-by{animation:urgencyPulse 1s ease-in-out infinite;}
 @keyframes urgencyPulse{0%,100%{opacity:1}50%{opacity:.5}}
 
@@ -4869,9 +4893,9 @@ img,svg{display:block;max-width:100%;}
     .ynj-desktop-grid{flex-direction:row;gap:24px;align-items:flex-start;}
     .ynj-desktop-grid__left{width:380px;flex-shrink:0;position:sticky;top:72px;}
     .ynj-desktop-grid__right{flex:1;min-width:0;}
-    .ynj-card--hero{padding:24px 20px 20px;}
-    .ynj-countdown{font-size:32px;}
-    .ynj-hero-prayer{font-size:20px;}
+    .ynj-card--hero{padding:28px 24px 24px;}
+    .ynj-countdown{font-size:42px;}
+    .ynj-hero-prayer{font-size:24px;}
     .ynj-nav{display:none;}
     body{padding-bottom:0;}
     /* Desktop top nav inside header */
