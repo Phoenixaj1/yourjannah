@@ -95,8 +95,8 @@ $slug = ynj_mosque_slug();
         var video = '';
         if (cls === 'live' && e.live_url) {
             video = '<div class="ynj-live-card__video">' + getEmbed(e.live_url) + '</div>';
-        } else if (cls === 'archive' && e.live_url) {
-            video = '<div class="ynj-live-card__video">' + getEmbed(e.live_url) + '</div>';
+        } else if (cls === 'archive' && (e.recording_url || e.live_url)) {
+            video = '<div class="ynj-live-card__video">' + getEmbed(e.recording_url || e.live_url) + '</div>';
         } else {
             video = '<div class="ynj-live-card__video" style="aspect-ratio:3/1;background:linear-gradient(135deg,#0a1628,#1a3a5c);"><span style="color:rgba(255,255,255,.5);font-size:13px;">📅 ' + fmtDate(e.event_date) + ' · ' + fmtTime(e.start_time) + '</span></div>';
         }
@@ -108,8 +108,8 @@ $slug = ynj_mosque_slug();
         var cta = '';
         if (cls === 'live' && e.live_url) {
             cta = '<a href="' + e.live_url + '" target="_blank" rel="noopener" class="ynj-btn" style="width:100%;justify-content:center;background:#dc2626;">▶ Watch Live</a>';
-        } else if (cls === 'archive' && e.live_url) {
-            cta = '<a href="' + e.live_url + '" target="_blank" rel="noopener" class="ynj-btn ynj-btn--outline" style="width:100%;justify-content:center;">▶ Watch Recording</a>';
+        } else if (cls === 'archive' && (e.recording_url || e.live_url)) {
+            cta = '<a href="' + (e.recording_url || e.live_url) + '" target="_blank" rel="noopener" class="ynj-btn ynj-btn--outline" style="width:100%;justify-content:center;">▶ Watch Recording</a>';
         } else if (cls === 'upcoming') {
             cta = '<a href="' + <?php echo wp_json_encode( home_url( '/mosque/' ) ); ?> + slug + '/events/' + e.id + '" class="ynj-btn ynj-btn--outline" style="width:100%;justify-content:center;">🔔 View Details</a>';
         }

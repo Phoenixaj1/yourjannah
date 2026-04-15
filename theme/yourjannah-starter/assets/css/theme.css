@@ -273,6 +273,23 @@ img,svg{display:block;max-width:100%;}
 .ynj-support-card--services{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;}
 .ynj-support-card--services .ynj-support-card__help{background:rgba(255,255,255,.15);color:rgba(255,255,255,.9);}
 
+/* Patron CTA */
+.ynj-patron-cta{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:14px 18px;border-radius:14px;text-decoration:none;
+    background:linear-gradient(135deg,#0a1628,#1a3a5c);color:#fff;margin-bottom:14px;
+    transition:transform .15s;
+}
+.ynj-patron-cta:hover{transform:translateY(-1px);}
+.ynj-patron-cta__left{display:flex;align-items:center;gap:10px;}
+.ynj-patron-cta__left strong{font-size:14px;display:block;}
+.ynj-patron-cta__left span{font-size:11px;color:rgba(255,255,255,.7);}
+.ynj-patron-cta__tiers{display:flex;gap:6px;}
+.ynj-patron-cta__tiers span{
+    padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700;
+    background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);
+}
+
 /* Prayer Grid */
 .ynj-prayer-grid{display:flex;flex-direction:column;gap:1px;}
 .ynj-prayer-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0ec;}
@@ -388,14 +405,14 @@ img,svg{display:block;max-width:100%;}
     transition:transform .15s, box-shadow .15s;
 }
 .ynj-biz-card:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,0,0,.08);}
-.ynj-biz--premium{border:2px solid #f59e0b;box-shadow:0 4px 20px rgba(245,158,11,.12);}
-.ynj-biz--featured{border:2px solid #00ADEF;box-shadow:0 4px 20px rgba(0,173,239,.1);}
-.ynj-biz--standard{border:2px solid #d4d4d8;}
+.ynj-biz--premium{border:2px solid #f59e0b;background:linear-gradient(180deg,#fffbeb,#fff);box-shadow:0 4px 24px rgba(245,158,11,.18);}
+.ynj-biz--featured{border:2px solid #00ADEF;background:linear-gradient(180deg,#eff6ff,#fff);box-shadow:0 4px 20px rgba(0,173,239,.12);}
+.ynj-biz--standard{border:1px solid #e5e7eb;}
 .ynj-biz-tier{
-    padding:6px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+    padding:8px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
 }
-.ynj-biz--premium .ynj-biz-tier{background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;}
-.ynj-biz--featured .ynj-biz-tier{background:linear-gradient(135deg,#e0f2fe,#bae6fd);color:#0369a1;}
+.ynj-biz--premium .ynj-biz-tier{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;}
+.ynj-biz--featured .ynj-biz-tier{background:linear-gradient(135deg,#00ADEF,#0369a1);color:#fff;}
 .ynj-biz--standard .ynj-biz-tier{background:#f4f4f5;color:#71717a;}
 .ynj-biz-header{display:flex;gap:14px;padding:16px 16px 0;align-items:center;}
 .ynj-biz-logo{

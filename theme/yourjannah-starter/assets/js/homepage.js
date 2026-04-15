@@ -170,7 +170,7 @@
                         const dfmSlug = m.dfm_slug || m.slug || slug;
                         const donateBtn = document.getElementById('donate-btn');
                         donateBtn.href = `https://donationformasjid.com/${dfmSlug}`;
-                        donateBtn.style.display = '';
+                        donateBtn.target = '_blank'; donateBtn.rel = 'noopener';
 
                         // Always show navigate if we have mosque coords
                         if (m.latitude && m.longitude) {

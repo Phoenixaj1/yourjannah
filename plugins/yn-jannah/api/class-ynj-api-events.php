@@ -277,6 +277,7 @@ class YNJ_API_Events {
             'is_online'             => absint( $data['is_online'] ?? 0 ),
             'is_live'               => absint( $data['is_live'] ?? 0 ),
             'live_url'              => esc_url_raw( $data['live_url'] ?? '' ),
+            'recording_url'         => esc_url_raw( $data['recording_url'] ?? '' ),
             'donation_target_pence' => absint( $data['donation_target_pence'] ?? 0 ),
             'status'                => sanitize_text_field( $data['status'] ?? 'draft' ),
         ];
@@ -330,7 +331,7 @@ class YNJ_API_Events {
         $allowed = [
             'title', 'description', 'image_url', 'event_date', 'start_time', 'end_time',
             'location', 'event_type', 'max_capacity', 'requires_booking', 'ticket_price_pence',
-            'is_online', 'is_live', 'live_url', 'donation_target_pence', 'status',
+            'is_online', 'is_live', 'live_url', 'recording_url', 'donation_target_pence', 'status',
         ];
 
         $update = [];
@@ -343,6 +344,7 @@ class YNJ_API_Events {
                     break;
                 case 'image_url':
                 case 'live_url':
+                case 'recording_url':
                     $update[ $key ] = esc_url_raw( $data[ $key ] );
                     break;
                 case 'max_capacity':
@@ -418,6 +420,7 @@ class YNJ_API_Events {
             'is_online'             => (bool) ( $row->is_online ?? 0 ),
             'is_live'               => (bool) ( $row->is_live ?? 0 ),
             'live_url'              => $row->live_url ?? '',
+            'recording_url'         => $row->recording_url ?? '',
             'live_started_at'       => $row->live_started_at ?? null,
             'donation_target_pence' => (int) ( $row->donation_target_pence ?? 0 ),
             'donation_raised_pence' => (int) ( $row->donation_raised_pence ?? 0 ),
