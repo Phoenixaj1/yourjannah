@@ -47,6 +47,7 @@ spl_autoload_register(function($class) {
         'YNJ_API_Masjid_Services'  => 'api/class-ynj-api-masjid-services.php',
         'YNJ_WP_Auth'              => 'inc/class-ynj-wp-auth.php',
         'YNJ_API_Media'            => 'api/class-ynj-api-media.php',
+        'YNJ_Cache'                => 'inc/class-ynj-cache.php',
     ];
     if (isset($map[$class])) {
         require_once YNJ_DIR . $map[$class];
@@ -179,4 +180,50 @@ add_action('ynj_new_class', function($mosque_id, $data) {
         YNJ_Push::send_push($u->push_endpoint, $u->push_p256dh, $u->push_auth, $payload);
     }
 }, 10, 2);
+
+// WP Site Health checks
+add_filter('site_status_tests', function($tests) {
+    $tests['direct']['ynj_db_version'] = [
+        'label' => 'YourJannah Database',
+        'test'  => function() {
+            $installed = get_option('ynj_db_version', '');
+            $expected = YNJ_DB::SCHEMA_VERSION;
+            $pass = ($installed === $expected);
+            return [
+                'label'       => $pass ? 'YourJannah database is up to date' : 'YourJannah database needs updating',
+                'status'      => $pass ? 'good' : 'critical',
+                'badge'       => ['label' => 'YourJannah', 'color' => $pass ? 'blue' : 'red'],
+                'description' => '<p>Database version: ' . esc_html($installed) . ' (expected: ' . esc_html($expected) . ')</p>',
+                'test'        => 'ynj_db_version',
+            ];
+        },
+    ];
+    $tests['direct']['ynj_stripe'] = [
+        'label' => 'YourJannah Stripe',
+        'test'  => function() {
+            $configured = YNJ_Stripe::is_configured();
+            return [
+                'label'       => $configured ? 'Stripe is configured' : 'Stripe is not configured',
+                'status'      => $configured ? 'good' : 'recommended',
+                'badge'       => ['label' => 'YourJannah', 'color' => 'blue'],
+                'description' => '<p>Stripe payment processing ' . ($configured ? 'is active.' : 'is not set up. Paid bookings and subscriptions will not work.') . '</p>',
+                'test'        => 'ynj_stripe',
+            ];
+        },
+    ];
+    $tests['direct']['ynj_vapid'] = [
+        'label' => 'YourJannah Push Notifications',
+        'test'  => function() {
+            $key = get_option('ynj_vapid_public', '');
+            return [
+                'label'       => $key ? 'VAPID keys configured' : 'VAPID keys missing',
+                'status'      => $key ? 'good' : 'recommended',
+                'badge'       => ['label' => 'YourJannah', 'color' => 'blue'],
+                'description' => '<p>Web Push notification ' . ($key ? 'keys are set up.' : 'keys are missing. Push notifications will not work.') . '</p>',
+                'test'        => 'ynj_vapid',
+            ];
+        },
+    ];
+    return $tests;
+});
 // deploy trigger

@@ -147,6 +147,8 @@ class YNJ_WP_Auth {
         // Auto-login and generate application password for API access
         $app_pass = self::create_app_password( $wp_user_id, 'YourJannah Dashboard' );
 
+        do_action( 'ynj_mosque_registered', $mosque_id, $wp_user_id, $data );
+
         return [
             'ok'         => true,
             'token'      => $app_pass,
@@ -314,6 +316,8 @@ class YNJ_WP_Auth {
             'token_hash'      => $token_hash,
             'token_last_used' => current_time( 'mysql', true ),
         ], [ 'id' => $ynj_user_id ] );
+
+        do_action( 'ynj_user_registered', $wp_user_id, $data );
 
         return [
             'ok'         => true,

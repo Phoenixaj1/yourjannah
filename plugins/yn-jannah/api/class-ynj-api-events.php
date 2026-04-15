@@ -57,6 +57,13 @@ class YNJ_API_Events {
             'methods'             => 'POST',
             'callback'            => [ __CLASS__, 'create' ],
             'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
+            'args' => [
+                'title'      => [ 'type' => 'string', 'required' => true, 'sanitize_callback' => 'sanitize_text_field' ],
+                'event_date' => [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ],
+                'start_time' => [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ],
+                'event_type' => [ 'type' => 'string', 'default' => 'general', 'sanitize_callback' => 'sanitize_text_field' ],
+                'status'     => [ 'type' => 'string', 'default' => 'draft', 'sanitize_callback' => 'sanitize_text_field' ],
+            ],
         ]);
 
         // PUT /admin/events/{id}

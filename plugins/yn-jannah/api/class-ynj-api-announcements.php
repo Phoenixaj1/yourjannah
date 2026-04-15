@@ -36,6 +36,11 @@ class YNJ_API_Announcements {
             'methods'             => 'POST',
             'callback'            => [ __CLASS__, 'create' ],
             'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
+            'args' => [
+                'title'  => [ 'type' => 'string', 'required' => true, 'sanitize_callback' => 'sanitize_text_field' ],
+                'body'   => [ 'type' => 'string', 'required' => true ],
+                'status' => [ 'type' => 'string', 'default' => 'draft', 'sanitize_callback' => 'sanitize_text_field' ],
+            ],
         ]);
 
         // PUT /admin/announcements/{id}

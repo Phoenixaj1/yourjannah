@@ -32,12 +32,23 @@ class YNJ_API_Admin {
             'methods'             => 'POST',
             'callback'            => [ __CLASS__, 'handle_register' ],
             'permission_callback' => '__return_true',
+            'args' => [
+                'name'     => [ 'type' => 'string', 'required' => true, 'sanitize_callback' => 'sanitize_text_field' ],
+                'email'    => [ 'type' => 'string', 'required' => true, 'sanitize_callback' => 'sanitize_email' ],
+                'password' => [ 'type' => 'string', 'required' => true ],
+                'postcode' => [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ],
+                'city'     => [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ],
+            ],
         ]);
 
         register_rest_route( self::NS, '/admin/login', [
             'methods'             => 'POST',
             'callback'            => [ __CLASS__, 'handle_login' ],
             'permission_callback' => '__return_true',
+            'args' => [
+                'email'    => [ 'type' => 'string', 'required' => true, 'sanitize_callback' => 'sanitize_email' ],
+                'password' => [ 'type' => 'string', 'required' => true ],
+            ],
         ]);
 
         // --- Profile (bearer) ---

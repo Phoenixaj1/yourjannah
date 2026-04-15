@@ -17,6 +17,11 @@ class YNJ_API_User {
             'methods'             => 'POST',
             'callback'            => [ __CLASS__, 'handle_register' ],
             'permission_callback' => '__return_true',
+            'args' => [
+                'name'     => [ 'type' => 'string', 'required' => true, 'sanitize_callback' => 'sanitize_text_field' ],
+                'email'    => [ 'type' => 'string', 'required' => true, 'sanitize_callback' => 'sanitize_email' ],
+                'password' => [ 'type' => 'string', 'required' => true ],
+            ],
         ] );
 
         // POST /auth/login — user login
@@ -24,6 +29,10 @@ class YNJ_API_User {
             'methods'             => 'POST',
             'callback'            => [ __CLASS__, 'handle_login' ],
             'permission_callback' => '__return_true',
+            'args' => [
+                'email'    => [ 'type' => 'string', 'required' => true, 'sanitize_callback' => 'sanitize_email' ],
+                'password' => [ 'type' => 'string', 'required' => true ],
+            ],
         ] );
 
         // GET /auth/me — get user profile
@@ -66,6 +75,9 @@ class YNJ_API_User {
             'methods'             => 'POST',
             'callback'            => [ __CLASS__, 'forgot_password' ],
             'permission_callback' => '__return_true',
+            'args' => [
+                'email' => [ 'type' => 'string', 'required' => true, 'sanitize_callback' => 'sanitize_email' ],
+            ],
         ] );
 
         // POST /auth/reset-password — reset with key

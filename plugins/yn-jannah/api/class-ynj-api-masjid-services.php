@@ -58,6 +58,10 @@ class YNJ_API_Masjid_Services {
         register_rest_route( self::NS, '/admin/masjid-services', [
             'methods' => 'POST', 'callback' => [ __CLASS__, 'admin_create' ],
             'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
+            'args' => [
+                'title'    => [ 'type' => 'string', 'required' => true, 'sanitize_callback' => 'sanitize_text_field' ],
+                'category' => [ 'type' => 'string', 'default' => 'general', 'sanitize_callback' => 'sanitize_text_field' ],
+            ],
         ] );
         register_rest_route( self::NS, '/admin/masjid-services/(?P<id>\d+)', [
             'methods' => 'PUT', 'callback' => [ __CLASS__, 'admin_update' ],
