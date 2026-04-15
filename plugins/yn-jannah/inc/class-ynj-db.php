@@ -243,6 +243,9 @@ class YNJ_DB {
             donation_target_pence bigint(20) NOT NULL DEFAULT 0,
             donation_raised_pence bigint(20) NOT NULL DEFAULT 0,
             donation_count int(11) NOT NULL DEFAULT 0,
+            needs_volunteers tinyint(1) NOT NULL DEFAULT 0,
+            volunteer_roles varchar(500) NOT NULL DEFAULT '',
+            volunteer_count int(11) NOT NULL DEFAULT 0,
             status varchar(20) NOT NULL DEFAULT 'draft',
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
@@ -690,6 +693,22 @@ class YNJ_DB {
             UNIQUE KEY mosque_email (mosque_id, email),
             KEY mosque_id (mosque_id),
             KEY status (status)
+        ) $charset_collate;";
+
+        // 17. Event Volunteers
+        $tables[] = "CREATE TABLE {$t('event_volunteers')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            event_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_name varchar(255) NOT NULL DEFAULT '',
+            user_email varchar(255) NOT NULL DEFAULT '',
+            user_phone varchar(50) NOT NULL DEFAULT '',
+            role varchar(100) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'confirmed',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY event_id (event_id),
+            KEY mosque_id (mosque_id)
         ) $charset_collate;";
 
         return $tables;

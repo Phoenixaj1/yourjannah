@@ -468,6 +468,20 @@ async function renderDashboard() {
         '</div>' +
         '<p style="margin-top:12px;font-size:12px;color:var(--text-dim)">Sponsor & service listing revenue coming soon. <a href="#/patrons">View patrons \u2192</a></p>' +
         '</div>' +
+        // Engagement insights
+        (function() {
+            var evList = events.events || [];
+            var totalRsvps = evList.reduce(function(s,e){ return s + (e.registered_count||0); }, 0);
+            var upcomingCount = evList.filter(function(e){ return e.status === 'published'; }).length;
+            return '<div class="d-card" style="margin-bottom:16px">' +
+                '<h3 style="margin-bottom:12px">\ud83d\udcca Engagement</h3>' +
+                '<div class="d-grid d-grid-4">' +
+                '<div style="text-align:center"><div style="font-size:20px;font-weight:900;color:var(--primary)">' + upcomingCount + '</div><div style="font-size:10px;color:var(--text-dim)">Events</div></div>' +
+                '<div style="text-align:center"><div style="font-size:20px;font-weight:900;color:var(--primary)">' + totalRsvps + '</div><div style="font-size:10px;color:var(--text-dim)">RSVPs</div></div>' +
+                '<div style="text-align:center"><div style="font-size:20px;font-weight:900;color:var(--primary)">' + bookCount + '</div><div style="font-size:10px;color:var(--text-dim)">Bookings</div></div>' +
+                '<div style="text-align:center"><div style="font-size:20px;font-weight:900;color:var(--primary)">' + enqCount + '</div><div style="font-size:10px;color:var(--text-dim)">Enquiries</div></div>' +
+                '</div></div>';
+        })() +
         (campCount > 0 ? '<div class="d-card" style="margin-bottom:16px"><h3 style="margin-bottom:8px">Fundraising</h3><p style="color:var(--text-dim);font-size:13px">' + campCount + ' active campaign' + (campCount>1?'s':'') + '</p><button class="d-btn d-btn--secondary d-btn--sm" style="margin-top:8px" onclick="navigate(\'/campaigns\')">Manage Campaigns</button></div>' : '') +
         '<div class="d-card"><h3 style="margin-bottom:12px">Quick Actions</h3>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap">' +

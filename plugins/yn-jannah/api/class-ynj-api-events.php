@@ -45,6 +45,13 @@ class YNJ_API_Events {
             'permission_callback' => '__return_true',
         ]);
 
+        // POST /events/{id}/volunteer — sign up as volunteer
+        register_rest_route( self::NS, '/events/(?P<id>\d+)/volunteer', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'volunteer_signup' ],
+            'permission_callback' => '__return_true',
+        ]);
+
         // GET /mosques/{slug}/events — slug-based convenience route
         register_rest_route( self::NS, '/mosques/(?P<slug>[a-zA-Z][a-zA-Z0-9_-]*)/events', [
             'methods'             => 'GET',
@@ -95,6 +102,44 @@ class YNJ_API_Events {
     /**
      * GET /admin/events — All events for this mosque, including drafts.
      */
+    /**
+     * POST /events/{id}/volunteer — Public volunteer sign-up.
+     */
+    public static function volunteer_signup( \WP_REST_Request $request ) {
+        $event_id = absint( $request->get_param( 'id' ) );
+        $data = $request->get_json_params();
+
+        $name  = sanitize_text_field( $data['name'] ?? '' );
+        $email = sanitize_email( $data['email'] ?? '' );
+        if ( ! $name || ! is_email( $email ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Name and email required.' ], 400 );
+        }
+
+        global $wpdb;
+        $event = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM " . YNJ_DB::table( 'events' ) . " WHERE id = %d", $event_id
+        ) );
+        if ( ! $event || ! $event->needs_volunteers ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Event not found or not accepting volunteers.' ], 404 );
+        }
+
+        $wpdb->insert( YNJ_DB::table( 'event_volunteers' ), [
+            'event_id'   => $event_id,
+            'mosque_id'  => $event->mosque_id,
+            'user_name'  => $name,
+            'user_email' => $email,
+            'user_phone' => sanitize_text_field( $data['phone'] ?? '' ),
+            'role'       => sanitize_text_field( $data['role'] ?? '' ),
+        ] );
+
+        // Increment volunteer count
+        $wpdb->query( $wpdb->prepare(
+            "UPDATE " . YNJ_DB::table( 'events' ) . " SET volunteer_count = volunteer_count + 1 WHERE id = %d", $event_id
+        ) );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'message' => 'Thank you for volunteering!' ] );
+    }
+
     public static function list_admin( \WP_REST_Request $request ) {
         $mosque = $request->get_param( '_ynj_mosque' );
         global $wpdb;
@@ -355,7 +400,8 @@ class YNJ_API_Events {
         $allowed = [
             'title', 'description', 'image_url', 'event_date', 'start_time', 'end_time',
             'location', 'event_type', 'max_capacity', 'requires_booking', 'ticket_price_pence',
-            'is_online', 'is_live', 'live_url', 'recording_url', 'donation_target_pence', 'status',
+            'is_online', 'is_live', 'live_url', 'recording_url', 'donation_target_pence',
+            'needs_volunteers', 'volunteer_roles', 'status',
         ];
 
         $update = [];
@@ -446,6 +492,9 @@ class YNJ_API_Events {
             'live_url'              => $row->live_url ?? '',
             'recording_url'         => $row->recording_url ?? '',
             'live_started_at'       => $row->live_started_at ?? null,
+            'needs_volunteers'      => (bool) ( $row->needs_volunteers ?? 0 ),
+            'volunteer_roles'       => $row->volunteer_roles ?? '',
+            'volunteer_count'       => (int) ( $row->volunteer_count ?? 0 ),
             'donation_target_pence' => (int) ( $row->donation_target_pence ?? 0 ),
             'donation_raised_pence' => (int) ( $row->donation_raised_pence ?? 0 ),
             'donation_count'        => (int) ( $row->donation_count ?? 0 ),

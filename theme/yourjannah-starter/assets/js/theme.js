@@ -109,6 +109,13 @@
         }
     };
 
+    // WhatsApp share helper
+    window.ynjWhatsApp = function(title, url) {
+        var mosqueName = localStorage.getItem('ynj_mosque_name') || 'our mosque';
+        var text = '\ud83d\udd4c ' + mosqueName + '\n\n' + title + '\n\nView: ' + url;
+        window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+    };
+
     // ================================================================
     // SERVICE WORKER
     // ================================================================

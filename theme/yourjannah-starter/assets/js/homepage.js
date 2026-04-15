@@ -532,7 +532,7 @@
                     <div class="ynj-feed-card__content">
                         <div class="ynj-feed-card__top">${badge}<h4>${item.title}</h4></div>
                         ${snippet ? `<div class="ynj-feed-card__body">${snippet}</div>` : ''}
-                        <div class="ynj-feed-card__meta">${meta.join(' ')}</div>
+                        <div class="ynj-feed-card__meta">${meta.join(' ')}${item.type !== 'announcement' && item.mosque_slug ? ` <a href="#" onclick="ynjWhatsApp('${item.title.replace(/'/g,"\\'")}','${ynjData.siteUrl}mosque/${item.mosque_slug}/events/${item.event_id||''}');return false;" style="color:#25D366;font-weight:700;">WhatsApp</a>` : ''}</div>
                         ${mosqueTag}
                     </div>
                 </div>`;
