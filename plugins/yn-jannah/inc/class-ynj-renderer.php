@@ -2521,6 +2521,250 @@ class YNJ_Renderer {
     }
 
     /* ================================================================== */
+    /*  PAGE: Classes (mosque-specific)                                   */
+    /* ================================================================== */
+
+    public static function render_classes( string $slug ): void {
+        self::page_head( 'Classes — YourJannah', 'Book classes and courses at your local mosque.' );
+        ?>
+        <style>
+        .ynj-class-card{background:rgba(255,255,255,.9);border-radius:16px;padding:18px;margin-bottom:14px;border:1px solid rgba(255,255,255,.6);box-shadow:0 2px 10px rgba(0,0,0,.04);}
+        .ynj-class-card__header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;}
+        .ynj-class-card__price{font-size:18px;font-weight:800;color:<?php echo self::COLOR_ACCENT; ?>;white-space:nowrap;}
+        .ynj-class-card__price small{font-size:11px;font-weight:500;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}
+        .ynj-class-card__instructor{display:flex;align-items:center;gap:8px;font-size:12px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;margin-bottom:8px;}
+        .ynj-class-card__schedule{display:flex;flex-wrap:wrap;gap:6px;font-size:11px;margin-bottom:10px;}
+        .ynj-class-card__schedule span{background:#f0f8fc;padding:3px 8px;border-radius:6px;color:<?php echo self::COLOR_TEXT; ?>;}
+        .ynj-class-card__spots{font-size:12px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;margin-bottom:10px;}
+        @media(min-width:900px){.ynj-classes-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}.ynj-class-card{margin-bottom:0;}}
+        </style>
+        <header class="ynj-header">
+            <div class="ynj-header__inner">
+                <a href="/" class="ynj-back" aria-label="Back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></a>
+                <div class="ynj-logo"><span>Classes & Courses</span></div>
+            </div>
+        </header>
+        <main class="ynj-main">
+            <?php if ( isset( $_GET['enrolled'] ) ) : ?>
+                <div class="ynj-card" style="text-align:center;padding:30px 20px;">
+                    <div style="font-size:48px;margin-bottom:8px;">&#x2705;</div>
+                    <h2>You're Enrolled!</h2>
+                    <p class="ynj-text-muted">Check your email for class details.</p>
+                </div>
+            <?php endif; ?>
+
+            <div class="ynj-search-bar" style="margin-bottom:14px;">
+                <div class="ynj-search-bar__filters">
+                    <select id="cls-cat" class="ynj-search-bar__select" onchange="loadClasses()">
+                        <option value="">All Categories</option>
+                        <option>Quran</option><option>Arabic</option><option>Tajweed</option><option>Islamic Studies</option>
+                        <option>Fiqh</option><option>Seerah</option><option>Business</option><option>SEO</option>
+                        <option>Marketing</option><option>Finance</option><option>Health</option><option>Fitness</option>
+                        <option>Cooking</option><option>Parenting</option><option>Youth</option><option>Sisters</option>
+                    </select>
+                    <a href="/classes" class="ynj-btn ynj-btn--outline" style="padding:8px 14px;font-size:12px;white-space:nowrap;">Browse All Mosques</a>
+                </div>
+            </div>
+
+            <div class="ynj-classes-grid" id="classes-list">
+                <p class="ynj-text-muted" style="padding:20px;text-align:center;">Loading classes...</p>
+            </div>
+        </main>
+        <?php self::render_bottom_nav( 'services', $slug ); ?>
+        <script>
+        (function(){
+            const slug = <?php echo wp_json_encode( $slug ); ?>;
+            const API = '/wp-json/ynj/v1';
+            document.querySelectorAll('[data-nav-mosque]').forEach(el => el.href = el.dataset.navMosque.replace('{slug}', slug));
+
+            const catIcons = {Quran:'📖',Arabic:'📚',Tajweed:'🎙️','Islamic Studies':'🕌',Fiqh:'⚖️',Seerah:'📜',Business:'💼',SEO:'🔍',Marketing:'📱',Finance:'💰',Health:'🏥',Fitness:'💪',Cooking:'🍳',Parenting:'👪',Youth:'👦',Sisters:'👩'};
+
+            window.loadClasses = function() {
+                const cat = document.getElementById('cls-cat').value;
+                const url = `${API}/mosques/${slug}/classes` + (cat ? `?category=${encodeURIComponent(cat)}` : '');
+                fetch(url).then(r=>r.json()).then(data => {
+                    const el = document.getElementById('classes-list');
+                    const classes = data.classes || [];
+                    if (!classes.length) { el.innerHTML = '<p class="ynj-text-muted" style="padding:20px;text-align:center;">No classes available. Check back soon.</p>'; return; }
+                    el.innerHTML = classes.map(renderClassCard).join('');
+                });
+            };
+
+            function renderClassCard(c) {
+                const icon = catIcons[c.category] || '📚';
+                const price = c.price_pence > 0 ? '£' + (c.price_pence/100).toFixed(0) : 'Free';
+                const priceLabel = c.price_type === 'per_session' ? '/session' : (c.price_type === 'monthly' ? '/month' : '');
+                const spots = c.max_capacity > 0 ? (c.max_capacity - c.enrolled_count) + ' spots left' : '';
+                const online = c.is_online ? '<span>🌐 Online</span>' : '';
+                const time = c.start_time ? String(c.start_time).replace(/:\d{2}$/,'') : '';
+
+                return `<div class="ynj-class-card">
+                    <div class="ynj-class-card__header">
+                        <div>
+                            <span class="ynj-badge">${icon} ${c.category||'Class'}</span>
+                            <h3 style="font-size:16px;font-weight:700;margin:6px 0 2px;">${c.title}</h3>
+                        </div>
+                        <div class="ynj-class-card__price">${price}<small>${priceLabel}</small></div>
+                    </div>
+                    ${c.instructor_name ? `<div class="ynj-class-card__instructor">👤 ${c.instructor_name}</div>` : ''}
+                    <p style="font-size:13px;color:#555;margin-bottom:8px;">${(c.description||'').slice(0,100)}${(c.description||'').length>100?'...':''}</p>
+                    <div class="ynj-class-card__schedule">
+                        ${c.day_of_week ? `<span>📅 ${c.day_of_week}s</span>` : ''}
+                        ${time ? `<span>🕐 ${time}</span>` : ''}
+                        ${c.total_sessions > 1 ? `<span>📋 ${c.total_sessions} sessions</span>` : ''}
+                        ${c.location ? `<span>📍 ${c.location}</span>` : ''}
+                        ${online}
+                    </div>
+                    ${spots ? `<div class="ynj-class-card__spots">🪑 ${spots}</div>` : ''}
+                    <button class="ynj-btn" style="width:100%;justify-content:center;" onclick="enrolClass(${c.id},'${c.title.replace(/'/g,"\\'")}',${c.price_pence})">
+                        ${c.price_pence > 0 ? '🎓 Book — '+price+(priceLabel||'') : '🎓 Enrol — Free'}
+                    </button>
+                </div>`;
+            }
+
+            window.enrolClass = function(id, title, price) {
+                const name = prompt('Your name:');
+                if (!name) return;
+                const email = prompt('Your email:');
+                if (!email) return;
+
+                fetch(`${API}/classes/${id}/enrol`, {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({user_name:name, user_email:email})
+                })
+                .then(r=>r.json())
+                .then(data => {
+                    if (data.ok && data.checkout_url) window.location.href = data.checkout_url;
+                    else if (data.ok && data.free) window.location.href = `/mosque/${slug}/classes?enrolled=1`;
+                    else alert(data.error || 'Could not enrol.');
+                })
+                .catch(() => alert('Network error.'));
+            };
+
+            loadClasses();
+        })();
+        </script>
+        </body></html>
+        <?php
+        exit;
+    }
+
+    /* ================================================================== */
+    /*  PAGE: Classes Browse (all mosques)                                */
+    /* ================================================================== */
+
+    public static function render_classes_browse(): void {
+        self::page_head( 'Browse Classes — YourJannah', 'Find classes and courses across all mosques.' );
+        ?>
+        <style>
+        .ynj-class-card{background:rgba(255,255,255,.9);border-radius:16px;padding:18px;margin-bottom:14px;border:1px solid rgba(255,255,255,.6);box-shadow:0 2px 10px rgba(0,0,0,.04);}
+        .ynj-class-card__header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;}
+        .ynj-class-card__price{font-size:18px;font-weight:800;color:<?php echo self::COLOR_ACCENT; ?>;white-space:nowrap;}
+        .ynj-class-card__price small{font-size:11px;font-weight:500;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}
+        .ynj-class-card__instructor{display:flex;align-items:center;gap:8px;font-size:12px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;margin-bottom:8px;}
+        .ynj-class-card__schedule{display:flex;flex-wrap:wrap;gap:6px;font-size:11px;margin-bottom:10px;}
+        .ynj-class-card__schedule span{background:#f0f8fc;padding:3px 8px;border-radius:6px;color:<?php echo self::COLOR_TEXT; ?>;}
+        @media(min-width:900px){.ynj-classes-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}.ynj-class-card{margin-bottom:0;}}
+        </style>
+        <header class="ynj-header">
+            <div class="ynj-header__inner">
+                <a href="/" class="ynj-back" aria-label="Back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></a>
+                <div class="ynj-logo"><span>Browse Classes</span></div>
+            </div>
+        </header>
+        <main class="ynj-main">
+            <div class="ynj-search-bar">
+                <input class="ynj-search-bar__input" id="cls-q" type="text" placeholder="Search classes (e.g. tajweed, business, SEO)..." oninput="searchClasses()">
+                <div class="ynj-search-bar__filters">
+                    <select id="cls-cat" class="ynj-search-bar__select" onchange="searchClasses()">
+                        <option value="">All Categories</option>
+                        <option>Quran</option><option>Arabic</option><option>Tajweed</option><option>Islamic Studies</option>
+                        <option>Business</option><option>SEO</option><option>Marketing</option><option>Finance</option>
+                        <option>Health</option><option>Fitness</option><option>Cooking</option><option>Youth</option><option>Sisters</option>
+                    </select>
+                    <select id="cls-loc" class="ynj-search-bar__select" onchange="searchClasses()">
+                        <option value="">All locations</option>
+                        <option value="online">🌐 Online only</option>
+                        <option value="5">Within 5 miles</option>
+                        <option value="25">Within 25 miles</option>
+                        <option value="50">Within 50 miles</option>
+                    </select>
+                </div>
+            </div>
+            <div class="ynj-classes-grid" id="browse-list" style="margin-top:14px;">
+                <p class="ynj-text-muted" style="padding:20px;text-align:center;">Loading classes...</p>
+            </div>
+        </main>
+        <?php self::render_bottom_nav( 'services' ); ?>
+        <script>
+        (function(){
+            const API = '/wp-json/ynj/v1';
+            let userLat = null, userLng = null;
+            if ('geolocation' in navigator) navigator.geolocation.getCurrentPosition(p => { userLat=p.coords.latitude; userLng=p.coords.longitude; }, ()=>{}, {timeout:5000});
+            // Also try saved postcode
+            const pc = localStorage.getItem('ynj_user_postcode');
+            if (pc && !userLat) {
+                fetch(`https://api.postcodes.io/postcodes/${pc.replace(/\s/g,'')}`).then(r=>r.json()).then(d=>{
+                    if(d.result){userLat=d.result.latitude;userLng=d.result.longitude;}
+                }).catch(()=>{});
+            }
+
+            const catIcons = {Quran:'📖',Arabic:'📚',Tajweed:'🎙️','Islamic Studies':'🕌',Business:'💼',SEO:'🔍',Marketing:'📱',Finance:'💰',Health:'🏥',Fitness:'💪',Cooking:'🍳',Youth:'👦',Sisters:'👩'};
+
+            let debounce;
+            window.searchClasses = function() {
+                clearTimeout(debounce);
+                debounce = setTimeout(doSearch, 300);
+            };
+
+            function doSearch() {
+                const q = document.getElementById('cls-q').value.trim();
+                const cat = document.getElementById('cls-cat').value;
+                const loc = document.getElementById('cls-loc').value;
+                const params = new URLSearchParams();
+                if (q) params.set('q', q);
+                if (cat) params.set('category', cat);
+                if (loc === 'online') params.set('online', '1');
+                else if (loc && userLat) { params.set('lat', userLat); params.set('lng', userLng); params.set('radius_km', parseInt(loc)*1.609); }
+                else if (userLat) { params.set('lat', userLat); params.set('lng', userLng); }
+
+                const el = document.getElementById('browse-list');
+                el.innerHTML = '<p class="ynj-text-muted" style="padding:20px;text-align:center;">Searching...</p>';
+
+                fetch(`${API}/classes/browse?${params}`).then(r=>r.json()).then(data => {
+                    const classes = data.classes || [];
+                    if (!classes.length) { el.innerHTML = '<p class="ynj-text-muted" style="padding:20px;text-align:center;">No classes found. Try different filters.</p>'; return; }
+                    el.innerHTML = classes.map(c => {
+                        const icon = catIcons[c.category] || '📚';
+                        const price = c.price_pence > 0 ? '£' + (c.price_pence/100).toFixed(0) : 'Free';
+                        const priceLabel = c.price_type === 'per_session' ? '/session' : (c.price_type === 'monthly' ? '/month' : '');
+                        const time = c.start_time ? String(c.start_time).replace(/:\d{2}$/,'') : '';
+                        const dist = c.distance_km != null && c.distance_km < 9000 ? (c.distance_km < 1.6 ? (c.distance_km*0.621).toFixed(1)+'mi' : Math.round(c.distance_km*0.621)+'mi') : '';
+                        return `<div class="ynj-class-card">
+                            <div class="ynj-class-card__header"><div><span class="ynj-badge">${icon} ${c.category||'Class'}</span><h3 style="font-size:16px;font-weight:700;margin:6px 0 2px;">${c.title}</h3></div><div class="ynj-class-card__price">${price}<small>${priceLabel}</small></div></div>
+                            ${c.instructor_name ? `<div class="ynj-class-card__instructor">👤 ${c.instructor_name}</div>` : ''}
+                            <div class="ynj-class-card__instructor">🕌 ${c.mosque_name||''}${dist ? ' · '+dist : ''}</div>
+                            <p style="font-size:13px;color:#555;margin-bottom:8px;">${(c.description||'').slice(0,80)}...</p>
+                            <div class="ynj-class-card__schedule">
+                                ${c.day_of_week ? `<span>📅 ${c.day_of_week}s</span>` : ''}
+                                ${time ? `<span>🕐 ${time}</span>` : ''}
+                                ${c.is_online ? '<span>🌐 Online</span>' : ''}
+                            </div>
+                            <a href="/mosque/${c.mosque_slug||''}/classes" class="ynj-btn ynj-btn--outline" style="width:100%;justify-content:center;">View & Book</a>
+                        </div>`;
+                    }).join('');
+                });
+            }
+
+            setTimeout(doSearch, 500); // initial load
+        })();
+        </script>
+        </body></html>
+        <?php
+        exit;
+    }
+
+    /* ================================================================== */
     /*  PAGE: Live Events                                                 */
     /* ================================================================== */
 
@@ -3422,9 +3666,10 @@ document.addEventListener('DOMContentLoaded', function() {
     var path = location.pathname;
     var links = [
         ['/', 'Home'], ['/live', '🔴 Live'],
+        ['/mosque/'+slug+'/classes', '🎓 Classes'], ['/classes', 'Browse Classes'],
         ['/mosque/'+slug+'/fundraising', 'Fundraise'],
         ['/mosque/'+slug+'/sponsors', 'Sponsors'], ['/mosque/'+slug+'/services', 'Services'],
-        ['/mosque/'+slug+'/rooms', 'Rooms'], ['/profile', 'My Account']
+        ['/profile', 'Account']
     ];
     nav.innerHTML = links.map(function(l) {
         var active = (l[0] === '/' && path === '/') || (l[0] !== '/' && path.indexOf(l[0]) === 0);

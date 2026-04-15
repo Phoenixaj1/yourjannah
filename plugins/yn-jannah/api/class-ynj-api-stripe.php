@@ -145,6 +145,20 @@ class YNJ_API_Stripe {
                 error_log( "[YNJ Webhook] Event booking #$item_id confirmed." );
                 break;
 
+            case 'class_enrolment':
+                $et = YNJ_DB::table( 'enrolments' );
+                $wpdb->update( $et, [ 'status' => 'confirmed' ], [ 'id' => $item_id ] );
+                // Increment enrolled_count
+                $enrol = $wpdb->get_row( $wpdb->prepare( "SELECT class_id FROM $et WHERE id = %d", $item_id ) );
+                if ( $enrol ) {
+                    $wpdb->query( $wpdb->prepare(
+                        "UPDATE " . YNJ_DB::table( 'classes' ) . " SET enrolled_count = enrolled_count + 1 WHERE id = %d",
+                        $enrol->class_id
+                    ) );
+                }
+                error_log( "[YNJ Webhook] Class enrolment #$item_id confirmed." );
+                break;
+
             case 'event_donation':
                 $table = YNJ_DB::table( 'events' );
                 $amount = (int) ( $session->amount_total ?? 0 );

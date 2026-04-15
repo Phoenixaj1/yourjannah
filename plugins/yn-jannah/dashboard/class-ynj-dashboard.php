@@ -124,6 +124,7 @@ function shell(content) {
         { path: '/rooms', icon: '\ud83c\udfe0', label: 'Rooms' },
         { path: '/enquiries', icon: '\u2709\ufe0f', label: 'Enquiries' },
         { path: '/subscribers', icon: '\ud83d\udc65', label: 'Subscribers' },
+        { path: '/classes', icon: '\ud83c\udf93', label: 'Classes' },
         { path: '/campaigns', icon: '\u2764\ufe0f', label: 'Fundraising' },
         { path: '/settings', icon: '\u2699\ufe0f', label: 'Settings' },
     ];
@@ -169,6 +170,9 @@ function route() {
         '/rooms': renderRooms,
         '/enquiries': renderEnquiries,
         '/subscribers': renderSubscribers,
+        '/classes': renderClasses,
+        '/classes/new': renderClassForm,
+        '/enrolments': renderEnrolments,
         '/campaigns': renderCampaigns,
         '/campaigns/new': renderCampaignForm,
         '/settings': renderSettings,
@@ -476,6 +480,72 @@ function exportCSV(){
     rows.forEach(function(r){var cols=[];r.querySelectorAll('th,td').forEach(function(c){cols.push('"'+c.textContent.replace(/"/g,'""')+'"');});csv.push(cols.join(','));});
     var blob=new Blob([csv.join('\n')],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='subscribers.csv';a.click();
 }
+// ── Classes ──
+async function renderClasses() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Classes</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/classes');
+    var list = res.classes || [];
+    var rows = list.map(function(c) {
+        var price = c.price_pence > 0 ? '£'+(c.price_pence/100) : 'Free';
+        var pt = c.price_type === 'per_session' ? '/session' : (c.price_type === 'monthly' ? '/mo' : '');
+        var online = c.is_online ? '<span class="d-badge d-badge--blue">Online</span>' : '';
+        return '<tr><td><strong>'+esc(c.title)+'</strong> '+online+'</td><td>'+esc(c.category)+'</td><td>'+esc(c.instructor_name||'—')+'</td><td>'+price+pt+'</td><td>'+c.enrolled_count+'/'+(c.max_capacity||'∞')+'</td><td>'+esc(c.schedule_text||c.day_of_week||'—')+'</td><td><button class="d-btn d-btn--danger d-btn--sm" onclick="deleteClass('+c.id+')">Del</button></td></tr>';
+    }).join('');
+    render(shell(
+        '<div class="d-header"><h1>Classes & Courses</h1><div style="display:flex;gap:8px"><button class="d-btn d-btn--primary d-btn--sm" onclick="navigate(\'/classes/new\')">+ New Class</button><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/enrolments\')">Enrolments</button></div></div>' +
+        '<div class="d-card">' +
+        (rows ? '<table class="d-table"><thead><tr><th>Class</th><th>Category</th><th>Instructor</th><th>Price</th><th>Enrolled</th><th>Schedule</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<p style="color:var(--text-dim)">No classes yet.</p>') +
+        '</div>'
+    ));
+}
+async function renderClassForm() {
+    if (!mosque) await loadMosque();
+    render(shell(
+        '<div class="d-header"><h1>New Class</h1></div><div class="d-card">' +
+        '<div class="d-field"><label>Title</label><input id="cl_title" placeholder="e.g. Tajweed for Beginners"></div>' +
+        '<div class="d-field"><label>Description</label><textarea id="cl_desc" rows="3"></textarea></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Category</label><select id="cl_cat"><option>Quran</option><option>Arabic</option><option>Tajweed</option><option>Islamic Studies</option><option>Fiqh</option><option>Seerah</option><option>Business</option><option>SEO</option><option>Marketing</option><option>Finance</option><option>Health</option><option>Fitness</option><option>Cooking</option><option>Parenting</option><option>Youth</option><option>Sisters</option></select></div><div class="d-field"><label>Instructor</label><input id="cl_instructor" placeholder="Sheikh Ahmad"></div><div class="d-field"><label>Type</label><select id="cl_type"><option value="course">Course</option><option value="workshop">Workshop</option><option value="drop_in">Drop-in</option><option value="seminar">Seminar</option></select></div></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Day</label><select id="cl_day"><option value="">Any</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option></select></div><div class="d-field"><label>Start Time</label><input type="time" id="cl_start"></div><div class="d-field"><label>End Time</label><input type="time" id="cl_end"></div></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Start Date</label><input type="date" id="cl_sdate"></div><div class="d-field"><label>Sessions</label><input type="number" id="cl_sessions" value="1"></div><div class="d-field"><label>Capacity (0=unlimited)</label><input type="number" id="cl_cap" value="0"></div></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Price (pence, 0=free)</label><input type="number" id="cl_price" value="0"></div><div class="d-field"><label>Price Type</label><select id="cl_ptype"><option value="one_off">One-off / Full course</option><option value="per_session">Per session</option><option value="monthly">Monthly</option></select></div><div class="d-field"><label>Online?</label><select id="cl_online"><option value="0">In Person</option><option value="1">Online</option></select></div></div>' +
+        '<div class="d-grid d-grid-2"><div class="d-field"><label>Location</label><input id="cl_location" placeholder="Main Hall / Online"></div><div class="d-field"><label>Live URL (if online)</label><input id="cl_url" placeholder="https://zoom.us/..."></div></div>' +
+        '<div style="display:flex;gap:8px;margin-top:16px"><button class="d-btn d-btn--primary" id="cl-save" onclick="saveClass()"><span class="btn-text">Create Class</span><span class="spinner"></span></button><button class="d-btn d-btn--secondary" onclick="navigate(\'/classes\')">Cancel</button></div></div>'
+    ));
+}
+async function saveClass() {
+    btn('#cl-save',true);
+    var res = await api('admin/classes',{method:'POST',body:{
+        title:$('#cl_title').value, description:$('#cl_desc').value,
+        category:$('#cl_cat').value, instructor_name:$('#cl_instructor').value,
+        class_type:$('#cl_type').value, day_of_week:$('#cl_day').value,
+        start_time:($('#cl_start').value||'')+':00', end_time:($('#cl_end').value||'')+':00',
+        start_date:$('#cl_sdate').value, total_sessions:parseInt($('#cl_sessions').value),
+        max_capacity:parseInt($('#cl_cap').value), price_pence:parseInt($('#cl_price').value),
+        price_type:$('#cl_ptype').value, is_online:parseInt($('#cl_online').value),
+        location:$('#cl_location').value, live_url:$('#cl_url').value
+    }});
+    btn('#cl-save',false);
+    if(res.ok){toast('Class created!');navigate('/classes');}else toast(res.error||'Failed.','error');
+}
+async function deleteClass(id){if(!confirm('Delete?'))return;await api('admin/classes/'+id,{method:'DELETE'});toast('Deleted.');renderClasses();}
+async function renderEnrolments() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Enrolments</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/enrolments');
+    var list = res.enrolments || [];
+    var rows = list.map(function(e) {
+        var badge = e.status==='confirmed'?'green':(e.status==='pending'?'yellow':'gray');
+        var paid = e.amount_paid_pence > 0 ? '£'+(e.amount_paid_pence/100) : 'Free';
+        return '<tr><td><strong>'+esc(e.user_name)+'</strong><br><span style="font-size:11px;color:var(--text-dim)">'+esc(e.user_email)+'</span></td><td>'+esc(e.class_title)+'</td><td>'+paid+'</td><td><span class="d-badge d-badge--'+badge+'">'+esc(e.status)+'</span></td><td>'+fmtDate(e.enrolled_at)+'</td></tr>';
+    }).join('');
+    render(shell(
+        '<div class="d-header"><h1>Enrolments</h1><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/classes\')">← Back to Classes</button></div>' +
+        '<div class="d-card"><table class="d-table"><thead><tr><th>Student</th><th>Class</th><th>Paid</th><th>Status</th><th>Date</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" style="color:var(--text-dim)">No enrolments.</td></tr>')+'</tbody></table></div>'
+    ));
+}
+
 // ── Fundraising Campaigns ──
 async function renderCampaigns() {
     if (!mosque) await loadMosque();

@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '1.4.0';
+    const SCHEMA_VERSION = '1.5.0';
 
     /**
      * Return the full table name for a given short name.
@@ -325,7 +325,60 @@ class YNJ_DB {
             KEY service_type (service_type)
         ) $charset_collate;";
 
-        // 12. Fundraising Campaigns
+        // 12. Classes
+        $tables[] = "CREATE TABLE {$t('classes')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            title varchar(255) NOT NULL DEFAULT '',
+            description text NOT NULL,
+            instructor_name varchar(255) NOT NULL DEFAULT '',
+            instructor_bio text NOT NULL,
+            category varchar(50) NOT NULL DEFAULT '',
+            class_type varchar(20) NOT NULL DEFAULT 'course',
+            schedule_text varchar(500) NOT NULL DEFAULT '',
+            start_date date DEFAULT NULL,
+            end_date date DEFAULT NULL,
+            day_of_week varchar(20) NOT NULL DEFAULT '',
+            start_time time DEFAULT NULL,
+            end_time time DEFAULT NULL,
+            total_sessions int(11) NOT NULL DEFAULT 1,
+            is_online tinyint(1) NOT NULL DEFAULT 0,
+            live_url varchar(500) NOT NULL DEFAULT '',
+            location varchar(255) NOT NULL DEFAULT '',
+            max_capacity int(11) NOT NULL DEFAULT 0,
+            enrolled_count int(11) NOT NULL DEFAULT 0,
+            price_pence int(11) NOT NULL DEFAULT 0,
+            price_type varchar(20) NOT NULL DEFAULT 'one_off',
+            image_url varchar(500) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'active',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY category (category),
+            KEY is_online (is_online)
+        ) $charset_collate;";
+
+        // 12b. Class Enrolments
+        $tables[] = "CREATE TABLE {$t('enrolments')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            class_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_name varchar(255) NOT NULL DEFAULT '',
+            user_email varchar(255) NOT NULL DEFAULT '',
+            user_phone varchar(50) NOT NULL DEFAULT '',
+            amount_paid_pence int(11) NOT NULL DEFAULT 0,
+            stripe_session_id varchar(255) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            enrolled_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY class_id (class_id),
+            KEY mosque_id (mosque_id),
+            KEY user_email (user_email),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 13. Fundraising Campaigns
         $tables[] = "CREATE TABLE {$t('campaigns')} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
@@ -433,6 +486,8 @@ class YNJ_DB {
             'enquiries',
             'businesses',
             'services',
+            'classes',
+            'enrolments',
             'campaigns',
             'users',
             'subscribers',

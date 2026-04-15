@@ -72,6 +72,7 @@ class YNJ_Router {
             '#^/mosque/([a-z0-9-]+)/fundraising/?$#'    => 'render_fundraising',
             '#^/mosque/([a-z0-9-]+)/sponsors/?$#'       => 'render_sponsors',
             '#^/mosque/([a-z0-9-]+)/sponsors/join/?$#'  => 'render_sponsor_signup',
+            '#^/mosque/([a-z0-9-]+)/classes/?$#'         => 'render_classes',
             '#^/mosque/([a-z0-9-]+)/rooms/?$#'          => 'render_rooms',
             '#^/mosque/([a-z0-9-]+)/contact/?$#'        => 'render_contact',
             '#^/mosque/([a-z0-9-]+)/donate/?$#'         => 'render_donate',
@@ -85,6 +86,13 @@ class YNJ_Router {
                 YNJ_Renderer::$method( $slug );
                 exit;
             }
+        }
+
+        // ---- Classes browse ----
+
+        if ( '/classes' === $path ) {
+            YNJ_Renderer::render_classes_browse();
+            exit;
         }
 
         // ---- Live events ----
