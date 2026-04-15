@@ -2955,16 +2955,16 @@ img,svg{display:block;max-width:100%;}
                 'href'  => '/',
                 'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M9 21V9h6v12"/></svg>',
             ],
-            'services' => [
-                'label' => 'Services',
-                'href'  => '/mosque/{slug}/services',
-                'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a4 4 0 00-8 0v2"/></svg>',
-                'mosque' => true,
-            ],
             'sponsors' => [
                 'label' => 'Sponsors',
                 'href'  => '/mosque/{slug}/sponsors',
                 'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+                'mosque' => true,
+            ],
+            'services' => [
+                'label' => 'Services',
+                'href'  => '/mosque/{slug}/services',
+                'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a4 4 0 00-8 0v2"/></svg>',
                 'mosque' => true,
             ],
             'more' => [
