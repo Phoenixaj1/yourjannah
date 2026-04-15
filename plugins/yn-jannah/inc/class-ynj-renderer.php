@@ -4433,7 +4433,7 @@ img,svg{display:block;max-width:100%;}
     padding:0 16px;padding-top:env(safe-area-inset-top,0);
 }
 .ynj-header__inner{max-width:500px;margin:0 auto;display:flex;align-items:center;gap:14px;min-height:72px;}
-.ynj-logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:19px;white-space:nowrap;text-decoration:none;color:#fff;}
+.ynj-logo{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;white-space:nowrap;text-decoration:none;color:#fff;letter-spacing:.3px;}
 .ynj-header__nav{display:none;}
 .ynj-back{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;transition:background .15s;}
 .ynj-back:active{background:rgba(255,255,255,.15);}
