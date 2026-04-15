@@ -253,6 +253,37 @@ class YNJ_Renderer {
                         mosqueData = m;
                         document.getElementById('mosque-name').textContent = m.name || slug;
 
+                        // Always show navigate if we have mosque coords
+                        if (m.latitude && m.longitude) {
+                            mosqueLat = m.latitude; mosqueLng = m.longitude;
+                            document.getElementById('nav-buttons').style.display = '';
+                            document.getElementById('navigate-walk').href =
+                                `https://www.google.com/maps/dir/?api=1&destination=${m.latitude},${m.longitude}&travelmode=walking`;
+                            document.getElementById('navigate-drive').href =
+                                `https://www.google.com/maps/dir/?api=1&destination=${m.latitude},${m.longitude}&travelmode=driving`;
+
+                            // Show leave-by with default travel time if user hasn't set one
+                            if (!travelMinutes) {
+                                // Check if user has saved preference
+                                try {
+                                    const savedUser = JSON.parse(localStorage.getItem('ynj_user') || '{}');
+                                    travelMinutes = savedUser.travel_minutes || 15; // default 15 min
+                                } catch(e) { travelMinutes = 15; }
+                            }
+                            document.getElementById('hero-travel').style.display = '';
+
+                            // Show distance if we have user coords
+                            if (userLat) {
+                                const km = haversine(userLat, userLng, m.latitude, m.longitude);
+                                const distText = km < 1 ? `${Math.round(km*1000)}m` : `${km.toFixed(1)}km`;
+                                document.getElementById('travel-dist').textContent = `${distText} · ~${Math.round(km*12)} min walk`;
+                                travelMinutes = Math.max(1, Math.round(km * 12));
+                            } else {
+                                document.getElementById('travel-dist').textContent = `~${travelMinutes} min (est.)`;
+                            }
+                            updateLeaveBy();
+                        }
+
                         if (m.prayer_times && !m.prayer_times.error) {
                             // Store jamat times separately
                             ['fajr_jamat','dhuhr_jamat','asr_jamat','maghrib_jamat','isha_jamat'].forEach(k => {
