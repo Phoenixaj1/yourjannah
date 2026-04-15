@@ -590,7 +590,7 @@ class YNJ_API_Admin {
 
         $update = [];
         if ( isset( $data['status'] ) ) {
-            $allowed_statuses = [ 'new', 'read', 'replied', 'archived' ];
+            $allowed_statuses = [ 'new', 'read', 'replied', 'resolved', 'archived' ];
             $new_status = sanitize_text_field( $data['status'] );
             if ( ! in_array( $new_status, $allowed_statuses, true ) ) {
                 return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Invalid status.' ], 400 );

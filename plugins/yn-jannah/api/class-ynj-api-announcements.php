@@ -31,6 +31,13 @@ class YNJ_API_Announcements {
             'permission_callback' => '__return_true',
         ]);
 
+        // GET /admin/announcements — all announcements including drafts
+        register_rest_route( self::NS, '/admin/announcements', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'list_admin' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
+        ]);
+
         // POST /admin/announcements
         register_rest_route( self::NS, '/admin/announcements', [
             'methods'             => 'POST',
@@ -60,6 +67,31 @@ class YNJ_API_Announcements {
 
     // ================================================================
     // HANDLERS
+
+    /**
+     * GET /admin/announcements — All announcements for this mosque, including drafts.
+     */
+    public static function list_admin( \WP_REST_Request $request ) {
+        $mosque = $request->get_param( '_ynj_mosque' );
+        global $wpdb;
+        $table = YNJ_DB::table( 'announcements' );
+        $results = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM $table WHERE mosque_id = %d ORDER BY pinned DESC, published_at DESC LIMIT 200",
+            (int) $mosque->id
+        ) );
+        $announcements = array_map( function( $row ) {
+            return [
+                'id'           => (int) $row->id,
+                'title'        => $row->title,
+                'body'         => $row->body,
+                'pinned'       => (bool) $row->pinned,
+                'status'       => $row->status,
+                'published_at' => $row->published_at,
+                'expires_at'   => $row->expires_at ?? null,
+            ];
+        }, $results ?: [] );
+        return new \WP_REST_Response( [ 'ok' => true, 'announcements' => $announcements ] );
+    }
     // ================================================================
 
     /**

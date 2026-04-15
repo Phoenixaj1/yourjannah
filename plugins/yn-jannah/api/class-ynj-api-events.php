@@ -52,6 +52,13 @@ class YNJ_API_Events {
             'permission_callback' => '__return_true',
         ]);
 
+        // GET /admin/events — all events including drafts
+        register_rest_route( self::NS, '/admin/events', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'list_admin' ],
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
+        ]);
+
         // POST /admin/events
         register_rest_route( self::NS, '/admin/events', [
             'methods'             => 'POST',
@@ -84,6 +91,23 @@ class YNJ_API_Events {
     // ================================================================
     // HANDLERS
     // ================================================================
+
+    /**
+     * GET /admin/events — All events for this mosque, including drafts.
+     */
+    public static function list_admin( \WP_REST_Request $request ) {
+        $mosque = $request->get_param( '_ynj_mosque' );
+        global $wpdb;
+        $table = YNJ_DB::table( 'events' );
+        $results = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM $table WHERE mosque_id = %d ORDER BY event_date DESC, start_time ASC LIMIT 200",
+            (int) $mosque->id
+        ) );
+        return new \WP_REST_Response( [
+            'ok'     => true,
+            'events' => array_map( [ __CLASS__, 'format' ], $results ?: [] ),
+        ] );
+    }
 
     /**
      * POST /events/{id}/donate — Create Stripe checkout for event donation.

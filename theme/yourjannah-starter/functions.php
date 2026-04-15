@@ -229,6 +229,13 @@ add_action( 'init', function() {
         'top'
     );
 
+    // Sponsor join: /mosque/{slug}/sponsors/join
+    add_rewrite_rule(
+        '^mosque/([^/]+)/sponsors/join/?$',
+        'index.php?ynj_mosque_slug=$matches[1]&ynj_page_type=sponsor_join',
+        'top'
+    );
+
     // Mosque profile: /mosque/{slug}
     add_rewrite_rule(
         '^mosque/([^/]+)/?$',
@@ -280,6 +287,7 @@ add_filter( 'template_include', function( $template ) {
         'donate'          => 'page-templates/page-donate.php',
         'directory'       => 'page-templates/page-directory.php',
         'event_detail'    => 'page-templates/page-event-detail.php',
+        'sponsor_join'    => 'page-templates/page-sponsor-join.php',
         'live'            => 'page-templates/page-live.php',
         'login'           => 'page-templates/page-login.php',
         'register'        => 'page-templates/page-register.php',
