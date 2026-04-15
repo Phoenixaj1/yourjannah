@@ -440,21 +440,32 @@
                 }
                 const mosqueTag = item.mosque_name ? `<div class="ynj-feed-card__mosque">🕌 ${item.mosque_name}</div>` : '';
 
-                // Calendar date strip
+                // Icon strip: big emoji + date
                 let dateStrip = '';
+                // Get the category emoji
+                let stripEmoji = '📅';
+                if (item.type === 'live') stripEmoji = '🔴';
+                else if (item.type === 'class') stripEmoji = '🎓';
+                else if (item.type === 'announcement') stripEmoji = item.pinned ? '📌' : '📢';
+                else if (item.type === 'event') {
+                    const et = (item.event_type||'').toLowerCase();
+                    const cfg = typeConfig[et];
+                    if (cfg) stripEmoji = cfg.icon;
+                }
+
                 const dateStr = item.date || item.start_date || '';
                 if (dateStr && item.type !== 'announcement') {
                     const d = new Date(dateStr + 'T00:00:00');
                     const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
                     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
                     dateStrip = `<div class="ynj-feed-card__date">
-                        <span class="ynj-feed-card__date-day">${days[d.getDay()]}</span>
+                        <span class="ynj-feed-card__date-emoji">${stripEmoji}</span>
                         <span class="ynj-feed-card__date-num">${d.getDate()}</span>
-                        <span class="ynj-feed-card__date-month">${months[d.getMonth()]}</span>
+                        <span class="ynj-feed-card__date-month">${days[d.getDay()]} ${months[d.getMonth()]}</span>
                     </div>`;
-                } else if (item.type === 'announcement') {
-                    dateStrip = `<div class="ynj-feed-card__date" style="background:${item.pinned ? '#dcfce7' : '#e8f4f8'};">
-                        <span style="font-size:18px;">${item.pinned ? '📌' : '📢'}</span>
+                } else {
+                    dateStrip = `<div class="ynj-feed-card__date">
+                        <span class="ynj-feed-card__date-emoji">${stripEmoji}</span>
                     </div>`;
                 }
 
