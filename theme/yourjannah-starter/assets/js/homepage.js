@@ -265,7 +265,9 @@
                 prayerTimes = {};
                 ['fajr','sunrise','dhuhr','asr','maghrib','isha'].forEach(p => {
                     if (times[p]) {
-                        prayerTimes[p] = String(times[p]).replace(/:\d{2}$/,'').replace(/\s*\(.*\)/,'');
+                        // Strip timezone suffix first, then strip seconds only (keep HH:MM)
+                        var raw = String(times[p]).replace(/\s*\(.*\)/,'');
+                        prayerTimes[p] = raw.replace(/^(\d{1,2}:\d{2}):\d{2}$/, '$1');
                     }
                 });
                 updateCountdown();
