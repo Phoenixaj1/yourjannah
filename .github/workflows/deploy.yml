@@ -45,6 +45,17 @@ jobs:
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'SSH OK'"
 
+      - name: Install Stripe SDK
+        run: |
+          cd plugins/yn-jannah
+          cat > composer.json << 'COMPOSEREOF'
+          {
+            "name": "yourjannah/yn-jannah",
+            "require": { "stripe/stripe-php": "^15.0" }
+          }
+          COMPOSEREOF
+          composer install --no-dev --no-interaction --optimize-autoloader 2>/dev/null || true
+
       - name: Deploy yn-jannah plugin
         run: |
           echo "📦 Deploying yn-jannah plugin..."
@@ -52,6 +63,8 @@ jobs:
             --exclude='.git' \
             --exclude='.DS_Store' \
             --exclude='node_modules' \
+            --exclude='seed-*.php' \
+            --exclude='data-mosques.tsv' \
             -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
             ./plugins/yn-jannah/ \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.WP_PATH }}/wp-content/plugins/yn-jannah/
