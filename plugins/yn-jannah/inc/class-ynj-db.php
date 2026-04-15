@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '2.0.0';
+    const SCHEMA_VERSION = '2.1.0';
 
     /**
      * Return the full table name for a given short name.
@@ -574,7 +574,49 @@ class YNJ_DB {
             KEY stripe_subscription_id (stripe_subscription_id)
         ) $charset_collate;";
 
-        // 15a. User Subscriptions (multi-mosque + notification preferences)
+        // 15. Masjid Services (mosque-offered bookable services: nikkah, funeral, etc.)
+        $tables[] = "CREATE TABLE {$t('masjid_services')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            title varchar(255) NOT NULL DEFAULT '',
+            category varchar(50) NOT NULL DEFAULT 'general',
+            description text NOT NULL,
+            price_pence int(11) NOT NULL DEFAULT 0,
+            price_label varchar(100) NOT NULL DEFAULT '',
+            contact_phone varchar(50) NOT NULL DEFAULT '',
+            contact_email varchar(255) NOT NULL DEFAULT '',
+            availability varchar(500) NOT NULL DEFAULT '',
+            requires_approval tinyint(1) NOT NULL DEFAULT 1,
+            image_url varchar(500) NOT NULL DEFAULT '',
+            sort_order int(11) NOT NULL DEFAULT 0,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY category (category),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 15b. Masjid Service Enquiries (booking requests for masjid services)
+        $tables[] = "CREATE TABLE {$t('masjid_service_enquiries')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            service_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_name varchar(255) NOT NULL DEFAULT '',
+            user_email varchar(255) NOT NULL DEFAULT '',
+            user_phone varchar(50) NOT NULL DEFAULT '',
+            preferred_date date DEFAULT NULL,
+            message text NOT NULL,
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            admin_notes text NOT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY service_id (service_id),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 15c. User Subscriptions (multi-mosque + notification preferences)
         $tables[] = "CREATE TABLE {$t('user_subscriptions')} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             user_id bigint(20) unsigned NOT NULL DEFAULT 0,
@@ -662,6 +704,8 @@ class YNJ_DB {
             'madrassah_fees',
             'madrassah_reports',
             'patrons',
+            'masjid_services',
+            'masjid_service_enquiries',
             'user_subscriptions',
             'users',
             'subscribers',

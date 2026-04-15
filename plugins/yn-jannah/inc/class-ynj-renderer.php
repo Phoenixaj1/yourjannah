@@ -1856,7 +1856,7 @@ class YNJ_Renderer {
 
             <div id="sp-local-panel">
                 <!-- Your Mosque Sponsors -->
-                <div id="local-biz-list"><p class="ynj-text-muted">Loading&hellip;</p></div>
+                <div id="local-biz-list" class="ynj-sponsors-grid"><p class="ynj-text-muted">Loading&hellip;</p></div>
             </div>
 
             <div id="sp-nearby-panel" style="display:none;">
@@ -2647,9 +2647,21 @@ class YNJ_Renderer {
                 </section>
             <?php else : ?>
             <h2 id="bk-title" style="font-size:18px;font-weight:700;margin-bottom:4px;">Booking</h2>
-            <p class="ynj-text-muted" style="margin-bottom:14px;">Book rooms and masjid services — all bookings require masjid approval</p>
+            <p class="ynj-text-muted" style="margin-bottom:14px;">Book masjid services and rooms — all bookings require masjid approval</p>
 
-            <div id="rooms-list"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading...</p></div>
+            <div class="ynj-book-tabs">
+                <button class="ynj-book-tab ynj-book-tab--active" id="tab-msvc" onclick="switchBookTab('msvc')">🕌 Masjid Services</button>
+                <button class="ynj-book-tab" id="tab-rooms" onclick="switchBookTab('rooms')">🏠 Rooms</button>
+            </div>
+
+            <div id="msvc-panel">
+                <div id="msvc-list" style="display:grid;grid-template-columns:1fr;gap:14px;"><p class="ynj-text-muted" style="text-align:center;padding:20px;grid-column:1/-1;">Loading masjid services...</p></div>
+            </div>
+
+            <div id="rooms-panel" style="display:none;">
+                <div id="rooms-list" style="display:grid;grid-template-columns:1fr;gap:14px;"><p class="ynj-text-muted" style="text-align:center;padding:20px;grid-column:1/-1;">Loading rooms...</p></div>
+            </div>
+            <style>@media(min-width:700px){#rooms-list,#msvc-list{grid-template-columns:1fr 1fr !important;}}</style>
 
             <!-- Room Booking Modal -->
             <div class="ynj-modal" id="booking-modal" style="display:none;">
@@ -2682,6 +2694,28 @@ class YNJ_Renderer {
                     <p class="ynj-text-muted" id="modal-error" style="margin-top:8px;color:#dc2626;"></p>
                 </div>
             </div>
+
+            <!-- Service Enquiry Modal -->
+            <div class="ynj-modal" id="svc-enquiry-modal" style="display:none;">
+                <div class="ynj-modal__content">
+                    <h3 id="svc-modal-title" style="margin-bottom:12px;">Enquire</h3>
+                    <form id="svc-enquiry-form" class="ynj-form">
+                        <input type="hidden" name="service_id" id="svc-modal-id">
+                        <div class="ynj-field"><label>Your Name *</label><input type="text" name="name" required></div>
+                        <div class="ynj-field-row">
+                            <div class="ynj-field"><label>Email *</label><input type="email" name="email" required></div>
+                            <div class="ynj-field"><label>Phone</label><input type="tel" name="phone"></div>
+                        </div>
+                        <div class="ynj-field"><label>Preferred Date</label><input type="date" name="preferred_date" min="<?php echo date('Y-m-d'); ?>"></div>
+                        <div class="ynj-field"><label>Message / Details</label><textarea name="message" rows="3" placeholder="Any specific requirements or questions?"></textarea></div>
+                    </form>
+                    <div style="display:flex;gap:8px;">
+                        <button class="ynj-book-btn" id="svc-modal-submit" type="button" style="flex:1;justify-content:center;">Send Enquiry</button>
+                        <button class="ynj-book-btn ynj-book-btn--outline" type="button" onclick="document.getElementById('svc-enquiry-modal').style.display='none'">Cancel</button>
+                    </div>
+                    <p class="ynj-text-muted" id="svc-modal-error" style="margin-top:8px;color:#dc2626;"></p>
+                </div>
+            </div>
             <?php endif; ?>
         </main>
         <?php self::render_bottom_nav( 'more', $slug ); ?>
@@ -2695,7 +2729,41 @@ class YNJ_Renderer {
                 el.href = el.dataset.navMosque.replace('{slug}', slug);
             });
 
-            // Load mosque info + rooms
+            var svcIcons = {nikkah:'\ud83d\udc8d',funeral:'\ud83d\udd4a\ufe0f',counselling:'\ud83e\udd1d',quran:'\ud83d\udcd6',revert:'\ud83d\udd4c',ruqyah:'\ud83e\udd32',aqiqah:'\ud83d\udc11',walima:'\ud83c\udf7d\ufe0f',hire:'\ud83c\udfe0',imam:'\ud83d\udd4c',certificate:'\ud83d\udcdc',circumcision:'\ud83c\udfe5',general:'\ud83d\udd4c'};
+
+            window.switchBookTab = function(tab) {
+                document.getElementById('tab-msvc').classList.toggle('ynj-book-tab--active', tab === 'msvc');
+                document.getElementById('tab-rooms').classList.toggle('ynj-book-tab--active', tab === 'rooms');
+                document.getElementById('msvc-panel').style.display = tab === 'msvc' ? '' : 'none';
+                document.getElementById('rooms-panel').style.display = tab === 'rooms' ? '' : 'none';
+            };
+
+            function renderMasjidServices(services) {
+                var el = document.getElementById('msvc-list');
+                if (!services.length) {
+                    el.innerHTML = '<div style="text-align:center;padding:30px 20px;grid-column:1/-1;"><div style="font-size:40px;margin-bottom:8px;">\ud83d\udd4c</div><h3 style="font-size:15px;">No Services Listed Yet</h3><p class="ynj-text-muted">This mosque hasn\'t added their bookable services yet.</p></div>';
+                    return;
+                }
+                el.innerHTML = services.map(function(s) {
+                    var icon = svcIcons[s.category] || '\ud83d\udd4c';
+                    var price = s.price_pence > 0 ? '\u00a3'+(s.price_pence/100).toFixed(0) : (s.price_label || 'Free / Contact');
+                    return '<div class="ynj-room-card">' +
+                        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
+                        '<div style="width:44px;height:44px;border-radius:12px;background:#e8f4f8;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">' + icon + '</div>' +
+                        '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#00ADEF;margin-bottom:2px;">' + (s.category||'service').replace(/_/g,' ') + '</div>' +
+                        '<h3 style="font-size:15px;font-weight:700;margin:0;">' + s.title + '</h3></div></div>' +
+                        (s.description ? '<p class="ynj-text-muted" style="margin:6px 0;line-height:1.4;font-size:13px;">' + s.description + '</p>' : '') +
+                        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;">' +
+                        '<span class="ynj-room-badge ynj-room-badge--price">' + price + '</span>' +
+                        (s.availability ? '<span style="font-size:12px;color:#6b8fa3;background:#f0f4f8;padding:3px 10px;border-radius:6px;">\ud83d\udcc5 ' + s.availability + '</span>' : '') +
+                        (s.requires_approval ? '<span style="font-size:11px;color:#92400e;background:#fef3c7;padding:2px 8px;border-radius:6px;">\u23f3 Requires approval</span>' : '') +
+                        '</div>' +
+                        '<button class="ynj-book-btn" onclick="enquireMasjidSvc('+s.id+',\''+s.title.replace(/'/g,"\\'")+'\')">\ud83d\udcdd Enquire / Book</button>' +
+                        '</div>';
+                }).join('');
+            }
+
+            // Load mosque info + services + rooms
             fetch('/wp-json/ynj/v1/mosques/' + slug)
                 .then(r => r.json())
                 .then(resp => {
@@ -2703,11 +2771,17 @@ class YNJ_Renderer {
                     mosqueId = m.id;
                     document.getElementById('bk-title').textContent = (m.name || 'Mosque') + ' Booking';
 
+                    // Load masjid services
+                    fetch('/wp-json/ynj/v1/mosques/' + slug + '/masjid-services')
+                        .then(r => r.ok ? r.json() : { services: [] })
+                        .then(data => renderMasjidServices(data.services || []))
+                        .catch(() => { document.getElementById('msvc-list').innerHTML = '<p class="ynj-text-muted" style="grid-column:1/-1">Could not load services.</p>'; });
+
                     // Load rooms
                     fetch('/wp-json/ynj/v1/mosques/' + m.id + '/rooms')
                         .then(r => r.ok ? r.json() : { rooms: [] })
                         .then(data => renderRooms(data.rooms || []))
-                        .catch(() => { document.getElementById('rooms-list').innerHTML = '<p class="ynj-text-muted">Could not load rooms.</p>'; });
+                        .catch(() => { document.getElementById('rooms-list').innerHTML = '<p class="ynj-text-muted" style="grid-column:1/-1">Could not load rooms.</p>'; });
                 })
                 .catch(() => {});
 
@@ -2785,6 +2859,44 @@ class YNJ_Renderer {
                     else if (data.ok && data.free) { window.location.href = '/mosque/' + slug + '/rooms?payment=success'; }
                     else { document.getElementById('modal-error').textContent = data.error || 'Booking failed.'; btn.disabled = false; btn.textContent = 'Submit Booking Request'; }
                 } catch(e) { document.getElementById('modal-error').textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Submit Booking Request'; }
+            });
+
+            // Service enquiry
+            window.enquireMasjidSvc = function(svcId, svcTitle) {
+                document.getElementById('svc-modal-id').value = svcId;
+                document.getElementById('svc-modal-title').textContent = 'Enquire: ' + svcTitle;
+                document.getElementById('svc-enquiry-modal').style.display = '';
+                document.getElementById('svc-modal-error').textContent = '';
+            };
+
+            document.getElementById('svc-modal-submit').addEventListener('click', async function() {
+                var btn = this;
+                var form = document.getElementById('svc-enquiry-form');
+                var svcId = form.querySelector('[name="service_id"]').value;
+                var name = form.querySelector('[name="name"]').value.trim();
+                var email = form.querySelector('[name="email"]').value.trim();
+                if (!name || !email) { document.getElementById('svc-modal-error').textContent = 'Name and email required.'; return; }
+
+                btn.disabled = true; btn.textContent = 'Sending...';
+                try {
+                    var resp = await fetch('/wp-json/ynj/v1/masjid-services/' + svcId + '/enquire', {
+                        method: 'POST', headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({
+                            name: name, email: email,
+                            phone: form.querySelector('[name="phone"]').value.trim(),
+                            preferred_date: form.querySelector('[name="preferred_date"]').value,
+                            message: form.querySelector('[name="message"]').value.trim()
+                        })
+                    });
+                    var data = await resp.json();
+                    if (data.ok) {
+                        document.getElementById('svc-enquiry-modal').style.display = 'none';
+                        alert('Enquiry sent! The mosque will contact you.');
+                    } else {
+                        document.getElementById('svc-modal-error').textContent = data.error || 'Failed.';
+                    }
+                } catch(e) { document.getElementById('svc-modal-error').textContent = 'Network error.'; }
+                btn.disabled = false; btn.textContent = 'Send Enquiry';
             });
         })();
         </script>
@@ -4600,8 +4712,8 @@ img,svg{display:block;max-width:100%;}
 .ynj-svc-card__phone{font-weight:600;font-size:13px;color:<?php echo self::COLOR_ACCENT; ?>;}
 
 /* Sponsor Cards */
-.ynj-sponsors-grid{display:flex;flex-direction:column;gap:12px;}
-@media(min-width:900px){.ynj-sponsors-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}}
+.ynj-sponsors-grid{display:grid;grid-template-columns:1fr;gap:14px;}
+@media(min-width:700px){.ynj-sponsors-grid{grid-template-columns:1fr 1fr;}}
 /* Business listing cards */
 .ynj-biz-card{
     background:rgba(255,255,255,.92);backdrop-filter:blur(8px);
@@ -4843,7 +4955,25 @@ img,svg{display:block;max-width:100%;}
         <header class="ynj-header">
             <div class="ynj-header__inner">
                 <a href="/" class="ynj-logo">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="14" fill="#287e61"/><path d="M14 4c-1.5 3-5 5-5 9a5 5 0 0010 0c0-4-3.5-6-5-9z" fill="#fff" opacity=".9"/></svg>
+                    <svg width="32" height="28" viewBox="0 0 64 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Cloud -->
+                        <ellipse cx="30" cy="40" rx="26" ry="14" fill="#5BC0EB"/>
+                        <ellipse cx="22" cy="36" rx="16" ry="12" fill="#5BC0EB"/>
+                        <ellipse cx="38" cy="34" rx="14" ry="10" fill="#5BC0EB"/>
+                        <path d="M22 36c-2-1-4-3-3-5s3-3 5-2" fill="#3DADD6"/>
+                        <!-- Minaret -->
+                        <rect x="34" y="14" width="6" height="22" rx="1" fill="#fff"/>
+                        <rect x="35.5" y="20" width="3" height="4" rx=".5" fill="#2C3E6B" opacity=".5"/>
+                        <rect x="35.5" y="26" width="3" height="4" rx=".5" fill="#2C3E6B" opacity=".5"/>
+                        <path d="M37 14l-2 0 2-5 2 5-2 0z" fill="#fff"/>
+                        <!-- Dome top -->
+                        <ellipse cx="37" cy="14" rx="4" ry="2" fill="#fff"/>
+                        <!-- Crescent -->
+                        <circle cx="37" cy="6" r="2.5" fill="#fff"/>
+                        <circle cx="38" cy="5.5" r="2" fill="#2C3E6B"/>
+                        <!-- Crescent spike -->
+                        <line x1="37" y1="2" x2="37" y2="0" stroke="#fff" stroke-width="1"/>
+                    </svg>
                     <span>YourJannah</span>
                 </a>
                 <nav class="ynj-header__nav" id="desktop-nav">

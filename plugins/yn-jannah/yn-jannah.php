@@ -43,7 +43,8 @@ spl_autoload_register(function($class) {
         'YNJ_API_Classes'     => 'api/class-ynj-api-classes.php',
         'YNJ_API_Patrons'     => 'api/class-ynj-api-patrons.php',
         'YNJ_API_Madrassah'   => 'api/class-ynj-api-madrassah.php',
-        'YNJ_API_Subscriptions' => 'api/class-ynj-api-subscriptions.php',
+        'YNJ_API_Subscriptions'    => 'api/class-ynj-api-subscriptions.php',
+        'YNJ_API_Masjid_Services'  => 'api/class-ynj-api-masjid-services.php',
     ];
     if (isset($map[$class])) {
         require_once YNJ_DIR . $map[$class];
@@ -81,6 +82,7 @@ add_action('rest_api_init', function() {
     YNJ_API_Patrons::register();
     YNJ_API_Madrassah::register();
     YNJ_API_Subscriptions::register();
+    YNJ_API_Masjid_Services::register();
 });
 
 // Admin menu

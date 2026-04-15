@@ -122,6 +122,7 @@ function shell(content) {
         { path: '/events', icon: '\ud83d\udcc5', label: 'Events' },
         { path: '/bookings', icon: '\ud83d\udcd3', label: 'Bookings' },
         { path: '/rooms', icon: '\ud83c\udfe0', label: 'Rooms' },
+        { path: '/masjid-services', icon: '\ud83d\udd4c', label: 'Masjid Services' },
         { path: '/enquiries', icon: '\u2709\ufe0f', label: 'Enquiries' },
         { path: '/subscribers', icon: '\ud83d\udc65', label: 'Subscribers' },
         { path: '/classes', icon: '\ud83c\udf93', label: 'Classes' },
@@ -177,6 +178,9 @@ function route() {
         '/enrolments': renderEnrolments,
         '/campaigns': renderCampaigns,
         '/campaigns/new': renderCampaignForm,
+        '/masjid-services': renderMasjidServices,
+        '/masjid-services/new': renderMasjidServiceForm,
+        '/masjid-service-enquiries': renderMasjidServiceEnquiries,
         '/madrassah': renderMadrassah,
         '/madrassah/students': renderMadStudents,
         '/madrassah/students/new': renderMadStudentForm,
@@ -638,6 +642,96 @@ async function deleteCampaign(id) {
     await api('admin/campaigns/' + id, {method:'DELETE'});
     toast('Deleted.');
     renderCampaigns();
+}
+
+// ── Masjid Services ──
+async function renderMasjidServices() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Masjid Services</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/masjid-services');
+    var list = res.services || [];
+    var catLabels = {nikkah:'Nikkah',funeral:'Funeral',counselling:'Counselling',quran:'Quran Classes',revert:'Revert Support',ruqyah:'Ruqyah',aqiqah:'Aqiqah',circumcision:'Circumcision',walima:'Walima/Catering',hire:'Venue Hire',imam:'Imam Services',certificate:'Certificates',general:'General'};
+    var rows = list.map(function(s) {
+        var cat = catLabels[s.category] || s.category;
+        var price = s.price_pence > 0 ? '\u00a3'+(s.price_pence/100).toFixed(0) : (s.price_label || 'Free/Contact');
+        return '<tr><td><strong>'+esc(s.title)+'</strong></td><td><span class="d-badge d-badge--blue">'+esc(cat)+'</span></td><td>'+price+'</td><td>'+(s.requires_approval?'\u2705':'\u274c')+'</td><td>'+esc(s.availability||'\u2014')+'</td><td><button class="d-btn d-btn--danger d-btn--sm" onclick="delMasjidSvc('+s.id+')">Del</button></td></tr>';
+    }).join('');
+    render(shell(
+        '<div class="d-header"><h1>\ud83d\udd4c Masjid Services</h1><div style="display:flex;gap:8px"><button class="d-btn d-btn--primary d-btn--sm" onclick="navigate(\'/masjid-services/new\')">+ Add Service</button><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/masjid-service-enquiries\')">View Enquiries</button></div></div>' +
+        '<div class="d-alert d-alert--info" style="margin-bottom:16px">These are services your mosque offers to the community (nikkah, funeral, counselling, etc). They appear on your Booking page for congregation members to enquire about.</div>' +
+        '<div class="d-card">' +
+        (rows ? '<table class="d-table"><thead><tr><th>Service</th><th>Category</th><th>Price</th><th>Approval</th><th>Availability</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<p style="color:var(--text-dim)">No services listed yet. Add your first masjid service.</p>') +
+        '</div>'
+    ));
+}
+
+async function delMasjidSvc(id) {
+    if(!confirm('Delete this service?')) return;
+    await api('admin/masjid-services/'+id,{method:'DELETE'});
+    toast('Deleted.'); renderMasjidServices();
+}
+
+async function renderMasjidServiceForm() {
+    if (!mosque) await loadMosque();
+    var cats = '<option value="nikkah">Nikkah / Marriage</option><option value="funeral">Funeral / Janazah</option><option value="counselling">Counselling</option><option value="quran">Quran Classes</option><option value="revert">Revert Support</option><option value="ruqyah">Ruqyah</option><option value="aqiqah">Aqiqah</option><option value="circumcision">Circumcision</option><option value="walima">Walima / Catering</option><option value="hire">Venue / Hall Hire</option><option value="imam">Imam Services</option><option value="certificate">Certificates</option><option value="general">General</option>';
+    render(shell(
+        '<div class="d-header"><h1>Add Masjid Service</h1><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/masjid-services\')">\u2190 Back</button></div>' +
+        '<div class="d-card">' +
+        '<div class="d-grid d-grid-2"><div class="d-field"><label>Service Name</label><input id="ms_title" placeholder="e.g. Nikkah Ceremony"></div><div class="d-field"><label>Category</label><select id="ms_cat">'+cats+'</select></div></div>' +
+        '<div class="d-field"><label>Description</label><textarea id="ms_desc" rows="3" placeholder="Describe what this service includes, requirements, etc."></textarea></div>' +
+        '<div class="d-grid d-grid-3"><div class="d-field"><label>Price (\u00a3) — leave 0 for free/contact</label><input type="number" id="ms_price" value="0"></div><div class="d-field"><label>Price Label (optional)</label><input id="ms_pricelbl" placeholder="e.g. From \u00a3150, Contact for quote"></div><div class="d-field"><label>Availability</label><input id="ms_avail" placeholder="e.g. Mon-Fri 9am-5pm, By appointment"></div></div>' +
+        '<div class="d-grid d-grid-2"><div class="d-field"><label>Contact Phone</label><input id="ms_phone" placeholder="Direct phone for this service"></div><div class="d-field"><label>Contact Email</label><input id="ms_email" placeholder="Direct email for this service"></div></div>' +
+        '<div class="d-field"><label><input type="checkbox" id="ms_approval" checked style="margin-right:6px">Requires masjid approval before confirmation</label></div>' +
+        '<button class="d-btn d-btn--primary" id="ms-save" onclick="saveMasjidSvc()"><span class="btn-text">Add Service</span><span class="spinner"></span></button>' +
+        '</div>'
+    ));
+}
+
+async function saveMasjidSvc() {
+    btn('#ms-save',true);
+    var res = await api('admin/masjid-services',{method:'POST',body:{
+        title:$('#ms_title').value,
+        category:$('#ms_cat').value,
+        description:$('#ms_desc').value,
+        price_pence:Math.round(parseFloat($('#ms_price').value||0)*100),
+        price_label:$('#ms_pricelbl').value,
+        availability:$('#ms_avail').value,
+        contact_phone:$('#ms_phone').value,
+        contact_email:$('#ms_email').value,
+        requires_approval:$('#ms_approval').checked?1:0
+    }});
+    btn('#ms-save',false);
+    if(res.ok){toast('Service added!');navigate('/masjid-services');}
+    else toast(res.error||'Failed.','error');
+}
+
+async function renderMasjidServiceEnquiries() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>Service Enquiries</h1></div><div class="d-card">Loading...</div>'));
+    var res = await api('admin/masjid-service-enquiries');
+    var list = res.enquiries || [];
+    var statusBadge = function(s){if(s==='pending')return'<span class="d-badge d-badge--yellow">Pending</span>';if(s==='confirmed')return'<span class="d-badge d-badge--green">Confirmed</span>';if(s==='declined')return'<span class="d-badge d-badge--red">Declined</span>';return'<span class="d-badge d-badge--gray">'+esc(s)+'</span>';};
+    var rows = list.map(function(e) {
+        return '<tr><td><strong>'+esc(e.user_name)+'</strong><br><span style="font-size:11px;color:var(--text-dim)">'+esc(e.user_email)+'</span></td><td>'+esc(e.service_title||'\u2014')+'</td><td>'+(e.preferred_date?fmtDate(e.preferred_date):'\u2014')+'</td><td>'+statusBadge(e.status)+'</td><td style="max-width:200px;font-size:12px;">'+esc(e.message||'')+'</td><td><button class="d-btn d-btn--primary d-btn--sm" onclick="confirmEnquiry('+e.id+')">Confirm</button> <button class="d-btn d-btn--danger d-btn--sm" onclick="declineEnquiry('+e.id+')">Decline</button></td></tr>';
+    }).join('');
+    render(shell(
+        '<div class="d-header"><h1>Service Enquiries</h1><button class="d-btn d-btn--secondary d-btn--sm" onclick="navigate(\'/masjid-services\')">\u2190 Back</button></div>' +
+        '<div class="d-card">' +
+        (rows ? '<table class="d-table"><thead><tr><th>Person</th><th>Service</th><th>Date</th><th>Status</th><th>Message</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<p style="color:var(--text-dim)">No enquiries yet.</p>') +
+        '</div>'
+    ));
+}
+
+async function confirmEnquiry(id) {
+    await api('admin/masjid-service-enquiries/'+id,{method:'PUT',body:{status:'confirmed'}});
+    toast('Confirmed!'); renderMasjidServiceEnquiries();
+}
+async function declineEnquiry(id) {
+    if(!confirm('Decline this enquiry?')) return;
+    await api('admin/masjid-service-enquiries/'+id,{method:'PUT',body:{status:'declined'}});
+    toast('Declined.'); renderMasjidServiceEnquiries();
 }
 
 // ── Madrassah ──
