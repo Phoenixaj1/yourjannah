@@ -224,18 +224,18 @@ class YNJ_Renderer {
                 document.getElementById('timetable-link').href = `/mosque/${slug}/prayers`;
 
                 // Travel & navigate
-                if (userLat != null && lat && lng) {
-                    const km = distKm || haversine(userLat, userLng, lat, lng);
-                    travelMinutes = Math.max(1, Math.round(km * 12)); // ~5km/h walking
-                    const distText = km < 1 ? `${Math.round(km*1000)}m` : `${km.toFixed(1)}km`;
-                    document.getElementById('travel-dist').textContent = `${distText} · ~${travelMinutes} min walk`;
-                    document.getElementById('hero-travel').style.display = '';
+                if (lat && lng) {
                     document.getElementById('nav-buttons').style.display = '';
                     document.getElementById('navigate-walk').href =
                         `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`;
                     document.getElementById('navigate-drive').href =
                         `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
-                    updateLeaveBy();
+
+                    if (userLat != null) {
+                        calcTravelFromCoords(lat, lng);
+                    } else {
+                        showPostcodePrompt(lat, lng);
+                    }
                 }
 
                 // Fetch prayer times
@@ -263,33 +263,10 @@ class YNJ_Renderer {
                                 `https://www.google.com/maps/dir/?api=1&destination=${m.latitude},${m.longitude}&travelmode=driving`;
 
                             if (userLat) {
-                                // GPS available — calculate real distance and travel time
-                                const km = haversine(userLat, userLng, m.latitude, m.longitude);
-                                travelMinutes = Math.max(1, Math.round(km * 12)); // ~5km/h walking
-                                const distText = km < 1 ? `${Math.round(km*1000)}m` : `${km.toFixed(1)}km`;
-                                document.getElementById('travel-dist').textContent = `${distText} · ~${travelMinutes} min walk`;
-                                document.getElementById('hero-travel').style.display = '';
-                                updateLeaveBy();
+                                calcTravelFromCoords(m.latitude, m.longitude);
                             } else {
-                                // No GPS — check if user has saved travel time in profile
-                                const userToken = localStorage.getItem('ynj_user_token');
-                                if (userToken) {
-                                    fetch(`${API}/auth/me`, {headers:{'Authorization':'Bearer '+userToken}})
-                                        .then(r => r.json())
-                                        .then(resp => {
-                                            if (resp.ok && resp.user && resp.user.travel_minutes > 0) {
-                                                travelMinutes = resp.user.travel_minutes;
-                                                const mode = resp.user.travel_mode === 'drive' ? 'drive' : 'walk';
-                                                document.getElementById('travel-dist').textContent = `~${travelMinutes} min ${mode}`;
-                                                document.getElementById('hero-travel').style.display = '';
-                                                updateLeaveBy();
-                                            }
-                                            // If user has no travel_minutes saved, leave-by stays hidden
-                                            // Navigate buttons still show so user can check Google Maps
-                                        })
-                                        .catch(() => {});
-                                }
-                                // No token and no GPS = navigate buttons show but no leave-by
+                                // No GPS yet — show postcode prompt in travel area
+                                showPostcodePrompt(m.latitude, m.longitude);
                             }
                         }
 
@@ -566,6 +543,83 @@ class YNJ_Renderer {
                         document.getElementById('mosque-dropdown').style.display = 'none';
                     });
                 });
+            }
+
+            /* ---- Travel Calculation ---- */
+            function calcTravelFromCoords(mLat, mLng) {
+                const km = haversine(userLat, userLng, mLat, mLng);
+                travelMinutes = Math.max(1, Math.round(km * 12)); // ~5km/h walking
+                const mi = km * 0.621;
+                const distText = mi < 0.5 ? `${Math.round(km*1000)}m` : `${mi.toFixed(1)} mi`;
+                document.getElementById('travel-dist').textContent = `${distText} · ~${travelMinutes} min walk`;
+                document.getElementById('hero-travel').style.display = '';
+                updateLeaveBy();
+            }
+
+            function showPostcodePrompt(mLat, mLng) {
+                // Check localStorage for saved postcode first
+                const savedPC = localStorage.getItem('ynj_user_postcode');
+                if (savedPC) {
+                    geocodePostcode(savedPC, mLat, mLng);
+                    return;
+                }
+
+                const travelEl = document.getElementById('hero-travel');
+                travelEl.style.display = '';
+                travelEl.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:8px;width:100%;">
+                        <input type="text" id="pc-input" placeholder="Enter your postcode"
+                            style="flex:1;padding:8px 12px;border:1px solid rgba(255,255,255,.4);border-radius:8px;
+                            background:rgba(255,255,255,.15);color:#fff;font-size:13px;font-family:inherit;
+                            outline:none;text-transform:uppercase;max-width:140px;"
+                            maxlength="8">
+                        <button onclick="submitPostcode()"
+                            style="padding:8px 14px;border:1px solid rgba(255,255,255,.4);border-radius:8px;
+                            background:rgba(255,255,255,.2);color:#fff;font-size:13px;font-weight:600;
+                            cursor:pointer;white-space:nowrap;">
+                            Calculate
+                        </button>
+                    </div>`;
+                // Focus the input
+                setTimeout(() => { const inp = document.getElementById('pc-input'); if(inp) inp.focus(); }, 100);
+            }
+
+            window.submitPostcode = function() {
+                const inp = document.getElementById('pc-input');
+                if (!inp) return;
+                const pc = inp.value.trim().replace(/\s+/g, '');
+                if (pc.length < 3) return;
+                localStorage.setItem('ynj_user_postcode', pc);
+                inp.disabled = true;
+                geocodePostcode(pc, mosqueLat, mosqueLng);
+            };
+
+            function geocodePostcode(pc, mLat, mLng) {
+                const travelEl = document.getElementById('hero-travel');
+                travelEl.style.display = '';
+                travelEl.innerHTML = '<span style="font-size:13px;opacity:.7;">Calculating travel time...</span>';
+
+                fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(pc.replace(/\s/g,''))}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.result && data.result.latitude) {
+                            userLat = data.result.latitude;
+                            userLng = data.result.longitude;
+                            // Restore the travel display elements
+                            travelEl.innerHTML = `
+                                <div class="ynj-leave-by" id="leave-by">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                                    <span id="leave-by-text">Calculating...</span>
+                                </div>
+                                <span class="ynj-travel-dist" id="travel-dist"></span>`;
+                            calcTravelFromCoords(mLat, mLng);
+                        } else {
+                            travelEl.innerHTML = '<span style="font-size:12px;opacity:.7;">Postcode not found. <a href="#" onclick="localStorage.removeItem(\'ynj_user_postcode\');location.reload();return false;" style="color:#fff;text-decoration:underline;">Try again</a></span>';
+                        }
+                    })
+                    .catch(() => {
+                        travelEl.innerHTML = '<span style="font-size:12px;opacity:.7;">Could not look up postcode. <a href="#" onclick="localStorage.removeItem(\'ynj_user_postcode\');location.reload();return false;" style="color:#fff;text-decoration:underline;">Try again</a></span>';
+                    });
             }
 
             /* ---- Nav ---- */
