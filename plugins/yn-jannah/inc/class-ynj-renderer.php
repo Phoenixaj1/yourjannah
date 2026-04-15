@@ -95,11 +95,17 @@ class YNJ_Renderer {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
             </a>
 
-            <!-- Section 3: Feed Timeline -->
-            <section class="ynj-card" id="feed-card">
-                <h3 class="ynj-card__title">What&rsquo;s Happening</h3>
-                <div class="ynj-feed" id="feed-list">
-                    <p class="ynj-text-muted">Loading&hellip;</p>
+            <!-- Section 3: Feed -->
+            <section id="feed-section">
+                <div class="ynj-feed-tabs">
+                    <button class="ynj-feed-tab ynj-feed-tab--active" id="tab-local" onclick="switchFeedTab('local')">Your Mosque</button>
+                    <button class="ynj-feed-tab" id="tab-wider" onclick="switchFeedTab('wider')">Nearby</button>
+                </div>
+                <div id="feed-local">
+                    <p class="ynj-text-muted" style="padding:16px;text-align:center;">Loading&hellip;</p>
+                </div>
+                <div id="feed-wider" style="display:none;">
+                    <p class="ynj-text-muted" style="padding:16px;text-align:center;">Loading nearby events&hellip;</p>
                 </div>
             </section>
 
@@ -413,61 +419,98 @@ class YNJ_Renderer {
             }
 
             /* ---- Feed ---- */
+            let widerFeedLoaded = false;
+
+            window.switchFeedTab = function(tab) {
+                document.getElementById('tab-local').classList.toggle('ynj-feed-tab--active', tab==='local');
+                document.getElementById('tab-wider').classList.toggle('ynj-feed-tab--active', tab==='wider');
+                document.getElementById('feed-local').style.display = tab==='local' ? '' : 'none';
+                document.getElementById('feed-wider').style.display = tab==='wider' ? '' : 'none';
+                if (tab==='wider' && !widerFeedLoaded) loadWiderFeed();
+            };
+
+            function renderFeedCard(item) {
+                const cardClass = item.pinned ? 'ynj-feed-card--pinned' : (item.type==='event' ? 'ynj-feed-card--event' : 'ynj-feed-card--announcement');
+                const badge = item.type === 'event'
+                    ? '<span class="ynj-badge ynj-badge--event">Event</span>'
+                    : (item.pinned ? '<span class="ynj-badge ynj-badge--pinned">Pinned</span>' : '<span class="ynj-badge">Update</span>');
+                const snippet = (item.body||'').length > 80 ? item.body.slice(0,80)+'...' : (item.body||'');
+                const meta = [];
+                if (item.type === 'event') {
+                    if (item.date) meta.push('📅 ' + item.date);
+                    if (item.time) meta.push('🕐 ' + item.time);
+                    if (item.location) meta.push('📍 ' + item.location);
+                    if (item.event_id && item.mosque_slug) meta.push(`<a href="/mosque/${item.mosque_slug}/events/${item.event_id}" style="color:#00ADEF;font-weight:600;">RSVP →</a>`);
+                } else {
+                    if (item.date) meta.push(timeAgo(item.date));
+                }
+                const mosqueTag = item.mosque_name ? `<div class="ynj-feed-card__mosque">🕌 ${item.mosque_name}</div>` : '';
+                return `<div class="ynj-feed-card ${cardClass}">
+                    <div class="ynj-feed-card__top">${badge}<h4>${item.title}</h4></div>
+                    ${snippet ? `<div class="ynj-feed-card__body">${snippet}</div>` : ''}
+                    <div class="ynj-feed-card__meta">${meta.join('')}</div>
+                    ${mosqueTag}
+                </div>`;
+            }
+
             function loadFeed(slug) {
-                const feedEl = document.getElementById('feed-list');
+                const el = document.getElementById('feed-local');
                 Promise.all([
                     fetch(`${API}/mosques/${slug}/announcements`).then(r => r.json()).catch(() => ({announcements:[]})),
                     fetch(`${API}/mosques/${slug}/events?upcoming=1`).then(r => r.json()).catch(() => ({events:[]}))
                 ]).then(([aData, eData]) => {
                     const items = [];
                     (aData.announcements || []).forEach(a => {
-                        items.push({
-                            type: 'announcement',
-                            title: a.title,
-                            body: a.body,
-                            date: a.published_at || '',
-                            pinned: a.pinned
-                        });
+                        items.push({ type:'announcement', title:a.title, body:a.body, date:a.published_at||'', pinned:a.pinned });
                     });
                     (eData.events || []).forEach(e => {
                         const time = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
-                        items.push({
-                            type: 'event',
-                            title: e.title,
-                            body: e.description || '',
-                            date: e.event_date || '',
-                            time: time,
-                            location: e.location || ''
-                        });
+                        items.push({ type:'event', title:e.title, body:e.description||'', date:e.event_date||'', time:time, location:e.location||'', event_id:e.id, mosque_slug:slug });
                     });
-
-                    // Pinned first, then by date
-                    items.sort((a,b) => {
-                        if (a.pinned && !b.pinned) return -1;
-                        if (!a.pinned && b.pinned) return 1;
-                        return (b.date||'').localeCompare(a.date||'');
-                    });
-
-                    if (!items.length) {
-                        feedEl.innerHTML = '<p class="ynj-text-muted">No announcements or events yet.</p>';
-                        return;
-                    }
-
-                    feedEl.innerHTML = items.map(item => {
-                        const badge = item.type === 'event'
-                            ? '<span class="ynj-badge ynj-badge--event">Event</span>'
-                            : (item.pinned ? '<span class="ynj-badge ynj-badge--pinned">Pinned</span>' : '');
-                        const meta = item.type === 'event'
-                            ? `<span class="ynj-feed-meta">${item.date}${item.time ? ' · '+item.time : ''}${item.location ? ' · '+item.location : ''}</span>`
-                            : `<span class="ynj-feed-meta">${timeAgo(item.date)}</span>`;
-                        const snippet = item.body.length > 120 ? item.body.slice(0,120)+'...' : item.body;
-                        return `<div class="ynj-feed-item">
-                            <div class="ynj-feed-item__head">${badge}<h4>${item.title}</h4></div>
-                            <p class="ynj-feed-item__body">${snippet}</p>
-                            ${meta}
-                        </div>`;
-                    }).join('');
+                    items.sort((a,b) => { if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1; return (b.date||'').localeCompare(a.date||''); });
+                    el.innerHTML = items.length ? '<div class="ynj-feed">'+items.map(renderFeedCard).join('')+'</div>' : '<p class="ynj-text-muted" style="padding:16px;text-align:center;">No announcements or events yet.</p>';
                 });
+            }
+
+            function loadWiderFeed() {
+                widerFeedLoaded = true;
+                const el = document.getElementById('feed-wider');
+                const lat = userLat || mosqueLat;
+                const lng = userLng || mosqueLng;
+                if (!lat) { el.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">Location needed to find nearby events.</p>'; return; }
+
+                // Search for events at nearby mosques
+                fetch(`${API}/mosques/nearest?lat=${lat}&lng=${lng}&limit=10`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const mosques = (data.mosques||[]).filter(m => m.slug !== mosqueSlug);
+                        if (!mosques.length) { el.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">No nearby mosques found.</p>'; return; }
+
+                        // Fetch events from up to 5 nearby mosques
+                        const fetches = mosques.slice(0,5).map(m =>
+                            fetch(`${API}/mosques/${m.slug}/events?upcoming=1`).then(r=>r.json())
+                                .then(d => (d.events||[]).map(e => ({...e, mosque_name:m.name, mosque_slug:m.slug, distance:m.distance})))
+                                .catch(() => [])
+                        );
+                        return Promise.all(fetches);
+                    })
+                    .then(results => {
+                        if (!results) return;
+                        const allEvents = results.flat().sort((a,b) => (a.event_date||'').localeCompare(b.event_date||''));
+                        if (!allEvents.length) {
+                            el.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">No upcoming events at nearby mosques.</p>';
+                            return;
+                        }
+                        el.innerHTML = '<div class="ynj-feed">' + allEvents.map(e => {
+                            const time = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
+                            return renderFeedCard({
+                                type:'event', title:e.title, body:e.description||'', date:e.event_date||'',
+                                time:time, location:e.location||'', event_id:e.id, mosque_slug:e.mosque_slug,
+                                mosque_name: e.mosque_name + (e.distance ? ` · ${e.distance < 1.6 ? (e.distance*0.621).toFixed(1)+'mi' : Math.round(e.distance*0.621)+'mi'}` : '')
+                            });
+                        }).join('') + '</div>';
+                    })
+                    .catch(() => { el.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">Could not load.</p>'; });
             }
 
             function timeAgo(dateStr) {
@@ -2621,8 +2664,28 @@ img,svg{display:block;max-width:100%;}
 .ynj-badge--event{background:#fef3c7;color:#92400e;}
 .ynj-badge--pinned{background:#dcfce7;color:#166534;}
 
-/* Feed */
-.ynj-feed{display:flex;flex-direction:column;gap:2px;}
+/* Feed Tabs */
+.ynj-feed-tabs{display:flex;gap:0;margin-bottom:12px;background:rgba(255,255,255,.6);border-radius:12px;padding:3px;border:1px solid rgba(0,173,239,.1);}
+.ynj-feed-tab{flex:1;padding:9px 8px;border:none;background:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;color:<?php echo self::COLOR_TEXT_MUTED; ?>;font-family:inherit;transition:all .15s;}
+.ynj-feed-tab--active{background:<?php echo self::COLOR_ACCENT; ?>;color:#fff;box-shadow:0 2px 8px rgba(0,173,239,.25);}
+
+/* Feed Cards */
+.ynj-feed{display:flex;flex-direction:column;gap:10px;}
+.ynj-feed-card{
+    background:rgba(255,255,255,.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    border-radius:14px;padding:14px 16px;border:1px solid rgba(255,255,255,.6);
+    box-shadow:0 1px 6px rgba(0,0,0,.04);
+}
+.ynj-feed-card--event{border-left:3px solid #f59e0b;}
+.ynj-feed-card--announcement{border-left:3px solid <?php echo self::COLOR_ACCENT; ?>;}
+.ynj-feed-card--pinned{border-left:3px solid #16a34a;}
+.ynj-feed-card__top{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.ynj-feed-card__top h4{font-size:14px;font-weight:600;flex:1;min-width:0;}
+.ynj-feed-card__body{font-size:13px;color:#555;line-height:1.45;margin-bottom:6px;}
+.ynj-feed-card__meta{display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}
+.ynj-feed-card__mosque{font-size:11px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;margin-top:4px;}
+
+/* Legacy feed (other pages) */
 .ynj-feed-item{padding:14px 0;border-bottom:1px solid #f0f0ec;}
 .ynj-feed-item:last-child{border-bottom:none;}
 .ynj-feed-item__head{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
