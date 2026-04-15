@@ -114,6 +114,8 @@ class YNJ_API_Stripe {
                     'expires_at'             => null, // Active subscription, no expiry
                 ], [ 'id' => $item_id ] );
                 error_log( "[YNJ Webhook] Business #$item_id activated." );
+                $biz = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $item_id ) );
+                if ( $biz ) do_action( 'ynj_payment_received', (int) $biz->mosque_id, 'business_sponsor', $item_id );
                 break;
 
             case 'professional_service':
@@ -123,6 +125,8 @@ class YNJ_API_Stripe {
                     'stripe_subscription_id' => $session->subscription ?? '',
                 ], [ 'id' => $item_id ] );
                 error_log( "[YNJ Webhook] Service #$item_id activated." );
+                $svc = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $item_id ) );
+                if ( $svc ) do_action( 'ynj_payment_received', (int) $svc->mosque_id, 'professional_service', $item_id );
                 break;
 
             case 'room_booking':
@@ -268,6 +272,15 @@ class YNJ_API_Stripe {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Failed to create listing.' ], 500 );
         }
 
+        // Notify mosque admin
+        do_action( 'ynj_new_sponsor', $mosque_id, [
+            'business_name'    => $name,
+            'category'         => $category,
+            'tier'             => $tier,
+            'monthly_fee_pence' => $tier_config['amount'],
+            'phone'            => sanitize_text_field( $data['phone'] ?? '' ),
+        ] );
+
         // Get mosque slug for redirect URLs
         $mosque = $wpdb->get_row( $wpdb->prepare(
             "SELECT slug FROM " . YNJ_DB::table( 'mosques' ) . " WHERE id = %d", $mosque_id
@@ -335,6 +348,14 @@ class YNJ_API_Stripe {
         if ( ! $svc_id ) {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Failed to create listing.' ], 500 );
         }
+
+        // Notify mosque admin
+        do_action( 'ynj_new_service_listing', $mosque_id, [
+            'provider_name' => $provider,
+            'service_type'  => $type,
+            'phone'         => sanitize_text_field( $data['phone'] ?? '' ),
+            'area_covered'  => sanitize_text_field( $data['area_covered'] ?? '' ),
+        ] );
 
         $mosque = $wpdb->get_row( $wpdb->prepare(
             "SELECT slug FROM " . YNJ_DB::table( 'mosques' ) . " WHERE id = %d", $mosque_id
@@ -507,7 +528,17 @@ class YNJ_API_Stripe {
         ) );
 
         if ( $event->ticket_price_pence <= 0 ) {
-            // Free event — confirmed immediately
+            // Notify mosque admin
+            do_action( 'ynj_new_booking', (int) $event->mosque_id, [
+                'user_name'    => sanitize_text_field( $data['user_name'] ?? '' ),
+                'user_email'   => sanitize_email( $data['user_email'] ?? '' ),
+                'event_id'     => $event_id,
+                'booking_date' => $event->event_date,
+                'start_time'   => $event->start_time,
+                'end_time'     => $event->end_time,
+                'notes'        => $event->title,
+            ] );
+
             return new \WP_REST_Response( [
                 'ok'         => true,
                 'free'       => true,

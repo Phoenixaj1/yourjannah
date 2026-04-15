@@ -33,6 +33,9 @@ spl_autoload_register(function($class) {
         'YNJ_API_Admin'       => 'api/class-ynj-api-admin.php',
         'YNJ_Stripe'          => 'inc/class-ynj-stripe.php',
         'YNJ_API_Stripe'      => 'api/class-ynj-api-stripe.php',
+        'YNJ_API_Search'      => 'api/class-ynj-api-search.php',
+        'YNJ_Cron'            => 'inc/class-ynj-cron.php',
+        'YNJ_Notify'          => 'inc/class-ynj-notify.php',
     ];
     if (isset($map[$class])) {
         require_once YNJ_DIR . $map[$class];
@@ -62,6 +65,7 @@ add_action('rest_api_init', function() {
     YNJ_API_Subscribe::register();
     YNJ_API_Admin::register();
     YNJ_API_Stripe::register();
+    YNJ_API_Search::register();
 });
 
 // Admin menu
@@ -86,4 +90,16 @@ add_action('init', function() {
         YNJ_Push::generate_vapid_keys();
     }
 });
+
+// Prayer reminder cron
+add_action('ynj_prayer_reminder_cron', ['YNJ_Cron', 'check_prayers']);
+register_activation_hook(__FILE__, ['YNJ_Cron', 'schedule']);
+register_deactivation_hook(__FILE__, ['YNJ_Cron', 'unschedule']);
+
+// Admin email notifications
+add_action('ynj_new_enquiry', ['YNJ_Notify', 'on_enquiry'], 10, 2);
+add_action('ynj_new_booking', ['YNJ_Notify', 'on_booking'], 10, 2);
+add_action('ynj_new_sponsor', ['YNJ_Notify', 'on_sponsor'], 10, 2);
+add_action('ynj_new_service_listing', ['YNJ_Notify', 'on_service_listing'], 10, 2);
+add_action('ynj_payment_received', ['YNJ_Notify', 'on_payment'], 10, 3);
 // deploy trigger

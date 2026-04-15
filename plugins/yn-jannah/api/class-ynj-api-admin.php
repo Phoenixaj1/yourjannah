@@ -164,6 +164,16 @@ class YNJ_API_Admin {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Failed to submit enquiry.' ], 500 );
         }
 
+        // Notify mosque admin
+        do_action( 'ynj_new_enquiry', $mosque_id, [
+            'name'    => $name,
+            'email'   => $email,
+            'phone'   => sanitize_text_field( $data['phone'] ?? '' ),
+            'subject' => $subject,
+            'message' => $message,
+            'type'    => sanitize_text_field( $data['type'] ?? 'general' ),
+        ] );
+
         return new \WP_REST_Response( [
             'ok'      => true,
             'id'      => $id,

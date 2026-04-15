@@ -737,7 +737,7 @@ class YNJ_Renderer {
     /* ================================================================== */
 
     public static function render_services( string $slug ): void {
-        self::page_head( 'Services — YourJannah', 'Masjid services and local professionals.' );
+        self::page_head( 'Services — YourJannah', 'Find Muslim professionals and masjid services near you.' );
         ?>
         <header class="ynj-header">
             <div class="ynj-header__inner">
@@ -748,80 +748,174 @@ class YNJ_Renderer {
             </div>
         </header>
         <main class="ynj-main">
-            <!-- Masjid Services (free/official) -->
-            <section class="ynj-card" id="masjid-services">
-                <h2 class="ynj-card__title">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="<?php echo self::COLOR_ACCENT; ?>" stroke-width="2" style="display:inline;vertical-align:-3px;margin-right:6px;"><path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>
-                    Masjid Services
-                </h2>
-                <div id="masjid-svc-list" class="ynj-svc-grid"><p class="ynj-text-muted">Loading&hellip;</p></div>
+            <!-- Search Bar -->
+            <div class="ynj-search-bar">
+                <input class="ynj-search-bar__input" id="svc-search" type="text" placeholder="Find a service (e.g. web developer, solicitor)..." autocomplete="off">
+                <div class="ynj-search-bar__filters">
+                    <select id="svc-type" class="ynj-search-bar__select">
+                        <option value="">All Types</option>
+                        <option>Imam / Scholar</option><option>Quran Teacher</option><option>Arabic Tutor</option>
+                        <option>Counselling</option><option>Legal Services</option><option>Accounting</option>
+                        <option>Web Development</option><option>SEO</option><option>Digital Marketing</option>
+                        <option>IT Support</option><option>Graphic Design</option><option>Photography</option>
+                        <option>Tutoring</option><option>Driving Instructor</option><option>Plumbing</option>
+                        <option>Electrician</option><option>Cleaning</option><option>Catering</option>
+                        <option>Financial Advice</option><option>Translation</option><option>Other</option>
+                    </select>
+                    <select id="svc-radius" class="ynj-search-bar__select">
+                        <option value="0">My Mosque</option>
+                        <option value="5">Within 5 miles</option>
+                        <option value="10">Within 10 miles</option>
+                        <option value="25">Within 25 miles</option>
+                        <option value="50">Within 50 miles</option>
+                        <option value="9999">Nationwide</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Your Mosque Services -->
+            <section class="ynj-card" id="local-services">
+                <h2 class="ynj-card__title" id="local-title">Your Mosque</h2>
+                <div id="local-svc-list" class="ynj-svc-grid"><p class="ynj-text-muted">Loading&hellip;</p></div>
             </section>
 
-            <!-- Professional Services (paid community) -->
-            <section class="ynj-card" id="pro-services">
-                <h2 class="ynj-card__title">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="<?php echo self::COLOR_ACCENT; ?>" stroke-width="2" style="display:inline;vertical-align:-3px;margin-right:6px;"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    Local Professionals
-                </h2>
-                <p class="ynj-text-muted" style="margin-bottom:12px;">Community members offering their services</p>
-                <div id="pro-svc-list" class="ynj-feed"><p class="ynj-text-muted">Loading&hellip;</p></div>
+            <!-- Wider Community Results (hidden until search) -->
+            <section class="ynj-card" id="community-services" style="display:none;">
+                <h2 class="ynj-card__title" id="community-title">Wider Community</h2>
+                <div id="community-svc-list" class="ynj-svc-grid"></div>
             </section>
+
+            <!-- List your service CTA -->
+            <div style="text-align:center;padding:16px 0;">
+                <p class="ynj-text-muted" style="margin-bottom:8px;">Are you a professional? Get found by your community.</p>
+                <a href="/mosque/<?php echo esc_attr( $slug ); ?>/services/join" class="ynj-btn ynj-btn--outline">List Your Service — £10/mo</a>
+            </div>
         </main>
         <?php self::render_bottom_nav( 'services', $slug ); ?>
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
+            const API = '/wp-json/ynj/v1';
+            let mosqueId = null;
+            let userLat = null, userLng = null;
+
             document.querySelectorAll('[data-nav-mosque]').forEach(el => {
                 el.href = el.dataset.navMosque.replace('{slug}', slug);
             });
 
-            fetch(`/wp-json/ynj/v1/mosques/${slug}/directory`)
+            const svcIcons = {
+                'Imam / Scholar':'🕌','Quran Teacher':'📖','Arabic Tutor':'📚',
+                'Counselling':'🤝','Legal Services':'⚖️','Accounting':'📊',
+                'Web Development':'💻','SEO':'🔍','Digital Marketing':'📱',
+                'IT Support':'🖥️','Graphic Design':'🎨','Photography':'📷',
+                'Tutoring':'📚','Financial Advice':'💰','Catering':'🍽️',
+                'Nikah':'💍','Funeral':'🕊️','Janazah':'🕊️','Translation':'🌐'
+            };
+
+            function renderCard(s, showMosque) {
+                const icon = svcIcons[s.service_type] || '✦';
+                const dist = s.distance_km != null && s.distance_km < 9000 ? `<span class="ynj-text-muted" style="font-size:11px;">📍 ${s.distance_km < 1.6 ? Math.round(s.distance_km*0.621*10)/10 + ' mi' : Math.round(s.distance_km*0.621) + ' mi'}</span>` : '';
+                const mosque = showMosque && s.mosque_name ? `<span class="ynj-text-muted" style="font-size:11px;">🕌 ${s.mosque_name}${s.mosque_city ? ', '+s.mosque_city : ''}</span>` : '';
+                return `<div class="ynj-svc-card">
+                    <div class="ynj-svc-card__icon">${icon}</div>
+                    <div class="ynj-svc-card__body">
+                        <h4>${s.provider_name}</h4>
+                        <span class="ynj-badge">${s.service_type}</span>
+                        <p class="ynj-text-muted">${(s.description||'').length > 100 ? s.description.slice(0,100)+'...' : s.description||''}</p>
+                        ${s.phone ? `<a href="tel:${s.phone}" class="ynj-svc-card__phone">${s.phone}</a>` : ''}
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:4px;">${dist}${mosque}${s.area_covered ? `<span class="ynj-text-muted" style="font-size:11px;">🗺️ ${s.area_covered}</span>` : ''}</div>
+                    </div>
+                </div>`;
+            }
+
+            // Try to get user location for distance calculations
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(p => {
+                    userLat = p.coords.latitude; userLng = p.coords.longitude;
+                }, () => {}, {timeout:5000, maximumAge:300000});
+            }
+
+            // Load local mosque services
+            fetch(`${API}/mosques/${slug}`)
+                .then(r => r.json())
+                .then(resp => {
+                    const m = resp.mosque || resp;
+                    mosqueId = m.id;
+                    document.getElementById('local-title').textContent = m.name || 'Your Mosque';
+                    if (!userLat && m.latitude) { userLat = m.latitude; userLng = m.longitude; }
+                })
+                .then(() => fetch(`${API}/mosques/${slug}/directory`))
                 .then(r => r.json())
                 .then(data => {
-                    // Masjid services (free — monthly_fee_pence <= 0 or service_type matches known masjid services)
-                    const all = data.services || [];
-                    const masjid = all.filter(s => !s.hourly_rate_pence || s.hourly_rate_pence === 0);
-                    const pro = all.filter(s => s.hourly_rate_pence && s.hourly_rate_pence > 0);
-
-                    // If no clear split, use all as masjid if < 5, otherwise split at fee boundary
-                    const masjidList = document.getElementById('masjid-svc-list');
-                    const proList = document.getElementById('pro-svc-list');
-
-                    if (all.length === 0) {
-                        masjidList.innerHTML = '<p class="ynj-text-muted">No masjid services listed yet.</p>';
-                        proList.innerHTML = '<p class="ynj-text-muted">No professional services listed yet.</p>';
-                        return;
-                    }
-
-                    // For now, show ALL services in masjid section (the seed data doesn't distinguish yet)
-                    // The masjid admin will mark their own services
-                    const svcIcons = {
-                        'Imam / Scholar': '🕌', 'Quran Teacher': '📖', 'Arabic Tutor': '📚',
-                        'Counselling': '🤝', 'Nikah': '💍', 'Funeral': '🕊️', 'Janazah': '🕊️'
-                    };
-
-                    masjidList.innerHTML = all.map(s => {
-                        const icon = svcIcons[s.service_type] || '✦';
-                        return `<div class="ynj-svc-card">
-                            <div class="ynj-svc-card__icon">${icon}</div>
-                            <div class="ynj-svc-card__body">
-                                <h4>${s.provider_name}</h4>
-                                <span class="ynj-badge">${s.service_type}</span>
-                                <p class="ynj-text-muted">${s.description || ''}</p>
-                                ${s.phone ? `<a href="tel:${s.phone}" class="ynj-svc-card__phone">${s.phone}</a>` : ''}
-                                ${s.area_covered ? `<span class="ynj-text-muted" style="font-size:11px;">${s.area_covered}</span>` : ''}
-                            </div>
-                        </div>`;
-                    }).join('');
-
-                    // Hide pro section if no separate pro services
-                    if (pro.length === 0) {
-                        document.getElementById('pro-services').style.display = 'none';
-                    }
+                    const list = document.getElementById('local-svc-list');
+                    const svcs = data.services || [];
+                    if (!svcs.length) { list.innerHTML = '<p class="ynj-text-muted">No services listed at this mosque yet.</p>'; return; }
+                    list.innerHTML = svcs.map(s => renderCard(s, false)).join('');
                 })
                 .catch(() => {
-                    document.getElementById('masjid-svc-list').innerHTML = '<p class="ynj-text-muted">Could not load services.</p>';
+                    document.getElementById('local-svc-list').innerHTML = '<p class="ynj-text-muted">Could not load services.</p>';
                 });
+
+            // Search handlers
+            let debounce;
+            function doSearch() {
+                clearTimeout(debounce);
+                debounce = setTimeout(executeSearch, 300);
+            }
+
+            document.getElementById('svc-search').addEventListener('input', doSearch);
+            document.getElementById('svc-type').addEventListener('change', doSearch);
+            document.getElementById('svc-radius').addEventListener('change', doSearch);
+
+            function executeSearch() {
+                const q = document.getElementById('svc-search').value.trim();
+                const type = document.getElementById('svc-type').value;
+                const radiusMi = parseInt(document.getElementById('svc-radius').value);
+
+                // If "My Mosque" selected and no search query, just show local
+                if (radiusMi === 0 && !q && !type) {
+                    document.getElementById('community-services').style.display = 'none';
+                    return;
+                }
+
+                const radiusKm = radiusMi === 0 ? 0 : (radiusMi === 9999 ? 9999 : radiusMi * 1.609);
+                const communityEl = document.getElementById('community-services');
+                const communityList = document.getElementById('community-svc-list');
+
+                communityEl.style.display = '';
+                communityList.innerHTML = '<p class="ynj-text-muted">Searching...</p>';
+
+                const params = new URLSearchParams();
+                if (q) params.set('q', q);
+                if (type) params.set('type', type);
+                if (userLat) { params.set('lat', userLat); params.set('lng', userLng); }
+                if (radiusKm > 0) params.set('radius_km', radiusKm);
+                if (mosqueId) params.set('mosque_id', mosqueId);
+                params.set('per_page', '30');
+
+                fetch(`${API}/services/search?${params}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const svcs = data.services || [];
+                        // Filter out services from current mosque (already shown above)
+                        const community = radiusMi === 0 ? svcs : svcs.filter(s => s.mosque_id !== mosqueId);
+
+                        document.getElementById('community-title').textContent =
+                            radiusMi === 9999 ? `Nationwide (${data.total} found)` :
+                            radiusMi === 0 ? `Your Mosque (${svcs.length} found)` :
+                            `Within ${radiusMi} miles (${data.total} found)`;
+
+                        if (!community.length && !svcs.length) {
+                            communityList.innerHTML = '<p class="ynj-text-muted">No services found. Try widening your search radius.</p>';
+                        } else {
+                            const toShow = radiusMi === 0 ? svcs : community;
+                            communityList.innerHTML = toShow.map(s => renderCard(s, true)).join('');
+                        }
+                    })
+                    .catch(() => {
+                        communityList.innerHTML = '<p class="ynj-text-muted">Search failed. Try again.</p>';
+                    });
+            }
         })();
         </script>
         </body></html>
@@ -834,7 +928,7 @@ class YNJ_Renderer {
     /* ================================================================== */
 
     public static function render_sponsors( string $slug ): void {
-        self::page_head( 'Sponsors — YourJannah', 'Businesses supporting your masjid.' );
+        self::page_head( 'Sponsors — YourJannah', 'Muslim businesses supporting your community.' );
         ?>
         <header class="ynj-header">
             <div class="ynj-header__inner">
@@ -845,17 +939,45 @@ class YNJ_Renderer {
             </div>
         </header>
         <main class="ynj-main">
-            <section class="ynj-card">
-                <h2 class="ynj-card__title">
+            <!-- Search Bar -->
+            <div class="ynj-search-bar">
+                <input class="ynj-search-bar__input" id="biz-search" type="text" placeholder="Find a business (e.g. restaurant, solicitor)..." autocomplete="off">
+                <div class="ynj-search-bar__filters">
+                    <select id="biz-category" class="ynj-search-bar__select">
+                        <option value="">All Categories</option>
+                        <option>Restaurant</option><option>Grocery</option><option>Butcher</option>
+                        <option>Clothing</option><option>Books & Gifts</option><option>Health</option>
+                        <option>Legal</option><option>Finance</option><option>Insurance</option>
+                        <option>Travel</option><option>Education</option><option>Automotive</option>
+                        <option>Catering</option><option>Property</option><option>Technology</option>
+                    </select>
+                    <select id="biz-radius" class="ynj-search-bar__select">
+                        <option value="0">My Mosque</option>
+                        <option value="5">Within 5 miles</option>
+                        <option value="10">Within 10 miles</option>
+                        <option value="25">Within 25 miles</option>
+                        <option value="9999">Nationwide</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Your Mosque Sponsors -->
+            <section class="ynj-card" id="local-sponsors">
+                <h2 class="ynj-card__title" id="local-biz-title">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="display:inline;vertical-align:-3px;margin-right:6px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    Masjid Sponsors
+                    Your Masjid Sponsors
                 </h2>
-                <p class="ynj-text-muted" style="margin-bottom:16px;">Businesses supporting your masjid</p>
-                <div id="sponsor-list"><p class="ynj-text-muted">Loading&hellip;</p></div>
+                <div id="local-biz-list"><p class="ynj-text-muted">Loading&hellip;</p></div>
             </section>
 
-            <div style="text-align:center;padding:20px;">
-                <p class="ynj-text-muted" style="margin-bottom:12px;">Want to support your local masjid?</p>
+            <!-- Wider Community (hidden until search) -->
+            <section class="ynj-card" id="community-sponsors" style="display:none;">
+                <h2 class="ynj-card__title" id="community-biz-title">Nearby Businesses</h2>
+                <div id="community-biz-list"></div>
+            </section>
+
+            <div style="text-align:center;padding:16px 0;">
+                <p class="ynj-text-muted" style="margin-bottom:8px;">Want to support your local masjid?</p>
                 <a href="/mosque/<?php echo esc_attr( $slug ); ?>/sponsors/join" class="ynj-btn">Become a Sponsor</a>
             </div>
         </main>
@@ -863,45 +985,89 @@ class YNJ_Renderer {
         <script>
         (function(){
             const slug = <?php echo wp_json_encode( $slug ); ?>;
+            const API = '/wp-json/ynj/v1';
+            let mosqueId = null, userLat = null, userLng = null;
+
             document.querySelectorAll('[data-nav-mosque]').forEach(el => {
                 el.href = el.dataset.navMosque.replace('{slug}', slug);
             });
 
-            fetch(`/wp-json/ynj/v1/mosques/${slug}/directory`)
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(p => {
+                    userLat = p.coords.latitude; userLng = p.coords.longitude;
+                }, () => {}, {timeout:5000, maximumAge:300000});
+            }
+
+            function renderBiz(b, rank, showMosque) {
+                const dist = b.distance_km != null && b.distance_km < 9000 ? `📍 ${b.distance_km < 1.6 ? (b.distance_km*0.621).toFixed(1)+' mi' : Math.round(b.distance_km*0.621)+' mi'}` : '';
+                const mosque = showMosque && b.mosque_name ? `🕌 ${b.mosque_name}` : '';
+                const medal = rank && rank <= 3 ? ['🥇','🥈','🥉'][rank-1] : (rank ? '#'+rank : '');
+                return `<div class="ynj-sponsor${rank<=3?' ynj-sponsor--'+(rank===1?'gold':rank===2?'silver':'bronze'):''}">
+                    ${medal ? `<div class="ynj-sponsor__rank">${medal}</div>` : ''}
+                    <div class="ynj-sponsor__body">
+                        <h4>${b.business_name}</h4>
+                        <span class="ynj-badge">${b.category}</span>
+                        ${b.description ? `<p class="ynj-text-muted" style="margin-top:4px;">${b.description.length>100?b.description.slice(0,100)+'...':b.description}</p>` : ''}
+                        <div class="ynj-sponsor__actions">
+                            ${b.phone ? `<a href="tel:${b.phone}">${b.phone}</a>` : ''}
+                            ${b.website ? `<a href="${b.website}" target="_blank" rel="noopener">Website</a>` : ''}
+                        </div>
+                        ${dist||mosque ? `<div style="display:flex;gap:12px;margin-top:6px;font-size:11px;color:#6b8fa3;">${dist ? `<span>${dist}</span>` : ''}${mosque ? `<span>${mosque}</span>` : ''}</div>` : ''}
+                    </div>
+                </div>`;
+            }
+
+            // Load local mosque sponsors
+            fetch(`${API}/mosques/${slug}`)
+                .then(r => r.json())
+                .then(resp => { const m = resp.mosque||resp; mosqueId = m.id; if (!userLat && m.latitude) { userLat = m.latitude; userLng = m.longitude; } })
+                .then(() => fetch(`${API}/mosques/${slug}/directory`))
                 .then(r => r.json())
                 .then(data => {
                     const biz = data.businesses || [];
-                    const list = document.getElementById('sponsor-list');
-
-                    if (!biz.length) {
-                        list.innerHTML = '<p class="ynj-text-muted">No sponsors yet. Be the first to support your masjid!</p>';
-                        return;
-                    }
-
-                    list.innerHTML = biz.map((b, i) => {
-                        const rank = i + 1;
-                        let medalClass = '';
-                        if (rank === 1) medalClass = ' ynj-sponsor--gold';
-                        else if (rank === 2) medalClass = ' ynj-sponsor--silver';
-                        else if (rank === 3) medalClass = ' ynj-sponsor--bronze';
-
-                        return `<div class="ynj-sponsor${medalClass}">
-                            <div class="ynj-sponsor__rank">${rank <= 3 ? ['🥇','🥈','🥉'][rank-1] : '#'+rank}</div>
-                            <div class="ynj-sponsor__body">
-                                <h4>${b.business_name}</h4>
-                                <span class="ynj-badge">${b.category}</span>
-                                ${b.description ? `<p class="ynj-text-muted" style="margin-top:4px;">${b.description.length > 100 ? b.description.slice(0,100)+'...' : b.description}</p>` : ''}
-                                <div class="ynj-sponsor__actions">
-                                    ${b.phone ? `<a href="tel:${b.phone}">${b.phone}</a>` : ''}
-                                    ${b.website ? `<a href="${b.website}" target="_blank" rel="noopener">Website</a>` : ''}
-                                </div>
-                            </div>
-                        </div>`;
-                    }).join('');
+                    const list = document.getElementById('local-biz-list');
+                    if (!biz.length) { list.innerHTML = '<p class="ynj-text-muted">No sponsors yet. Be the first!</p>'; return; }
+                    list.innerHTML = biz.map((b,i) => renderBiz(b, i+1, false)).join('');
                 })
-                .catch(() => {
-                    document.getElementById('sponsor-list').innerHTML = '<p class="ynj-text-muted">Could not load sponsors.</p>';
-                });
+                .catch(() => { document.getElementById('local-biz-list').innerHTML = '<p class="ynj-text-muted">Could not load.</p>'; });
+
+            // Search
+            let debounce;
+            function doSearch() { clearTimeout(debounce); debounce = setTimeout(executeSearch, 300); }
+            document.getElementById('biz-search').addEventListener('input', doSearch);
+            document.getElementById('biz-category').addEventListener('change', doSearch);
+            document.getElementById('biz-radius').addEventListener('change', doSearch);
+
+            function executeSearch() {
+                const q = document.getElementById('biz-search').value.trim();
+                const cat = document.getElementById('biz-category').value;
+                const radiusMi = parseInt(document.getElementById('biz-radius').value);
+                if (radiusMi === 0 && !q && !cat) { document.getElementById('community-sponsors').style.display = 'none'; return; }
+
+                const el = document.getElementById('community-sponsors');
+                const list = document.getElementById('community-biz-list');
+                el.style.display = '';
+                list.innerHTML = '<p class="ynj-text-muted">Searching...</p>';
+
+                const params = new URLSearchParams();
+                if (q) params.set('q', q);
+                if (cat) params.set('category', cat);
+                if (userLat) { params.set('lat', userLat); params.set('lng', userLng); }
+                if (radiusMi > 0) params.set('radius_km', radiusMi === 9999 ? 9999 : radiusMi * 1.609);
+                if (mosqueId) params.set('mosque_id', mosqueId);
+
+                fetch(`${API}/businesses/search?${params}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const biz = (data.businesses || []).filter(b => b.mosque_id !== mosqueId);
+                        document.getElementById('community-biz-title').textContent =
+                            radiusMi === 9999 ? `Nationwide (${data.total} found)` :
+                            `Within ${radiusMi} miles (${data.total} found)`;
+                        list.innerHTML = biz.length ? biz.map((b,i) => renderBiz(b, null, true)).join('')
+                            : '<p class="ynj-text-muted">No businesses found. Try widening your search.</p>';
+                    })
+                    .catch(() => { list.innerHTML = '<p class="ynj-text-muted">Search failed.</p>'; });
+            }
         })();
         </script>
         </body></html>
@@ -1936,6 +2102,23 @@ img,svg{display:block;max-width:100%;}
 
 /* Donate */
 .ynj-donate-badge{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,.85);margin-top:12px;}
+
+/* Search Bar */
+.ynj-search-bar{margin-bottom:14px;}
+.ynj-search-bar__input{
+    width:100%;padding:12px 16px;border:2px solid #e0e8ed;border-radius:14px;
+    font-size:15px;font-family:inherit;outline:none;background:#fff;
+    transition:border-color .15s;
+}
+.ynj-search-bar__input:focus{border-color:<?php echo self::COLOR_ACCENT; ?>;}
+.ynj-search-bar__input::placeholder{color:#a0b4c0;}
+.ynj-search-bar__filters{display:flex;gap:8px;margin-top:8px;}
+.ynj-search-bar__select{
+    flex:1;padding:8px 12px;border:1px solid #e0e8ed;border-radius:10px;
+    font-size:13px;font-family:inherit;background:#fff;color:<?php echo self::COLOR_TEXT; ?>;
+    outline:none;cursor:pointer;
+}
+.ynj-search-bar__select:focus{border-color:<?php echo self::COLOR_ACCENT; ?>;}
 
 /* Forms */
 .ynj-form{display:flex;flex-direction:column;gap:14px;}
