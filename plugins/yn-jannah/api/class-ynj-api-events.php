@@ -24,6 +24,13 @@ class YNJ_API_Events {
             'permission_callback' => '__return_true',
         ]);
 
+        // GET /events/{id} — single event detail
+        register_rest_route( self::NS, '/events/(?P<id>\d+)', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'get_single' ],
+            'permission_callback' => '__return_true',
+        ]);
+
         // GET /mosques/{slug}/events — slug-based convenience route
         register_rest_route( self::NS, '/mosques/(?P<slug>[a-zA-Z][a-zA-Z0-9_-]*)/events', [
             'methods'             => 'GET',
@@ -56,6 +63,37 @@ class YNJ_API_Events {
     // ================================================================
     // HANDLERS
     // ================================================================
+
+    /**
+     * GET /events/{id} — Single event detail.
+     */
+    public static function get_single( \WP_REST_Request $request ) {
+        $id = absint( $request->get_param( 'id' ) );
+
+        global $wpdb;
+        $table = YNJ_DB::table( 'events' );
+        $event = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM $table WHERE id = %d AND status = 'published'", $id
+        ) );
+
+        if ( ! $event ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Event not found.' ], 404 );
+        }
+
+        $formatted = self::format( $event );
+        $formatted['spots_remaining'] = $event->max_capacity > 0
+            ? max( 0, $event->max_capacity - $event->registered_count )
+            : null;
+
+        // Get mosque name
+        $mosque = $wpdb->get_row( $wpdb->prepare(
+            "SELECT name, slug FROM " . YNJ_DB::table( 'mosques' ) . " WHERE id = %d", $event->mosque_id
+        ) );
+        $formatted['mosque_name'] = $mosque->name ?? '';
+        $formatted['mosque_slug'] = $mosque->slug ?? '';
+
+        return new \WP_REST_Response( [ 'ok' => true, 'event' => $formatted ] );
+    }
 
     /**
      * GET /mosques/{slug}/events — Resolve slug to ID and delegate.

@@ -856,7 +856,7 @@ class YNJ_Renderer {
 
             <div style="text-align:center;padding:20px;">
                 <p class="ynj-text-muted" style="margin-bottom:12px;">Want to support your local masjid?</p>
-                <a href="#" class="ynj-btn" onclick="alert('Contact the mosque to become a sponsor.');return false;">Become a Sponsor</a>
+                <a href="/mosque/<?php echo esc_attr( $slug ); ?>/sponsors/join" class="ynj-btn">Become a Sponsor</a>
             </div>
         </main>
         <?php self::render_bottom_nav( 'sponsors', $slug ); ?>
@@ -1055,14 +1055,614 @@ class YNJ_Renderer {
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="<?php echo self::COLOR_ACCENT; ?>" stroke-width="2"><path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>
                         <span>Mosque Profile</span>
                     </a>
-                    <a href="#" class="ynj-more-item" onclick="alert('Room bookings coming soon.');return false;">
+                    <a href="/mosque/<?php echo esc_attr( $slug ); ?>/rooms" class="ynj-more-item">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="<?php echo self::COLOR_ACCENT; ?>" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
                         <span>Room Bookings</span>
+                    </a>
+                    <a href="/mosque/<?php echo esc_attr( $slug ); ?>/contact" class="ynj-more-item">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="<?php echo self::COLOR_ACCENT; ?>" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>
+                        <span>Contact Mosque</span>
                     </a>
                 </div>
             </section>
         </main>
         <?php self::render_bottom_nav( 'more', $slug ); ?>
+        </body></html>
+        <?php
+        exit;
+    }
+
+    /* ================================================================== */
+    /*  PAGE: Sponsor Signup                                              */
+    /* ================================================================== */
+
+    public static function render_sponsor_signup( string $slug ): void {
+        $stripe_pk = YNJ_Stripe::public_key();
+        self::page_head( 'Become a Sponsor — YourJannah', 'Support your local masjid with a business sponsorship.' );
+        ?>
+        <header class="ynj-header">
+            <div class="ynj-header__inner">
+                <a href="/mosque/<?php echo esc_attr( $slug ); ?>/sponsors" class="ynj-back" aria-label="Back">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                </a>
+                <div class="ynj-logo"><span>Become a Sponsor</span></div>
+            </div>
+        </header>
+        <main class="ynj-main">
+            <?php if ( isset( $_GET['payment'] ) && $_GET['payment'] === 'success' ) : ?>
+                <section class="ynj-card" style="text-align:center;padding:40px 20px;">
+                    <div style="font-size:48px;margin-bottom:12px;">&#x2705;</div>
+                    <h2 style="margin-bottom:8px;">You're a Sponsor!</h2>
+                    <p class="ynj-text-muted">Your business listing is now live. Thank you for supporting your local masjid.</p>
+                    <a href="/mosque/<?php echo esc_attr( $slug ); ?>/sponsors" class="ynj-btn" style="margin-top:20px;">View Sponsors</a>
+                </section>
+            <?php else : ?>
+                <section class="ynj-card">
+                    <h2 class="ynj-card__title">Business Details</h2>
+                    <form id="sponsor-form" class="ynj-form">
+                        <div class="ynj-field"><label>Business Name *</label><input type="text" name="business_name" required></div>
+                        <div class="ynj-field"><label>Your Name</label><input type="text" name="owner_name"></div>
+                        <div class="ynj-field"><label>Category *</label>
+                            <select name="category" required>
+                                <option value="">Select category...</option>
+                                <option>Restaurant</option><option>Grocery</option><option>Butcher</option>
+                                <option>Clothing</option><option>Books & Gifts</option><option>Health</option>
+                                <option>Legal</option><option>Finance</option><option>Insurance</option>
+                                <option>Travel</option><option>Education</option><option>Automotive</option>
+                                <option>Catering</option><option>Property</option><option>Technology</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+                        <div class="ynj-field"><label>Description</label><textarea name="description" rows="3" placeholder="What does your business do?"></textarea></div>
+                        <div class="ynj-field-row">
+                            <div class="ynj-field"><label>Phone *</label><input type="tel" name="phone" required></div>
+                            <div class="ynj-field"><label>Email</label><input type="email" name="email"></div>
+                        </div>
+                        <div class="ynj-field"><label>Website</label><input type="url" name="website" placeholder="https://"></div>
+                        <div class="ynj-field"><label>Address</label><input type="text" name="address"></div>
+                        <div class="ynj-field"><label>Postcode</label><input type="text" name="postcode"></div>
+                    </form>
+                </section>
+
+                <section class="ynj-card">
+                    <h2 class="ynj-card__title">Choose Your Plan</h2>
+                    <div class="ynj-tier-grid">
+                        <label class="ynj-tier">
+                            <input type="radio" name="tier" value="standard" checked>
+                            <div class="ynj-tier__body">
+                                <div class="ynj-tier__price">&pound;30<span>/mo</span></div>
+                                <div class="ynj-tier__name">Standard</div>
+                                <p class="ynj-text-muted">Listed in the sponsors section</p>
+                            </div>
+                        </label>
+                        <label class="ynj-tier">
+                            <input type="radio" name="tier" value="featured">
+                            <div class="ynj-tier__body">
+                                <div class="ynj-tier__price">&pound;50<span>/mo</span></div>
+                                <div class="ynj-tier__name">Featured</div>
+                                <p class="ynj-text-muted">Higher placement + badge</p>
+                            </div>
+                        </label>
+                        <label class="ynj-tier">
+                            <input type="radio" name="tier" value="premium">
+                            <div class="ynj-tier__body">
+                                <div class="ynj-tier__price">&pound;100<span>/mo</span></div>
+                                <div class="ynj-tier__name">Premium</div>
+                                <p class="ynj-text-muted">Top placement + featured card</p>
+                            </div>
+                        </label>
+                    </div>
+                </section>
+
+                <button class="ynj-btn" id="submit-sponsor" style="width:100%;justify-content:center;margin-bottom:20px;" type="button">
+                    Continue to Payment
+                </button>
+                <p class="ynj-text-muted" style="text-align:center;" id="sponsor-error"></p>
+            <?php endif; ?>
+        </main>
+        <?php self::render_bottom_nav( 'sponsors', $slug ); ?>
+        <?php if ( ! isset( $_GET['payment'] ) ) : ?>
+        <script>
+        document.getElementById('submit-sponsor').addEventListener('click', async function() {
+            const btn = this;
+            const form = document.getElementById('sponsor-form');
+            const name = form.querySelector('[name="business_name"]').value.trim();
+            const phone = form.querySelector('[name="phone"]').value.trim();
+            if (!name || !phone) { document.getElementById('sponsor-error').textContent = 'Business name and phone are required.'; return; }
+
+            btn.disabled = true; btn.textContent = 'Processing...';
+            const tier = document.querySelector('input[name="tier"]:checked').value;
+
+            const body = {
+                mosque_slug: <?php echo wp_json_encode( $slug ); ?>,
+                business_name: name,
+                owner_name: form.querySelector('[name="owner_name"]').value.trim(),
+                category: form.querySelector('[name="category"]').value,
+                description: form.querySelector('[name="description"]').value.trim(),
+                phone: phone,
+                email: form.querySelector('[name="email"]').value.trim(),
+                website: form.querySelector('[name="website"]').value.trim(),
+                address: form.querySelector('[name="address"]').value.trim(),
+                postcode: form.querySelector('[name="postcode"]').value.trim(),
+                tier: tier
+            };
+
+            try {
+                const resp = await fetch('/wp-json/ynj/v1/stripe/checkout/business', {
+                    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+                });
+                const data = await resp.json();
+                if (data.ok && data.checkout_url) {
+                    window.location.href = data.checkout_url;
+                } else {
+                    document.getElementById('sponsor-error').textContent = data.error || 'Something went wrong.';
+                    btn.disabled = false; btn.textContent = 'Continue to Payment';
+                }
+            } catch(e) {
+                document.getElementById('sponsor-error').textContent = 'Network error. Please try again.';
+                btn.disabled = false; btn.textContent = 'Continue to Payment';
+            }
+        });
+        </script>
+        <?php endif; ?>
+        </body></html>
+        <?php
+        exit;
+    }
+
+    /* ================================================================== */
+    /*  PAGE: Service Signup                                              */
+    /* ================================================================== */
+
+    public static function render_service_signup( string $slug ): void {
+        self::page_head( 'List Your Service — YourJannah', 'Advertise your professional service to the local Muslim community.' );
+        ?>
+        <header class="ynj-header">
+            <div class="ynj-header__inner">
+                <a href="/mosque/<?php echo esc_attr( $slug ); ?>/services" class="ynj-back" aria-label="Back">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                </a>
+                <div class="ynj-logo"><span>List Your Service</span></div>
+            </div>
+        </header>
+        <main class="ynj-main">
+            <?php if ( isset( $_GET['payment'] ) && $_GET['payment'] === 'success' ) : ?>
+                <section class="ynj-card" style="text-align:center;padding:40px 20px;">
+                    <div style="font-size:48px;margin-bottom:12px;">&#x2705;</div>
+                    <h2 style="margin-bottom:8px;">You're Listed!</h2>
+                    <p class="ynj-text-muted">Your service listing is now live. Local Muslims can find you through the app.</p>
+                    <a href="/mosque/<?php echo esc_attr( $slug ); ?>/services" class="ynj-btn" style="margin-top:20px;">View Services</a>
+                </section>
+            <?php else : ?>
+                <section class="ynj-card">
+                    <h2 class="ynj-card__title">Your Service Details</h2>
+                    <p class="ynj-text-muted" style="margin-bottom:16px;">&pound;10/month — reach local Muslims through the YourJannah app.</p>
+                    <form id="service-form" class="ynj-form">
+                        <div class="ynj-field"><label>Your Name / Business Name *</label><input type="text" name="provider_name" required></div>
+                        <div class="ynj-field"><label>Service Type *</label>
+                            <select name="service_type" required>
+                                <option value="">Select type...</option>
+                                <option>Web Development</option><option>SEO</option><option>Digital Marketing</option>
+                                <option>Legal Services</option><option>Accounting</option><option>Financial Advice</option>
+                                <option>IT Support</option><option>Graphic Design</option><option>Photography</option>
+                                <option>Tutoring</option><option>Counselling</option><option>Translation</option>
+                                <option>Driving Instructor</option><option>Plumbing</option><option>Electrician</option>
+                                <option>Cleaning</option><option>Catering</option><option>Other</option>
+                            </select>
+                        </div>
+                        <div class="ynj-field"><label>Description *</label><textarea name="description" rows="3" required placeholder="What service do you offer?"></textarea></div>
+                        <div class="ynj-field-row">
+                            <div class="ynj-field"><label>Phone *</label><input type="tel" name="phone" required></div>
+                            <div class="ynj-field"><label>Email</label><input type="email" name="email"></div>
+                        </div>
+                        <div class="ynj-field"><label>Area Covered</label><input type="text" name="area_covered" placeholder="e.g. London, Birmingham, Remote"></div>
+                    </form>
+                </section>
+
+                <button class="ynj-btn" id="submit-service" style="width:100%;justify-content:center;margin-bottom:20px;" type="button">
+                    Pay &pound;10/mo &amp; Go Live
+                </button>
+                <p class="ynj-text-muted" style="text-align:center;" id="service-error"></p>
+            <?php endif; ?>
+        </main>
+        <?php self::render_bottom_nav( 'services', $slug ); ?>
+        <?php if ( ! isset( $_GET['payment'] ) ) : ?>
+        <script>
+        document.getElementById('submit-service').addEventListener('click', async function() {
+            const btn = this; const form = document.getElementById('service-form');
+            const name = form.querySelector('[name="provider_name"]').value.trim();
+            const type = form.querySelector('[name="service_type"]').value;
+            const desc = form.querySelector('[name="description"]').value.trim();
+            const phone = form.querySelector('[name="phone"]').value.trim();
+            if (!name || !type || !desc || !phone) { document.getElementById('service-error').textContent = 'Please fill in all required fields.'; return; }
+
+            btn.disabled = true; btn.textContent = 'Processing...';
+            try {
+                const resp = await fetch('/wp-json/ynj/v1/stripe/checkout/service', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({
+                        mosque_slug: <?php echo wp_json_encode( $slug ); ?>,
+                        provider_name: name, service_type: type, description: desc,
+                        phone: phone, email: form.querySelector('[name="email"]').value.trim(),
+                        area_covered: form.querySelector('[name="area_covered"]').value.trim()
+                    })
+                });
+                const data = await resp.json();
+                if (data.ok && data.checkout_url) { window.location.href = data.checkout_url; }
+                else { document.getElementById('service-error').textContent = data.error || 'Something went wrong.'; btn.disabled = false; btn.textContent = 'Pay £10/mo & Go Live'; }
+            } catch(e) { document.getElementById('service-error').textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Pay £10/mo & Go Live'; }
+        });
+        </script>
+        <?php endif; ?>
+        </body></html>
+        <?php
+        exit;
+    }
+
+    /* ================================================================== */
+    /*  PAGE: Room Booking                                                */
+    /* ================================================================== */
+
+    public static function render_rooms( string $slug ): void {
+        self::page_head( 'Room Booking — YourJannah', 'Book a room at your local mosque.' );
+        ?>
+        <header class="ynj-header">
+            <div class="ynj-header__inner">
+                <a href="/mosque/<?php echo esc_attr( $slug ); ?>/directory" class="ynj-back" aria-label="Back">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                </a>
+                <div class="ynj-logo"><span>Room Booking</span></div>
+            </div>
+        </header>
+        <main class="ynj-main">
+            <?php if ( isset( $_GET['payment'] ) && $_GET['payment'] === 'success' ) : ?>
+                <section class="ynj-card" style="text-align:center;padding:40px 20px;">
+                    <div style="font-size:48px;margin-bottom:12px;">&#x2705;</div>
+                    <h2 style="margin-bottom:8px;">Room Booked!</h2>
+                    <p class="ynj-text-muted">Your booking is confirmed. You'll receive details at your email.</p>
+                </section>
+            <?php else : ?>
+                <div id="rooms-list"><p class="ynj-text-muted">Loading rooms...</p></div>
+
+                <!-- Booking modal (hidden) -->
+                <div class="ynj-modal" id="booking-modal" style="display:none;">
+                    <div class="ynj-modal__content">
+                        <h3 id="modal-room-name">Book Room</h3>
+                        <form id="room-booking-form" class="ynj-form">
+                            <input type="hidden" name="room_id" id="modal-room-id">
+                            <div class="ynj-field"><label>Date *</label><input type="date" name="booking_date" required min="<?php echo date('Y-m-d'); ?>"></div>
+                            <div class="ynj-field-row">
+                                <div class="ynj-field"><label>Start Time *</label><input type="time" name="start_time" required></div>
+                                <div class="ynj-field"><label>End Time *</label><input type="time" name="end_time" required></div>
+                            </div>
+                            <div class="ynj-field"><label>Your Name *</label><input type="text" name="user_name" required></div>
+                            <div class="ynj-field-row">
+                                <div class="ynj-field"><label>Email *</label><input type="email" name="user_email" required></div>
+                                <div class="ynj-field"><label>Phone</label><input type="tel" name="user_phone"></div>
+                            </div>
+                            <div class="ynj-field"><label>Notes</label><textarea name="notes" rows="2" placeholder="Purpose of booking"></textarea></div>
+                        </form>
+                        <p id="modal-price" class="ynj-text-muted" style="margin:12px 0;"></p>
+                        <div style="display:flex;gap:8px;">
+                            <button class="ynj-btn" id="modal-submit" type="button" style="flex:1;justify-content:center;">Book Now</button>
+                            <button class="ynj-btn ynj-btn--outline" type="button" onclick="document.getElementById('booking-modal').style.display='none'">Cancel</button>
+                        </div>
+                        <p class="ynj-text-muted" id="modal-error" style="margin-top:8px;"></p>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </main>
+        <?php self::render_bottom_nav( 'more', $slug ); ?>
+        <?php if ( ! isset( $_GET['payment'] ) ) : ?>
+        <script>
+        (function(){
+            const slug = <?php echo wp_json_encode( $slug ); ?>;
+            let roomsData = [];
+
+            fetch(`/wp-json/ynj/v1/mosques/${slug}/directory`)
+                .then(r => r.json())
+                .then(() => {
+                    // Rooms aren't in directory endpoint — need admin API. Use a direct fetch.
+                    // For now, use the mosque profile which we can extend.
+                    // Actually rooms need their own endpoint. Let me fetch via ID.
+                });
+
+            // Fetch rooms via mosque profile + admin API workaround
+            // We need a public rooms endpoint — for now fetch mosque then use ID
+            fetch(`/wp-json/ynj/v1/mosques/${slug}`)
+                .then(r => r.json())
+                .then(resp => {
+                    const m = resp.mosque || resp;
+                    // Fetch rooms (they're only in admin API currently — we'll use the bookings endpoint context)
+                    // TODO: Add public rooms endpoint. For now, render from seeded data.
+                    return fetch(`/wp-json/ynj/v1/mosques/${m.id}/rooms`);
+                })
+                .then(r => r.ok ? r.json() : { rooms: [] })
+                .then(data => {
+                    roomsData = data.rooms || [];
+                    renderRooms(roomsData);
+                })
+                .catch(() => {
+                    document.getElementById('rooms-list').innerHTML = '<p class="ynj-text-muted">Could not load rooms.</p>';
+                });
+
+            function renderRooms(rooms) {
+                const el = document.getElementById('rooms-list');
+                if (!rooms.length) { el.innerHTML = '<p class="ynj-text-muted">No rooms available for booking.</p>'; return; }
+
+                el.innerHTML = rooms.map(r => {
+                    const hourly = r.hourly_rate_pence > 0 ? `£${(r.hourly_rate_pence/100).toFixed(0)}/hr` : 'Free';
+                    const daily = r.daily_rate_pence > 0 ? `£${(r.daily_rate_pence/100).toFixed(0)}/day` : '';
+                    return `<div class="ynj-card ynj-room-card">
+                        <h3 style="font-size:16px;font-weight:600;margin-bottom:4px;">${r.name}</h3>
+                        <p class="ynj-text-muted" style="margin-bottom:8px;">${r.description || ''}</p>
+                        <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+                            <span class="ynj-badge">Capacity: ${r.capacity}</span>
+                            <span style="font-weight:600;color:#00ADEF;">${hourly}</span>
+                            ${daily ? `<span class="ynj-text-muted">${daily}</span>` : ''}
+                        </div>
+                        <button class="ynj-btn ynj-btn--outline" onclick="openBooking(${r.id}, '${r.name.replace(/'/g,"\\'")}', ${r.hourly_rate_pence})">Book This Room</button>
+                    </div>`;
+                }).join('');
+            }
+
+            window.openBooking = function(roomId, roomName, hourlyRate) {
+                document.getElementById('modal-room-id').value = roomId;
+                document.getElementById('modal-room-name').textContent = 'Book: ' + roomName;
+                document.getElementById('modal-price').textContent = hourlyRate > 0
+                    ? `Rate: £${(hourlyRate/100).toFixed(0)}/hour — payment via Stripe`
+                    : 'This room is free to book.';
+                document.getElementById('booking-modal').style.display = '';
+                document.getElementById('modal-error').textContent = '';
+            };
+
+            document.getElementById('modal-submit').addEventListener('click', async function() {
+                const btn = this;
+                const form = document.getElementById('room-booking-form');
+                const roomId = form.querySelector('[name="room_id"]').value;
+                const date = form.querySelector('[name="booking_date"]').value;
+                const start = form.querySelector('[name="start_time"]').value;
+                const end = form.querySelector('[name="end_time"]').value;
+                const name = form.querySelector('[name="user_name"]').value.trim();
+                const email = form.querySelector('[name="user_email"]').value.trim();
+
+                if (!date || !start || !end || !name || !email) {
+                    document.getElementById('modal-error').textContent = 'Please fill in all required fields.';
+                    return;
+                }
+
+                // Calculate hours
+                const [sh,sm] = start.split(':').map(Number);
+                const [eh,em] = end.split(':').map(Number);
+                const hours = Math.max(1, Math.ceil(((eh*60+em) - (sh*60+sm)) / 60));
+
+                btn.disabled = true; btn.textContent = 'Processing...';
+
+                try {
+                    const resp = await fetch('/wp-json/ynj/v1/stripe/checkout/room', {
+                        method: 'POST', headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({
+                            room_id: parseInt(roomId), hours: hours,
+                            booking_date: date, start_time: start+':00', end_time: end+':00',
+                            user_name: name, user_email: email,
+                            user_phone: form.querySelector('[name="user_phone"]').value.trim(),
+                            notes: form.querySelector('[name="notes"]').value.trim()
+                        })
+                    });
+                    const data = await resp.json();
+                    if (data.ok && data.checkout_url) { window.location.href = data.checkout_url; }
+                    else if (data.ok && data.free) { window.location.href = `/mosque/${slug}/rooms?payment=success`; }
+                    else { document.getElementById('modal-error').textContent = data.error || 'Booking failed.'; btn.disabled = false; btn.textContent = 'Book Now'; }
+                } catch(e) { document.getElementById('modal-error').textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Book Now'; }
+            });
+        })();
+        </script>
+        <?php endif; ?>
+        </body></html>
+        <?php
+        exit;
+    }
+
+    /* ================================================================== */
+    /*  PAGE: Event Detail + RSVP                                         */
+    /* ================================================================== */
+
+    public static function render_event_detail( string $slug, int $event_id ): void {
+        self::page_head( 'Event — YourJannah', 'Event details and booking.' );
+        ?>
+        <header class="ynj-header">
+            <div class="ynj-header__inner">
+                <a href="/mosque/<?php echo esc_attr( $slug ); ?>/events" class="ynj-back" aria-label="Back">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                </a>
+                <div class="ynj-logo"><span>Event</span></div>
+            </div>
+        </header>
+        <main class="ynj-main">
+            <section class="ynj-card" id="event-detail">
+                <p class="ynj-text-muted">Loading event...</p>
+            </section>
+
+            <section class="ynj-card" id="rsvp-section" style="display:none;">
+                <h3 class="ynj-card__title" id="rsvp-title">RSVP</h3>
+                <form id="rsvp-form" class="ynj-form">
+                    <div class="ynj-field"><label>Your Name *</label><input type="text" name="user_name" required></div>
+                    <div class="ynj-field-row">
+                        <div class="ynj-field"><label>Email *</label><input type="email" name="user_email" required></div>
+                        <div class="ynj-field"><label>Phone</label><input type="tel" name="user_phone"></div>
+                    </div>
+                </form>
+                <button class="ynj-btn" id="rsvp-btn" type="button" style="width:100%;justify-content:center;margin-top:12px;">RSVP — Free</button>
+                <p class="ynj-text-muted" id="rsvp-error" style="margin-top:8px;"></p>
+            </section>
+
+            <section class="ynj-card" id="rsvp-success" style="display:none;text-align:center;padding:30px 20px;">
+                <div style="font-size:48px;margin-bottom:12px;">&#x2705;</div>
+                <h3>You're In!</h3>
+                <p class="ynj-text-muted" id="rsvp-success-msg">See you there.</p>
+            </section>
+        </main>
+        <?php self::render_bottom_nav( 'more', $slug ); ?>
+        <script>
+        (function(){
+            const slug = <?php echo wp_json_encode( $slug ); ?>;
+            const eventId = <?php echo (int) $event_id; ?>;
+            let eventData = null;
+
+            fetch(`/wp-json/ynj/v1/events/${eventId}`)
+                .then(r => r.json())
+                .then(resp => {
+                    if (!resp.ok || !resp.event) {
+                        document.getElementById('event-detail').innerHTML = '<p class="ynj-text-muted">Event not found.</p>';
+                        return;
+                    }
+                    eventData = resp.event;
+                    const e = eventData;
+                    const time = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
+                    const endTime = e.end_time ? String(e.end_time).replace(/:\d{2}$/,'') : '';
+                    const price = e.ticket_price_pence > 0 ? `£${(e.ticket_price_pence/100).toFixed(2)}` : 'Free';
+                    const spots = e.spots_remaining !== null ? `${e.spots_remaining} spots remaining` : 'Unlimited capacity';
+
+                    document.getElementById('event-detail').innerHTML = `
+                        <span class="ynj-badge ynj-badge--event">${e.event_type || 'Event'}</span>
+                        <h2 style="font-size:20px;font-weight:700;margin:8px 0 4px;">${e.title}</h2>
+                        <div style="display:flex;flex-wrap:wrap;gap:12px;margin:12px 0;font-size:13px;color:#6b8fa3;">
+                            <span>📅 ${e.event_date}</span>
+                            <span>🕐 ${time}${endTime ? ' — '+endTime : ''}</span>
+                            ${e.location ? `<span>📍 ${e.location}</span>` : ''}
+                        </div>
+                        <p style="margin:12px 0;line-height:1.6;">${e.description || ''}</p>
+                        <div style="display:flex;gap:16px;margin-top:16px;">
+                            <span class="ynj-badge">${price}</span>
+                            <span class="ynj-text-muted">${spots}</span>
+                        </div>
+                    `;
+
+                    // Show RSVP section
+                    if (e.spots_remaining === 0) {
+                        document.getElementById('rsvp-section').style.display = '';
+                        document.getElementById('rsvp-section').innerHTML = '<p style="text-align:center;font-weight:600;color:#dc2626;">This event is fully booked.</p>';
+                    } else {
+                        document.getElementById('rsvp-section').style.display = '';
+                        const btnText = e.ticket_price_pence > 0 ? `Buy Ticket — ${price}` : 'RSVP — Free';
+                        document.getElementById('rsvp-btn').textContent = btnText;
+                        document.getElementById('rsvp-title').textContent = e.ticket_price_pence > 0 ? 'Buy Ticket' : 'RSVP';
+                    }
+                })
+                .catch(() => {
+                    document.getElementById('event-detail').innerHTML = '<p class="ynj-text-muted">Could not load event.</p>';
+                });
+
+            document.getElementById('rsvp-btn').addEventListener('click', async function() {
+                const btn = this; const form = document.getElementById('rsvp-form');
+                const name = form.querySelector('[name="user_name"]').value.trim();
+                const email = form.querySelector('[name="user_email"]').value.trim();
+                if (!name || !email) { document.getElementById('rsvp-error').textContent = 'Name and email required.'; return; }
+
+                btn.disabled = true; btn.textContent = 'Processing...';
+                try {
+                    const resp = await fetch('/wp-json/ynj/v1/stripe/checkout/event', {
+                        method: 'POST', headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({
+                            event_id: eventId, user_name: name, user_email: email,
+                            user_phone: form.querySelector('[name="user_phone"]').value.trim()
+                        })
+                    });
+                    const data = await resp.json();
+                    if (data.ok && data.checkout_url) { window.location.href = data.checkout_url; }
+                    else if (data.ok && data.free) {
+                        document.getElementById('rsvp-section').style.display = 'none';
+                        document.getElementById('rsvp-success').style.display = '';
+                        document.getElementById('rsvp-success-msg').textContent = data.message || 'See you there!';
+                    }
+                    else { document.getElementById('rsvp-error').textContent = data.error || 'Failed.'; btn.disabled = false; btn.textContent = 'Try Again'; }
+                } catch(e) { document.getElementById('rsvp-error').textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Try Again'; }
+            });
+        })();
+        </script>
+        </body></html>
+        <?php
+        exit;
+    }
+
+    /* ================================================================== */
+    /*  PAGE: Contact / Enquiry                                           */
+    /* ================================================================== */
+
+    public static function render_contact( string $slug ): void {
+        self::page_head( 'Contact — YourJannah', 'Send an enquiry to your local mosque.' );
+        ?>
+        <header class="ynj-header">
+            <div class="ynj-header__inner">
+                <a href="/mosque/<?php echo esc_attr( $slug ); ?>/directory" class="ynj-back" aria-label="Back">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                </a>
+                <div class="ynj-logo"><span>Contact Mosque</span></div>
+            </div>
+        </header>
+        <main class="ynj-main">
+            <section class="ynj-card" id="contact-form-card">
+                <h2 class="ynj-card__title">Send an Enquiry</h2>
+                <form id="contact-form" class="ynj-form">
+                    <div class="ynj-field"><label>Your Name *</label><input type="text" name="name" required></div>
+                    <div class="ynj-field-row">
+                        <div class="ynj-field"><label>Email *</label><input type="email" name="email" required></div>
+                        <div class="ynj-field"><label>Phone</label><input type="tel" name="phone"></div>
+                    </div>
+                    <div class="ynj-field"><label>Enquiry Type</label>
+                        <select name="type">
+                            <option value="general">General</option>
+                            <option value="nikah">Nikah / Marriage</option>
+                            <option value="janazah">Funeral / Janazah</option>
+                            <option value="room_booking">Room Booking</option>
+                            <option value="classes">Classes / Education</option>
+                            <option value="volunteer">Volunteering</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="ynj-field"><label>Subject</label><input type="text" name="subject" placeholder="Brief subject line"></div>
+                    <div class="ynj-field"><label>Message *</label><textarea name="message" rows="5" required placeholder="Your message to the mosque..."></textarea></div>
+                </form>
+                <button class="ynj-btn" id="submit-contact" type="button" style="width:100%;justify-content:center;margin-top:12px;">Send Enquiry</button>
+                <p class="ynj-text-muted" id="contact-error" style="margin-top:8px;"></p>
+            </section>
+
+            <section class="ynj-card" id="contact-success" style="display:none;text-align:center;padding:40px 20px;">
+                <div style="font-size:48px;margin-bottom:12px;">&#x2705;</div>
+                <h2 style="margin-bottom:8px;">Enquiry Sent</h2>
+                <p class="ynj-text-muted">The mosque will respond to your email. Jazakallah khayr.</p>
+                <a href="/mosque/<?php echo esc_attr( $slug ); ?>" class="ynj-btn" style="margin-top:20px;">Back to Mosque</a>
+            </section>
+        </main>
+        <?php self::render_bottom_nav( 'more', $slug ); ?>
+        <script>
+        document.getElementById('submit-contact').addEventListener('click', async function() {
+            const btn = this; const form = document.getElementById('contact-form');
+            const name = form.querySelector('[name="name"]').value.trim();
+            const email = form.querySelector('[name="email"]').value.trim();
+            const message = form.querySelector('[name="message"]').value.trim();
+            if (!name || !email || !message) { document.getElementById('contact-error').textContent = 'Name, email, and message required.'; return; }
+
+            btn.disabled = true; btn.textContent = 'Sending...';
+            try {
+                const resp = await fetch('/wp-json/ynj/v1/enquiries', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({
+                        mosque_slug: <?php echo wp_json_encode( $slug ); ?>,
+                        name: name, email: email, message: message,
+                        phone: form.querySelector('[name="phone"]').value.trim(),
+                        type: form.querySelector('[name="type"]').value,
+                        subject: form.querySelector('[name="subject"]').value.trim()
+                    })
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    document.getElementById('contact-form-card').style.display = 'none';
+                    document.getElementById('contact-success').style.display = '';
+                } else { document.getElementById('contact-error').textContent = data.error || 'Failed to send.'; btn.disabled = false; btn.textContent = 'Send Enquiry'; }
+            } catch(e) { document.getElementById('contact-error').textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Send Enquiry'; }
+        });
+        </script>
         </body></html>
         <?php
         exit;
@@ -1336,6 +1936,43 @@ img,svg{display:block;max-width:100%;}
 
 /* Donate */
 .ynj-donate-badge{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,.85);margin-top:12px;}
+
+/* Forms */
+.ynj-form{display:flex;flex-direction:column;gap:14px;}
+.ynj-field{display:flex;flex-direction:column;gap:4px;}
+.ynj-field label{font-size:12px;font-weight:600;color:<?php echo self::COLOR_TEXT_MUTED; ?>;text-transform:uppercase;letter-spacing:.3px;}
+.ynj-field input,.ynj-field select,.ynj-field textarea{
+    padding:10px 14px;border:1px solid #e0e0e0;border-radius:10px;font-size:14px;
+    font-family:inherit;outline:none;transition:border-color .15s;background:#fff;width:100%;
+}
+.ynj-field input:focus,.ynj-field select:focus,.ynj-field textarea:focus{border-color:<?php echo self::COLOR_ACCENT; ?>;}
+.ynj-field textarea{resize:vertical;}
+.ynj-field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+/* Tier Selector */
+.ynj-tier-grid{display:flex;flex-direction:column;gap:10px;}
+.ynj-tier{display:flex;cursor:pointer;}
+.ynj-tier input{display:none;}
+.ynj-tier__body{
+    flex:1;padding:16px;border:2px solid #e0e0e0;border-radius:14px;
+    transition:all .2s;background:#fff;
+}
+.ynj-tier input:checked + .ynj-tier__body{border-color:<?php echo self::COLOR_ACCENT; ?>;background:#e8f7ff;box-shadow:0 0 0 1px <?php echo self::COLOR_ACCENT; ?>;}
+.ynj-tier__price{font-size:24px;font-weight:700;color:<?php echo self::COLOR_PRIMARY; ?>;}
+.ynj-tier__price span{font-size:14px;font-weight:400;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}
+.ynj-tier__name{font-size:14px;font-weight:600;margin:4px 0 2px;}
+
+/* Modal */
+.ynj-modal{
+    position:fixed;top:0;left:0;right:0;bottom:0;z-index:300;
+    background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;
+    padding:0 0 env(safe-area-inset-bottom,0);
+}
+.ynj-modal__content{
+    background:#fff;border-radius:18px 18px 0 0;padding:24px 20px 32px;
+    width:100%;max-width:500px;max-height:85vh;overflow-y:auto;
+}
+.ynj-modal__content h3{font-size:18px;font-weight:700;margin-bottom:16px;}
 
 /* Text helpers */
 .ynj-text-muted{font-size:13px;color:<?php echo self::COLOR_TEXT_MUTED; ?>;}

@@ -17,6 +17,13 @@ class YNJ_API_Bookings {
      */
     public static function register() {
 
+        // GET /mosques/{id}/rooms — Public room listing
+        register_rest_route( self::NS, '/mosques/(?P<id>\d+)/rooms', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'list_rooms' ],
+            'permission_callback' => '__return_true',
+        ]);
+
         // POST /bookings — Public booking creation
         register_rest_route( self::NS, '/bookings', [
             'methods'             => 'POST',
@@ -42,6 +49,36 @@ class YNJ_API_Bookings {
     // ================================================================
     // HANDLERS
     // ================================================================
+
+    /**
+     * GET /mosques/{id}/rooms — Public room listing.
+     */
+    public static function list_rooms( \WP_REST_Request $request ) {
+        $mosque_id = absint( $request->get_param( 'id' ) );
+
+        global $wpdb;
+        $table = YNJ_DB::table( 'rooms' );
+
+        $results = $wpdb->get_results( $wpdb->prepare(
+            "SELECT id, name, description, capacity, hourly_rate_pence, daily_rate_pence, photo_url, status
+             FROM $table WHERE mosque_id = %d AND status = 'active' ORDER BY name ASC",
+            $mosque_id
+        ) );
+
+        $rooms = array_map( function( $r ) {
+            return [
+                'id'                => (int) $r->id,
+                'name'              => $r->name,
+                'description'       => $r->description,
+                'capacity'          => (int) $r->capacity,
+                'hourly_rate_pence' => (int) $r->hourly_rate_pence,
+                'daily_rate_pence'  => (int) $r->daily_rate_pence,
+                'photo_url'         => $r->photo_url,
+            ];
+        }, $results );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'rooms' => $rooms ] );
+    }
 
     /**
      * POST /bookings — Create a booking (public). Rate limited 5/min.

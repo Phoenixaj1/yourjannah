@@ -20,6 +20,13 @@ class YNJ_API_Admin {
      */
     public static function register() {
 
+        // --- Public enquiry submission ---
+        register_rest_route( self::NS, '/enquiries', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'submit_enquiry' ],
+            'permission_callback' => '__return_true',
+        ] );
+
         // --- Auth (public) ---
         register_rest_route( self::NS, '/admin/register', [
             'methods'             => 'POST',
@@ -110,6 +117,58 @@ class YNJ_API_Admin {
             'callback'            => [ __CLASS__, 'list_rooms' ],
             'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ]);
+    }
+
+    // ================================================================
+    // PUBLIC ENQUIRY
+    // ================================================================
+
+    public static function submit_enquiry( \WP_REST_Request $request ) {
+        $ip = self::get_ip();
+        if ( ! self::rate_limit( 'enquiry_' . $ip, 3 ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Too many requests. Please wait.' ], 429 );
+        }
+
+        $data = $request->get_json_params();
+
+        $mosque_id = absint( $data['mosque_id'] ?? 0 );
+        if ( ! $mosque_id && ! empty( $data['mosque_slug'] ) ) {
+            $mosque_id = (int) YNJ_DB::resolve_slug( $data['mosque_slug'] );
+        }
+
+        $name    = sanitize_text_field( $data['name'] ?? '' );
+        $email   = sanitize_email( $data['email'] ?? '' );
+        $subject = sanitize_text_field( $data['subject'] ?? '' );
+        $message = sanitize_textarea_field( $data['message'] ?? '' );
+
+        if ( ! $mosque_id || ! $name || ! is_email( $email ) || ! $message ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Name, email, mosque, and message are required.' ], 400 );
+        }
+
+        global $wpdb;
+        $table = YNJ_DB::table( 'enquiries' );
+
+        $wpdb->insert( $table, [
+            'mosque_id' => $mosque_id,
+            'name'      => $name,
+            'email'     => $email,
+            'phone'     => sanitize_text_field( $data['phone'] ?? '' ),
+            'subject'   => $subject,
+            'message'   => $message,
+            'type'      => sanitize_text_field( $data['type'] ?? 'general' ),
+            'status'    => 'new',
+        ] );
+
+        $id = (int) $wpdb->insert_id;
+        if ( ! $id ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Failed to submit enquiry.' ], 500 );
+        }
+
+        return new \WP_REST_Response( [
+            'ok'      => true,
+            'id'      => $id,
+            'message' => 'Enquiry submitted. The mosque will respond to your email.',
+        ], 201 );
     }
 
     // ================================================================
