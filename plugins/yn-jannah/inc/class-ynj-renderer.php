@@ -152,9 +152,10 @@ class YNJ_Renderer {
                 <div id="feed-local">
                     <div class="ynj-filter-chips" id="local-filters">
                         <button class="ynj-chip ynj-chip--active" data-filter="all" onclick="filterLocal('all')">All</button>
+                        <button class="ynj-chip" data-filter="_live" onclick="filterLocal('_live')">🔴 Live</button>
+                        <button class="ynj-chip" data-filter="_classes" onclick="filterLocal('_classes')">🎓 Classes</button>
                         <button class="ynj-chip" data-filter="announcements" onclick="filterLocal('announcements')">📢 Updates</button>
                         <button class="ynj-chip" data-filter="talk" onclick="filterLocal('talk')">🎤 Talks</button>
-                        <button class="ynj-chip" data-filter="class,course,halaqa" onclick="filterLocal('class,course,halaqa')">📖 Classes</button>
                         <button class="ynj-chip" data-filter="youth,kids,children" onclick="filterLocal('youth,kids,children')">👦 Youth</button>
                         <button class="ynj-chip" data-filter="sisters" onclick="filterLocal('sisters')">👩 Sisters</button>
                         <button class="ynj-chip" data-filter="sports,competition" onclick="filterLocal('sports,competition')">⚽ Sports</button>
@@ -167,8 +168,8 @@ class YNJ_Renderer {
                 <div id="feed-wider" style="display:none;">
                     <div class="ynj-filter-chips" id="event-filters">
                         <button class="ynj-chip ynj-chip--active" data-filter="all" onclick="filterEvents('all')">All</button>
+                        <button class="ynj-chip" data-filter="class" onclick="filterEvents('class')">🎓 Classes</button>
                         <button class="ynj-chip" data-filter="talk" onclick="filterEvents('talk')">🎤 Talks</button>
-                        <button class="ynj-chip" data-filter="class,course,halaqa" onclick="filterEvents('class,course,halaqa')">📖 Classes</button>
                         <button class="ynj-chip" data-filter="youth,kids,children" onclick="filterEvents('youth,kids,children')">👦 Youth</button>
                         <button class="ynj-chip" data-filter="sisters" onclick="filterEvents('sisters')">👩 Sisters</button>
                         <button class="ynj-chip" data-filter="sports,competition" onclick="filterEvents('sports,competition')">⚽ Sports</button>
@@ -556,21 +557,36 @@ class YNJ_Renderer {
             };
 
             function renderFeedCard(item) {
-                const cardClass = item.pinned ? 'ynj-feed-card--pinned' : (item.type==='event' ? 'ynj-feed-card--event' : 'ynj-feed-card--announcement');
+                let cardClass, badge;
 
-                let badge;
-                if (item.type === 'event') {
+                if (item.type === 'live') {
+                    cardClass = 'ynj-feed-card--event';
+                    badge = '<span class="ynj-badge" style="background:#fee2e2;color:#dc2626;">🔴 LIVE</span>';
+                } else if (item.type === 'class') {
+                    cardClass = 'ynj-feed-card--event';
+                    badge = `<span class="ynj-badge" style="background:#ede9fe;color:#7c3aed;">🎓 Class${item.price ? ' · '+item.price : ''}</span>`;
+                } else if (item.type === 'event') {
+                    cardClass = 'ynj-feed-card--event';
                     const et = (item.event_type||'').toLowerCase();
                     const icon = eventTypeIcons[et] || '📅';
                     const label = (item.event_type||'Event').charAt(0).toUpperCase() + (item.event_type||'event').slice(1);
                     badge = `<span class="ynj-badge ynj-badge--event">${icon} ${label}</span>`;
                 } else {
+                    cardClass = item.pinned ? 'ynj-feed-card--pinned' : 'ynj-feed-card--announcement';
                     badge = item.pinned ? '<span class="ynj-badge ynj-badge--pinned">📌 Pinned</span>' : '<span class="ynj-badge">📢 Update</span>';
                 }
 
                 const snippet = (item.body||'').length > 80 ? item.body.slice(0,80)+'...' : (item.body||'');
                 const meta = [];
-                if (item.type === 'event') {
+                if (item.type === 'live') {
+                    if (item.time) meta.push(`<span>🕐 ${item.time}</span>`);
+                    if (item.live_url) meta.push(`<a href="/live" style="color:#dc2626;font-weight:600;">Watch Live →</a>`);
+                } else if (item.type === 'class') {
+                    if (item.day_of_week) meta.push(`<span>📅 ${item.day_of_week}s</span>`);
+                    if (item.time) meta.push(`<span>🕐 ${item.time}</span>`);
+                    if (item.instructor) meta.push(`<span>👤 ${item.instructor}</span>`);
+                    if (item.mosque_slug) meta.push(`<a href="/mosque/${item.mosque_slug}/classes" style="color:#00ADEF;font-weight:600;">Book →</a>`);
+                } else if (item.type === 'event') {
                     if (item.date) meta.push(`<span>📅 ${item.date}</span>`);
                     if (item.time) meta.push(`<span>🕐 ${item.time}</span>`);
                     if (item.location) meta.push(`<span>📍 ${item.location}</span>`);
@@ -592,17 +608,36 @@ class YNJ_Renderer {
             function loadFeed(slug) {
                 Promise.all([
                     fetch(`${API}/mosques/${slug}/announcements`).then(r => r.json()).catch(() => ({announcements:[]})),
-                    fetch(`${API}/mosques/${slug}/events?upcoming=1`).then(r => r.json()).catch(() => ({events:[]}))
-                ]).then(([aData, eData]) => {
+                    fetch(`${API}/mosques/${slug}/events?upcoming=1`).then(r => r.json()).catch(() => ({events:[]})),
+                    fetch(`${API}/mosques/${slug}/classes`).then(r => r.json()).catch(() => ({classes:[]}))
+                ]).then(([aData, eData, cData]) => {
                     allLocalItems = [];
                     (aData.announcements || []).forEach(a => {
                         allLocalItems.push({ type:'announcement', title:a.title, body:a.body, date:a.published_at||'', pinned:a.pinned });
                     });
                     (eData.events || []).forEach(e => {
                         const time = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
-                        allLocalItems.push({ type:'event', title:e.title, body:e.description||'', date:e.event_date||'', time:time, location:e.location||'', event_id:e.id, mosque_slug:slug, event_type:e.event_type||'' });
+                        const isLive = e.is_live && e.is_online;
+                        allLocalItems.push({
+                            type: isLive ? 'live' : 'event',
+                            title: e.title, body:e.description||'', date:e.event_date||'', time:time,
+                            location:e.location||'', event_id:e.id, mosque_slug:slug,
+                            event_type: isLive ? 'live' : (e.event_type||''),
+                            live_url: e.live_url||''
+                        });
                     });
-                    allLocalItems.sort((a,b) => { if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1; return (b.date||'').localeCompare(a.date||''); });
+                    (cData.classes || []).forEach(c => {
+                        const time = c.start_time ? String(c.start_time).replace(/:\d{2}$/,'') : '';
+                        const price = c.price_pence > 0 ? '£'+(c.price_pence/100) : 'Free';
+                        allLocalItems.push({
+                            type:'class', title:c.title, body:c.description||'',
+                            date:c.start_date||'', time:time, location:c.location||'',
+                            event_type:'class', mosque_slug:slug,
+                            class_id:c.id, instructor:c.instructor_name||'', price:price,
+                            day_of_week:c.day_of_week||''
+                        });
+                    });
+                    allLocalItems.sort((a,b) => { if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1; if(a.type==='live'&&b.type!=='live')return -1; if(a.type!=='live'&&b.type==='live')return 1; return (b.date||'').localeCompare(a.date||''); });
                     renderLocalFeed('all');
                 });
             }
@@ -611,7 +646,11 @@ class YNJ_Renderer {
                 const el = document.getElementById('local-feed-list');
                 let items = allLocalItems;
 
-                if (filter === 'announcements') {
+                if (filter === '_live') {
+                    items = items.filter(i => i.type === 'live');
+                } else if (filter === '_classes') {
+                    items = items.filter(i => i.type === 'class');
+                } else if (filter === 'announcements') {
                     items = items.filter(i => i.type === 'announcement');
                 } else if (filter && filter !== 'all') {
                     const types = filter.split(',');
@@ -651,16 +690,27 @@ class YNJ_Renderer {
                         const mosques = (data.mosques||[]).filter(m => m.slug !== mosqueSlug);
                         if (!mosques.length) { el.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">No nearby mosques found.</p>'; return; }
 
-                        const fetches = mosques.slice(0,8).map(m =>
+                        // Fetch events AND classes from nearby mosques
+                        const eventFetches = mosques.slice(0,8).map(m =>
                             fetch(`${API}/mosques/${m.slug}/events?upcoming=1`).then(r=>r.json())
-                                .then(d => (d.events||[]).map(e => ({...e, mosque_name:m.name, mosque_slug:m.slug, distance:m.distance})))
+                                .then(d => (d.events||[]).map(e => ({...e, _type:'event', mosque_name:m.name, mosque_slug:m.slug, distance:m.distance})))
                                 .catch(() => [])
                         );
-                        return Promise.all(fetches);
+                        const classFetches = mosques.slice(0,8).map(m =>
+                            fetch(`${API}/mosques/${m.slug}/classes`).then(r=>r.json())
+                                .then(d => (d.classes||[]).map(c => ({...c, _type:'class', mosque_name:m.name, mosque_slug:m.slug, distance:m.distance})))
+                                .catch(() => [])
+                        );
+                        return Promise.all([...eventFetches, ...classFetches]);
                     })
                     .then(results => {
                         if (!results) return;
-                        allWiderEvents = results.flat().sort((a,b) => (a.event_date||'').localeCompare(b.event_date||''));
+                        allWiderEvents = results.flat().sort((a,b) => {
+                            // Live first, then by date
+                            if (a.is_live && !b.is_live) return -1;
+                            if (!a.is_live && b.is_live) return 1;
+                            return ((a.event_date||a.start_date)||'').localeCompare((b.event_date||b.start_date)||'');
+                        });
                         renderWiderEvents('all');
                     })
                     .catch(() => { el.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">Could not load.</p>'; });
@@ -672,7 +722,10 @@ class YNJ_Renderer {
 
                 if (filter && filter !== 'all') {
                     const types = filter.split(',');
-                    events = events.filter(e => types.includes((e.event_type||'').toLowerCase()));
+                    events = events.filter(e => {
+                        if (e._type === 'class') return types.includes('class');
+                        return types.includes((e.event_type||'').toLowerCase());
+                    });
                 }
 
                 if (!events.length) {
@@ -684,11 +737,27 @@ class YNJ_Renderer {
 
                 el.innerHTML = '<div class="ynj-feed">' + events.map(e => {
                     const time = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
+                    const distLabel = e.distance ? ` · ${e.distance < 1.6 ? (e.distance*0.621).toFixed(1)+'mi' : Math.round(e.distance*0.621)+'mi'}` : '';
+                    const mosqueName = e.mosque_name + distLabel;
+
+                    if (e._type === 'class') {
+                        const price = e.price_pence > 0 ? '£'+(e.price_pence/100) : 'Free';
+                        return renderFeedCard({
+                            type:'class', title:e.title, body:e.description||'',
+                            date:e.start_date||'', time:time, location:e.location||'',
+                            event_type:'class', mosque_slug:e.mosque_slug,
+                            class_id:e.id, instructor:e.instructor_name||'', price:price,
+                            day_of_week:e.day_of_week||'', mosque_name:mosqueName
+                        });
+                    }
+
+                    const isLive = e.is_live && e.is_online;
                     return renderFeedCard({
-                        type:'event', title:e.title, body:e.description||'', date:e.event_date||'',
+                        type: isLive ? 'live' : 'event',
+                        title:e.title, body:e.description||'', date:e.event_date||'',
                         time:time, location:e.location||'', event_id:e.id, mosque_slug:e.mosque_slug,
-                        event_type: e.event_type||'',
-                        mosque_name: e.mosque_name + (e.distance ? ` · ${e.distance < 1.6 ? (e.distance*0.621).toFixed(1)+'mi' : Math.round(e.distance*0.621)+'mi'}` : '')
+                        event_type: isLive ? 'live' : (e.event_type||''),
+                        live_url: e.live_url||'', mosque_name: mosqueName
                     });
                 }).join('') + '</div>';
             }
@@ -1887,6 +1956,14 @@ class YNJ_Renderer {
             <section class="ynj-card">
                 <h2 class="ynj-card__title">Quick Links</h2>
                 <div class="ynj-more-grid">
+                    <a href="/mosque/<?php echo esc_attr( $slug ); ?>/classes" class="ynj-more-item">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="<?php echo self::COLOR_ACCENT; ?>" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+                        <span>Classes & Courses</span>
+                    </a>
+                    <a href="/live" class="ynj-more-item">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 010 8.49M7.76 16.24a6 6 0 010-8.49"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 19.07a10 10 0 010-14.14"/></svg>
+                        <span>Live Events</span>
+                    </a>
                     <a href="/mosque/<?php echo esc_attr( $slug ); ?>/events" class="ynj-more-item">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="<?php echo self::COLOR_ACCENT; ?>" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                         <span>All Events</span>
@@ -1895,9 +1972,9 @@ class YNJ_Renderer {
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="<?php echo self::COLOR_ACCENT; ?>" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                         <span>Full Timetable</span>
                     </a>
-                    <a href="/mosque/<?php echo esc_attr( $slug ); ?>" class="ynj-more-item">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="<?php echo self::COLOR_ACCENT; ?>" stroke-width="2"><path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>
-                        <span>Mosque Profile</span>
+                    <a href="/mosque/<?php echo esc_attr( $slug ); ?>/services" class="ynj-more-item">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="<?php echo self::COLOR_ACCENT; ?>" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a4 4 0 00-8 0v2"/></svg>
+                        <span>Services</span>
                     </a>
                     <a href="/mosque/<?php echo esc_attr( $slug ); ?>/rooms" class="ynj-more-item">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="<?php echo self::COLOR_ACCENT; ?>" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -3665,10 +3742,13 @@ document.addEventListener('DOMContentLoaded', function() {
     nav.style.display = 'flex';
     var path = location.pathname;
     var links = [
-        ['/', 'Home'], ['/live', '🔴 Live'],
-        ['/mosque/'+slug+'/classes', '🎓 Classes'], ['/classes', 'Browse Classes'],
+        ['/', 'Home'],
+        ['/mosque/'+slug+'/classes', 'Classes'],
+        ['/live', 'Live'],
+        ['/mosque/'+slug+'/events', 'Events'],
         ['/mosque/'+slug+'/fundraising', 'Fundraise'],
-        ['/mosque/'+slug+'/sponsors', 'Sponsors'], ['/mosque/'+slug+'/services', 'Services'],
+        ['/mosque/'+slug+'/sponsors', 'Sponsors'],
+        ['/mosque/'+slug+'/services', 'Services'],
         ['/profile', 'Account']
     ];
     nav.innerHTML = links.map(function(l) {
@@ -3694,6 +3774,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 'href'  => '/',
                 'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M9 21V9h6v12"/></svg>',
             ],
+            'explore' => [
+                'label' => 'Explore',
+                'href'  => '/mosque/{slug}/classes',
+                'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>',
+                'mosque' => true,
+            ],
             'fundraising' => [
                 'label' => 'Fundraise',
                 'href'  => '/mosque/{slug}/fundraising',
@@ -3704,12 +3790,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 'label' => 'Sponsors',
                 'href'  => '/mosque/{slug}/sponsors',
                 'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
-                'mosque' => true,
-            ],
-            'services' => [
-                'label' => 'Services',
-                'href'  => '/mosque/{slug}/services',
-                'icon'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a4 4 0 00-8 0v2"/></svg>',
                 'mosque' => true,
             ],
             'more' => [
