@@ -105,6 +105,22 @@ get_header();
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
     </a>
 
+    <!-- Support your masjid CTAs -->
+    <div class="ynj-support-row">
+        <a class="ynj-support-card ynj-support-card--sponsor" id="cta-sponsor" href="#" data-nav-mosque="/mosque/{slug}/sponsors">
+            <span class="ynj-support-card__icon">⭐</span>
+            <strong><?php esc_html_e( 'Sponsor Your Masjid', 'yourjannah' ); ?></strong>
+            <span class="ynj-support-card__sub"><?php esc_html_e( 'List your business — reach the community', 'yourjannah' ); ?></span>
+            <span class="ynj-support-card__help" id="cta-sponsor-help"><?php esc_html_e( 'Funds go to supporting the masjid', 'yourjannah' ); ?></span>
+        </a>
+        <a class="ynj-support-card ynj-support-card--services" id="cta-services" href="#" data-nav-mosque="/mosque/{slug}/services">
+            <span class="ynj-support-card__icon">🤝</span>
+            <strong><?php esc_html_e( 'Advertise Services', 'yourjannah' ); ?></strong>
+            <span class="ynj-support-card__sub"><?php esc_html_e( 'Professionals — get found locally', 'yourjannah' ); ?></span>
+            <span class="ynj-support-card__help" id="cta-services-help"><?php esc_html_e( 'Proceeds help fund the masjid', 'yourjannah' ); ?></span>
+        </a>
+    </div>
+
     </div><!-- end left column -->
     <div class="ynj-desktop-grid__right">
 

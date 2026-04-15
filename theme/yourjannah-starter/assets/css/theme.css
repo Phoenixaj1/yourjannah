@@ -255,6 +255,24 @@ img,svg{display:block;max-width:100%;}
 .ynj-timetable-link svg{display:inline;}
 .ynj-timetable-link:active{background:rgba(0,173,239,.08);}
 
+/* Support CTA row */
+.ynj-support-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.ynj-support-card{
+    display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;
+    padding:16px 12px;border-radius:14px;text-decoration:none;
+    border:1px solid rgba(255,255,255,.6);
+    backdrop-filter:blur(8px);transition:transform .15s;
+}
+.ynj-support-card:hover{transform:translateY(-1px);}
+.ynj-support-card__icon{font-size:24px;margin-bottom:2px;}
+.ynj-support-card strong{font-size:13px;line-height:1.3;}
+.ynj-support-card__sub{font-size:11px;opacity:.8;line-height:1.3;}
+.ynj-support-card__help{font-size:10px;margin-top:4px;padding:3px 8px;border-radius:6px;line-height:1.3;}
+.ynj-support-card--sponsor{background:linear-gradient(135deg,#00ADEF,#0369a1);color:#fff;}
+.ynj-support-card--sponsor .ynj-support-card__help{background:rgba(255,255,255,.15);color:rgba(255,255,255,.9);}
+.ynj-support-card--services{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;}
+.ynj-support-card--services .ynj-support-card__help{background:rgba(255,255,255,.15);color:rgba(255,255,255,.9);}
+
 /* Prayer Grid */
 .ynj-prayer-grid{display:flex;flex-direction:column;gap:1px;}
 .ynj-prayer-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0ec;}

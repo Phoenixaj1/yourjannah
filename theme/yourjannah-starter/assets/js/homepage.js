@@ -137,6 +137,13 @@
                         mosqueData = m;
                         document.getElementById('mosque-name').textContent = m.name || slug;
 
+                        // Update CTA help text with mosque name
+                        var mName = m.name || 'the masjid';
+                        var sh = document.getElementById('cta-sponsor-help');
+                        var svh = document.getElementById('cta-services-help');
+                        if (sh) sh.textContent = 'Funds go to supporting ' + mName;
+                        if (svh) svh.textContent = 'Proceeds help fund ' + mName;
+
                         // Sponsor ticker
                         fetch(`${API}/mosques/${slug}/directory`)
                             .then(r => r.json())
