@@ -77,6 +77,18 @@
     }
 
     // ================================================================
+    // GLOBAL: Close modals on Escape key
+    // ================================================================
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.ynj-modal').forEach(function(m) {
+                if (m.style.display !== 'none') m.style.display = 'none';
+            });
+        }
+    });
+
+    // ================================================================
     // SERVICE WORKER
     // ================================================================
 

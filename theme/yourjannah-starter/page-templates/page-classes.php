@@ -46,6 +46,23 @@ $slug = ynj_mosque_slug();
     <div class="ynj-classes-grid" id="classes-list">
         <p class="ynj-text-muted" style="padding:20px;text-align:center;">Loading classes...</p>
     </div>
+
+    <!-- Enrolment Modal -->
+    <div class="ynj-modal" id="enrol-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+        <div class="ynj-modal__content">
+            <h3 id="enrol-modal-title"><?php esc_html_e( 'Enrol in Class', 'yourjannah' ); ?></h3>
+            <form id="enrol-form" class="ynj-form">
+                <input type="hidden" name="class_id" id="enrol-class-id">
+                <div class="ynj-field"><label><?php esc_html_e( 'Your Name', 'yourjannah' ); ?> *</label><input type="text" name="user_name" required placeholder="<?php esc_attr_e( 'Full name', 'yourjannah' ); ?>"></div>
+                <div class="ynj-field"><label><?php esc_html_e( 'Email', 'yourjannah' ); ?> *</label><input type="email" name="user_email" required placeholder="your@email.com"></div>
+            </form>
+            <div style="display:flex;gap:8px;margin-top:16px;">
+                <button class="ynj-btn" id="enrol-submit" type="button" style="flex:1;justify-content:center;"><?php esc_html_e( 'Enrol Now', 'yourjannah' ); ?></button>
+                <button class="ynj-btn ynj-btn--outline" type="button" onclick="document.getElementById('enrol-modal').style.display='none'"><?php esc_html_e( 'Cancel', 'yourjannah' ); ?></button>
+            </div>
+            <p class="ynj-text-muted" id="enrol-error" style="margin-top:8px;color:#dc2626;"></p>
+        </div>
+    </div>
 </main>
 
 <!-- Teach a Course CTA -->
@@ -230,23 +247,32 @@ $slug = ynj_mosque_slug();
     }
 
     window.enrolClass = function(id, title, price) {
-        const name = prompt('Your name:');
-        if (!name) return;
-        const email = prompt('Your email:');
-        if (!email) return;
+        document.getElementById('enrol-class-id').value = id;
+        document.getElementById('enrol-modal-title').textContent = 'Enrol: ' + title;
+        document.getElementById('enrol-error').textContent = '';
+        document.getElementById('enrol-modal').style.display = '';
+    };
 
-        fetch(API + 'classes/' + id + '/enrol', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({user_name:name, user_email:email})
-        })
-        .then(r=>r.json())
-        .then(data => {
+    document.getElementById('enrol-submit').addEventListener('click', async function() {
+        var btn = this;
+        var form = document.getElementById('enrol-form');
+        var id = form.querySelector('[name="class_id"]').value;
+        var name = form.querySelector('[name="user_name"]').value.trim();
+        var email = form.querySelector('[name="user_email"]').value.trim();
+        if (!name || !email) { document.getElementById('enrol-error').textContent = 'Name and email required.'; return; }
+
+        btn.disabled = true; btn.textContent = 'Enrolling...';
+        try {
+            var resp = await fetch(API + 'classes/' + id + '/enrol', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({user_name:name, user_email:email})
+            });
+            var data = await resp.json();
             if (data.ok && data.checkout_url) window.location.href = data.checkout_url;
             else if (data.ok && data.free) window.location.href = <?php echo wp_json_encode( home_url( '/mosque/' . $slug . '/classes?enrolled=1' ) ); ?>;
-            else alert(data.error || 'Could not enrol.');
-        })
-        .catch(() => alert('Network error.'));
-    };
+            else { document.getElementById('enrol-error').textContent = data.error || 'Could not enrol.'; btn.disabled = false; btn.textContent = 'Enrol Now'; }
+        } catch(e) { document.getElementById('enrol-error').textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Enrol Now'; }
+    });
 
     loadClasses();
 })();

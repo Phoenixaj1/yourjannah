@@ -66,10 +66,23 @@ body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--tex
 .spinner{display:none;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
 .loading .btn-text{display:none}.loading .spinner{display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
-@media(max-width:768px){.d-sidebar{display:none}.d-main{margin-left:0}.d-grid-2,.d-grid-3,.d-grid-4{grid-template-columns:1fr}}
+/* Mobile hamburger + drawer */
+.d-hamburger{display:none;position:fixed;top:12px;left:12px;z-index:60;width:40px;height:40px;border:none;border-radius:10px;background:var(--primary);color:#fff;cursor:pointer;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.d-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:49}
+.d-overlay.open{display:block}
+@media(max-width:768px){
+    .d-hamburger{display:flex}
+    .d-sidebar{transform:translateX(-100%);transition:transform .25s ease;box-shadow:4px 0 20px rgba(0,0,0,.1)}
+    .d-sidebar.open{transform:translateX(0)}
+    .d-main{margin-left:0;padding:16px;padding-top:60px}
+    .d-grid-2,.d-grid-3,.d-grid-4{grid-template-columns:1fr}
+    .d-header h1{font-size:18px}
+}
 </style>
 </head>
 <body>
+<button class="d-hamburger" id="d-hamburger" onclick="toggleSidebar()">&#9776;</button>
+<div class="d-overlay" id="d-overlay" onclick="toggleSidebar()"></div>
 <div id="app"></div>
 <script>
 var API = '<?php echo esc_js($rest_url); ?>';
@@ -112,6 +125,19 @@ async function api(endpoint, opts) {
 }
 
 function render(html) { document.getElementById('app').innerHTML = html; }
+
+function toggleSidebar() {
+    var sb = document.querySelector('.d-sidebar');
+    var ov = document.getElementById('d-overlay');
+    if (sb) { sb.classList.toggle('open'); }
+    if (ov) { ov.classList.toggle('open'); }
+}
+// Close sidebar when nav link clicked on mobile
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.d-nav a') && window.innerWidth <= 768) {
+        toggleSidebar();
+    }
+});
 
 function filterTableList(tableId, searchId, statusFilterId) {
     var table = document.getElementById(tableId);

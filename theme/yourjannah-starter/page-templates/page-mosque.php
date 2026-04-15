@@ -43,6 +43,7 @@ $slug = ynj_mosque_slug();
 (function(){
     const slug = <?php echo wp_json_encode( $slug ); ?>;
     const API  = ynjData.restUrl;
+    function esc(s) { var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
 
     const token = localStorage.getItem('ynj_user_token') || '';
     let isSubscribed = false;
@@ -142,7 +143,7 @@ $slug = ynj_mosque_slug();
         .then(data => {
             if (data.announcements && data.announcements.length) {
                 document.getElementById('mp-feed').innerHTML = data.announcements.map(a =>
-                    '<div class="ynj-feed-item"><h4>' + a.title + '</h4><p>' + a.body + '</p><time>' + (a.published_at||'') + '</time></div>'
+                    '<div class="ynj-feed-item"><h4>' + esc(a.title) + '</h4><p>' + esc(a.body) + '</p><time>' + esc(a.published_at||'') + '</time></div>'
                 ).join('');
             }
         }).catch(() => {});
@@ -153,7 +154,7 @@ $slug = ynj_mosque_slug();
             if (data.events && data.events.length) {
                 document.getElementById('mp-events-list').innerHTML = data.events.map(e => {
                     const t = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
-                    return '<div class="ynj-feed-item"><h4>' + e.title + '</h4><p>' + (e.event_date||'') + ' &middot; ' + t + '</p></div>';
+                    return '<div class="ynj-feed-item"><h4>' + esc(e.title) + '</h4><p>' + esc(e.event_date||'') + ' &middot; ' + t + '</p></div>';
                 }).join('');
             }
         }).catch(() => {});

@@ -60,7 +60,7 @@ $slug = ynj_mosque_slug();
     <style>@media(min-width:700px){#rooms-list,#msvc-list{grid-template-columns:1fr 1fr !important;}}</style>
 
     <!-- Room Booking Modal -->
-    <div class="ynj-modal" id="booking-modal" style="display:none;">
+    <div class="ynj-modal" id="booking-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
         <div class="ynj-modal__content">
             <h3 id="modal-room-name" style="margin-bottom:12px;"><?php esc_html_e( 'Book Room', 'yourjannah' ); ?></h3>
             <form id="room-booking-form" class="ynj-form">
@@ -92,7 +92,7 @@ $slug = ynj_mosque_slug();
     </div>
 
     <!-- Service Enquiry Modal -->
-    <div class="ynj-modal" id="svc-enquiry-modal" style="display:none;">
+    <div class="ynj-modal" id="svc-enquiry-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
         <div class="ynj-modal__content">
             <h3 id="svc-modal-title" style="margin-bottom:12px;"><?php esc_html_e( 'Enquire', 'yourjannah' ); ?></h3>
             <form id="svc-enquiry-form" class="ynj-form">
@@ -288,7 +288,12 @@ $slug = ynj_mosque_slug();
             var data = await resp.json();
             if (data.ok) {
                 document.getElementById('svc-enquiry-modal').style.display = 'none';
-                alert('Enquiry sent! The mosque will contact you.');
+                var successEl = document.createElement('div');
+                successEl.className = 'ynj-card';
+                successEl.style.cssText = 'text-align:center;padding:24px 20px;margin-bottom:14px;';
+                successEl.innerHTML = '<div style="font-size:36px;margin-bottom:8px;">&#x2705;</div><h3>Enquiry Sent</h3><p class="ynj-text-muted">The mosque will contact you. Jazakallah khayr.</p>';
+                document.getElementById('msvc-list').prepend(successEl);
+                setTimeout(function(){ successEl.remove(); }, 5000);
             } else {
                 document.getElementById('svc-modal-error').textContent = data.error || 'Failed.';
             }
