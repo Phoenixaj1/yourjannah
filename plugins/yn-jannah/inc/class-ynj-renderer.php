@@ -1592,9 +1592,13 @@ class YNJ_Renderer {
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="<?php echo self::COLOR_ACCENT; ?>" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>
                         <span>Contact Mosque</span>
                     </a>
-                    <a href="/profile" class="ynj-more-item" id="profile-link">
+                    <a href="/profile" class="ynj-more-item">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="<?php echo self::COLOR_ACCENT; ?>" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        <span id="profile-label">My Account</span>
+                        <span>My Account</span>
+                    </a>
+                    <a href="/dashboard" class="ynj-more-item">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="<?php echo self::COLOR_ACCENT; ?>" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        <span>Mosque Admin</span>
                     </a>
                 </div>
             </section>
