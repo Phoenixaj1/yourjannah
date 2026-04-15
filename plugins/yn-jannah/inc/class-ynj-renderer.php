@@ -262,26 +262,35 @@ class YNJ_Renderer {
                             document.getElementById('navigate-drive').href =
                                 `https://www.google.com/maps/dir/?api=1&destination=${m.latitude},${m.longitude}&travelmode=driving`;
 
-                            // Show leave-by with default travel time if user hasn't set one
-                            if (!travelMinutes) {
-                                // Check if user has saved preference
-                                try {
-                                    const savedUser = JSON.parse(localStorage.getItem('ynj_user') || '{}');
-                                    travelMinutes = savedUser.travel_minutes || 15; // default 15 min
-                                } catch(e) { travelMinutes = 15; }
-                            }
-                            document.getElementById('hero-travel').style.display = '';
-
-                            // Show distance if we have user coords
                             if (userLat) {
+                                // GPS available — calculate real distance and travel time
                                 const km = haversine(userLat, userLng, m.latitude, m.longitude);
+                                travelMinutes = Math.max(1, Math.round(km * 12)); // ~5km/h walking
                                 const distText = km < 1 ? `${Math.round(km*1000)}m` : `${km.toFixed(1)}km`;
-                                document.getElementById('travel-dist').textContent = `${distText} · ~${Math.round(km*12)} min walk`;
-                                travelMinutes = Math.max(1, Math.round(km * 12));
+                                document.getElementById('travel-dist').textContent = `${distText} · ~${travelMinutes} min walk`;
+                                document.getElementById('hero-travel').style.display = '';
+                                updateLeaveBy();
                             } else {
-                                document.getElementById('travel-dist').textContent = `~${travelMinutes} min (est.)`;
+                                // No GPS — check if user has saved travel time in profile
+                                const userToken = localStorage.getItem('ynj_user_token');
+                                if (userToken) {
+                                    fetch(`${API}/auth/me`, {headers:{'Authorization':'Bearer '+userToken}})
+                                        .then(r => r.json())
+                                        .then(resp => {
+                                            if (resp.ok && resp.user && resp.user.travel_minutes > 0) {
+                                                travelMinutes = resp.user.travel_minutes;
+                                                const mode = resp.user.travel_mode === 'drive' ? 'drive' : 'walk';
+                                                document.getElementById('travel-dist').textContent = `~${travelMinutes} min ${mode}`;
+                                                document.getElementById('hero-travel').style.display = '';
+                                                updateLeaveBy();
+                                            }
+                                            // If user has no travel_minutes saved, leave-by stays hidden
+                                            // Navigate buttons still show so user can check Google Maps
+                                        })
+                                        .catch(() => {});
+                                }
+                                // No token and no GPS = navigate buttons show but no leave-by
                             }
-                            updateLeaveBy();
                         }
 
                         if (m.prayer_times && !m.prayer_times.error) {
