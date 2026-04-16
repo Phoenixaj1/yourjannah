@@ -24,7 +24,30 @@ $slug = ynj_mosque_slug();
 </style>
 
 <main class="ynj-main">
-    <h2 id="fundraising-title" style="font-size:18px;font-weight:700;margin-bottom:14px;"><?php esc_html_e( 'Masjid Fundraising', 'yourjannah' ); ?></h2>
+    <h2 id="fundraising-title" style="font-size:18px;font-weight:700;margin-bottom:4px;"><?php esc_html_e( 'Donate & Fundraise', 'yourjannah' ); ?></h2>
+    <p class="ynj-text-muted" style="margin-bottom:14px;"><?php esc_html_e( 'Support your masjid — every contribution makes a difference', 'yourjannah' ); ?></p>
+
+    <!-- Quick Donate Banner -->
+    <a id="quick-donate-btn" href="#" target="_blank" rel="noopener" style="display:block;background:linear-gradient(135deg,#16a34a,#15803d);border-radius:14px;padding:20px;margin-bottom:16px;text-decoration:none;color:#fff;text-align:center;">
+        <div style="font-size:28px;margin-bottom:6px;">❤️</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:4px;"><?php esc_html_e( 'Donate Now', 'yourjannah' ); ?></div>
+        <div style="font-size:12px;opacity:.8;"><?php esc_html_e( '100% reaches your masjid — zero platform fees', 'yourjannah' ); ?></div>
+    </a>
+
+    <!-- Patron CTA -->
+    <a id="patron-link" href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/patron' ) ); ?>" style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#0a1628,#1a3a5c);border-radius:14px;padding:16px 20px;margin-bottom:16px;text-decoration:none;color:#fff;">
+        <div>
+            <div style="font-size:14px;font-weight:700;">🕌 <?php esc_html_e( 'Become a Monthly Patron', 'yourjannah' ); ?></div>
+            <div style="font-size:12px;opacity:.7;margin-top:2px;"><?php esc_html_e( 'Steady support for your masjid', 'yourjannah' ); ?></div>
+        </div>
+        <div style="display:flex;gap:6px;">
+            <span style="padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);">£5</span>
+            <span style="padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);">£10</span>
+            <span style="padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);">£20</span>
+        </div>
+    </a>
+
+    <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;"><?php esc_html_e( 'Active Campaigns', 'yourjannah' ); ?></h3>
     <div id="campaigns-list">
         <p class="ynj-text-muted" style="text-align:center;padding:20px;"><?php esc_html_e( 'Loading campaigns...', 'yourjannah' ); ?></p>
     </div>
@@ -41,11 +64,15 @@ $slug = ynj_mosque_slug();
         'equipment':'\ud83d\udee0\ufe0f','roof':'\ud83c\udfe0','heating':'\ud83d\udd25','parking':'\ud83c\udd7f\ufe0f'
     };
 
-    // Get mosque name
+    // Get mosque name + set donate link
     fetch(API + 'mosques/' + slug)
         .then(r => r.json())
         .then(resp => {
             const m = resp.mosque || resp;
+            // Set quick donate button to DFM
+            const dfmSlug = m.dfm_slug || m.slug || slug;
+            const donBtn = document.getElementById('quick-donate-btn');
+            if (donBtn) donBtn.href = 'https://donationformasjid.com/' + dfmSlug;
             const ftEl = document.getElementById('fundraising-title');
             if (ftEl) ftEl.textContent = (m.name || 'Your Masjid') + ' Fundraising';
         })

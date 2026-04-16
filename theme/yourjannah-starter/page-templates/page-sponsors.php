@@ -12,16 +12,31 @@ $slug = ynj_mosque_slug();
 ?>
 
 <main class="ynj-main">
-    <!-- Become a Sponsor CTA -->
+    <!-- CTA Banner -->
     <div style="background:linear-gradient(135deg,#00ADEF,#0369a1);border-radius:14px;padding:18px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <div>
             <h3 style="color:#fff;font-size:15px;font-weight:700;margin-bottom:2px;"><?php esc_html_e( 'Support Your Masjid', 'yourjannah' ); ?></h3>
-            <p style="color:rgba(255,255,255,.8);font-size:12px;"><?php esc_html_e( 'List your business and reach the community', 'yourjannah' ); ?></p>
+            <p style="color:rgba(255,255,255,.8);font-size:12px;"><?php esc_html_e( 'List your business or services — proceeds fund the masjid', 'yourjannah' ); ?></p>
         </div>
-        <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/sponsors/join' ) ); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;background:#fff;color:#00ADEF;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">⭐ <?php esc_html_e( 'Become a Sponsor', 'yourjannah' ); ?></a>
+        <div style="display:flex;gap:6px;">
+            <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/sponsors/join' ) ); ?>" style="display:inline-flex;align-items:center;gap:4px;padding:8px 14px;border-radius:10px;background:#fff;color:#00ADEF;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;">⭐ <?php esc_html_e( 'Sponsor', 'yourjannah' ); ?></a>
+            <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/services' ) ); ?>" style="display:inline-flex;align-items:center;gap:4px;padding:8px 14px;border-radius:10px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;">🤝 <?php esc_html_e( 'List Service', 'yourjannah' ); ?></a>
+        </div>
     </div>
 
-    <div id="local-biz-list" class="ynj-sponsors-grid"><p class="ynj-text-muted">Loading&hellip;</p></div>
+    <!-- Tabs: Sponsors / Services -->
+    <div class="ynj-feed-tabs" style="margin-bottom:14px;">
+        <button class="ynj-feed-tab ynj-feed-tab--active" id="biz-tab-sponsors" onclick="switchBizTab('sponsors')">⭐ <?php esc_html_e( 'Sponsors', 'yourjannah' ); ?></button>
+        <button class="ynj-feed-tab" id="biz-tab-services" onclick="switchBizTab('services')">🤝 <?php esc_html_e( 'Services', 'yourjannah' ); ?></button>
+    </div>
+
+    <div id="biz-panel-sponsors">
+        <div id="local-biz-list" class="ynj-sponsors-grid"><p class="ynj-text-muted">Loading&hellip;</p></div>
+    </div>
+
+    <div id="biz-panel-services" style="display:none;">
+        <div id="local-svc-list"><p class="ynj-text-muted">Loading&hellip;</p></div>
+    </div>
 </main>
 
 <script>
@@ -34,9 +49,38 @@ $slug = ynj_mosque_slug();
     let nearbyBiz = [];
     let nearbyLoaded = false;
 
+    let svcLoaded = false;
+
     document.querySelectorAll('[data-nav-mosque]').forEach(el => {
         el.href = el.dataset.navMosque.replace('{slug}', slug);
     });
+
+    // Tab switching
+    window.switchBizTab = function(tab) {
+        document.getElementById('biz-tab-sponsors').classList.toggle('ynj-feed-tab--active', tab === 'sponsors');
+        document.getElementById('biz-tab-services').classList.toggle('ynj-feed-tab--active', tab === 'services');
+        document.getElementById('biz-panel-sponsors').style.display = tab === 'sponsors' ? '' : 'none';
+        document.getElementById('biz-panel-services').style.display = tab === 'services' ? '' : 'none';
+        if (tab === 'services' && !svcLoaded) loadServices();
+    };
+
+    // Services rendering
+    const svcIcons = {'Imam / Scholar':'\ud83d\udd4c','Quran Teacher':'\ud83d\udcd6','Arabic Tutor':'\ud83d\udcda','Counselling':'\ud83e\udd1d','Legal Services':'\u2696\ufe0f','Accounting':'\ud83d\udcca','Web Development':'\ud83d\udcbb','Tutoring':'\ud83d\udcda','Catering':'\ud83c\udf7d\ufe0f','Photography':'\ud83d\udcf7','Plumbing':'\ud83d\udd27','Electrician':'\u26a1'};
+
+    function renderSvcCard(s) {
+        const icon = svcIcons[s.service_type] || '\u2726';
+        return '<div class="ynj-svc-card"><div class="ynj-svc-card__icon">' + icon + '</div><div class="ynj-svc-card__body"><h4>' + s.provider_name + '</h4><span class="ynj-badge">' + s.service_type + '</span><p class="ynj-text-muted">' + ((s.description||'').slice(0,100)) + '</p>' + (s.phone ? '<a href="tel:' + s.phone + '" class="ynj-svc-card__phone">' + s.phone + '</a>' : '') + '</div></div>';
+    }
+
+    function loadServices() {
+        fetch(API + 'mosques/' + slug + '/directory').then(r=>r.json()).then(data => {
+            const svcs = data.services || [];
+            const el = document.getElementById('local-svc-list');
+            if (!svcs.length) { el.innerHTML = '<p class="ynj-text-muted">No services listed yet.</p>'; return; }
+            el.innerHTML = svcs.map(s => renderSvcCard(s)).join('');
+            svcLoaded = true;
+        }).catch(() => { document.getElementById('local-svc-list').innerHTML = '<p class="ynj-text-muted">Could not load.</p>'; });
+    }
 
     function renderBiz(b, rank, showMosque) {
         const dist = b.distance_km != null && b.distance_km < 9000 ? `${b.distance_km < 1.6 ? (b.distance_km*0.621).toFixed(1)+' mi' : Math.round(b.distance_km*0.621)+' mi'}` : '';
