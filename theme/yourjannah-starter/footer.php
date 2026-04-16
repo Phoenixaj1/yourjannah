@@ -89,10 +89,15 @@ if ( $_nb_id && $_nb_pk ) :
 .ynj-niyyah--open{transform:translateY(0);}
 .ynj-niyyah__handle{display:flex;justify-content:center;padding:10px 0 4px;cursor:pointer;}
 .ynj-niyyah__handle span{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.3);}
-.ynj-niyyah__peek{text-align:center;font-size:13px;font-weight:700;padding:0 0 10px;opacity:.9;}
+.ynj-niyyah__peek{display:flex;align-items:center;gap:8px;padding:0 16px 10px;}
+.ynj-niyyah__peek-fund{flex:1;padding:8px 32px 8px 10px;border:1px solid rgba(255,255,255,.25);border-radius:8px;background:rgba(255,255,255,.1);color:#fff;font-size:12px;font-weight:600;font-family:inherit;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='white' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;min-width:0;}
+.ynj-niyyah__peek-fund option{background:#1a3a5c;color:#fff;}
+.ynj-niyyah__peek-btn{padding:8px 14px;border:none;border-radius:8px;background:#fff;color:#0a1628;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;}
 .ynj-niyyah__body{padding:0 18px 14px;display:none;}
 .ynj-niyyah--open .ynj-niyyah__body{display:block;}
 .ynj-niyyah--open .ynj-niyyah__peek{display:none;}
+.ynj-niyyah__min{position:absolute;top:10px;right:14px;background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer;line-height:1;padding:4px;display:none;}
+.ynj-niyyah--open .ynj-niyyah__min{display:block;}
 .ynj-niyyah__mosque{font-size:11px;color:rgba(255,255,255,.6);text-align:center;margin-bottom:8px;}
 .ynj-niyyah__steps{display:flex;justify-content:center;gap:6px;margin-bottom:12px;}
 .ynj-niyyah__dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2);transition:all .2s;}
@@ -136,9 +141,26 @@ if ( $_nb_id && $_nb_pk ) :
 
 <div class="ynj-niyyah" id="ynj-niyyah-bar">
     <div class="ynj-niyyah__handle" onclick="document.getElementById('ynj-niyyah-bar').classList.toggle('ynj-niyyah--open')"><span></span></div>
-    <div class="ynj-niyyah__peek">🕌 Donate to <?php echo esc_html( $_nb_name ); ?></div>
+    <div class="ynj-niyyah__peek">
+        <select class="ynj-niyyah__peek-fund" id="nb-peek-fund" onchange="document.getElementById('nb-fund').value=this.value">
+            <option value="welfare">🕌 Welfare Fund</option>
+            <option value="general">General Donation</option>
+            <option value="maintenance">Maintenance</option>
+            <option value="extension">Masjid Extension</option>
+            <option value="sustainability">Sustainability</option>
+            <option value="imam">Imam &amp; Staff</option>
+            <option value="education">Education</option>
+            <option value="youth">Youth &amp; Family</option>
+            <option value="sadaqah">Sadaqah Jariyah</option>
+            <option value="ramadan">Ramadan</option>
+            <option value="utility">Running Costs</option>
+            <option value="new-mosque">New Mosque</option>
+        </select>
+        <button type="button" class="ynj-niyyah__peek-btn" onclick="document.getElementById('ynj-niyyah-bar').classList.add('ynj-niyyah--open')">Donate →</button>
+    </div>
 
     <div class="ynj-niyyah__body">
+        <button type="button" class="ynj-niyyah__min" onclick="document.getElementById('ynj-niyyah-bar').classList.remove('ynj-niyyah--open')" title="Minimise">▾</button>
         <div class="ynj-niyyah__mosque">🕌 <?php echo esc_html( $_nb_name ); ?></div>
 
         <div class="ynj-niyyah__steps" id="nb-steps">
@@ -170,7 +192,7 @@ if ( $_nb_id && $_nb_pk ) :
         <div id="nb-step2" style="display:none">
             <button type="button" class="ynj-nb-back" onclick="nbSetStep(1)">&larr; Back</button>
             <input type="email" class="ynj-nb-email" id="nb-email" placeholder="Your email address" autocomplete="email">
-            <select class="ynj-nb-fund" id="nb-fund">
+            <select class="ynj-nb-fund" id="nb-fund" onchange="document.getElementById('nb-peek-fund').value=this.value">
                 <option value="welfare">Community Welfare Fund</option>
                 <option value="general">General Donation</option>
                 <option value="maintenance">Mosque Maintenance &amp; Repairs</option>
