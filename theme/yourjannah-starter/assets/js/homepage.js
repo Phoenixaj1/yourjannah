@@ -319,7 +319,7 @@
                             const km = haversine(userLat, userLng, m.latitude, m.longitude);
                             travelMinutes = Math.max(1, Math.round(km * 12));
                             const distText = km < 1 ? `${Math.round(km*1000)}m` : `${km.toFixed(1)}km`;
-                            document.getElementById('travel-dist').textContent = `${distText} · ~${travelMinutes} min walk`;
+                            /* travel-dist removed */ void = `${distText} · ~${travelMinutes} min walk`;
                             document.getElementById('hero-travel').style.display = '';
                             document.getElementById('nav-buttons').style.display = ''; document.getElementById('hero-gps-prompt').style.display = 'none';
                             document.getElementById('navigate-walk').href =
@@ -455,7 +455,10 @@
 
                     if (minsUntilLeave <= 0) {
                         hero.classList.add('ynj-hero--critical');
-                        document.getElementById('leave-by-text').textContent = '🚨 LEAVE NOW';
+                        var wt = document.getElementById('leave-by-walk-text');
+                        var dt = document.getElementById('leave-by-drive-text');
+                        if(wt) wt.textContent = '🚨 LEAVE NOW';
+                        if(dt) dt.textContent = '🚨 LEAVE NOW';
                     } else if (minsUntilLeave <= 10) {
                         hero.classList.add('ynj-hero--urgent');
                     }
@@ -465,27 +468,33 @@
             }
 
             function updateLeaveBy() {
-                if (!prayerTimes || !travelMinutes) return;
+                if (!prayerTimes || !distanceKm) return;
                 const now = new Date();
                 const prayers = ['fajr','dhuhr','asr','maghrib','isha'];
                 for (const p of prayers) {
                     if (!prayerTimes[p]) continue;
-
-                    // Use JAMAT time if available, otherwise adhan
                     const targetTime = jamatTimes[p+'_jamat'] || prayerTimes[p];
                     const [h,m] = targetTime.split(':').map(Number);
                     const t = new Date(now); t.setHours(h,m,0,0);
 
                     if (t > now) {
-                        // Leave time = jamat time - travel time - buffer (wudhu/prep)
-                        const totalLeadMin = travelMinutes + bufferMinutes;
-                        const leave = new Date(t.getTime() - totalLeadMin * 60000);
-                        const lh = String(leave.getHours()).padStart(2,'0');
-                        const lm = String(leave.getMinutes()).padStart(2,'0');
+                        // Walk: ~12 min/km + buffer
+                        var walkMin = Math.max(1, Math.round(distanceKm * 12)) + bufferMinutes;
+                        var walkLeave = new Date(t.getTime() - walkMin * 60000);
+                        var wh = String(walkLeave.getHours()).padStart(2,'0');
+                        var wm = String(walkLeave.getMinutes()).padStart(2,'0');
 
-                        const parts = [`Leave by ${lh}:${lm}`];
-                        if (bufferMinutes > 0) parts.push(`(inc. ${bufferMinutes}min prep)`);
-                        document.getElementById('leave-by-text').textContent = parts.join(' ');
+                        // Drive: ~2 min/km + buffer
+                        var driveMin = Math.max(1, Math.round(distanceKm * 2)) + bufferMinutes;
+                        var driveLeave = new Date(t.getTime() - driveMin * 60000);
+                        var dh = String(driveLeave.getHours()).padStart(2,'0');
+                        var dm = String(driveLeave.getMinutes()).padStart(2,'0');
+
+                        var walkEl = document.getElementById('leave-by-walk-text');
+                        var driveEl = document.getElementById('leave-by-drive-text');
+                        if (walkEl) walkEl.textContent = 'Leave ' + wh + ':' + wm;
+                        if (driveEl) driveEl.textContent = 'Leave ' + dh + ':' + dm;
+                        document.getElementById('hero-travel').style.display = '';
                         return;
                     }
                 }
@@ -940,7 +949,7 @@
                 const mi = distanceKm * 0.621;
                 travelMinutes = Math.max(1, Math.round(distanceKm * (modeSpeed[travelMode] || 12)));
                 const distText = mi < 0.5 ? `${Math.round(distanceKm*1000)}m` : `${mi.toFixed(1)} mi`;
-                document.getElementById('travel-dist').textContent = `${distText} · ~${travelMinutes} min ${modeLabel[travelMode]}`;
+                /* travel-dist removed */ void = `${distText} · ~${travelMinutes} min ${modeLabel[travelMode]}`;
                 document.getElementById('hero-travel').style.display = '';
                 document.getElementById('travel-settings').style.display = '';
 

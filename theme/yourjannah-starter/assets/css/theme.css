@@ -113,16 +113,16 @@ img,svg{display:block;max-width:100%;}
 
 /* Hero card elements */
 .ynj-label{font-size:10px;text-transform:uppercase;letter-spacing:2px;opacity:.5;font-weight:600;position:relative;z-index:1;}
-.ynj-hero-prayer{font-size:32px;font-weight:800;margin:8px 0 2px;position:relative;z-index:1;text-shadow:0 2px 8px rgba(0,0,0,.15);}
-.ynj-hero-time{font-size:20px;font-weight:700;opacity:.9;position:relative;z-index:1;}
-.ynj-countdown{font-size:28px;font-weight:600;letter-spacing:2px;margin:8px 0;font-variant-numeric:tabular-nums;position:relative;z-index:1;opacity:.7;}
+.ynj-hero-prayer{font-size:28px;font-weight:800;margin:6px 0 2px;position:relative;z-index:1;text-shadow:0 2px 8px rgba(0,0,0,.15);}
+.ynj-hero-time{font-size:36px;font-weight:800;position:relative;z-index:1;letter-spacing:1px;}
+.ynj-countdown{font-size:15px;font-weight:500;letter-spacing:1px;margin:4px 0 10px;font-variant-numeric:tabular-nums;position:relative;z-index:1;opacity:.6;}
 .ynj-hero-travel{
     display:flex;align-items:center;justify-content:center;gap:16px;
     margin:8px 0 0;font-size:13px;opacity:.8;position:relative;z-index:1;
     background:rgba(255,255,255,.08);border-radius:10px;padding:8px 16px;
     backdrop-filter:blur(4px);
 }
-.ynj-leave-by{display:flex;align-items:center;gap:6px;font-weight:700;font-size:16px;background:rgba(255,255,255,.15);padding:8px 14px;border-radius:10px;}
+.ynj-leave-by{display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px;background:rgba(255,255,255,.15);padding:8px 14px;border-radius:10px;flex:1;justify-content:center;}
 .ynj-leave-by svg{display:inline;}
 .ynj-travel-dist{opacity:.7;}
 .ynj-hero-actions{position:relative;z-index:1;margin-top:16px;}

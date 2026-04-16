@@ -141,11 +141,16 @@ get_header();
         <p class="ynj-hero-time" id="next-prayer-time">&nbsp;</p>
         <div class="ynj-countdown" id="next-prayer-countdown">--:--:--</div>
         <div class="ynj-hero-travel" id="hero-travel" style="display:none;">
-            <div class="ynj-leave-by" id="leave-by">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                <span id="leave-by-text"><?php esc_html_e( 'Leave by --:--', 'yourjannah' ); ?></span>
+            <div style="display:flex;gap:8px;justify-content:center;width:100%;">
+                <div class="ynj-leave-by" id="leave-by-walk">
+                    <span>🚶</span>
+                    <span id="leave-by-walk-text"><?php esc_html_e( 'Leave --:--', 'yourjannah' ); ?></span>
+                </div>
+                <div class="ynj-leave-by" id="leave-by-drive">
+                    <span>🚗</span>
+                    <span id="leave-by-drive-text"><?php esc_html_e( 'Leave --:--', 'yourjannah' ); ?></span>
+                </div>
             </div>
-            <span class="ynj-travel-dist" id="travel-dist"></span>
         </div>
         <div class="ynj-hero-actions">
             <div class="ynj-hero-gps" id="hero-gps-prompt">
