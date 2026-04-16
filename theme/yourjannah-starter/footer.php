@@ -173,11 +173,16 @@ if ( $_nb_id && $_nb_pk ) :
             <select class="ynj-nb-fund" id="nb-fund">
                 <option value="welfare">Community Welfare Fund</option>
                 <option value="general">General Donation</option>
+                <option value="maintenance">Mosque Maintenance &amp; Repairs</option>
+                <option value="extension">Masjid Extension / Building</option>
+                <option value="sustainability">Masjid Sustainability</option>
                 <option value="imam">Imam &amp; Staff Fund</option>
-                <option value="maintenance">Mosque Maintenance</option>
                 <option value="education">Quran &amp; Education</option>
                 <option value="youth">Youth &amp; Family</option>
                 <option value="sadaqah">Sadaqah Jariyah</option>
+                <option value="ramadan">Ramadan &amp; Events</option>
+                <option value="utility">Utility &amp; Running Costs</option>
+                <option value="new-mosque">New Mosque Fund</option>
             </select>
             <button type="button" class="ynj-nb-next" id="nb-next" onclick="nbGoStep3()">Make Your Niyyah &rarr;</button>
         </div>
@@ -219,8 +224,7 @@ if ( $_nb_id && $_nb_pk ) :
     var cardElement = null;
     var cardReady = false;
 
-    // Auto-open bar after 2s
-    setTimeout(function(){ bar.classList.add('ynj-niyyah--open'); }, 2000);
+    // Bar starts closed — user taps to open
 
     // Frequency toggle
     bar.querySelectorAll('.ynj-nb-freq__btn').forEach(function(btn){
@@ -428,12 +432,14 @@ function ynj_default_mobile_nav() {
 
     // More drawer
     $more_links = [
+        [ 'label' => 'Dashboard',  'href' => '/dashboard',                          'icon' => '🎯' ],
         [ 'label' => 'Classes',    'href' => '/mosque/' . $slug . '/classes',       'icon' => '🎓' ],
         [ 'label' => 'Live',       'href' => '/live',                               'icon' => '📡' ],
         [ 'label' => 'Prayers',    'href' => '/mosque/' . $slug . '/prayers',       'icon' => '🕐' ],
         [ 'label' => 'Booking',    'href' => '/mosque/' . $slug . '/rooms',         'icon' => '🏠' ],
         [ 'label' => 'Masjid Info','href' => '/mosque/' . $slug,                    'icon' => '🕌' ],
         [ 'label' => 'Patron',     'href' => '/mosque/' . $slug . '/patron',        'icon' => '🏅' ],
+        [ 'label' => 'Donate',     'href' => '/mosque/' . $slug . '/donate',        'icon' => '💝' ],
         [ 'label' => 'Profile',    'href' => '/profile',                            'icon' => '👤' ],
         [ 'label' => 'Login',      'href' => '/login',                              'icon' => '🔑' ],
         [ 'label' => 'Sponsor YourJannah','href' => '/sponsor-yourjannah',           'icon' => '🤲' ],
