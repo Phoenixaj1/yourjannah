@@ -111,9 +111,10 @@ if (is_admin()) {
 // Frontend routing — now handled by yourjannah-starter theme templates
 // Old router archived to _archive/class-ynj-router.php
 
-// Serve /sw.js service worker from plugin assets
+// Serve /sw.js — create the physical file if it doesn't exist
 add_action('init', function() {
-    $uri = $_SERVER['REQUEST_URI'] ?? '';
+    // Check if sw.js needs serving via PHP (Nginx might block non-existent .js files)
+    $uri = strtok($_SERVER['REQUEST_URI'] ?? '', '?');
     if ($uri === '/sw.js' || $uri === '/sw.js/') {
         header('Content-Type: application/javascript');
         header('Service-Worker-Allowed: /');
@@ -122,6 +123,15 @@ add_action('init', function() {
         exit;
     }
 }, 1);
+
+// Also try to create a physical sw.js at the web root on plugin activation/admin load
+add_action('admin_init', function() {
+    $root_sw = ABSPATH . 'sw.js';
+    $source_sw = YNJ_DIR . 'assets/js/sw.js';
+    if (file_exists($source_sw) && (!file_exists($root_sw) || filemtime($source_sw) > filemtime($root_sw))) {
+        @copy($source_sw, $root_sw);
+    }
+}, 5);
 
 // Serve /.well-known/assetlinks.json for Android TWA verification
 add_action('init', function() {
