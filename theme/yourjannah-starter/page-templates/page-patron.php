@@ -20,19 +20,18 @@ $mosque_status = $mosque ? $mosque->status : '';
 .ynj-main .ynj-patron-hero{text-align:center;padding:32px 20px 20px;background:linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#0e4d3c 100%);color:#fff;border-radius:0 0 24px 24px;margin:-16px -16px 20px;}
 .ynj-patron-hero h2{font-size:20px;font-weight:800;margin-bottom:6px;color:#fff;}
 .ynj-patron-hero p{font-size:13px;color:rgba(255,255,255,.75);line-height:1.5;max-width:400px;margin:0 auto;}
-.ynj-tier-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.ynj-tier{background:#fff;border-radius:16px;padding:18px 16px;border:2px solid #e5e7eb;transition:all .2s;cursor:pointer;position:relative;text-align:center;}
-.ynj-tier:hover,.ynj-tier.selected{border-color:#00ADEF;box-shadow:0 4px 20px rgba(0,173,239,.12);}
-.ynj-tier.selected::after{content:'\2713';position:absolute;top:8px;right:10px;width:22px;height:22px;border-radius:50%;background:#00ADEF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
-.ynj-tier__badge{display:inline-block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:5px;margin-bottom:6px;}
-.ynj-tier__badge--supporter{background:#dbeafe;color:#1e40af;}
-.ynj-tier__badge--guardian{background:#e0e7ff;color:#4338ca;}
-.ynj-tier__badge--champion{background:#dcfce7;color:#166534;}
-.ynj-tier .ynj-tier__price{font-size:28px;font-weight:900;color:#0a1628;line-height:1;}
-.ynj-tier .ynj-tier__price span{font-size:13px;font-weight:500;color:#6b8fa3;}
-.ynj-tier ul{list-style:none;margin:8px 0 0;padding:0;font-size:12px;color:#555;text-align:left;}
-.ynj-tier li{padding:3px 0;display:flex;align-items:center;gap:5px;}
-.ynj-tier li::before{content:'\2713';color:#16a34a;font-weight:700;font-size:11px;}
+/* Patron tier rows */
+.ynj-ptier{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:#fff;border:2px solid #e5e7eb;cursor:pointer;transition:all .15s;position:relative;}
+.ynj-ptier:hover,.ynj-ptier.selected{border-color:#00ADEF;box-shadow:0 4px 16px rgba(0,173,239,.12);}
+.ynj-ptier.selected::after{content:'\2713';position:absolute;top:50%;right:14px;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:#00ADEF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
+.ynj-ptier--popular{border-color:#f59e0b;box-shadow:0 4px 16px rgba(245,158,11,.15);}
+.ynj-ptier--popular:hover,.ynj-ptier--popular.selected{border-color:#f59e0b;box-shadow:0 6px 24px rgba(245,158,11,.2);}
+.ynj-ptier__pop{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:2px 10px;border-radius:6px;background:#f59e0b;color:#fff;white-space:nowrap;}
+.ynj-ptier__left{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.ynj-ptier__mid{flex:1;}
+.ynj-ptier__mid strong{font-size:15px;font-weight:700;color:#0a1628;}
+.ynj-ptier__price{font-size:22px;font-weight:900;color:#0a1628;margin-right:30px;}
+.ynj-ptier__price span{font-size:12px;font-weight:500;color:#6b8fa3;}
 .ynj-patron-cta{margin-top:16px;text-align:center;}
 .ynj-patron-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:16px;border-radius:14px;background:linear-gradient(135deg,#00ADEF,#0090d0);color:#fff;font-size:16px;font-weight:800;border:none;cursor:pointer;transition:all .15s;box-shadow:0 4px 16px rgba(0,173,239,.25);font-family:inherit;}
 .ynj-patron-btn:hover{box-shadow:0 6px 24px rgba(0,173,239,.35);transform:translateY(-1px);}
@@ -53,7 +52,7 @@ $mosque_status = $mosque ? $mosque->status : '';
 .ynj-status-card h3{font-size:16px;font-weight:700;color:#fff;margin-bottom:4px;}
 .ynj-status-card p{font-size:13px;color:rgba(255,255,255,.75);}
 .ynj-cancel-link{display:inline-block;margin-top:8px;font-size:12px;color:#fca5a5;cursor:pointer;text-decoration:underline;}
-@media(max-width:480px){.ynj-tier-grid{grid-template-columns:1fr;}}
+/* tier-grid no longer used */
 </style>
 
 <main class="ynj-main">
@@ -73,51 +72,36 @@ $mosque_status = $mosque ? $mosque->status : '';
     <!-- Active patron status (shown if already patron) -->
     <div id="active-status" style="display:none;"></div>
 
-    <!-- Tier cards -->
-    <div id="tier-cards" class="ynj-tier-grid">
-        <div class="ynj-tier selected" data-tier="supporter" onclick="selectTier('supporter')">
-            <span class="ynj-tier__badge ynj-tier__badge--supporter"><?php esc_html_e( 'Bronze', 'yourjannah' ); ?></span>
-            <div class="ynj-tier__price">&pound;5 <span><?php esc_html_e( '/month', 'yourjannah' ); ?></span></div>
-            <ul>
-                <li><?php esc_html_e( 'Patron badge on your profile', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Name on mosque patron wall', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Support masjid running costs', 'yourjannah' ); ?></li>
-            </ul>
+    <!-- Choose your level -->
+    <h3 style="font-size:15px;font-weight:700;text-align:center;margin-bottom:12px;"><?php esc_html_e( 'Choose your level of support', 'yourjannah' ); ?></h3>
+
+    <div id="tier-cards" style="display:flex;flex-direction:column;gap:8px;">
+        <div class="ynj-ptier" data-tier="supporter" onclick="selectTier('supporter')">
+            <div class="ynj-ptier__left" style="background:#cd7f32;"><span>🥉</span></div>
+            <div class="ynj-ptier__mid"><strong><?php esc_html_e( 'Bronze', 'yourjannah' ); ?></strong></div>
+            <div class="ynj-ptier__price">&pound;5<span>/mo</span></div>
         </div>
-        <div class="ynj-tier" data-tier="guardian" onclick="selectTier('guardian')">
-            <span class="ynj-tier__badge ynj-tier__badge--guardian"><?php esc_html_e( 'Silver', 'yourjannah' ); ?></span>
-            <div class="ynj-tier__price">&pound;10 <span><?php esc_html_e( '/month', 'yourjannah' ); ?></span></div>
-            <ul>
-                <li><?php esc_html_e( 'Everything in Bronze', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Silver tier badge', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Priority event booking', 'yourjannah' ); ?></li>
-            </ul>
+        <div class="ynj-ptier" data-tier="guardian" onclick="selectTier('guardian')">
+            <div class="ynj-ptier__left" style="background:#9ca3af;"><span>🥈</span></div>
+            <div class="ynj-ptier__mid"><strong><?php esc_html_e( 'Silver', 'yourjannah' ); ?></strong></div>
+            <div class="ynj-ptier__price">&pound;10<span>/mo</span></div>
         </div>
-        <div class="ynj-tier" data-tier="champion" onclick="selectTier('champion')">
-            <span class="ynj-tier__badge ynj-tier__badge--champion"><?php esc_html_e( 'Gold', 'yourjannah' ); ?></span>
-            <div class="ynj-tier__price">&pound;20 <span><?php esc_html_e( '/month', 'yourjannah' ); ?></span></div>
-            <ul>
-                <li><?php esc_html_e( 'Everything in Silver', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Gold tier badge', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Featured on patron wall', 'yourjannah' ); ?></li>
-            </ul>
+        <div class="ynj-ptier ynj-ptier--popular selected" data-tier="champion" onclick="selectTier('champion')">
+            <div class="ynj-ptier__pop"><?php esc_html_e( 'Most Popular', 'yourjannah' ); ?></div>
+            <div class="ynj-ptier__left" style="background:#f59e0b;"><span>🥇</span></div>
+            <div class="ynj-ptier__mid"><strong><?php esc_html_e( 'Gold', 'yourjannah' ); ?></strong></div>
+            <div class="ynj-ptier__price">&pound;20<span>/mo</span></div>
         </div>
-        <div class="ynj-tier" data-tier="platinum" onclick="selectTier('platinum')">
-            <span class="ynj-tier__badge" style="background:#fef3c7;color:#92400e;"><?php esc_html_e( 'Platinum', 'yourjannah' ); ?></span>
-            <div class="ynj-tier__price">&pound;50 <span><?php esc_html_e( '/month', 'yourjannah' ); ?></span></div>
-            <ul>
-                <li><?php esc_html_e( 'Everything in Gold', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Platinum badge & VIP recognition', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Priority room bookings', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Exclusive masjid updates', 'yourjannah' ); ?></li>
-            </ul>
+        <div class="ynj-ptier" data-tier="platinum" onclick="selectTier('platinum')">
+            <div class="ynj-ptier__left" style="background:#6b21a8;"><span>💎</span></div>
+            <div class="ynj-ptier__mid"><strong><?php esc_html_e( 'Platinum', 'yourjannah' ); ?></strong></div>
+            <div class="ynj-ptier__price">&pound;50<span>/mo</span></div>
         </div>
     </div>
 
     <div class="ynj-patron-cta" id="patron-cta">
         <button class="ynj-patron-btn" id="patron-btn" onclick="becomePerson()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-            <?php esc_html_e( 'Become a Patron', 'yourjannah' ); ?> &mdash; &pound;5/mo
+            🏅 <?php esc_html_e( 'Become a Gold Patron', 'yourjannah' ); ?> &mdash; &pound;20/mo
         </button>
         <div class="ynj-login-prompt" id="login-prompt" style="display:none;">
             <a href="<?php echo esc_url( home_url( '/login' ) ); ?>"><?php esc_html_e( 'Sign in', 'yourjannah' ); ?></a> <?php esc_html_e( 'or', 'yourjannah' ); ?> <a href="<?php echo esc_url( home_url( '/register' ) ); ?>"><?php esc_html_e( 'create an account', 'yourjannah' ); ?></a> <?php esc_html_e( 'to become a patron.', 'yourjannah' ); ?>
@@ -153,20 +137,19 @@ $mosque_status = $mosque ? $mosque->status : '';
     const slug = <?php echo wp_json_encode( $slug ); ?>;
     const API  = ynjData.restUrl;
     const token = localStorage.getItem('ynj_user_token') || '';
-    let selectedTier = 'supporter';
+    let selectedTier = 'champion'; // Gold default (most popular)
     let mosqueId = <?php echo $mosque_id; ?>;
 
-    // Mosque name pre-loaded from PHP — instant, no API call
-
     const tierPrices = { supporter: 5, guardian: 10, champion: 20, platinum: 50 };
+    const tierNames = { supporter: 'Bronze', guardian: 'Silver', champion: 'Gold', platinum: 'Platinum' };
 
     function selectTier(tier) {
         selectedTier = tier;
-        document.querySelectorAll('.ynj-tier').forEach(el => {
+        document.querySelectorAll('.ynj-ptier').forEach(el => {
             el.classList.toggle('selected', el.dataset.tier === tier);
         });
         const btn = document.getElementById('patron-btn');
-        if (btn) btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg> <?php echo esc_js( __( 'Become a Patron', 'yourjannah' ) ); ?> \u2014 \u00a3' + tierPrices[tier] + '/mo';
+        if (btn) btn.textContent = '🏅 <?php echo esc_js( __( 'Become a', 'yourjannah' ) ); ?> ' + (tierNames[tier] || '') + ' <?php echo esc_js( __( 'Patron', 'yourjannah' ) ); ?> \u2014 \u00a3' + tierPrices[tier] + '/mo';
     }
     window.selectTier = selectTier;
 
