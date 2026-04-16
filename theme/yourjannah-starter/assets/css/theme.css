@@ -19,7 +19,7 @@ img,svg{display:block;max-width:100%;}
 @media(min-width:1200px){.ynj-main{max-width:1280px;}}
 
 /* Top Bar — Patron Status */
-.ynj-topbar{display:flex;align-items:center;justify-content:space-between;padding:4px 16px;font-size:11px;font-weight:600;z-index:101;}
+.ynj-topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 16px;font-size:11px;font-weight:600;z-index:102;position:sticky;top:0;}
 .ynj-topbar--guest{background:#0a1628;color:rgba(255,255,255,.8);}
 .ynj-topbar--member{background:linear-gradient(90deg,#92400e,#b45309);color:#fff;}
 .ynj-topbar--patron{background:linear-gradient(90deg,#166534,#15803d);color:#fff;}
@@ -39,7 +39,7 @@ img,svg{display:block;max-width:100%;}
 /* Header */
 .ynj-header{
     background:linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#00ADEF 100%);
-    color:#fff;position:sticky;top:0;z-index:100;
+    color:#fff;position:sticky;top:28px;z-index:100;
     padding:0 16px;padding-top:env(safe-area-inset-top,0);
 }
 .ynj-header__inner{max-width:500px;margin:0 auto;display:flex;align-items:center;gap:14px;min-height:72px;}
