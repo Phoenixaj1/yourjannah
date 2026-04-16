@@ -19,6 +19,7 @@ on:
     branches: [main]
     paths:
       - 'plugins/**'
+      - 'theme/**'
       - '.github/workflows/deploy.yml'
 
   workflow_dispatch:
@@ -68,6 +69,16 @@ jobs:
             -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
             ./plugins/yn-jannah/ \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.WP_PATH }}/wp-content/plugins/yn-jannah/
+
+      - name: Deploy yourjannah-starter theme
+        run: |
+          echo "🎨 Deploying yourjannah-starter theme..."
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='.DS_Store' \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
+            ./theme/yourjannah-starter/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.WP_PATH }}/wp-content/themes/yourjannah-starter/
 
       - name: Clear caches
         run: |
