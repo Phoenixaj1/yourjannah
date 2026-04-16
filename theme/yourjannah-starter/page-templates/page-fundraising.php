@@ -41,7 +41,6 @@ $slug = ynj_mosque_slug();
             <?php esc_html_e( 'Donate Any Amount', 'yourjannah' ); ?>
         </button>
     </div>
-    <input type="hidden" id="dfm-base-url" value="">
 
     <!-- Patron CTA -->
     <a id="patron-link" href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/patron' ) ); ?>" style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#0a1628,#1a3a5c);border-radius:14px;padding:16px 20px;margin-bottom:16px;text-decoration:none;color:#fff;">
@@ -73,17 +72,13 @@ $slug = ynj_mosque_slug();
         'equipment':'\ud83d\udee0\ufe0f','roof':'\ud83c\udfe0','heating':'\ud83d\udd25','parking':'\ud83c\udd7f\ufe0f'
     };
 
-    var dfmBaseUrl = '';
-
-    // Donate with prefilled amount + email
+    // Donate with prefilled amount + email — DFM detects mosque via GPS
     window.donateAmount = function(amount) {
-        if (!dfmBaseUrl) { alert('Donation link not ready. Please try again.'); return; }
-        var url = dfmBaseUrl;
+        var url = 'https://donationformasjid.com';
         var params = [];
         if (amount > 0) params.push('amount=' + amount);
-        // Get user email from localStorage
         try { var user = JSON.parse(localStorage.getItem('ynj_user')); if (user && user.email) params.push('email=' + encodeURIComponent(user.email)); } catch(e){}
-        if (params.length) url += (url.indexOf('?') >= 0 ? '&' : '?') + params.join('&');
+        if (params.length) url += '?' + params.join('&');
         window.open(url, '_blank');
     };
 
@@ -92,9 +87,6 @@ $slug = ynj_mosque_slug();
         .then(r => r.json())
         .then(resp => {
             const m = resp.mosque || resp;
-            const dfmSlug = m.dfm_slug || m.slug || slug;
-            dfmBaseUrl = 'https://donationformasjid.com/' + dfmSlug;
-            document.getElementById('dfm-base-url').value = dfmBaseUrl;
             const ftEl = document.getElementById('fundraising-title');
             if (ftEl) ftEl.textContent = (m.name || 'Your Masjid') + ' Fundraising';
         })
