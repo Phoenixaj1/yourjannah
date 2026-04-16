@@ -142,8 +142,8 @@ if ( $_nb_id && $_nb_pk ) :
     <div class="ynj-niyyah__bar" onclick="var b=document.getElementById('ynj-niyyah-bar');b.classList.toggle('ynj-niyyah--open');">
         <span class="ynj-niyyah__bar-label">🕌 Donate</span>
         <select class="ynj-niyyah__bar-fund" id="nb-fund" onclick="event.stopPropagation()">
-            <option value="welfare">Welfare Fund</option>
             <option value="general">General Donation</option>
+            <option value="welfare">Welfare Fund</option>
             <option value="maintenance">Maintenance &amp; Repairs</option>
             <option value="extension">Masjid Extension</option>
             <option value="sustainability">Sustainability</option>
