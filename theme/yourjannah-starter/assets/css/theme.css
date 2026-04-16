@@ -70,10 +70,11 @@ img,svg{display:block;max-width:100%;}
 .ynj-mosque-pill__gps.ynj-gps-btn--loading{animation:gpsPulse 1.2s ease-in-out infinite;}
 @keyframes gpsPulse{0%,100%{opacity:1}50%{opacity:.4}}
 .ynj-mosque-pill__name{
-    padding:0 8px;font-size:12px;font-weight:600;
-    max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    padding:0 6px;font-size:12px;font-weight:600;
+    max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-@media(max-width:380px){.ynj-mosque-pill__name{max-width:120px;font-size:11px;}}
+@media(max-width:480px){.ynj-mosque-pill__name{max-width:100px;font-size:11px;}}
+@media(max-width:360px){.ynj-mosque-pill__name{max-width:80px;font-size:10px;}}
 
 /* Radius badge */
 .ynj-radius-badge{

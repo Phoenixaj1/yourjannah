@@ -98,21 +98,15 @@ if ( is_user_logged_in() ) {
     <!-- Step 1: Account Details -->
     <div class="ynj-step-panel active" id="step-1">
         <div class="ynj-reg-card">
-            <h3><?php esc_html_e( 'Account Details', 'yourjannah' ); ?></h3>
-            <p class="ynj-subtitle"><?php esc_html_e( 'Set up your YourJannah account.', 'yourjannah' ); ?></p>
+            <h3><?php esc_html_e( 'Enter your email', 'yourjannah' ); ?></h3>
+            <p class="ynj-subtitle"><?php esc_html_e( 'We\'ll email you your password. No hassle.', 'yourjannah' ); ?></p>
 
             <form id="reg-form-1" autocomplete="on" onsubmit="return false;">
-                <div class="ynj-reg-field">
-                    <label for="reg-name"><?php esc_html_e( 'Full Name', 'yourjannah' ); ?></label>
-                    <input type="text" id="reg-name" name="name" required autocomplete="name" placeholder="<?php esc_attr_e( 'Your full name', 'yourjannah' ); ?>">
-                </div>
+                <input type="hidden" id="reg-name" value="">
+                <input type="hidden" id="reg-phone" value="">
                 <div class="ynj-reg-field">
                     <label for="reg-email"><?php esc_html_e( 'Email Address', 'yourjannah' ); ?></label>
-                    <input type="email" id="reg-email" name="email" required autocomplete="email" placeholder="you@example.com">
-                </div>
-                <div class="ynj-reg-field">
-                    <label for="reg-phone"><?php esc_html_e( 'Phone', 'yourjannah' ); ?> <span class="ynj-optional"><?php esc_html_e( '(optional)', 'yourjannah' ); ?></span></label>
-                    <input type="tel" id="reg-phone" name="phone" autocomplete="tel" placeholder="07xxx xxxxxx">
+                    <input type="email" id="reg-email" name="email" required autocomplete="email" placeholder="you@example.com" style="font-size:17px;padding:14px 16px;">
                 </div>
             </form>
 
@@ -221,15 +215,16 @@ if ( is_user_logged_in() ) {
 
     // --- Step 1: Continue ---
     document.getElementById('btn-continue').addEventListener('click', function() {
-        var name     = document.getElementById('reg-name').value.trim();
         var email    = document.getElementById('reg-email').value.trim();
         var errEl    = document.getElementById('step1-error');
         errEl.textContent = '';
 
-        if (!name || !email) {
-            errEl.textContent = <?php echo wp_json_encode( __( 'Name and email are required.', 'yourjannah' ) ); ?>;
+        if (!email) {
+            errEl.textContent = <?php echo wp_json_encode( __( 'Email is required.', 'yourjannah' ) ); ?>;
             return;
         }
+        // Use email prefix as display name
+        document.getElementById('reg-name').value = email.split('@')[0];
         // Basic email check
         if (email.indexOf('@') < 1 || email.indexOf('.') < 3) {
             errEl.textContent = <?php echo wp_json_encode( __( 'Please enter a valid email address.', 'yourjannah' ) ); ?>;
