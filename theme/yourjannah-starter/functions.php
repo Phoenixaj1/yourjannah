@@ -160,6 +160,8 @@ add_action( 'wp_head', function() {
     echo '<meta name="theme-color" content="#0a1628">' . "\n";
     echo '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n";
     echo '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">' . "\n";
+    echo '<meta name="apple-mobile-web-app-title" content="YourJannah">' . "\n";
+    echo '<link rel="apple-touch-icon" sizes="180x180" href="' . esc_url( ( defined( 'YNJ_URL' ) ? YNJ_URL : '' ) . 'assets/icons/icon-192.png' ) . '">' . "\n";
 
     // Output ynjData early in <head> so inline template scripts can use it
     $vapid = class_exists( 'YNJ_Push' ) ? YNJ_Push::get_public_key() : '';

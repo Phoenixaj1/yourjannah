@@ -1098,9 +1098,7 @@
             });
 
             function registerSW() {
-                if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.register('/sw.js', {scope:'/'}).catch(() => {});
-                }
+                // SW registration handled globally by theme.js — no duplicate needed
             }
 
             function urlB64(b64) {

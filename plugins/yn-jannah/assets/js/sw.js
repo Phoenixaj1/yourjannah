@@ -5,7 +5,8 @@
  * Handles push notifications for mosque announcements and prayer reminders.
  */
 
-const CACHE_NAME = 'ynj-v1';
+const CACHE_VERSION = '2.1.0';
+const CACHE_NAME = 'ynj-v' + CACHE_VERSION;
 
 const SHELL_URLS = [
     '/',
@@ -125,19 +126,27 @@ async function networkFirstWithOffline(request) {
 }
 
 /**
- * Cache-first strategy (for static assets).
+ * Stale-while-revalidate strategy (for static assets).
+ * Returns cached version immediately, fetches update in background.
  */
 async function cacheFirst(request) {
     const cached = await caches.match(request);
-    if (cached) return cached;
 
-    try {
-        const response = await fetch(request);
+    // Fetch update in background regardless
+    const fetchPromise = fetch(request).then((response) => {
         if (response.ok) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
         return response;
+    }).catch(() => null);
+
+    // Return cached immediately if available, otherwise wait for network
+    if (cached) return cached;
+
+    try {
+        const response = await fetchPromise;
+        return response || new Response('', { status: 503 });
     } catch (err) {
         return new Response('', { status: 503 });
     }

@@ -121,7 +121,12 @@
     // ================================================================
 
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(function(reg) {
+                // Check for SW updates every 30 minutes
+                setInterval(function() { reg.update(); }, 30 * 60 * 1000);
+            })
+            .catch(function(err) { console.warn('SW registration failed:', err); });
     }
 
 })();

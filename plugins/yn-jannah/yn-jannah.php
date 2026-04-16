@@ -111,6 +111,18 @@ if (is_admin()) {
 // Frontend routing — now handled by yourjannah-starter theme templates
 // Old router archived to _archive/class-ynj-router.php
 
+// Serve /sw.js service worker from plugin assets
+add_action('init', function() {
+    $uri = $_SERVER['REQUEST_URI'] ?? '';
+    if ($uri === '/sw.js' || $uri === '/sw.js/') {
+        header('Content-Type: application/javascript');
+        header('Service-Worker-Allowed: /');
+        header('Cache-Control: no-cache, must-revalidate');
+        readfile(YNJ_DIR . 'assets/js/sw.js');
+        exit;
+    }
+}, 1);
+
 // Serve /.well-known/assetlinks.json for Android TWA verification
 add_action('init', function() {
     $uri = $_SERVER['REQUEST_URI'] ?? '';

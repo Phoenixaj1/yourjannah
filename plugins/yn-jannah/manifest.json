@@ -2,6 +2,7 @@
     "name": "YourJannah — Mosque Community",
     "short_name": "YourJannah",
     "description": "Prayer times, events, donations, and community for your local mosque. Check in, donate, discover events and connect with your masjid.",
+    "id": "/?source=pwa",
     "start_url": "/?source=pwa",
     "scope": "/",
     "display": "standalone",
@@ -78,12 +79,14 @@
             "src": "/wp-content/plugins/yn-jannah/assets/screenshots/home.png",
             "sizes": "1080x1920",
             "type": "image/png",
+            "form_factor": "narrow",
             "label": "Prayer times with countdown and travel estimates"
         },
         {
             "src": "/wp-content/plugins/yn-jannah/assets/screenshots/events.png",
             "sizes": "1080x1920",
             "type": "image/png",
+            "form_factor": "narrow",
             "label": "Colour-coded events from your mosque"
         }
     ],
