@@ -5,15 +5,13 @@
  * Handles push notifications for mosque announcements and prayer reminders.
  */
 
-const CACHE_VERSION = '2.1.0';
+const CACHE_VERSION = '2.2.0';
 const CACHE_NAME = 'ynj-v' + CACHE_VERSION;
 
+// Only pre-cache static assets — NEVER cache HTML pages
 const SHELL_URLS = [
-    '/',
-    '/offline',
     '/wp-content/plugins/yn-jannah/assets/icons/icon-192.png',
     '/wp-content/plugins/yn-jannah/assets/icons/icon-512.png',
-    '/manifest.json',
 ];
 
 /* ------------------------------------------------------------------ */
@@ -69,20 +67,32 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Static assets (images, fonts, CSS, JS): cache-first.
+    // HTML pages: ALWAYS network, never cache. Fresh content every time.
+    if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
+        event.respondWith(fetch(request).catch(() => {
+            // Only show offline page if network is completely down
+            return caches.match('/offline') || new Response(
+                '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline</title></head><body style="font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#e8f4f8;text-align:center;padding:24px;"><div><h1>You\'re Offline</h1><p>Check your connection and try again.</p></div></body></html>',
+                { status: 503, headers: { 'Content-Type': 'text/html' } }
+            );
+        }));
+        return;
+    }
+
+    // API calls: ALWAYS network, never cache.
+    if (url.pathname.startsWith('/wp-json/')) {
+        event.respondWith(fetch(request).catch(() => new Response('{"ok":false}', { headers: { 'Content-Type': 'application/json' } })));
+        return;
+    }
+
+    // Static assets only (CSS/JS/images): cache with network update.
     if (isStaticAsset(url.pathname)) {
         event.respondWith(cacheFirst(request));
         return;
     }
 
-    // Navigation / HTML pages: network-first with offline fallback.
-    if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
-        event.respondWith(networkFirstWithOffline(request));
-        return;
-    }
-
-    // Default: network-first.
-    event.respondWith(networkFirst(request));
+    // Everything else: network only.
+    event.respondWith(fetch(request));
 });
 
 /**
