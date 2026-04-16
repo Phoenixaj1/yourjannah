@@ -9,6 +9,28 @@
 
 get_header();
 $slug = ynj_mosque_slug();
+
+// Pre-load ALL data server-side — zero API calls for primary data
+$mosque    = ynj_get_mosque( $slug );
+$mosque_id = $mosque ? (int) $mosque->id : 0;
+$mosque_name = $mosque ? $mosque->name : __( 'Mosque', 'yourjannah' );
+$masjid_services = [];
+$rooms = [];
+if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
+    global $wpdb;
+    $msvc_table = YNJ_DB::table( 'masjid_services' );
+    $room_table = YNJ_DB::table( 'rooms' );
+    $masjid_services = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, title, category, description, price_pence, price_label, contact_phone, contact_email, image_url, status
+         FROM $msvc_table WHERE mosque_id = %d AND status = 'active'
+         ORDER BY title ASC LIMIT 50", $mosque_id
+    ) ) ?: [];
+    $rooms = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, name, description, capacity, hourly_rate_pence, image_url, status
+         FROM $room_table WHERE mosque_id = %d AND status = 'active'
+         ORDER BY name ASC LIMIT 50", $mosque_id
+    ) ) ?: [];
+}
 ?>
 <style>
 .ynj-book-tabs{display:flex;gap:0;margin-bottom:16px;background:rgba(255,255,255,.6);border-radius:12px;padding:4px;border:1px solid rgba(0,0,0,.06);}
@@ -42,7 +64,7 @@ $slug = ynj_mosque_slug();
             <p class="ynj-text-muted"><?php esc_html_e( "Your booking requires masjid approval. You'll be notified once confirmed.", 'yourjannah' ); ?></p>
         </section>
     <?php else : ?>
-    <h2 id="bk-title" style="font-size:18px;font-weight:700;margin-bottom:4px;"><?php esc_html_e( 'Booking', 'yourjannah' ); ?></h2>
+    <h2 id="bk-title" style="font-size:18px;font-weight:700;margin-bottom:4px;"><?php echo esc_html( $mosque_name ); ?> <?php esc_html_e( 'Booking', 'yourjannah' ); ?></h2>
     <p class="ynj-text-muted" style="margin-bottom:14px;"><?php esc_html_e( 'Book masjid services and rooms — all bookings require masjid approval', 'yourjannah' ); ?></p>
 
     <div class="ynj-book-tabs">
@@ -51,11 +73,19 @@ $slug = ynj_mosque_slug();
     </div>
 
     <div id="msvc-panel">
-        <div id="msvc-list" style="display:grid;grid-template-columns:1fr;gap:14px;"><p class="ynj-text-muted" style="text-align:center;padding:20px;grid-column:1/-1;">Loading masjid services...</p></div>
+        <div id="msvc-list" style="display:grid;grid-template-columns:1fr;gap:14px;">
+        <?php if ( empty( $masjid_services ) ) : ?>
+            <div style="text-align:center;padding:30px 20px;grid-column:1/-1;"><div style="font-size:40px;margin-bottom:8px;">🕌</div><h3 style="font-size:15px;"><?php esc_html_e( "No Services Listed Yet", 'yourjannah' ); ?></h3><p class="ynj-text-muted"><?php esc_html_e( "This mosque hasn't added their bookable services yet.", 'yourjannah' ); ?></p></div>
+        <?php endif; ?>
+        </div>
     </div>
 
     <div id="rooms-panel" style="display:none;">
-        <div id="rooms-list" style="display:grid;grid-template-columns:1fr;gap:14px;"><p class="ynj-text-muted" style="text-align:center;padding:20px;grid-column:1/-1;">Loading rooms...</p></div>
+        <div id="rooms-list" style="display:grid;grid-template-columns:1fr;gap:14px;">
+        <?php if ( empty( $rooms ) ) : ?>
+            <div style="text-align:center;padding:30px 20px;grid-column:1/-1;"><div style="font-size:40px;margin-bottom:8px;">🏠</div><h3 style="font-size:15px;"><?php esc_html_e( 'No Rooms Listed', 'yourjannah' ); ?></h3><p class="ynj-text-muted"><?php esc_html_e( "This mosque hasn't listed any rooms yet.", 'yourjannah' ); ?></p></div>
+        <?php endif; ?>
+        </div>
     </div>
     <style>@media(min-width:700px){#rooms-list,#msvc-list{grid-template-columns:1fr 1fr !important;}}</style>
 
@@ -120,13 +150,35 @@ $slug = ynj_mosque_slug();
 (function(){
     const slug = <?php echo wp_json_encode( $slug ); ?>;
     const API  = ynjData.restUrl;
-    let mosqueId = 0;
+    let mosqueId = <?php echo $mosque_id; ?>;
 
     document.querySelectorAll('[data-nav-mosque]').forEach(el => {
         el.href = el.dataset.navMosque.replace('{slug}', slug);
     });
 
     var svcIcons = {nikkah:'\ud83d\udc8d',funeral:'\ud83d\udd4a\ufe0f',counselling:'\ud83e\udd1d',quran:'\ud83d\udcd6',revert:'\ud83d\udd4c',ruqyah:'\ud83e\udd32',aqiqah:'\ud83d\udc11',walima:'\ud83c\udf7d\ufe0f',hire:'\ud83c\udfe0',imam:'\ud83d\udd4c',certificate:'\ud83d\udcdc',circumcision:'\ud83c\udfe5',general:'\ud83d\udd4c'};
+
+    // Pre-loaded from PHP — instant, no API calls
+    var preloadedMasjidServices = <?php echo wp_json_encode( array_map( function( $s ) {
+        return [
+            'id'          => (int) $s->id,
+            'title'       => $s->title,
+            'category'    => $s->category,
+            'description' => $s->description,
+            'price_pence' => (int) $s->price_pence,
+            'price_label' => $s->price_label,
+        ];
+    }, $masjid_services ) ); ?>;
+    var preloadedRooms = <?php echo wp_json_encode( array_map( function( $r ) {
+        return [
+            'id'                => (int) $r->id,
+            'name'              => $r->name,
+            'description'       => $r->description,
+            'capacity'          => (int) $r->capacity,
+            'hourly_rate_pence' => (int) $r->hourly_rate_pence,
+            'photo_url'         => $r->image_url,
+        ];
+    }, $rooms ) ); ?>;
 
     window.switchBookTab = function(tab) {
         document.getElementById('tab-msvc').classList.toggle('ynj-book-tab--active', tab === 'msvc');
@@ -160,27 +212,9 @@ $slug = ynj_mosque_slug();
         }).join('');
     }
 
-    // Load mosque info + services + rooms
-    fetch(API + 'mosques/' + slug)
-        .then(r => r.json())
-        .then(resp => {
-            const m = resp.mosque || resp;
-            mosqueId = m.id;
-            document.getElementById('bk-title').textContent = (m.name || 'Mosque') + ' Booking';
-
-            // Load masjid services
-            fetch(API + 'mosques/' + slug + '/masjid-services')
-                .then(r => r.ok ? r.json() : { services: [] })
-                .then(data => renderMasjidServices(data.services || []))
-                .catch(() => { document.getElementById('msvc-list').innerHTML = '<p class="ynj-text-muted" style="grid-column:1/-1">Could not load services.</p>'; });
-
-            // Load rooms
-            fetch(API + 'mosques/' + m.id + '/rooms')
-                .then(r => r.ok ? r.json() : { rooms: [] })
-                .then(data => renderRooms(data.rooms || []))
-                .catch(() => { document.getElementById('rooms-list').innerHTML = '<p class="ynj-text-muted" style="grid-column:1/-1">Could not load rooms.</p>'; });
-        })
-        .catch(() => {});
+    // Render instantly from PHP pre-loaded data — no API calls
+    renderMasjidServices(preloadedMasjidServices);
+    renderRooms(preloadedRooms);
 
     function renderRooms(rooms) {
         const el = document.getElementById('rooms-list');

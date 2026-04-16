@@ -10,10 +10,38 @@
 
 get_header();
 $slug = ynj_mosque_slug();
+
+// Pre-load ALL data server-side — zero API calls for primary data
+$mosque      = ynj_get_mosque( $slug );
+$mosque_id   = $mosque ? (int) $mosque->id : 0;
+$mosque_name = $mosque ? $mosque->name : __( 'Your Masjid', 'yourjannah' );
+$announcements = [];
+$hub_events    = [];
+$hub_classes   = [];
+if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
+    global $wpdb;
+    $ann_table = YNJ_DB::table( 'announcements' );
+    $ev_table  = YNJ_DB::table( 'events' );
+    $cls_table = YNJ_DB::table( 'classes' );
+    $announcements = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, title, body, type, pinned, status, published_at
+         FROM $ann_table WHERE mosque_id = %d AND status = 'active'
+         ORDER BY pinned DESC, published_at DESC LIMIT 50", $mosque_id
+    ) ) ?: [];
+    $hub_events = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, title, description, event_date, start_time, end_time, location, event_type, status
+         FROM $ev_table WHERE mosque_id = %d AND status = 'active' AND event_date >= CURDATE()
+         ORDER BY event_date ASC, start_time ASC LIMIT 50", $mosque_id
+    ) ) ?: [];
+    $hub_classes = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, title, description, day_of_week, start_time, location, category
+         FROM $cls_table WHERE mosque_id = %d AND status = 'active'
+         ORDER BY title ASC LIMIT 50", $mosque_id
+    ) ) ?: [];
+}
 ?>
 
 <main class="ynj-main">
-    <?php $mosque = ynj_get_mosque( $slug ); $mosque_name = $mosque ? $mosque->name : __( 'Your Masjid', 'yourjannah' ); ?>
     <h2 id="hub-title" style="font-size:18px;font-weight:700;margin-bottom:14px;"><?php echo esc_html( $mosque_name ); ?></h2>
 
     <!-- Quick Book Section -->
@@ -38,49 +66,37 @@ $slug = ynj_mosque_slug();
         <button class="ynj-chip" data-filter="events" onclick="filterHub('events')">📅 Events</button>
         <button class="ynj-chip" data-filter="classes" onclick="filterHub('classes')">🎓 Classes</button>
     </div>
-    <div id="hub-feed"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading...</p></div>
+    <div id="hub-feed">
+    <?php if ( empty( $announcements ) && empty( $hub_events ) && empty( $hub_classes ) ) : ?>
+        <p class="ynj-text-muted" style="padding:12px;text-align:center;"><?php esc_html_e( 'Nothing to show yet.', 'yourjannah' ); ?></p>
+    <?php endif; ?>
+    </div>
 </main>
 
 <script>
 (function(){
     var slug = <?php echo wp_json_encode( $slug ); ?>;
     var API = ynjData.restUrl;
-    var allItems = [];
     var currentFilter = 'all';
 
-    // Load mosque name
-    fetch(API + 'mosques/' + slug).then(function(r){return r.json();}).then(function(resp){
-        var m = resp.mosque || resp;
-        document.getElementById('hub-title').textContent = (m.name || 'Your Masjid');
-    }).catch(function(){});
+    // Pre-loaded from PHP — instant, no API calls
+    var allItems = [];
+    <?php foreach ( $announcements as $a ) : ?>
+    allItems.push({type:'announcement', title:<?php echo wp_json_encode( $a->title ); ?>, body:<?php echo wp_json_encode( $a->body ?: '' ); ?>, date:<?php echo wp_json_encode( $a->published_at ?: '' ); ?>, pinned:<?php echo $a->pinned ? 'true' : 'false'; ?>});
+    <?php endforeach; ?>
+    <?php foreach ( $hub_events as $e ) : ?>
+    allItems.push({type:'event', title:<?php echo wp_json_encode( $e->title ); ?>, body:<?php echo wp_json_encode( $e->description ?: '' ); ?>, date:<?php echo wp_json_encode( $e->event_date ?: '' ); ?>, time:<?php echo wp_json_encode( $e->start_time ? preg_replace( '/:\d{2}$/', '', $e->start_time ) : '' ); ?>, location:<?php echo wp_json_encode( $e->location ?: '' ); ?>, event_type:<?php echo wp_json_encode( $e->event_type ?: '' ); ?>, event_id:<?php echo (int) $e->id; ?>});
+    <?php endforeach; ?>
+    <?php foreach ( $hub_classes as $c ) : ?>
+    allItems.push({type:'class', title:<?php echo wp_json_encode( $c->title ); ?>, body:<?php echo wp_json_encode( $c->description ?: '' ); ?>, date:'', day_of_week:<?php echo wp_json_encode( $c->day_of_week ?: '' ); ?>, category:<?php echo wp_json_encode( $c->category ?: '' ); ?>});
+    <?php endforeach; ?>
 
-    // Load everything
-    Promise.all([
-        fetch(API + 'mosques/' + slug + '/announcements').then(function(r){return r.json();}).catch(function(){return {announcements:[]};}),
-        fetch(API + 'mosques/' + slug + '/events?upcoming=1').then(function(r){return r.json();}).catch(function(){return {events:[]};}),
-        fetch(API + 'mosques/' + slug + '/classes').then(function(r){return r.json();}).catch(function(){return {classes:[]};})
-    ]).then(function(results){
-        var aData = results[0], eData = results[1], cData = results[2];
-        allItems = [];
-
-        (aData.announcements || []).forEach(function(a){
-            allItems.push({type:'announcement', title:a.title, body:a.body||'', date:a.published_at||'', pinned:a.pinned});
-        });
-        (eData.events || []).forEach(function(e){
-            var time = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
-            allItems.push({type:'event', title:e.title, body:e.description||'', date:e.event_date||'', time:time, location:e.location||'', event_type:e.event_type||'', event_id:e.id});
-        });
-        (cData.classes || []).forEach(function(c){
-            allItems.push({type:'class', title:c.title, body:c.description||'', date:c.start_date||'', day_of_week:c.day_of_week||'', category:c.category||''});
-        });
-
-        // Sort: pinned first, then by date
-        allItems.sort(function(a,b){
-            if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1;
-            return (a.date||'9').localeCompare(b.date||'9');
-        });
-        renderHub();
+    // Sort: pinned first, then by date
+    allItems.sort(function(a,b){
+        if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1;
+        return (a.date||'9').localeCompare(b.date||'9');
     });
+    renderHub();
 
     function renderHub(){
         var el = document.getElementById('hub-feed');

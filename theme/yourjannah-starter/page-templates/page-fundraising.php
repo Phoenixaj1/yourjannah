@@ -25,8 +25,20 @@ $slug = ynj_mosque_slug();
 
 <main class="ynj-main">
     <?php
-    $mosque = ynj_get_mosque( $slug );
+    $mosque      = ynj_get_mosque( $slug );
+    $mosque_id   = $mosque ? (int) $mosque->id : 0;
     $mosque_name = $mosque ? $mosque->name : __( 'Your Masjid', 'yourjannah' );
+    $campaigns   = [];
+    if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
+        global $wpdb;
+        $camp_table = YNJ_DB::table( 'campaigns' );
+        $campaigns = $wpdb->get_results( $wpdb->prepare(
+            "SELECT id, title, description, target_pence, raised_pence, status, end_date, category,
+                    donor_count, percentage, recurring, dfm_link
+             FROM $camp_table WHERE mosque_id = %d AND status = 'active'
+             ORDER BY id DESC LIMIT 50", $mosque_id
+        ) ) ?: [];
+    }
     ?>
     <h2 id="fundraising-title" style="font-size:18px;font-weight:700;margin-bottom:4px;"><?php echo esc_html( $mosque_name ); ?> — <?php esc_html_e( 'Donate & Fundraise', 'yourjannah' ); ?></h2>
     <p class="ynj-text-muted" style="margin-bottom:14px;"><?php printf( esc_html__( 'Support %s — every contribution makes a difference', 'yourjannah' ), esc_html( $mosque_name ) ); ?></p>
@@ -85,7 +97,9 @@ $slug = ynj_mosque_slug();
 
     <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;"><?php esc_html_e( 'Active Campaigns', 'yourjannah' ); ?></h3>
     <div id="campaigns-list">
-        <p class="ynj-text-muted" style="text-align:center;padding:20px;"><?php esc_html_e( 'Loading campaigns...', 'yourjannah' ); ?></p>
+    <?php if ( empty( $campaigns ) ) : ?>
+        <div class="ynj-card" style="text-align:center;padding:40px 20px;"><div style="font-size:48px;margin-bottom:12px;">🕌</div><h3 style="margin-bottom:8px;"><?php esc_html_e( 'No Active Campaigns', 'yourjannah' ); ?></h3><p class="ynj-text-muted"><?php esc_html_e( 'Your masjid has no fundraising campaigns right now. Check back soon.', 'yourjannah' ); ?></p></div>
+    <?php endif; ?>
     </div>
 </main>
 
@@ -145,16 +159,27 @@ $slug = ynj_mosque_slug();
 
     // Mosque name already rendered server-side — no API fetch needed
 
-    fetch(API + 'mosques/' + slug + '/campaigns')
-        .then(r => r.json())
-        .then(data => {
-            const campaigns = data.campaigns || [];
+    // Pre-loaded from PHP — instant, no API calls
+    var preloadedCampaigns = <?php echo wp_json_encode( array_map( function( $c ) {
+        return [
+            'id'           => (int) $c->id,
+            'title'        => $c->title,
+            'description'  => $c->description,
+            'target_pence' => (int) $c->target_pence,
+            'raised_pence' => (int) $c->raised_pence,
+            'category'     => $c->category,
+            'donor_count'  => (int) $c->donor_count,
+            'percentage'   => (int) $c->percentage,
+            'recurring'    => (int) $c->recurring,
+            'dfm_link'     => $c->dfm_link,
+        ];
+    }, $campaigns ) ); ?>;
+
+    (function(){
+            const campaigns = preloadedCampaigns;
             const el = document.getElementById('campaigns-list');
 
-            if (!campaigns.length) {
-                el.innerHTML = '<div class="ynj-card" style="text-align:center;padding:40px 20px;"><div style="font-size:48px;margin-bottom:12px;">\ud83d\udd4c</div><h3 style="margin-bottom:8px;"><?php echo esc_js( __( 'No Active Campaigns', 'yourjannah' ) ); ?></h3><p class="ynj-text-muted"><?php echo esc_js( __( 'Your masjid has no fundraising campaigns right now. Check back soon.', 'yourjannah' ) ); ?></p></div>';
-                return;
-            }
+            if (!campaigns.length) return; // Already rendered empty state from PHP
 
             el.innerHTML = campaigns.map(c => {
                 const icon = catIcons[c.category] || '\ud83d\udd4c';
@@ -198,10 +223,8 @@ $slug = ynj_mosque_slug();
                     '</div>' +
                 '</div>';
             }).join('');
-        })
-        .catch(() => {
-            document.getElementById('campaigns-list').innerHTML = '<p class="ynj-text-muted" style="text-align:center;padding:20px;"><?php echo esc_js( __( 'Could not load campaigns.', 'yourjannah' ) ); ?></p>';
         });
+    })();
 })();
 </script>
 <?php

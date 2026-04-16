@@ -10,6 +10,26 @@
 
 get_header();
 $slug = ynj_mosque_slug();
+
+// Pre-load ALL data server-side — zero API calls for primary data
+$mosque    = ynj_get_mosque( $slug );
+$mosque_id = $mosque ? (int) $mosque->id : 0;
+$mosque_name = $mosque ? $mosque->name : __( 'Your Mosque', 'yourjannah' );
+$mosque_lat  = $mosque ? (float) $mosque->latitude : 0;
+$mosque_lng  = $mosque ? (float) $mosque->longitude : 0;
+$live_events = [];
+if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
+    global $wpdb;
+    $ev_table = YNJ_DB::table( 'events' );
+    $live_events = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, title, description, event_date, start_time, end_time, location, event_type,
+                is_live, is_online, live_url, recording_url, status
+         FROM $ev_table
+         WHERE mosque_id = %d AND status = 'active' AND (is_online = 1 OR live_url IS NOT NULL AND live_url != '')
+         ORDER BY event_date DESC
+         LIMIT 100", $mosque_id
+    ) ) ?: [];
+}
 ?>
 <style>
 .ynj-live-tabs{display:flex;gap:0;margin-bottom:16px;background:rgba(255,255,255,.6);border-radius:12px;padding:3px;border:1px solid rgba(0,173,239,.1);}
@@ -35,7 +55,7 @@ $slug = ynj_mosque_slug();
 </style>
 
 <main class="ynj-main">
-    <h2 id="live-title" style="font-size:18px;font-weight:700;margin-bottom:4px;"><?php esc_html_e( 'Live & Streams', 'yourjannah' ); ?></h2>
+    <h2 id="live-title" style="font-size:18px;font-weight:700;margin-bottom:4px;"><?php echo esc_html( $mosque_name ); ?> — <?php esc_html_e( 'Live & Streams', 'yourjannah' ); ?></h2>
     <p class="ynj-text-muted" style="margin-bottom:14px;"><?php esc_html_e( 'Watch live, catch up on recordings, or see what\'s coming up', 'yourjannah' ); ?></p>
 
     <div class="ynj-live-tabs">
@@ -46,7 +66,9 @@ $slug = ynj_mosque_slug();
     </div>
 
     <div class="ynj-live-grid" id="live-list">
-        <p class="ynj-text-muted" style="padding:20px;text-align:center;grid-column:1/-1;"><?php esc_html_e( 'Loading...', 'yourjannah' ); ?></p>
+    <?php if ( empty( $live_events ) ) : ?>
+        <div class="ynj-live-empty" style="grid-column:1/-1"><div>📡</div><h3><?php esc_html_e( 'No Streams', 'yourjannah' ); ?></h3><p class="ynj-text-muted"><?php esc_html_e( 'No live events or recordings yet. The mosque can add live stream URLs to events.', 'yourjannah' ); ?></p></div>
+    <?php endif; ?>
     </div>
 </main>
 
@@ -54,10 +76,27 @@ $slug = ynj_mosque_slug();
 (function(){
     var slug = <?php echo wp_json_encode( $slug ); ?>;
     var API  = ynjData.restUrl;
-    var allEvents = [];
+    // Pre-loaded from PHP — instant, no API calls
+    var allEvents = <?php echo wp_json_encode( array_map( function( $e ) {
+        return [
+            'id'            => (int) $e->id,
+            'title'         => $e->title,
+            'description'   => $e->description,
+            'event_date'    => $e->event_date,
+            'start_time'    => $e->start_time,
+            'end_time'      => $e->end_time,
+            'location'      => $e->location,
+            'event_type'    => $e->event_type,
+            'is_live'       => (int) $e->is_live,
+            'is_online'     => (int) $e->is_online,
+            'live_url'      => $e->live_url,
+            'recording_url' => $e->recording_url,
+        ];
+    }, $live_events ) ); ?>;
     var nearbyEvents = [];
     var nearbyLoaded = false;
-    var mosqueLat = null, mosqueLng = null;
+    var mosqueLat = <?php echo $mosque_lat ? (float) $mosque_lat : 'null'; ?>;
+    var mosqueLng = <?php echo $mosque_lng ? (float) $mosque_lng : 'null'; ?>;
     var today = new Date().toISOString().slice(0,10);
 
     function getEmbed(url) {
@@ -180,25 +219,8 @@ $slug = ynj_mosque_slug();
         renderAll(f);
     };
 
-    // Load mosque info
-    fetch(API + 'mosques/' + slug)
-        .then(function(r) { return r.json(); })
-        .then(function(resp) {
-            var m = resp.mosque || resp;
-            mosqueLat = m.latitude; mosqueLng = m.longitude;
-            document.getElementById('live-title').textContent = (m.name || 'Your Mosque') + ' — Live & Streams';
-        }).catch(function(){});
-
-    // Load ALL events (no upcoming filter — we need past ones too for archive)
-    fetch(API + 'mosques/' + slug + '/events?per_page=100')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            allEvents = data.events || [];
-            renderAll('all');
-        })
-        .catch(function() {
-            document.getElementById('live-list').innerHTML = '<p class="ynj-text-muted" style="padding:20px;text-align:center;grid-column:1/-1;">Could not load.</p>';
-        });
+    // Render instantly from PHP pre-loaded data — no API calls
+    renderAll('all');
 
     // Radius change — load nearby
     window.onRadiusChange = function() {

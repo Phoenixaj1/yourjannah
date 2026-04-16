@@ -9,6 +9,25 @@
 
 get_header();
 $slug = ynj_mosque_slug();
+
+// Pre-load ALL data server-side — zero API calls for primary data
+$mosque    = ynj_get_mosque( $slug );
+$mosque_id = $mosque ? (int) $mosque->id : 0;
+$mosque_lat = $mosque ? (float) $mosque->latitude : 0;
+$mosque_lng = $mosque ? (float) $mosque->longitude : 0;
+$mosque_phone = $mosque ? $mosque->phone : '';
+$classes = [];
+if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
+    global $wpdb;
+    $cls_table = YNJ_DB::table( 'classes' );
+    $classes = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, title, description, instructor_name, day_of_week, start_time, location,
+                price_pence, status, category, price_type, max_capacity, enrolled_count,
+                total_sessions, is_online
+         FROM $cls_table WHERE mosque_id = %d AND status = 'active'
+         ORDER BY title ASC LIMIT 50", $mosque_id
+    ) ) ?: [];
+}
 ?>
 <style>
 .ynj-class-card{background:rgba(255,255,255,.9);border-radius:16px;padding:18px;margin-bottom:14px;border:1px solid rgba(255,255,255,.6);box-shadow:0 2px 10px rgba(0,0,0,.04);}
@@ -44,7 +63,9 @@ $slug = ynj_mosque_slug();
     </div>
 
     <div class="ynj-classes-grid" id="classes-list">
-        <p class="ynj-text-muted" style="padding:20px;text-align:center;">Loading classes...</p>
+    <?php if ( empty( $classes ) ) : ?>
+        <p class="ynj-text-muted" style="padding:20px;text-align:center;"><?php esc_html_e( 'No classes available. Check back soon.', 'yourjannah' ); ?></p>
+    <?php endif; ?>
     </div>
 
     <!-- Enrolment Modal -->
@@ -113,8 +134,27 @@ $slug = ynj_mosque_slug();
 (function(){
     const slug = <?php echo wp_json_encode( $slug ); ?>;
     const API = ynjData.restUrl;
-    let mosqueLat = null, mosqueLng = null;
-    let localClasses = [];
+    let mosqueLat = <?php echo $mosque_lat ? (float) $mosque_lat : 'null'; ?>;
+    let mosqueLng = <?php echo $mosque_lng ? (float) $mosque_lng : 'null'; ?>;
+    // Pre-loaded from PHP — instant, no API calls
+    let localClasses = <?php echo wp_json_encode( array_map( function( $c ) {
+        return [
+            'id'              => (int) $c->id,
+            'title'           => $c->title,
+            'description'     => $c->description,
+            'instructor_name' => $c->instructor_name,
+            'day_of_week'     => $c->day_of_week,
+            'start_time'      => $c->start_time,
+            'location'        => $c->location,
+            'price_pence'     => (int) $c->price_pence,
+            'category'        => $c->category,
+            'price_type'      => $c->price_type,
+            'max_capacity'    => (int) $c->max_capacity,
+            'enrolled_count'  => (int) $c->enrolled_count,
+            'total_sessions'  => (int) $c->total_sessions,
+            'is_online'       => (int) $c->is_online,
+        ];
+    }, $classes ) ); ?>;
     let nearbyClasses = [];
     let nearbyLoaded = false;
     document.querySelectorAll('[data-nav-mosque]').forEach(el => el.href = el.dataset.navMosque.replace('{slug}', slug));
@@ -158,25 +198,25 @@ $slug = ynj_mosque_slug();
         }
     };
 
-    // Set WhatsApp link from mosque phone + store coords
-    fetch(API + 'mosques/' + slug).then(r=>r.json()).then(resp => {
-        const m = resp.mosque || resp;
-        mosqueLat = m.latitude; mosqueLng = m.longitude;
-        if (m.phone) {
-            const phone = m.phone.replace(/[^0-9+]/g,'').replace(/^0/,'+44');
-            document.getElementById('whatsapp-teach').href = `https://wa.me/${phone}?text=${encodeURIComponent('Assalamu alaikum, I would like to teach a course at your masjid. Can we discuss?')}`;
-        }
-    }).catch(()=>{});
+    // WhatsApp link from PHP pre-loaded phone — no API call
+    <?php if ( $mosque_phone ) :
+        $wa_phone = preg_replace( '/[^0-9+]/', '', $mosque_phone );
+        $wa_phone = preg_replace( '/^0/', '+44', $wa_phone );
+    ?>
+    document.getElementById('whatsapp-teach').href = 'https://wa.me/<?php echo esc_js( $wa_phone ); ?>?text=' + encodeURIComponent('Assalamu alaikum, I would like to teach a course at your masjid. Can we discuss?');
+    <?php endif; ?>
 
     const catIcons = {Quran:'📖',Arabic:'📚',Tajweed:'🎙️','Islamic Studies':'🕌',Fiqh:'⚖️',Seerah:'📜',Business:'💼',SEO:'🔍',Marketing:'📱',Finance:'💰',Health:'🏥',Fitness:'💪',Cooking:'🍳',Parenting:'👪',Youth:'👦',Sisters:'👩'};
 
+    var allLocalClasses = localClasses.slice(); // keep unfiltered copy
     window.loadClasses = function() {
         const cat = document.getElementById('cls-cat').value;
-        const url = API + 'mosques/' + slug + '/classes' + (cat ? '?category=' + encodeURIComponent(cat) : '');
-        fetch(url).then(r=>r.json()).then(data => {
-            localClasses = data.classes || [];
-            renderClassList();
-        });
+        if (cat) {
+            localClasses = allLocalClasses.filter(function(c){ return c.category === cat; });
+        } else {
+            localClasses = allLocalClasses.slice();
+        }
+        renderClassList();
     };
 
     function renderClassList() {

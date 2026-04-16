@@ -9,6 +9,22 @@
 
 get_header();
 $slug = ynj_mosque_slug();
+
+// Pre-load ALL data server-side — zero API calls for primary data
+$mosque    = ynj_get_mosque( $slug );
+$mosque_id = $mosque ? (int) $mosque->id : 0;
+$mosque_lat = $mosque ? (float) $mosque->latitude : 0;
+$mosque_lng = $mosque ? (float) $mosque->longitude : 0;
+$services  = [];
+if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
+    global $wpdb;
+    $svc_table = YNJ_DB::table( 'services' );
+    $services = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, provider_name, phone, email, service_type, description, hourly_rate_pence, area_covered
+         FROM $svc_table WHERE mosque_id = %d AND status = 'active'
+         ORDER BY monthly_fee_pence DESC, provider_name ASC LIMIT 50", $mosque_id
+    ) ) ?: [];
+}
 ?>
 
 <main class="ynj-main">
@@ -21,16 +37,43 @@ $slug = ynj_mosque_slug();
         <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/services/join' ) ); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;background:#fff;color:#7c3aed;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;"><?php esc_html_e( 'List Yourself', 'yourjannah' ); ?></a>
     </div>
 
-    <div id="local-svc-list"><p class="ynj-text-muted">Loading&hellip;</p></div>
+    <div id="local-svc-list">
+    <?php if ( empty( $services ) ) : ?>
+        <p class="ynj-text-muted"><?php esc_html_e( 'No services listed yet.', 'yourjannah' ); ?></p>
+    <?php else : foreach ( $services as $s ) : ?>
+        <div class="ynj-svc-card">
+            <div class="ynj-svc-card__body">
+                <h4><?php echo esc_html( $s->provider_name ); ?></h4>
+                <span class="ynj-badge"><?php echo esc_html( $s->service_type ); ?></span>
+                <p class="ynj-text-muted"><?php echo esc_html( mb_strimwidth( $s->description ?: '', 0, 100, '...' ) ); ?></p>
+                <?php if ( $s->phone ) : ?><a href="tel:<?php echo esc_attr( $s->phone ); ?>" class="ynj-svc-card__phone"><?php echo esc_html( $s->phone ); ?></a><?php endif; ?>
+                <?php if ( $s->area_covered ) : ?><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:4px;"><span class="ynj-text-muted" style="font-size:11px;">🗺️ <?php echo esc_html( $s->area_covered ); ?></span></div><?php endif; ?>
+            </div>
+        </div>
+    <?php endforeach; endif; ?>
+    </div>
 </main>
 
 <script>
 (function(){
     const slug = <?php echo wp_json_encode( $slug ); ?>;
     const API = ynjData.restUrl;
-    let mosqueId = null;
-    let mosqueLat = null, mosqueLng = null;
-    let localSvcs = [];
+    let mosqueId = <?php echo $mosque_id; ?>;
+    let mosqueLat = <?php echo $mosque_lat ? (float) $mosque_lat : 'null'; ?>;
+    let mosqueLng = <?php echo $mosque_lng ? (float) $mosque_lng : 'null'; ?>;
+    // Pre-loaded from PHP — instant, no API calls
+    let localSvcs = <?php echo wp_json_encode( array_map( function( $s ) {
+        return [
+            'id'               => (int) $s->id,
+            'provider_name'    => $s->provider_name,
+            'phone'            => $s->phone,
+            'email'            => $s->email,
+            'service_type'     => $s->service_type,
+            'description'      => $s->description,
+            'hourly_rate_pence'=> (int) $s->hourly_rate_pence,
+            'area_covered'     => $s->area_covered,
+        ];
+    }, $services ) ); ?>;
     let nearbySvcs = [];
     let nearbyLoaded = false;
 
@@ -71,22 +114,8 @@ $slug = ynj_mosque_slug();
         list.innerHTML = all.map(s => renderCard(s, !!s.mosque_name)).join('');
     }
 
-    // Load mosque services
-    fetch(API + 'mosques/' + slug)
-        .then(r => r.json())
-        .then(resp => {
-            const m = resp.mosque || resp;
-            mosqueId = m.id; mosqueLat = m.latitude; mosqueLng = m.longitude;
-        })
-        .then(() => fetch(API + 'mosques/' + slug + '/directory'))
-        .then(r => r.json())
-        .then(data => {
-            localSvcs = data.services || [];
-            renderList();
-        })
-        .catch(() => {
-            document.getElementById('local-svc-list').innerHTML = '<p class="ynj-text-muted">Could not load services.</p>';
-        });
+    // Render instantly from PHP pre-loaded data — no API calls
+    renderList();
 
     // Radius change
     window.onRadiusChange = function() {

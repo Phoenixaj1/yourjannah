@@ -9,6 +9,26 @@
 
 get_header();
 $slug = ynj_mosque_slug();
+
+// Pre-load ALL data server-side — zero API calls for primary data
+$mosque    = ynj_get_mosque( $slug );
+$mosque_id = $mosque ? (int) $mosque->id : 0;
+$mosque_name = $mosque ? $mosque->name : __( 'Events', 'yourjannah' );
+$mosque_lat  = $mosque ? (float) $mosque->latitude : 0;
+$mosque_lng  = $mosque ? (float) $mosque->longitude : 0;
+$events = [];
+if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
+    global $wpdb;
+    $ev_table = YNJ_DB::table( 'events' );
+    $events = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, title, description, event_date, start_time, end_time, location, event_type, status,
+                ticket_price_pence, is_live, is_online, live_url, max_capacity, registered_count, requires_booking
+         FROM $ev_table
+         WHERE mosque_id = %d AND status = 'active' AND event_date >= CURDATE()
+         ORDER BY event_date ASC, start_time ASC
+         LIMIT 100", $mosque_id
+    ) ) ?: [];
+}
 ?>
 <style>
 .ynj-ev-card{background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-radius:16px;border:1px solid rgba(255,255,255,.6);overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.04);transition:transform .15s;}
@@ -51,7 +71,6 @@ $slug = ynj_mosque_slug();
 </style>
 
 <main class="ynj-main">
-    <?php $mosque = ynj_get_mosque( $slug ); $mosque_name = $mosque ? $mosque->name : __( 'Events', 'yourjannah' ); ?>
     <h2 id="ev-title" style="font-size:18px;font-weight:700;margin-bottom:4px;"><?php echo esc_html( $mosque_name ); ?> — <?php esc_html_e( 'Events', 'yourjannah' ); ?></h2>
     <p class="ynj-text-muted" style="margin-bottom:12px;"><?php esc_html_e( 'Upcoming events', 'yourjannah' ); ?></p>
 
@@ -65,7 +84,11 @@ $slug = ynj_mosque_slug();
         <button class="ynj-ev-chip" data-filter="sisters" onclick="filterEv('sisters')">👩 <?php esc_html_e( 'Sisters', 'yourjannah' ); ?></button>
         <button class="ynj-ev-chip" data-filter="sports,competition" onclick="filterEv('sports,competition')">⚽ <?php esc_html_e( 'Sports', 'yourjannah' ); ?></button>
     </div>
-    <div id="ev-feed"><p class="ynj-text-muted" style="text-align:center;padding:20px;">Loading events&hellip;</p></div>
+    <div id="ev-feed">
+    <?php if ( empty( $events ) ) : ?>
+        <div class="ynj-ev-empty"><div>📅</div><h3><?php esc_html_e( 'No Events Found', 'yourjannah' ); ?></h3><p class="ynj-text-muted"><?php esc_html_e( 'No upcoming events at this mosque yet. Check back soon.', 'yourjannah' ); ?></p></div>
+    <?php endif; ?>
+    </div>
 
     <!-- Soft donation prompt -->
     <div style="margin-top:16px;padding:16px;border-radius:12px;background:linear-gradient(135deg,#f0fdf4,#ecfeff);border:1px solid #bbf7d0;text-align:center;">
@@ -81,11 +104,31 @@ $slug = ynj_mosque_slug();
 (function(){
     const slug = <?php echo wp_json_encode( $slug ); ?>;
     const API  = ynjData.restUrl;
-    let allEvents = [];
+    // Pre-loaded from PHP — instant, no API calls
+    let allEvents = <?php echo wp_json_encode( array_map( function( $e ) {
+        return [
+            'id'                 => (int) $e->id,
+            'title'              => $e->title,
+            'description'        => $e->description,
+            'event_date'         => $e->event_date,
+            'start_time'         => $e->start_time,
+            'end_time'           => $e->end_time,
+            'location'           => $e->location,
+            'event_type'         => $e->event_type,
+            'ticket_price_pence' => (int) $e->ticket_price_pence,
+            'is_live'            => (int) $e->is_live,
+            'is_online'          => (int) $e->is_online,
+            'live_url'           => $e->live_url,
+            'max_capacity'       => (int) $e->max_capacity,
+            'registered_count'   => (int) $e->registered_count,
+            'requires_booking'   => (int) $e->requires_booking,
+        ];
+    }, $events ) ); ?>;
     let nearbyEvents = [];
     let nearbyLoaded = false;
     let currentFilter = 'all';
-    let mosqueLat = null, mosqueLng = null;
+    let mosqueLat = <?php echo $mosque_lat ? (float) $mosque_lat : 'null'; ?>;
+    let mosqueLng = <?php echo $mosque_lng ? (float) $mosque_lng : 'null'; ?>;
 
     document.querySelectorAll('[data-nav-mosque]').forEach(el => {
         el.href = el.dataset.navMosque.replace('{slug}', slug);
@@ -197,25 +240,8 @@ $slug = ynj_mosque_slug();
         renderAll();
     };
 
-    // Load mosque info
-    fetch(API + 'mosques/' + slug)
-        .then(r => r.json())
-        .then(resp => {
-            const m = resp.mosque || resp;
-            mosqueLat = m.latitude; mosqueLng = m.longitude;
-            document.getElementById('ev-title').textContent = (m.name || 'Your Mosque') + ' Events';
-        }).catch(() => {});
-
-    // Load events
-    fetch(API + 'mosques/' + slug + '/events?upcoming=1')
-        .then(r => r.json())
-        .then(data => {
-            allEvents = data.events || [];
-            renderAll();
-        })
-        .catch(() => {
-            document.getElementById('ev-feed').innerHTML = '<div class="ynj-ev-empty"><div>😕</div><h3>Could Not Load</h3><p class="ynj-text-muted">Please check your connection and try again.</p></div>';
-        });
+    // Render instantly from PHP pre-loaded data — no API calls
+    renderAll();
 
     // Radius change — load nearby events
     window.onRadiusChange = function() {

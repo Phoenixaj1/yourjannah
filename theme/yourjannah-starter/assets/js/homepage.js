@@ -5,7 +5,8 @@
             const VAPID = ynjData.vapidKey;
 
             let mosqueSlug = localStorage.getItem('ynj_mosque_slug');
-            let mosqueData = null;
+            // Use PHP pre-loaded mosque data if available (instant, no API)
+            let mosqueData = (ynjData.mosque && ynjData.mosque.slug) ? ynjData.mosque : null;
             let prayerTimes = null;
             let jamatTimes = {};
             let userLat = null, userLng = null;
@@ -52,9 +53,14 @@
                         renderFeed();
                     }
 
-                    // Always load fresh data in background (updates cache)
-                    // If cache was used, load silently (no "Loading..." flash)
-                    loadMosque(savedSlug);
+                    // If PHP pre-loaded this mosque, use it directly (no API call)
+                    if (mosqueData && mosqueData.slug === savedSlug) {
+                        // Already have full data from ynjData.mosque — just trigger rendering
+                        onMosqueDataReady(mosqueData);
+                    } else {
+                        // Different mosque or no preload — fetch from API
+                        loadMosque(savedSlug);
+                    }
                     loadFeed(savedSlug, isCacheFresh && cachedFeed);
                 }
 
