@@ -88,7 +88,12 @@ jobs:
           wp transient delete --all 2>/dev/null || true
           wp breeze purge --all 2>/dev/null || true
           rm -rf wp-content/cache/* 2>/dev/null || true
-          echo "🧹 Caches cleared"
+          # Purge Varnish cache
+          curl -s -X PURGE http://127.0.0.1:6081/ -H "X-Purge-Method: default" 2>/dev/null || true
+          curl -s -X BAN http://127.0.0.1:6081/ -H "X-Ban-URL: .*" 2>/dev/null || true
+          # Also try Cloudways Varnish purge
+          wp varnish purge 2>/dev/null || true
+          echo "🧹 All caches cleared (WP + Varnish)"
           ENDSSH
 
       - name: Cleanup SSH key

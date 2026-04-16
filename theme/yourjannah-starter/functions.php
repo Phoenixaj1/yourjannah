@@ -152,6 +152,14 @@ add_filter( 'document_title_separator', function() {
 // PWA SUPPORT
 // ================================================================
 
+// Prevent Varnish/page cache from caching HTML (dynamic membership bar)
+add_action( 'send_headers', function() {
+    if ( ! is_admin() ) {
+        header( 'Cache-Control: no-cache, must-revalidate, max-age=0' );
+        header( 'X-Varnish-Cache: BYPASS' );
+    }
+} );
+
 add_action( 'wp_head', function() {
     $plugin_url = defined( 'YNJ_URL' ) ? YNJ_URL : '';
     if ( $plugin_url ) {
