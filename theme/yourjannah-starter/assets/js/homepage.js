@@ -20,7 +20,18 @@
                 showGreeting();
                 loadPoints();
 
-                // Try GPS automatically
+                // Instant load: use cached mosque data if available
+                var cachedMosque = null;
+                try { cachedMosque = JSON.parse(localStorage.getItem('ynj_cached_mosque')); } catch(e) {}
+                if (cachedMosque && cachedMosque.slug && mosqueSlug === cachedMosque.slug) {
+                    // Instantly render with cached data — no wait for GPS
+                    document.getElementById('mosque-name').textContent = cachedMosque.name || mosqueSlug;
+                    loadMosque(cachedMosque.slug);
+                    loadFeed(cachedMosque.slug);
+                    updateNavLinks(cachedMosque.slug);
+                }
+
+                // GPS refreshes in background (updates travel time, finds nearest)
                 requestGps();
             }
 
@@ -176,6 +187,9 @@
                 mosqueSlug = slug;
                 mosqueLat = lat; mosqueLng = lng;
                 localStorage.setItem('ynj_mosque_slug', slug);
+                localStorage.setItem('ynj_mosque_name', name || slug);
+                // Cache mosque for instant load next time
+                try { localStorage.setItem('ynj_cached_mosque', JSON.stringify({slug:slug,name:name,lat:lat,lng:lng})); } catch(e){}
                 document.getElementById('mosque-name').textContent = name || slug;
                 updateNavLinks(slug);
 
@@ -193,7 +207,7 @@
                     if (userLat != null) {
                         calcTravelFromCoords(lat, lng);
                     } else {
-                        showPostcodePrompt(lat, lng);
+                        /* GPS will provide location — no postcode needed */
                     }
                 }
 
@@ -868,31 +882,7 @@
                 });
             }
 
-            /* ---- Location Bar ---- */
-            (function initLocationBar() {
-                const saved = localStorage.getItem('ynj_user_postcode');
-                const input = document.getElementById('location-postcode');
-                if (!input) return; // Only exists on homepage
-                if (saved) input.value = saved;
-                if (userLat) {
-                    // GPS active — show as detected
-                    input.placeholder = 'GPS detected — or enter postcode';
-                }
-            })();
-
-            window.updatePostcode = function() {
-                const pc = document.getElementById('location-postcode').value.trim().replace(/\s+/g, '');
-                if (pc.length < 3) return;
-                localStorage.setItem('ynj_user_postcode', pc);
-                document.getElementById('location-update').textContent = '...';
-                geocodePostcode(pc, mosqueLat, mosqueLng);
-                setTimeout(() => { document.getElementById('location-update').textContent = 'Update'; }, 2000);
-            };
-
-            // Allow enter key
-            document.getElementById('location-postcode').addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') updatePostcode();
-            });
+            /* ---- Location: GPS only, no postcode ---- */
 
             /* ---- Prayer Overview ---- */
             function renderPrayerOverview() {
