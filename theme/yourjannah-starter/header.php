@@ -59,6 +59,33 @@ $_tier_labels = [ 'supporter' => 'Bronze', 'guardian' => 'Silver', 'champion' =>
 </div>
 <?php endif; ?>
 
+<script>
+function ynjGpsFind(){
+    if(!navigator.geolocation)return;
+    var btn=document.getElementById('gps-btn');
+    btn.classList.add('ynj-gps-btn--loading');
+    navigator.geolocation.getCurrentPosition(function(p){
+        btn.classList.remove('ynj-gps-btn--loading');
+        fetch(ynjData.restUrl+'mosques/nearest?lat='+p.coords.latitude+'&lng='+p.coords.longitude+'&limit=5')
+        .then(function(r){return r.json()})
+        .then(function(d){
+            if(!d.ok||!d.mosques||!d.mosques.length)return;
+            var dd=document.getElementById('mosque-dropdown');
+            var ml=document.getElementById('mosque-list');
+            if(dd)dd.style.display='block';
+            if(ml){
+                ml.innerHTML=d.mosques.map(function(m){
+                    var dist=m.distance?(' · '+m.distance.toFixed(1)+'km'):'';
+                    var sub=[m.city,m.postcode].filter(Boolean).join(', ')+dist;
+                    return '<button style="display:block;width:100%;text-align:left;padding:12px 16px;border:none;background:none;cursor:pointer;font-family:inherit;border-bottom:1px solid #f0f0f0;" onclick="localStorage.setItem(\'ynj_mosque_slug\',\''+m.slug+'\');localStorage.setItem(\'ynj_mosque_name\',\''+m.name.replace(/'/g,'')+'\');localStorage.removeItem(\'ynj_cache_date\');window.location.href=\'/mosque/'+m.slug+'\'"><strong style="font-size:14px;display:block;">'+m.name+'</strong><span style="font-size:11px;color:#6b8fa3;">'+sub+'</span></button>';
+                }).join('');
+            }
+        });
+    },function(){
+        btn.classList.remove('ynj-gps-btn--loading');
+    },{timeout:8000,maximumAge:300000});
+}
+</script>
 <header class="ynj-header">
     <div class="ynj-header__inner">
         <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="ynj-logo">
@@ -85,7 +112,7 @@ $_tier_labels = [ 'supporter' => 'Bronze', 'guardian' => 'Silver', 'champion' =>
             ?>
             <!-- GPS + Mosque selector fused -->
             <div class="ynj-mosque-pill" id="mosque-selector">
-                <button class="ynj-mosque-pill__gps" id="gps-btn" type="button" title="<?php esc_attr_e( 'Detect my location', 'yourjannah' ); ?>" onclick="if(!navigator.geolocation)return;this.classList.add('ynj-gps-btn--loading');var mn=document.getElementById('mosque-name');if(mn)mn.textContent='Locating...';navigator.geolocation.getCurrentPosition(function(p){document.getElementById('gps-btn').classList.remove('ynj-gps-btn--loading');fetch(ynjData.restUrl+'mosques/nearest?lat='+p.coords.latitude+'&lng='+p.coords.longitude+'&limit=5').then(function(r){return r.json()}).then(function(d){if(d.ok&&d.mosques&&d.mosques[0]){var m=d.mosques[0];localStorage.setItem('ynj_mosque_slug',m.slug);localStorage.setItem('ynj_mosque_name',m.name);localStorage.removeItem('ynj_cache_date');window.location.href='/mosque/'+m.slug}})},function(){document.getElementById('gps-btn').classList.remove('ynj-gps-btn--loading');if(mn)mn.textContent=localStorage.getItem('ynj_mosque_name')||'Select mosque'},{timeout:8000,maximumAge:300000});">
+                <button class="ynj-mosque-pill__gps" id="gps-btn" type="button" title="<?php esc_attr_e( 'Detect my location', 'yourjannah' ); ?>" onclick="ynjGpsFind()">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
                 </button>
                 <span class="ynj-mosque-pill__name" id="mosque-name" onclick="var d=document.getElementById('mosque-dropdown');if(d){d.style.display=d.style.display==='block'?'none':'block';var s=document.getElementById('mosque-search');if(s&&d.style.display==='block')s.focus();}" style="cursor:pointer;"><?php echo esc_html( $mosque_name ?: __( 'Finding...', 'yourjannah' ) ); ?></span>
