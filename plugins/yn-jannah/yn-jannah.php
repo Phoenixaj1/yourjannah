@@ -80,6 +80,14 @@ add_action('admin_init', function() {
             wp_die('DB upgrade complete. Tables created/updated. <a href="' . admin_url() . '">Back to admin</a>');
         }
     }
+    // Fix seeded mosques to unclaimed (one-time fix)
+    if (isset($_GET['ynj_fix_unclaimed'])) {
+        global $wpdb;
+        $t = $wpdb->prefix . 'ynj_mosques';
+        // Set all mosques without an admin to 'unclaimed' (except the demo mosque)
+        $updated = $wpdb->query("UPDATE $t SET status = 'unclaimed' WHERE admin_email = '' AND admin_token_hash = '' AND setup_complete = 0 AND id > 1");
+        wp_die("Fixed $updated mosques to 'unclaimed'. <a href='" . admin_url() . "'>Back</a>");
+    }
     // Seed mosques trigger (admin only)
     if (isset($_GET['ynj_seed_mosques'])) {
         require_once YNJ_DIR . 'seed-import-mosques.php';
