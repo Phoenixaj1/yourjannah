@@ -64,8 +64,7 @@ jobs:
             --exclude='.git' \
             --exclude='.DS_Store' \
             --exclude='node_modules' \
-            --exclude='seed-*.php' \
-            --exclude='data-mosques.tsv' \
+            --exclude='merge-mosques.js' \
             -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
             ./plugins/yn-jannah/ \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.WP_PATH }}/wp-content/plugins/yn-jannah/
