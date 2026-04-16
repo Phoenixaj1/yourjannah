@@ -252,62 +252,58 @@ $mosque_status = $mosque ? $mosque->status : '';
     }
     window.submitIntention = submitIntention;
 
-    // Get mosque info
-    fetch(API + 'mosques/' + slug)
-        .then(r => r.json())
-        .then(resp => {
-            const m = resp.mosque || resp;
-            mosqueId = m.id;
-            var mosName = m.name || 'Masjid';
-            var nameEl = document.getElementById('patron-mosque-name');
-            if (nameEl) nameEl.textContent = mosName;
-            var title = document.getElementById('patron-title');
-            if (title) title.textContent = '<?php echo esc_js( __( 'Become a Patron', 'yourjannah' ) ); ?>';
+    // Mosque data pre-loaded from PHP — no fetch needed for name/status/id
 
-            // Show intention section for unclaimed mosques (and always for non-logged-in users)
-            if (m.status === 'unclaimed' || !token) {
-                document.getElementById('intention-section').style.display = '';
-                // Load intention count
-                fetch(API + 'mosques/' + m.id + '/intentions')
-                    .then(r => r.json())
-                    .then(iData => {
-                        if (iData.total > 0) {
-                            document.getElementById('int-count').textContent = iData.total + ' <?php echo esc_js( __( 'people have shown their intention', 'yourjannah' ) ); ?>';
-                        }
-                    }).catch(() => {});
-            }
+    // Show intention section for unclaimed mosques (and always for non-logged-in users)
+    <?php if ( $mosque_status === 'unclaimed' ) : ?>
+    (function(){
+        var heroDesc = document.querySelector('.ynj-patron-hero p');
+        if (heroDesc) heroDesc.textContent = '<?php echo esc_js( __( 'This mosque hasn\'t claimed their YourJannah page yet. Your support goes through YourJannah — when they join, they receive it directly.', 'yourjannah' ) ); ?>';
+    })();
+    <?php endif; ?>
+    <?php if ( $mosque_status === 'unclaimed' ) : ?>
+    document.getElementById('intention-section').style.display = '';
+    <?php endif; ?>
+    if (!token) {
+        document.getElementById('intention-section').style.display = '';
+    }
+    // Load intention count (lightweight, dynamic data)
+    if (document.getElementById('intention-section').style.display !== 'none' && mosqueId) {
+        fetch(API + 'mosques/' + mosqueId + '/intentions')
+            .then(function(r){ return r.json(); })
+            .then(function(iData) {
+                if (iData.total > 0) {
+                    document.getElementById('int-count').textContent = iData.total + ' <?php echo esc_js( __( 'people have shown their intention', 'yourjannah' ) ); ?>';
+                }
+            }).catch(function(){});
+    }
 
-            // Unclaimed mosque messaging
-            if (m.status === 'unclaimed') {
-                var heroDesc = document.querySelector('.ynj-patron-hero p');
-                if (heroDesc) heroDesc.textContent = '<?php echo esc_js( __( 'This mosque hasn\'t claimed their YourJannah page yet. Your support goes through YourJannah — when they join, they receive it directly.', 'yourjannah' ) ); ?>';
-            }
+    // Load patron wall (dynamic data — patrons change frequently)
+    if (mosqueId) {
+        fetch(API + 'mosques/' + mosqueId + '/patrons')
+            .then(function(r){ return r.json(); })
+            .then(function(data) {
+                if (data.total_patrons > 0) {
+                    document.getElementById('patron-stats').style.display = 'flex';
+                    document.getElementById('stat-patrons').textContent = data.total_patrons;
+                    document.getElementById('stat-monthly').textContent = '\u00a3' + (data.monthly_pence / 100).toFixed(0);
+                }
 
-            // Load patron wall
-            return fetch(API + 'mosques/' + m.id + '/patrons');
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.total_patrons > 0) {
-                document.getElementById('patron-stats').style.display = 'flex';
-                document.getElementById('stat-patrons').textContent = data.total_patrons;
-                document.getElementById('stat-monthly').textContent = '\u00a3' + (data.monthly_pence / 100).toFixed(0);
-            }
-
-            if (data.patrons && data.patrons.length) {
-                const tierEmoji = { champion: '\ud83c\udfc6', guardian: '\ud83d\udee1\ufe0f', supporter: '\u2b50' };
-                document.getElementById('patron-wall').style.display = 'block';
-                document.getElementById('patron-list').innerHTML = data.patrons.map(p => {
-                    const initial = (p.name || '?')[0].toUpperCase();
-                    return '<div class="ynj-pw-item">' +
-                        '<div class="ynj-pw-avatar">' + initial + '</div>' +
-                        '<div class="ynj-pw-name">' + p.name + ' ' + (tierEmoji[p.tier] || '') + '</div>' +
-                        '<div class="ynj-pw-tier">' + p.tier + '</div>' +
-                    '</div>';
-                }).join('');
-            }
-        })
-        .catch(() => {});
+                if (data.patrons && data.patrons.length) {
+                    const tierEmoji = { champion: '\ud83c\udfc6', guardian: '\ud83d\udee1\ufe0f', supporter: '\u2b50' };
+                    document.getElementById('patron-wall').style.display = 'block';
+                    document.getElementById('patron-list').innerHTML = data.patrons.map(function(p) {
+                        const initial = (p.name || '?')[0].toUpperCase();
+                        return '<div class="ynj-pw-item">' +
+                            '<div class="ynj-pw-avatar">' + initial + '</div>' +
+                            '<div class="ynj-pw-name">' + p.name + ' ' + (tierEmoji[p.tier] || '') + '</div>' +
+                            '<div class="ynj-pw-tier">' + p.tier + '</div>' +
+                        '</div>';
+                    }).join('');
+                }
+            })
+            .catch(function(){});
+    }
 
     // Check if user is already a patron
     if (token) {

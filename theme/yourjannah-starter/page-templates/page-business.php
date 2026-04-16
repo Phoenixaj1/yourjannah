@@ -10,10 +10,31 @@
 
 get_header();
 $slug = ynj_mosque_slug();
+
+// Pre-load ALL data server-side — zero API calls for primary data
+$mosque      = ynj_get_mosque( $slug );
+$mosque_id   = $mosque ? (int) $mosque->id : 0;
+$mosque_name = $mosque ? $mosque->name : __( 'Your Masjid', 'yourjannah' );
+$businesses  = [];
+$services    = [];
+if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
+    global $wpdb;
+    $biz_table = YNJ_DB::table( 'businesses' );
+    $svc_table = YNJ_DB::table( 'services' );
+    $businesses = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, business_name, owner_name, category, description, phone, email, website, logo_url, address, postcode, monthly_fee_pence, featured_position
+         FROM $biz_table WHERE mosque_id = %d AND status = 'active' AND (expires_at IS NULL OR expires_at > NOW())
+         ORDER BY monthly_fee_pence DESC, business_name ASC LIMIT 50", $mosque_id
+    ) ) ?: [];
+    $services = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, provider_name, phone, email, service_type, description, hourly_rate_pence, area_covered
+         FROM $svc_table WHERE mosque_id = %d AND status = 'active'
+         ORDER BY monthly_fee_pence DESC, provider_name ASC LIMIT 50", $mosque_id
+    ) ) ?: [];
+}
 ?>
 
 <main class="ynj-main">
-    <?php $mosque = ynj_get_mosque( $slug ); $mosque_name = $mosque ? $mosque->name : __( 'Your Masjid', 'yourjannah' ); ?>
     <h2 style="font-size:18px;font-weight:700;margin-bottom:12px;"><?php echo esc_html( $mosque_name ); ?> — <?php esc_html_e( 'Business Directory', 'yourjannah' ); ?></h2>
 
     <!-- Search bar -->
@@ -42,7 +63,27 @@ $slug = ynj_mosque_slug();
 
     <!-- Sponsors Section -->
     <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;">⭐ <?php esc_html_e( 'Masjid Sponsors', 'yourjannah' ); ?></h3>
-    <div id="biz-sponsors" class="ynj-sponsors-grid"><p class="ynj-text-muted">Loading...</p></div>
+    <div id="biz-sponsors" class="ynj-sponsors-grid">
+    <?php if ( empty( $businesses ) ) : ?>
+        <p class="ynj-text-muted"><?php esc_html_e( 'No sponsors found.', 'yourjannah' ); ?></p>
+    <?php else : foreach ( $businesses as $i => $b ) :
+        $rank = $i + 1;
+        $tierClass = $rank <= 3 ? ' ynj-biz--' . ( $rank === 1 ? 'premium' : ( $rank === 2 ? 'featured' : 'standard' ) ) : '';
+        $tierLabel = $rank <= 3 ? [ 'Premium', 'Featured', 'Standard' ][ $rank - 1 ] : '';
+        $medal = $rank <= 3 ? [ "\xF0\x9F\xA5\x87", "\xF0\x9F\xA5\x88", "\xF0\x9F\xA5\x89" ][ $rank - 1 ] : '';
+        $initial = strtoupper( substr( $b->business_name ?: '?', 0, 1 ) );
+    ?>
+        <div class="ynj-biz-card<?php echo $tierClass; ?>">
+            <?php if ( $tierLabel ) : ?><div class="ynj-biz-tier"><?php echo $medal . ' ' . $tierLabel; ?> Sponsor</div><?php endif; ?>
+            <div class="ynj-biz-header"><div class="ynj-biz-logo"><?php echo esc_html( $initial ); ?></div><div class="ynj-biz-info"><h3 class="ynj-biz-name"><?php echo esc_html( $b->business_name ); ?></h3><span class="ynj-biz-cat"><?php echo esc_html( $b->category ); ?></span></div></div>
+            <?php if ( $b->description ) : ?><p class="ynj-biz-desc"><?php echo esc_html( mb_strimwidth( $b->description, 0, 120, '...' ) ); ?></p><?php endif; ?>
+            <div class="ynj-biz-actions">
+                <?php if ( $b->phone ) : ?><a href="tel:<?php echo esc_attr( $b->phone ); ?>" class="ynj-biz-btn">Call</a><?php endif; ?>
+                <?php if ( $b->website ) : ?><a href="<?php echo esc_url( $b->website ); ?>" target="_blank" rel="noopener" class="ynj-biz-btn ynj-biz-btn--outline">Website</a><?php endif; ?>
+            </div>
+        </div>
+    <?php endforeach; endif; ?>
+    </div>
 
     <!-- Divider -->
     <div style="border-top:1px solid #e0e8ed;margin:20px 0;"></div>
@@ -50,15 +91,54 @@ $slug = ynj_mosque_slug();
     <!-- People / Services Directory -->
     <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;">🤝 <?php esc_html_e( 'Local Professionals', 'yourjannah' ); ?></h3>
 
-    <div id="biz-services"><p class="ynj-text-muted">Loading...</p></div>
+    <div id="biz-services">
+    <?php if ( empty( $services ) ) : ?>
+        <p class="ynj-text-muted"><?php esc_html_e( 'No professionals listed yet.', 'yourjannah' ); ?></p>
+    <?php else : foreach ( $services as $s ) : ?>
+        <div class="ynj-svc-card">
+            <div class="ynj-svc-card__body">
+                <h4><?php echo esc_html( $s->provider_name ); ?></h4>
+                <span class="ynj-badge"><?php echo esc_html( $s->service_type ); ?></span>
+                <p class="ynj-text-muted"><?php echo esc_html( mb_strimwidth( $s->description ?: '', 0, 80, '...' ) ); ?></p>
+                <?php if ( $s->phone ) : ?><a href="tel:<?php echo esc_attr( $s->phone ); ?>" class="ynj-svc-card__phone"><?php echo esc_html( $s->phone ); ?></a><?php endif; ?>
+            </div>
+        </div>
+    <?php endforeach; endif; ?>
+    </div>
 </main>
 
 <script>
 (function(){
     var slug = <?php echo wp_json_encode( $slug ); ?>;
     var API = ynjData.restUrl;
-    var allSvcs = [];
-    var allBiz = [];
+    // Pre-loaded from PHP — instant, no API calls
+    var allSvcs = <?php echo wp_json_encode( array_map( function( $s ) {
+        return [
+            'id'               => (int) $s->id,
+            'provider_name'    => $s->provider_name,
+            'phone'            => $s->phone,
+            'email'            => $s->email,
+            'service_type'     => $s->service_type,
+            'description'      => $s->description,
+            'hourly_rate_pence'=> (int) $s->hourly_rate_pence,
+            'area_covered'     => $s->area_covered,
+        ];
+    }, $services ) ); ?>;
+    var allBiz = <?php echo wp_json_encode( array_map( function( $b ) {
+        return [
+            'id'            => (int) $b->id,
+            'business_name' => $b->business_name,
+            'owner_name'    => $b->owner_name,
+            'category'      => $b->category,
+            'description'   => $b->description,
+            'phone'         => $b->phone,
+            'email'         => $b->email,
+            'website'       => $b->website,
+            'logo_url'      => $b->logo_url,
+            'address'       => $b->address,
+            'postcode'      => $b->postcode,
+        ];
+    }, $businesses ) ); ?>;
 
     function renderBiz(biz) {
         var el = document.getElementById('biz-sponsors');
@@ -81,15 +161,8 @@ $slug = ynj_mosque_slug();
         }).join('');
     }
 
-    // Load data from API
-    fetch(API + 'mosques/' + slug + '/directory').then(function(r){return r.json();}).then(function(data){
-        allBiz = data.businesses || [];
-        allSvcs = data.services || [];
-        renderBiz(allBiz);
-        renderSvcs(allSvcs);
-    }).catch(function(){
-        document.getElementById('biz-sponsors').innerHTML = '<p class="ynj-text-muted">Could not load.</p>';
-    });
+    // Render instantly from PHP pre-loaded data — no API calls
+    // (HTML already rendered server-side, JS arrays ready for client-side search filtering)
 
     var svcIcons = {'Imam / Scholar':'\ud83d\udd4c','Quran Teacher':'\ud83d\udcd6','Counselling':'\ud83e\udd1d','Legal Services':'\u2696\ufe0f','Accounting':'\ud83d\udcca','Web Development':'\ud83d\udcbb','Tutoring':'\ud83d\udcda','Catering':'\ud83c\udf7d\ufe0f','Photography':'\ud83d\udcf7','Plumbing':'\ud83d\udd27','Electrician':'\u26a1','Cleaning':'\ud83e\uddf9'};
 
