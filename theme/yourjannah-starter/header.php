@@ -100,6 +100,17 @@ $_tier_labels = [ 'supporter' => 'Bronze', 'guardian' => 'Silver', 'champion' =>
                 <option value="25">+25mi</option>
                 <option value="9999">All</option>
             </select>
+
+            <!-- User account icon -->
+            <?php if ( is_user_logged_in() ) : ?>
+            <a href="<?php echo esc_url( home_url( '/profile' ) ); ?>" class="ynj-header-user" title="<?php esc_attr_e( 'My Account', 'yourjannah' ); ?>">
+                <span class="ynj-header-user__initial"><?php echo esc_html( strtoupper( mb_substr( wp_get_current_user()->display_name ?: 'U', 0, 1 ) ) ); ?></span>
+            </a>
+            <?php else : ?>
+            <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" class="ynj-header-user ynj-header-user--guest" title="<?php esc_attr_e( 'Sign In', 'yourjannah' ); ?>">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </a>
+            <?php endif; ?>
         </div>
     </div>
 </header>

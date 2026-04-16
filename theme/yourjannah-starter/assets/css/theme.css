@@ -29,6 +29,13 @@ img,svg{display:block;max-width:100%;}
 .ynj-topbar--member .ynj-topbar__cta{background:rgba(255,255,255,.25);animation:ynj-pulse 2s ease-in-out infinite;}
 @keyframes ynj-pulse{0%,100%{opacity:1;}50%{opacity:.7;}}
 
+/* Header user icon */
+.ynj-header-user{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);color:#fff;text-decoration:none;flex-shrink:0;transition:background .15s;}
+.ynj-header-user:hover{background:rgba(255,255,255,.3);}
+.ynj-header-user__initial{font-size:13px;font-weight:800;line-height:1;}
+.ynj-header-user--guest{background:rgba(255,255,255,.15);}
+.ynj-header-user--guest:hover{background:rgba(255,255,255,.25);}
+
 /* Header */
 .ynj-header{
     background:linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#00ADEF 100%);
