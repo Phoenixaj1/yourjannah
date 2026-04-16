@@ -325,7 +325,7 @@
                             const km = haversine(userLat, userLng, m.latitude, m.longitude);
                             travelMinutes = Math.max(1, Math.round(km * 12));
                             const distText = km < 1 ? `${Math.round(km*1000)}m` : `${km.toFixed(1)}km`;
-                            /* travel-dist removed */ void = `${distText} · ~${travelMinutes} min walk`;
+                            // travel-dist removed
                             document.getElementById('hero-travel').style.display = '';
                             document.getElementById('nav-buttons').style.display = ''; document.getElementById('hero-gps-prompt').style.display = 'none';
                             document.getElementById('navigate-walk').href =
@@ -955,7 +955,7 @@
                 const mi = distanceKm * 0.621;
                 travelMinutes = Math.max(1, Math.round(distanceKm * (modeSpeed[travelMode] || 12)));
                 const distText = mi < 0.5 ? `${Math.round(distanceKm*1000)}m` : `${mi.toFixed(1)} mi`;
-                /* travel-dist removed */ void = `${distText} · ~${travelMinutes} min ${modeLabel[travelMode]}`;
+                // travel-dist removed
                 document.getElementById('hero-travel').style.display = '';
                 document.getElementById('travel-settings').style.display = '';
 
