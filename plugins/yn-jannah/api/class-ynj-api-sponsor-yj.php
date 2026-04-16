@@ -15,11 +15,11 @@ class YNJ_API_Sponsor_YJ {
 
     public static function register() {
 
-        // POST /sponsor-yj/checkout — Create Stripe checkout for platform sponsorship
+        // POST /sponsor-yj/checkout — Create Stripe checkout (public, no auth)
         register_rest_route( self::NS, '/sponsor-yj/checkout', [
             'methods'             => 'POST',
             'callback'            => [ __CLASS__, 'checkout' ],
-            'permission_callback' => [ 'YNJ_User_Auth', 'user_check' ],
+            'permission_callback' => '__return_true',
         ] );
     }
 
@@ -27,13 +27,18 @@ class YNJ_API_Sponsor_YJ {
      * POST /sponsor-yj/checkout — Create Stripe session for platform sponsorship.
      */
     public static function checkout( \WP_REST_Request $request ) {
-        $user = $request->get_param( '_ynj_user' );
         $data = $request->get_json_params();
 
-        $amount_pounds = max( 1, (int) ( $data['amount_pounds'] ?? 10 ) );
+        $amount_pounds = max( 1, (int) ( $data['amount_pounds'] ?? 50 ) );
         $amount_pence  = $amount_pounds * 100;
-        $tier          = sanitize_text_field( $data['tier'] ?? 'seed' );
+        $tier          = sanitize_text_field( $data['tier'] ?? 'tier_50' );
         $one_off       = ! empty( $data['one_off'] );
+        $name          = sanitize_text_field( $data['name'] ?? '' );
+        $email         = sanitize_email( $data['email'] ?? '' );
+
+        if ( ! $email ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Email is required.' ], 400 );
+        }
 
         if ( ! class_exists( 'YNJ_Stripe' ) || ! YNJ_Stripe::is_configured() ) {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Stripe is not configured.' ], 500 );
@@ -76,11 +81,11 @@ class YNJ_API_Sponsor_YJ {
                 'line_items'           => [ $line_item ],
                 'success_url'          => home_url( '/sponsor-yourjannah?payment=success' ),
                 'cancel_url'           => home_url( '/sponsor-yourjannah?payment=cancelled' ),
-                'customer_email'       => $user->email,
+                'customer_email'       => $email,
                 'metadata'             => [
                     'type'    => 'platform_sponsor',
                     'tier'    => $tier,
-                    'user_id' => $user->id,
+                    'name'    => $name,
                     'one_off' => $one_off ? '1' : '0',
                 ],
             ];

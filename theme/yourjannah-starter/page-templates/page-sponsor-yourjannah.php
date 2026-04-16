@@ -106,6 +106,12 @@ get_header();
         </div>
     </div>
 
+    <!-- Name & Email -->
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+        <input type="text" id="syj-name" placeholder="<?php esc_attr_e( 'Your name', 'yourjannah' ); ?>" style="padding:12px 16px;border:1px solid #d1d5db;border-radius:10px;font-size:15px;font-family:inherit;">
+        <input type="email" id="syj-email" placeholder="<?php esc_attr_e( 'Your email', 'yourjannah' ); ?>" style="padding:12px 16px;border:1px solid #d1d5db;border-radius:10px;font-size:15px;font-family:inherit;">
+    </div>
+
     <!-- CTA -->
     <button class="syj-cta-btn" id="syj-btn" onclick="sponsorYJ()">
         🤲 <?php esc_html_e( 'Sponsor YourJannah', 'yourjannah' ); ?> &mdash; &pound;50/month
@@ -165,13 +171,17 @@ get_header();
     }
 
     window.sponsorYJ = async function() {
-        var token = localStorage.getItem('ynj_user_token');
-        if (!token) {
-            window.location.href = '<?php echo esc_js( home_url( '/login?redirect=/sponsor-yourjannah' ) ); ?>';
-            return;
-        }
+        var name = document.getElementById('syj-name').value.trim();
+        var email = document.getElementById('syj-email').value.trim();
         var btn = document.getElementById('syj-btn');
         var msg = document.getElementById('syj-msg');
+
+        if (!email) {
+            msg.style.display = ''; msg.style.color = '#dc2626';
+            msg.textContent = '<?php echo esc_js( __( 'Please enter your email.', 'yourjannah' ) ); ?>';
+            return;
+        }
+
         btn.disabled = true;
         btn.textContent = '<?php echo esc_js( __( 'Redirecting to checkout...', 'yourjannah' ) ); ?>';
 
@@ -182,8 +192,8 @@ get_header();
         try {
             var res = await fetch(ynjData.restUrl + 'sponsor-yj/checkout', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                body: JSON.stringify({ amount_pounds: amount, tier: tier, one_off: isOneOff })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount_pounds: amount, tier: tier, one_off: isOneOff, name: name, email: email })
             });
             var data = await res.json();
             if (data.ok && data.checkout_url) {
