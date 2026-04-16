@@ -81,6 +81,18 @@ add_action('admin_init', function() {
             wp_die('DB upgrade complete. Tables created/updated. <a href="' . admin_url() . '">Back to admin</a>');
         }
     }
+    // Fix duplicate jumuah/announcements/events from double-seed
+    if (isset($_GET['ynj_fix_dupes'])) {
+        global $wpdb;
+        $p = $wpdb->prefix . 'ynj_';
+        $fixed = 0;
+        foreach (['jumuah_times', 'announcements', 'events', 'businesses', 'services', 'rooms', 'subscribers', 'enquiries'] as $t) {
+            // Delete duplicates keeping lowest ID
+            $dupes = $wpdb->query("DELETE t1 FROM {$p}{$t} t1 INNER JOIN {$p}{$t} t2 WHERE t1.id > t2.id AND t1.mosque_id = t2.mosque_id AND t1." . ($t === 'jumuah_times' ? 'slot_name' : ($t === 'businesses' ? 'business_name' : ($t === 'services' ? 'provider_name' : ($t === 'rooms' ? 'name' : ($t === 'subscribers' ? 'email' : 'title'))))) . " = t2." . ($t === 'jumuah_times' ? 'slot_name' : ($t === 'businesses' ? 'business_name' : ($t === 'services' ? 'provider_name' : ($t === 'rooms' ? 'name' : ($t === 'subscribers' ? 'email' : 'title'))))));
+            if ($dupes) $fixed += $dupes;
+        }
+        wp_die("Removed $fixed duplicate rows. <a href='" . admin_url() . "'>Back</a>");
+    }
     // Fix seeded mosques to unclaimed (one-time fix)
     if (isset($_GET['ynj_fix_unclaimed'])) {
         global $wpdb;

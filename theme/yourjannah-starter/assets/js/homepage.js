@@ -180,19 +180,26 @@
                     function(pos) {
                         userLat = pos.coords.latitude;
                         userLng = pos.coords.longitude;
-                        // If we have mosque coords, calculate travel
-                        var cached = null;
-                        try { cached = JSON.parse(localStorage.getItem('ynj_cached_mosque')); } catch(e) {}
-                        if (cached && cached.lat && cached.lng) {
-                            mosqueLat = cached.lat; mosqueLng = cached.lng;
-                            calcTravelFromCoords(cached.lat, cached.lng);
-                            // Show nav buttons
+                        // Try cached mosque coords first, then mosqueData from API
+                        var mLat = null, mLng = null;
+                        try {
+                            var cached = JSON.parse(localStorage.getItem('ynj_cached_mosque'));
+                            if (cached && cached.lat && cached.lng) { mLat = cached.lat; mLng = cached.lng; }
+                        } catch(e) {}
+                        // Fallback to mosqueData if loaded from API
+                        if (!mLat && mosqueData && mosqueData.latitude) { mLat = mosqueData.latitude; mLng = mosqueData.longitude; }
+                        // Fallback to mosqueLat/Lng if set from selectMosque
+                        if (!mLat && mosqueLat) { mLat = mosqueLat; mLng = mosqueLng; }
+
+                        if (mLat && mLng) {
+                            mosqueLat = mLat; mosqueLng = mLng;
+                            calcTravelFromCoords(mLat, mLng);
                             document.getElementById('nav-buttons').style.display = '';
                             document.getElementById('hero-gps-prompt').style.display = 'none';
                             document.getElementById('navigate-walk').href =
-                                'https://www.google.com/maps/dir/?api=1&destination=' + cached.lat + ',' + cached.lng + '&travelmode=walking';
+                                'https://www.google.com/maps/dir/?api=1&destination=' + mLat + ',' + mLng + '&travelmode=walking';
                             document.getElementById('navigate-drive').href =
-                                'https://www.google.com/maps/dir/?api=1&destination=' + cached.lat + ',' + cached.lng + '&travelmode=driving';
+                                'https://www.google.com/maps/dir/?api=1&destination=' + mLat + ',' + mLng + '&travelmode=driving';
                         }
                     },
                     function() { /* GPS denied — no travel times, that's fine */ },
@@ -388,20 +395,20 @@
                             if (hasAdhan) setPrayerTimes(m.prayer_times);
                         }
 
-                        // If we didn't get travel from GPS, try from mosque coords
-                        if (userLat && !travelMinutes && m.latitude && m.longitude) {
-                            const km = haversine(userLat, userLng, m.latitude, m.longitude);
-                            travelMinutes = Math.max(1, Math.round(km * 12));
-                            const distText = km < 1 ? `${Math.round(km*1000)}m` : `${km.toFixed(1)}km`;
-                            // travel-dist removed
-                            document.getElementById('hero-travel').style.display = '';
-                            document.getElementById('nav-buttons').style.display = ''; document.getElementById('hero-gps-prompt').style.display = 'none';
+                        // Calculate travel if GPS position available
+                        if (userLat && m.latitude && m.longitude) {
+                            mosqueLat = m.latitude; mosqueLng = m.longitude;
+                            calcTravelFromCoords(m.latitude, m.longitude);
+                            document.getElementById('nav-buttons').style.display = '';
+                            document.getElementById('hero-gps-prompt').style.display = 'none';
                             document.getElementById('navigate-walk').href =
                                 `https://www.google.com/maps/dir/?api=1&destination=${m.latitude},${m.longitude}&travelmode=walking`;
                             document.getElementById('navigate-drive').href =
                                 `https://www.google.com/maps/dir/?api=1&destination=${m.latitude},${m.longitude}&travelmode=driving`;
-                            mosqueLat = m.latitude; mosqueLng = m.longitude;
-                            updateLeaveBy();
+                        }
+                        // Cache mosque coords for getPositionForTravel
+                        if (m.latitude && m.longitude) {
+                            try { localStorage.setItem('ynj_cached_mosque', JSON.stringify({slug:m.slug||mosqueSlug,name:m.name,lat:m.latitude,lng:m.longitude})); } catch(e){}
                         }
                     })
                     .catch(() => {});
