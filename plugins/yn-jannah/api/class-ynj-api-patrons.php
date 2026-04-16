@@ -56,9 +56,10 @@ class YNJ_API_Patrons {
 
     private static function tiers() {
         return [
-            'supporter' => [ 'amount' => 500,   'label' => 'Supporter (£5/mo)' ],
-            'guardian'  => [ 'amount' => 1000,  'label' => 'Guardian (£10/mo)' ],
-            'champion'  => [ 'amount' => 2000,  'label' => 'Champion (£20/mo)' ],
+            'supporter' => [ 'amount' => 500,   'label' => 'Bronze (£5/mo)' ],
+            'guardian'  => [ 'amount' => 1000,  'label' => 'Silver (£10/mo)' ],
+            'champion'  => [ 'amount' => 2000,  'label' => 'Gold (£20/mo)' ],
+            'platinum'  => [ 'amount' => 5000,  'label' => 'Platinum (£50/mo)' ],
         ];
     }
 
@@ -87,7 +88,7 @@ class YNJ_API_Patrons {
         }
 
         if ( ! isset( $tiers[ $tier ] ) ) {
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Invalid tier. Choose: supporter, guardian, or champion.' ], 400 );
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Invalid tier.' ], 400 );
         }
 
         global $wpdb;

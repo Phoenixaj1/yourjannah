@@ -32,9 +32,34 @@ get_header();
         if (!profileResp.ok) { localStorage.removeItem('ynj_user_token'); window.location.href = '<?php echo esc_js( home_url( '/login' ) ); ?>'; return; }
         const user = profileResp.user;
 
-        // Fetch bookings
-        const bookingsResp = await fetch(API + 'auth/bookings', {headers}).then(r=>r.json()).catch(()=>({bookings:[]}));
+        // Fetch bookings + patron status
+        const [bookingsResp, patronResp] = await Promise.all([
+            fetch(API + 'auth/bookings', {headers}).then(r=>r.json()).catch(()=>({bookings:[]})),
+            fetch(API + 'patrons/me', {headers}).then(r=>r.json()).catch(()=>({patrons:[]}))
+        ]);
         const bookings = bookingsResp.bookings || [];
+        const patrons = (patronResp.patrons || []).filter(p => p.status === 'active');
+
+        const tierBadge = {supporter:'🥉 Bronze', guardian:'🥈 Silver', champion:'🥇 Gold', platinum:'💎 Platinum'};
+        const tierColor = {supporter:'#f0f9ff', guardian:'#f0f0ff', champion:'#fef3c7', platinum:'#ede9fe'};
+        const tierFg    = {supporter:'#0369a1', guardian:'#4338ca', champion:'#92400e', platinum:'#6b21a8'};
+
+        const patronSection = patrons.length ? `
+            <section class="ynj-card" style="background:linear-gradient(135deg,#0a1628,#1a3a5c);color:#fff;">
+                <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;">🏅 <?php echo esc_js( __( 'Patron Memberships', 'yourjannah' ) ); ?></h3>
+                ${patrons.map(p => `
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:10px;background:rgba(255,255,255,.1);margin-bottom:8px;">
+                        <div>
+                            <strong style="font-size:14px;display:block;">${p.mosque_name || 'Mosque'}</strong>
+                            <span style="font-size:11px;opacity:.7;">Since ${p.started_at ? new Date(p.started_at).toLocaleDateString('en-GB',{month:'short',year:'numeric'}) : 'recently'}</span>
+                        </div>
+                        <div style="text-align:right;">
+                            <span style="display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;background:${tierColor[p.tier]||'#f0f9ff'};color:${tierFg[p.tier]||'#0369a1'};">${tierBadge[p.tier] || p.tier}</span>
+                            <div style="font-size:12px;font-weight:700;margin-top:2px;">£${(p.amount_pence/100).toFixed(0)}/mo</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </section>` : '';
 
         main.innerHTML = `
             <section class="ynj-card">
@@ -42,8 +67,11 @@ get_header();
                     <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#00ADEF,#0090d0);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;margin:0 auto 8px;">${user.name.charAt(0).toUpperCase()}</div>
                     <h2 style="font-size:18px;font-weight:700;">${user.name}</h2>
                     <p class="ynj-text-muted">${user.email}</p>
+                    ${patrons.length ? '<div style="margin-top:8px;"><span style="display:inline-block;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;">🏅 Patron</span></div>' : ''}
                 </div>
             </section>
+
+            ${patronSection}
 
             <section class="ynj-card">
                 <h3 class="ynj-card__title"><?php echo esc_js( __( 'Prayer Preferences', 'yourjannah' ) ); ?></h3>

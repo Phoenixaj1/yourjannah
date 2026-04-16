@@ -55,9 +55,12 @@
                     loadFeed(savedSlug, isCacheFresh && cachedFeed);
                 }
 
-                // Only auto-GPS on first visit or if cache is stale
+                // First visit or stale cache: full GPS → detect mosque
                 if (!savedSlug || !isCacheFresh) {
                     requestGps();
+                } else {
+                    // Fresh cache: just get position silently for travel times
+                    getPositionForTravel();
                 }
             }
 
@@ -73,9 +76,10 @@
                     el.style.display = '';
                     el.innerHTML = '<div class="ynj-card" style="text-align:center;padding:20px;"><h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">Welcome to YourJannah</h3><p class="ynj-text-muted" style="margin-bottom:12px;">Your mosque community app — prayer times, events, donate, and more.</p><button class="ynj-btn" style="justify-content:center;" onclick="document.getElementById(\'mosque-dropdown\').style.display=\'\';document.getElementById(\'mosque-search\').focus();">🕌 Find Your Mosque</button></div>';
                 } else if (user && user.name) {
-                    // Logged-in greeting
+                    // Logged-in greeting with patron badge if active
+                    var patronBadge = (user.patron && user.patron.tier) ? ' <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;vertical-align:middle;">🏅 Patron</span>' : '';
                     el.style.display = '';
-                    el.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 4px;"><span style="font-size:14px;font-weight:600;">Assalamu alaikum, ' + (user.name.split(' ')[0]) + '</span><a href="/profile" style="font-size:12px;font-weight:600;">My Profile →</a></div>';
+                    el.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 4px;"><span style="font-size:14px;font-weight:600;">Assalamu alaikum, ' + (user.name.split(' ')[0]) + patronBadge + '</span><a href="/profile" style="font-size:12px;font-weight:600;">My Profile →</a></div>';
                 }
             }
 
@@ -167,6 +171,33 @@
                 // Open the dropdown so user can search
                 document.getElementById('mosque-dropdown').style.display = '';
                 document.getElementById('mosque-search').focus();
+            }
+
+            // Silent GPS — just get position for travel calc, don't change mosque
+            function getPositionForTravel() {
+                if (!('geolocation' in navigator)) return;
+                navigator.geolocation.getCurrentPosition(
+                    function(pos) {
+                        userLat = pos.coords.latitude;
+                        userLng = pos.coords.longitude;
+                        // If we have mosque coords, calculate travel
+                        var cached = null;
+                        try { cached = JSON.parse(localStorage.getItem('ynj_cached_mosque')); } catch(e) {}
+                        if (cached && cached.lat && cached.lng) {
+                            mosqueLat = cached.lat; mosqueLng = cached.lng;
+                            calcTravelFromCoords(cached.lat, cached.lng);
+                            // Show nav buttons
+                            document.getElementById('nav-buttons').style.display = '';
+                            document.getElementById('hero-gps-prompt').style.display = 'none';
+                            document.getElementById('navigate-walk').href =
+                                'https://www.google.com/maps/dir/?api=1&destination=' + cached.lat + ',' + cached.lng + '&travelmode=walking';
+                            document.getElementById('navigate-drive').href =
+                                'https://www.google.com/maps/dir/?api=1&destination=' + cached.lat + ',' + cached.lng + '&travelmode=driving';
+                        }
+                    },
+                    function() { /* GPS denied — no travel times, that's fine */ },
+                    { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+                );
             }
 
             function setupGpsButton() {

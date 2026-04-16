@@ -238,7 +238,7 @@ $slug = ynj_mosque_slug();
             if (!data.patrons) return;
             const active = data.patrons.find(p => p.mosque_slug === slug && p.status === 'active');
             if (active) {
-                const tierLabel = { supporter: 'Supporter', guardian: 'Guardian', champion: 'Champion' };
+                const tierLabel = { supporter: 'Bronze', guardian: 'Silver', champion: 'Gold', platinum: 'Platinum' };
                 document.getElementById('active-status').style.display = 'block';
                 document.getElementById('active-status').innerHTML = '<div class="ynj-status-card"><h3>\ud83c\udfc5 <?php echo esc_js( __( 'You are a', 'yourjannah' ) ); ?> ' + (tierLabel[active.tier] || active.tier) + ' <?php echo esc_js( __( 'Patron', 'yourjannah' ) ); ?></h3><p><?php echo esc_js( __( 'Thank you for supporting this masjid! Your monthly contribution of', 'yourjannah' ) ); ?> \u00a3' + (active.amount_pence/100).toFixed(0) + ' <?php echo esc_js( __( 'makes a difference.', 'yourjannah' ) ); ?></p><span class="ynj-cancel-link" onclick="cancelPatron()"><?php echo esc_js( __( 'Cancel membership', 'yourjannah' ) ); ?></span></div>';
                 document.getElementById('tier-cards').style.display = 'none';
