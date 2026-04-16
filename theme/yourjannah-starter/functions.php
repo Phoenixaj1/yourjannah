@@ -459,6 +459,15 @@ function ynj_get_mosque( $slug = null ) {
     return $mosque;
 }
 
+function ynj_get_mosque_by_id( $id ) {
+    if ( ! $id || ! class_exists( 'YNJ_DB' ) ) return null;
+    global $wpdb;
+    return $wpdb->get_row( $wpdb->prepare(
+        "SELECT * FROM " . YNJ_DB::table( 'mosques' ) . " WHERE id = %d",
+        (int) $id
+    ) );
+}
+
 // ================================================================
 // HELPER: Mosque slug for templates
 // ================================================================
