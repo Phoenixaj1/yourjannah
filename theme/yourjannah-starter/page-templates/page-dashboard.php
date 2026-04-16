@@ -60,25 +60,55 @@ $mosque_slug = $mosque ? $mosque->slug : '';
 $section = sanitize_text_field( $_GET['section'] ?? 'overview' );
 $dash_dir = get_template_directory() . '/page-templates/dashboard/';
 
-// ── Sidebar navigation ──
-$nav_items = [
-    [ 'key' => 'overview',       'icon' => '🎯', 'label' => 'Dashboard' ],
-    [ 'key' => 'announcements',  'icon' => '📢', 'label' => 'Announcements' ],
-    [ 'key' => 'events',         'icon' => '📅', 'label' => 'Events' ],
-    [ 'key' => 'prayers',        'icon' => '🕐', 'label' => 'Prayer Times' ],
-    [ 'key' => 'bookings',       'icon' => '📋', 'label' => 'Bookings' ],
-    [ 'key' => 'rooms',          'icon' => '🏠', 'label' => 'Rooms' ],
-    [ 'key' => 'classes',        'icon' => '🎓', 'label' => 'Classes' ],
-    [ 'key' => 'enquiries',      'icon' => '✉️',  'label' => 'Enquiries' ],
-    [ 'key' => 'subscribers',    'icon' => '👥', 'label' => 'Subscribers' ],
-    [ 'key' => 'broadcast',      'icon' => '📢', 'label' => 'Broadcast' ],
-    [ 'key' => 'campaigns',      'icon' => '💝', 'label' => 'Fundraising' ],
-    [ 'key' => 'services',       'icon' => '🛎️',  'label' => 'Masjid Services' ],
-    [ 'key' => 'patrons',        'icon' => '🏅', 'label' => 'Patrons' ],
-    [ 'key' => 'funds',          'icon' => '💰', 'label' => 'Donation Funds' ],
-    [ 'key' => 'madrassah',      'icon' => '📚', 'label' => 'Madrassah' ],
-    [ 'key' => 'settings',       'icon' => '⚙️',  'label' => 'Settings' ],
+// ── Sidebar navigation (grouped by purpose) ──
+$nav_groups = [
+    'main' => [
+        'label' => '',
+        'items' => [
+            [ 'key' => 'overview', 'icon' => '🎯', 'label' => 'Dashboard' ],
+        ],
+    ],
+    'engage' => [
+        'label' => 'ENGAGE',
+        'items' => [
+            [ 'key' => 'announcements',  'icon' => '📢', 'label' => 'Announcements' ],
+            [ 'key' => 'events',         'icon' => '📅', 'label' => 'Events' ],
+            [ 'key' => 'broadcast',      'icon' => '📤', 'label' => 'Broadcast' ],
+            [ 'key' => 'subscribers',    'icon' => '👥', 'label' => 'Subscribers' ],
+        ],
+    ],
+    'revenue' => [
+        'label' => 'REVENUE',
+        'items' => [
+            [ 'key' => 'patrons',   'icon' => '🏅', 'label' => 'Patrons' ],
+            [ 'key' => 'funds',     'icon' => '💰', 'label' => 'Donation Funds' ],
+            [ 'key' => 'campaigns', 'icon' => '💝', 'label' => 'Fundraising' ],
+            [ 'key' => 'sponsors',  'icon' => '⭐', 'label' => 'Sponsors' ],
+        ],
+    ],
+    'manage' => [
+        'label' => 'MANAGE',
+        'items' => [
+            [ 'key' => 'prayers',    'icon' => '🕐', 'label' => 'Prayer Times' ],
+            [ 'key' => 'classes',    'icon' => '🎓', 'label' => 'Classes' ],
+            [ 'key' => 'rooms',      'icon' => '🏠', 'label' => 'Rooms' ],
+            [ 'key' => 'bookings',   'icon' => '📋', 'label' => 'Bookings' ],
+            [ 'key' => 'services',   'icon' => '🛎️',  'label' => 'Masjid Services' ],
+            [ 'key' => 'enquiries',  'icon' => '✉️',  'label' => 'Enquiries' ],
+            [ 'key' => 'madrassah',  'icon' => '📚', 'label' => 'Madrassah' ],
+        ],
+    ],
+    'admin' => [
+        'label' => 'ADMIN',
+        'items' => [
+            [ 'key' => 'settings', 'icon' => '⚙️', 'label' => 'Settings' ],
+        ],
+    ],
 ];
+
+// Flatten for section_help lookup
+$nav_items = [];
+foreach ( $nav_groups as $g ) { foreach ( $g['items'] as $item ) { $nav_items[] = $item; } }
 
 // Wizard tips for each section
 $section_help = [
@@ -119,6 +149,7 @@ a{color:var(--primary);text-decoration:none;}
 .d-nav{list-style:none;}
 .d-nav__item{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:500;color:rgba(255,255,255,.7);cursor:pointer;transition:all .15s;text-decoration:none;}
 .d-nav__item:hover{background:rgba(255,255,255,.08);color:#fff;}
+.d-nav__group{padding:16px 20px 4px;font-size:10px;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,.35);list-style:none;}
 .d-nav__item--active{background:rgba(255,255,255,.12);color:#fff;font-weight:700;border-right:3px solid #fff;}
 .d-nav__icon{width:20px;text-align:center;font-size:14px;}
 .d-nav__logout{margin-top:auto;border-top:1px solid rgba(255,255,255,.1);padding-top:8px;}
@@ -204,7 +235,11 @@ a{color:var(--primary);text-decoration:none;}
     <div class="d-sidebar__logo">🕌 YourJannah</div>
     <div class="d-sidebar__mosque"><?php echo esc_html( $mosque_name ); ?></div>
     <ul class="d-nav">
-        <?php foreach ( $nav_items as $nav ) : ?>
+        <?php foreach ( $nav_groups as $gk => $group ) : ?>
+        <?php if ( $group['label'] ) : ?>
+        <li class="d-nav__group"><?php echo esc_html( $group['label'] ); ?></li>
+        <?php endif; ?>
+        <?php foreach ( $group['items'] as $nav ) : ?>
         <li>
             <a class="d-nav__item<?php echo $section === $nav['key'] ? ' d-nav__item--active' : ''; ?>"
                href="<?php echo esc_url( home_url( '/dashboard?section=' . $nav['key'] ) ); ?>">
@@ -212,6 +247,7 @@ a{color:var(--primary);text-decoration:none;}
                 <?php echo esc_html( $nav['label'] ); ?>
             </a>
         </li>
+        <?php endforeach; ?>
         <?php endforeach; ?>
         <li class="d-nav__logout">
             <a class="d-nav__item" href="<?php echo esc_url( home_url( '/mosque/' . $mosque_slug ) ); ?>">🕌 <?php esc_html_e( 'View Mosque Page', 'yourjannah' ); ?></a>
