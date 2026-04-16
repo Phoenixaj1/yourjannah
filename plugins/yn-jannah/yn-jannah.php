@@ -54,6 +54,7 @@ spl_autoload_register(function($class) {
         'YNJ_API_Intentions'       => 'api/class-ynj-api-intentions.php',
         'YNJ_API_Sponsor_YJ'       => 'api/class-ynj-api-sponsor-yj.php',
         'YNJ_Pool_Ledger'          => 'inc/class-ynj-pool-ledger.php',
+        'YNJ_API_Donations'        => 'api/class-ynj-api-donations.php',
     ];
     if (isset($map[$class])) {
         require_once YNJ_DIR . $map[$class];
@@ -207,6 +208,7 @@ add_action('rest_api_init', function() {
     YNJ_API_Points::register();
     YNJ_API_Intentions::register();
     YNJ_API_Sponsor_YJ::register();
+    YNJ_API_Donations::register();
 });
 
 // Admin menus

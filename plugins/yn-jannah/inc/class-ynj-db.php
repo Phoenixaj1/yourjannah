@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '2.3.0';
+    const SCHEMA_VERSION = '2.4.0';
 
     /**
      * Return the full table name for a given short name.
@@ -766,7 +766,31 @@ class YNJ_DB {
             KEY mosque_id (mosque_id)
         ) $charset_collate;";
 
-        // 19. Pool Ledger — immutable financial record of all payments
+        // 19. Donations — individual donor gifts to mosques
+        $tables[] = "CREATE TABLE {$t('donations')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            donor_name varchar(255) NOT NULL DEFAULT '',
+            donor_email varchar(255) NOT NULL DEFAULT '',
+            amount_pence int(11) NOT NULL DEFAULT 0,
+            currency varchar(5) NOT NULL DEFAULT 'gbp',
+            fund_type varchar(30) NOT NULL DEFAULT 'welfare',
+            frequency varchar(10) NOT NULL DEFAULT 'once',
+            is_recurring tinyint(1) NOT NULL DEFAULT 0,
+            stripe_payment_intent varchar(100) NOT NULL DEFAULT '',
+            stripe_customer_id varchar(100) NOT NULL DEFAULT '',
+            stripe_subscription_id varchar(100) NOT NULL DEFAULT '',
+            pool_allocation tinyint(1) NOT NULL DEFAULT 0,
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY donor_email (donor_email),
+            KEY stripe_payment_intent (stripe_payment_intent)
+        ) $charset_collate;";
+
+        // 20. Pool Ledger — immutable financial record of all payments
         $tables[] = "CREATE TABLE {$t('pool_ledger')} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             entry_ref varchar(30) NOT NULL DEFAULT '',

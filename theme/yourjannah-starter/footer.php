@@ -64,6 +64,323 @@
     </div>
 </div>
 
+<?php
+// ============================================================
+// FLOATING NIYYAH BAR — Stripe-connected donation widget
+// Shows on all pages when a mosque is selected
+// ============================================================
+$_nb_slug = ynj_mosque_slug();
+$_nb_mosque = $_nb_slug ? ynj_get_mosque( $_nb_slug ) : null;
+$_nb_name = $_nb_mosque ? $_nb_mosque->name : '';
+$_nb_id = $_nb_mosque ? (int) $_nb_mosque->id : 0;
+$_nb_pk = class_exists( 'YNJ_Stripe' ) ? YNJ_Stripe::public_key() : '';
+if ( $_nb_id && $_nb_pk ) :
+?>
+<script src="https://js.stripe.com/v3/" async></script>
+<style>
+.ynj-niyyah{position:fixed;bottom:0;left:0;right:0;z-index:200;background:linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#00ADEF 100%);color:#fff;border-radius:18px 18px 0 0;box-shadow:0 -4px 30px rgba(0,0,0,.3);transform:translateY(calc(100% - 48px));transition:transform .3s ease;max-width:500px;margin:0 auto;}
+.ynj-niyyah--open{transform:translateY(0);}
+.ynj-niyyah__handle{display:flex;justify-content:center;padding:10px 0 4px;cursor:pointer;}
+.ynj-niyyah__handle span{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.3);}
+.ynj-niyyah__peek{text-align:center;font-size:13px;font-weight:700;padding:0 0 10px;opacity:.9;}
+.ynj-niyyah__body{padding:0 18px 14px;display:none;}
+.ynj-niyyah--open .ynj-niyyah__body{display:block;}
+.ynj-niyyah--open .ynj-niyyah__peek{display:none;}
+.ynj-niyyah__mosque{font-size:11px;color:rgba(255,255,255,.6);text-align:center;margin-bottom:8px;}
+.ynj-niyyah__steps{display:flex;justify-content:center;gap:6px;margin-bottom:12px;}
+.ynj-niyyah__dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2);transition:all .2s;}
+.ynj-niyyah__dot--active{background:#fff;width:20px;border-radius:4px;}
+/* Frequency */
+.ynj-nb-freq{display:flex;gap:4px;margin-bottom:10px;background:rgba(0,0,0,.15);border-radius:10px;padding:3px;}
+.ynj-nb-freq__btn{flex:1;padding:8px 4px;border:none;border-radius:8px;background:transparent;color:rgba(255,255,255,.7);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;}
+.ynj-nb-freq__btn--active{background:#fff;color:#0a1628;}
+/* Amounts */
+.ynj-nb-amounts{display:flex;gap:6px;margin-bottom:6px;}
+.ynj-nb-amt{flex:1;padding:10px 4px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.08);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;text-align:center;transition:all .15s;}
+.ynj-nb-amt:hover{background:rgba(255,255,255,.15);}
+.ynj-nb-amt--active{background:#fff!important;color:#0a1628!important;border-color:#fff!important;box-shadow:0 2px 12px rgba(0,0,0,.2);}
+.ynj-nb-other{flex:1;position:relative;}
+.ynj-nb-other input{width:100%;padding:10px 8px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.08);color:#fff;font-size:14px;font-weight:700;font-family:inherit;text-align:center;box-sizing:border-box;}
+.ynj-nb-other input::placeholder{color:rgba(255,255,255,.4);font-weight:600;}
+.ynj-nb-other input:focus{outline:none;border-color:#fff;background:rgba(255,255,255,.15);}
+/* Step 2 */
+.ynj-nb-email{width:100%;padding:12px 14px;border:1px solid rgba(255,255,255,.25);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:14px;font-family:inherit;margin-bottom:8px;box-sizing:border-box;}
+.ynj-nb-email::placeholder{color:rgba(255,255,255,.4);}
+.ynj-nb-email:focus{outline:none;border-color:#fff;background:rgba(255,255,255,.15);}
+.ynj-nb-fund{width:100%;padding:10px 14px;border:1px solid rgba(255,255,255,.25);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:13px;font-weight:600;font-family:inherit;margin-bottom:10px;box-sizing:border-box;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
+.ynj-nb-fund option{background:#1a3a5c;color:#fff;}
+.ynj-nb-next{width:100%;padding:14px;border:none;border-radius:12px;background:#fff;color:#0a1628;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;}
+.ynj-nb-next:hover{box-shadow:0 4px 16px rgba(0,0,0,.2);transform:translateY(-1px);}
+.ynj-nb-next:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.ynj-nb-back{background:none;border:none;color:rgba(255,255,255,.6);font-size:13px;cursor:pointer;padding:4px 0;margin-bottom:8px;font-family:inherit;}
+/* Step 3: Card */
+.ynj-nb-card{padding:12px 14px;border:1px solid rgba(255,255,255,.25);border-radius:10px;background:rgba(255,255,255,.1);margin-bottom:10px;}
+.ynj-nb-error{color:#fca5a5;font-size:12px;margin-bottom:8px;display:none;}
+.ynj-nb-pay{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;}
+.ynj-nb-pay:disabled{opacity:.5;cursor:not-allowed;}
+/* Step 4: Success */
+.ynj-nb-success{text-align:center;padding:16px 0;}
+.ynj-nb-success__icon{font-size:40px;margin-bottom:8px;}
+.ynj-nb-success__title{font-size:18px;font-weight:800;margin-bottom:4px;}
+.ynj-nb-success__sub{font-size:13px;color:rgba(255,255,255,.7);line-height:1.5;}
+.ynj-nb-secure{text-align:center;font-size:10px;color:rgba(255,255,255,.4);margin-top:8px;}
+@media(max-width:500px){.ynj-niyyah{border-radius:14px 14px 0 0;max-width:none;}}
+</style>
+
+<div class="ynj-niyyah" id="ynj-niyyah-bar">
+    <div class="ynj-niyyah__handle" onclick="document.getElementById('ynj-niyyah-bar').classList.toggle('ynj-niyyah--open')"><span></span></div>
+    <div class="ynj-niyyah__peek">🕌 Donate to <?php echo esc_html( $_nb_name ); ?></div>
+
+    <div class="ynj-niyyah__body">
+        <div class="ynj-niyyah__mosque">🕌 <?php echo esc_html( $_nb_name ); ?></div>
+
+        <div class="ynj-niyyah__steps" id="nb-steps">
+            <div class="ynj-niyyah__dot ynj-niyyah__dot--active" data-step="1"></div>
+            <div class="ynj-niyyah__dot" data-step="2"></div>
+            <div class="ynj-niyyah__dot" data-step="3"></div>
+        </div>
+
+        <!-- STEP 1: Frequency + Amount -->
+        <div id="nb-step1">
+            <div class="ynj-nb-freq" id="nb-freq">
+                <button type="button" class="ynj-nb-freq__btn ynj-nb-freq__btn--active" data-freq="week">Every Friday</button>
+                <button type="button" class="ynj-nb-freq__btn" data-freq="month">Monthly</button>
+                <button type="button" class="ynj-nb-freq__btn" data-freq="once">One-off</button>
+            </div>
+            <div class="ynj-nb-amounts">
+                <button type="button" class="ynj-nb-amt" data-amount="500">&pound;5</button>
+                <button type="button" class="ynj-nb-amt" data-amount="1000">&pound;10</button>
+                <button type="button" class="ynj-nb-amt" data-amount="2500">&pound;25</button>
+            </div>
+            <div class="ynj-nb-amounts">
+                <button type="button" class="ynj-nb-amt" data-amount="5000">&pound;50</button>
+                <button type="button" class="ynj-nb-amt" data-amount="10000">&pound;100</button>
+                <div class="ynj-nb-other"><input type="number" id="nb-custom" placeholder="Other" min="1"></div>
+            </div>
+        </div>
+
+        <!-- STEP 2: Email + Fund -->
+        <div id="nb-step2" style="display:none">
+            <button type="button" class="ynj-nb-back" onclick="nbSetStep(1)">&larr; Back</button>
+            <input type="email" class="ynj-nb-email" id="nb-email" placeholder="Your email address" autocomplete="email">
+            <select class="ynj-nb-fund" id="nb-fund">
+                <option value="welfare">Community Welfare Fund</option>
+                <option value="general">General Donation</option>
+                <option value="imam">Imam &amp; Staff Fund</option>
+                <option value="maintenance">Mosque Maintenance</option>
+                <option value="education">Quran &amp; Education</option>
+                <option value="youth">Youth &amp; Family</option>
+                <option value="sadaqah">Sadaqah Jariyah</option>
+            </select>
+            <button type="button" class="ynj-nb-next" id="nb-next" onclick="nbGoStep3()">Make Your Niyyah &rarr;</button>
+        </div>
+
+        <!-- STEP 3: Card Payment -->
+        <div id="nb-step3" style="display:none">
+            <button type="button" class="ynj-nb-back" onclick="nbSetStep(2)">&larr; Back</button>
+            <div class="ynj-nb-card" id="nb-card-element"></div>
+            <div class="ynj-nb-error" id="nb-card-error"></div>
+            <button type="button" class="ynj-nb-pay" id="nb-pay-btn" disabled onclick="nbPay()">Donate</button>
+            <div class="ynj-nb-secure">🔒 Secured by Stripe</div>
+        </div>
+
+        <!-- STEP 4: Success -->
+        <div id="nb-step4" style="display:none">
+            <div class="ynj-nb-success">
+                <div class="ynj-nb-success__icon">✅</div>
+                <div class="ynj-nb-success__title">JazakAllah Khair!</div>
+                <p class="ynj-nb-success__sub">Your donation to <?php echo esc_html( $_nb_name ); ?> has been processed. A receipt is on its way.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    var bar = document.getElementById('ynj-niyyah-bar');
+    if (!bar) return;
+
+    var API = '<?php echo esc_url_raw( rest_url( 'ynj/v1/' ) ); ?>';
+    var PK  = '<?php echo esc_js( $_nb_pk ); ?>';
+    var mosqueId = <?php echo (int) $_nb_id; ?>;
+    var mosqueSlug = '<?php echo esc_js( $_nb_slug ); ?>';
+
+    var selectedFreq = 'week';
+    var selectedAmount = 0;
+    var donationId = 0;
+    var stripe = null;
+    var cardElement = null;
+    var cardReady = false;
+
+    // Auto-open bar after 2s
+    setTimeout(function(){ bar.classList.add('ynj-niyyah--open'); }, 2000);
+
+    // Frequency toggle
+    bar.querySelectorAll('.ynj-nb-freq__btn').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            bar.querySelectorAll('.ynj-nb-freq__btn').forEach(function(b){ b.classList.remove('ynj-nb-freq__btn--active'); });
+            btn.classList.add('ynj-nb-freq__btn--active');
+            selectedFreq = btn.dataset.freq;
+        });
+    });
+
+    // Amount buttons
+    bar.querySelectorAll('.ynj-nb-amt').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            bar.querySelectorAll('.ynj-nb-amt').forEach(function(b){ b.classList.remove('ynj-nb-amt--active'); });
+            btn.classList.add('ynj-nb-amt--active');
+            selectedAmount = parseInt(btn.dataset.amount);
+            document.getElementById('nb-custom').value = '';
+            setTimeout(function(){ nbSetStep(2); }, 300);
+        });
+    });
+
+    // Custom amount
+    var customIn = document.getElementById('nb-custom');
+    customIn.addEventListener('input', function(){
+        var v = parseFloat(this.value);
+        if (v > 0) {
+            bar.querySelectorAll('.ynj-nb-amt').forEach(function(b){ b.classList.remove('ynj-nb-amt--active'); });
+            selectedAmount = Math.round(v * 100);
+        }
+    });
+    customIn.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' && selectedAmount > 0) nbSetStep(2);
+    });
+
+    // Pre-fill email
+    var emailIn = document.getElementById('nb-email');
+    var saved = localStorage.getItem('ynj_user_email') || localStorage.getItem('yn_user_email') || '';
+    if (saved) emailIn.value = saved;
+
+    // Step management
+    window.nbSetStep = function(step) {
+        ['nb-step1','nb-step2','nb-step3','nb-step4'].forEach(function(id, i){
+            document.getElementById(id).style.display = (i+1 === step) ? '' : 'none';
+        });
+        bar.querySelectorAll('.ynj-niyyah__dot').forEach(function(d, i){
+            d.classList.toggle('ynj-niyyah__dot--active', i+1 === step);
+        });
+        if (step === 2) {
+            updateNextBtn();
+            setTimeout(function(){ emailIn.focus(); }, 200);
+        }
+        if (step === 3) initStripe();
+    };
+
+    function updateNextBtn() {
+        var amt = selectedAmount / 100;
+        var label = selectedFreq === 'once' ? 'Donate \u00A3' + amt : (selectedFreq === 'week' ? 'Donate \u00A3' + amt + '/week' : 'Donate \u00A3' + amt + '/month');
+        document.getElementById('nb-next').textContent = label + ' \u2192';
+    }
+
+    // Step 2 → 3
+    window.nbGoStep3 = function() {
+        var email = emailIn.value.trim();
+        if (!email || !email.includes('@')) { emailIn.style.borderColor = '#fca5a5'; return; }
+        emailIn.style.borderColor = '';
+        localStorage.setItem('ynj_user_email', email);
+        nbSetStep(3);
+        updatePayBtn();
+    };
+
+    function updatePayBtn() {
+        var amt = selectedAmount / 100;
+        var freq = selectedFreq === 'once' ? '' : (selectedFreq === 'week' ? '/week' : '/month');
+        document.getElementById('nb-pay-btn').textContent = 'Donate \u00A3' + amt + freq + ' \u2192';
+    }
+
+    // Init Stripe
+    function initStripe() {
+        if (stripe) return;
+        if (typeof Stripe === 'undefined') { setTimeout(initStripe, 200); return; }
+        stripe = Stripe(PK);
+        var elements = stripe.elements();
+        cardElement = elements.create('card', {
+            style: { base: { color:'#fff', fontSize:'15px', fontWeight:'500', '::placeholder':{ color:'rgba(255,255,255,.4)' } }, invalid:{ color:'#fca5a5' } }
+        });
+        cardElement.mount('#nb-card-element');
+        cardElement.on('change', function(e){
+            cardReady = e.complete;
+            document.getElementById('nb-pay-btn').disabled = !e.complete;
+            var err = document.getElementById('nb-card-error');
+            if (e.error) { err.textContent = e.error.message; err.style.display = ''; }
+            else { err.style.display = 'none'; }
+        });
+    }
+
+    // Pay
+    window.nbPay = async function() {
+        if (!cardReady || !selectedAmount) return;
+        var email = emailIn.value.trim();
+        var fund = document.getElementById('nb-fund').value;
+        var payBtn = document.getElementById('nb-pay-btn');
+        var errEl = document.getElementById('nb-card-error');
+        payBtn.disabled = true;
+        payBtn.textContent = 'Processing...';
+        errEl.style.display = 'none';
+
+        try {
+            var endpoint = selectedFreq === 'once' ? 'donate' : 'donate/recurring';
+            var body = {
+                mosque_id: mosqueId,
+                mosque_slug: mosqueSlug,
+                amount_pence: selectedAmount,
+                email: email,
+                fund_type: fund,
+                currency: 'gbp'
+            };
+            if (selectedFreq !== 'once') body.interval = selectedFreq;
+
+            var resp = await fetch(API + endpoint, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(body)
+            });
+            var data = await resp.json();
+
+            if (!data.ok || !data.client_secret) {
+                errEl.textContent = data.message || data.error || 'Could not process. Try again.';
+                errEl.style.display = '';
+                payBtn.disabled = false;
+                updatePayBtn();
+                return;
+            }
+
+            donationId = data.donation_id;
+
+            var result = await stripe.confirmCardPayment(data.client_secret, {
+                payment_method: { card: cardElement, billing_details: { email: email } }
+            });
+
+            if (result.error) {
+                errEl.textContent = result.error.message;
+                errEl.style.display = '';
+                payBtn.disabled = false;
+                updatePayBtn();
+                return;
+            }
+
+            // Confirm with backend
+            fetch(API + 'donate/confirm', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ donation_id: donationId })
+            }).catch(function(){});
+
+            nbSetStep(4);
+
+        } catch(e) {
+            errEl.textContent = 'Payment failed. Please try again.';
+            errEl.style.display = '';
+            payBtn.disabled = false;
+            updatePayBtn();
+        }
+    };
+})();
+</script>
+<?php endif; // $_nb_id && $_nb_pk ?>
+
 <?php wp_footer(); ?>
 </body>
 </html>

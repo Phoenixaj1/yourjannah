@@ -186,6 +186,12 @@ class YNJ_API_Stripe {
                 error_log( "[YNJ Webhook] Madrassah fee #$item_id paid." );
                 break;
 
+            case 'mosque_donation':
+                $dt = YNJ_DB::table( 'donations' );
+                $wpdb->update( $dt, [ 'status' => 'succeeded' ], [ 'id' => $item_id ] );
+                error_log( "[YNJ Webhook] Donation #$item_id succeeded." );
+                break;
+
             case 'patron_membership':
                 $pt = YNJ_DB::table( 'patrons' );
                 $wpdb->update( $pt, [
