@@ -180,9 +180,9 @@
 
             function showSearchPrompt() {
                 document.getElementById('mosque-name').textContent = 'Search mosque';
-                // Open the dropdown so user can search
-                document.getElementById('mosque-dropdown').style.display = '';
-                document.getElementById('mosque-search').focus();
+                // Open the mosque modal so user can search
+                var modal = document.getElementById('ynj-mosque-modal');
+                if (modal) modal.classList.add('ynj-mosque-modal--open');
             }
 
             // Silent GPS — just get position for travel calc, don't change mosque
@@ -945,74 +945,14 @@
             }
 
             /* ---- Mosque Selector ---- */
+            // Mosque selector is now handled by theme.js modal (ynj-mosque-modal).
+            // This function is kept as a no-op for the init() call.
             function setupMosqueSelector() {
-                const btn = document.getElementById('mosque-selector');
-                const dd = document.getElementById('mosque-dropdown');
-                const search = document.getElementById('mosque-search');
-
-                if (!btn || !dd) return; // Elements only exist on homepage
-
-                btn.addEventListener('click', () => {
-                    const visible = dd.style.display !== 'none';
-                    dd.style.display = visible ? 'none' : '';
-                    if (!visible) search.focus();
-                });
-
-                // Close on outside click
-                document.addEventListener('click', e => {
-                    if (!dd.contains(e.target) && !btn.contains(e.target)) {
-                        dd.style.display = 'none';
-                    }
-                });
-
-                // Search
-                let debounce;
-                search.addEventListener('input', () => {
-                    clearTimeout(debounce);
-                    const q = search.value.trim();
-                    if (q.length < 2) {
-                        populateDropdown(nearbyMosques);
-                        return;
-                    }
-                    debounce = setTimeout(() => {
-                        fetch(`${API}/mosques/search?q=${encodeURIComponent(q)}&limit=10`)
-                            .then(r => r.json())
-                            .then(data => {
-                                if (data.ok && data.mosques) populateDropdown(data.mosques);
-                            })
-                            .catch(() => {});
-                    }, 300);
-                });
+                // Modal open/close/search handled by theme.js
             }
 
             function populateDropdown(mosques) {
-                const list = document.getElementById('mosque-list');
-                if (!mosques.length) {
-                    list.innerHTML = '<p class="ynj-text-muted" style="padding:12px;">No mosques found.</p>';
-                    return;
-                }
-                list.innerHTML = mosques.map(m => {
-                    const dist = m.distance != null ? ` · ${m.distance < 1 ? Math.round(m.distance*1000)+'m' : m.distance.toFixed(1)+'km'}` : '';
-                    const active = m.slug === mosqueSlug ? ' ynj-dropdown__item--active' : '';
-                    return `<button class="ynj-dropdown__item${active}" data-slug="${m.slug}" data-name="${m.name}" data-lat="${m.latitude||''}" data-lng="${m.longitude||''}" data-dist="${m.distance||0}">
-                        <strong>${m.name}</strong>
-                        <span class="ynj-text-muted">${m.city || ''}${m.postcode ? ' '+m.postcode : ''}${dist}</span>
-                    </button>`;
-                }).join('');
-
-                // Bind clicks
-                list.querySelectorAll('.ynj-dropdown__item').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        selectMosque(
-                            btn.dataset.slug,
-                            btn.dataset.name,
-                            parseFloat(btn.dataset.lat) || null,
-                            parseFloat(btn.dataset.lng) || null,
-                            parseFloat(btn.dataset.dist) || null
-                        );
-                        document.getElementById('mosque-dropdown').style.display = 'none';
-                    });
-                });
+                // No longer used — theme.js modal handles rendering
             }
 
             /* ---- Location: GPS only, no postcode ---- */
