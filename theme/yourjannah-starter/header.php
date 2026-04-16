@@ -88,8 +88,8 @@ $_tier_labels = [ 'supporter' => 'Bronze', 'guardian' => 'Silver', 'champion' =>
                 <button class="ynj-mosque-pill__gps" id="gps-btn" type="button" title="<?php esc_attr_e( 'Detect my location', 'yourjannah' ); ?>">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
                 </button>
-                <span class="ynj-mosque-pill__name" id="mosque-name" onclick="var d=document.getElementById('mosque-dropdown');if(d){d.style.display=d.style.display==='none'?'':'none';var s=document.getElementById('mosque-search');if(s&&d.style.display!=='none')s.focus();}" style="cursor:pointer;"><?php echo esc_html( $mosque_name ?: __( 'Finding...', 'yourjannah' ) ); ?></span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:.6;flex-shrink:0;cursor:pointer;" onclick="var d=document.getElementById('mosque-dropdown');if(d){d.style.display=d.style.display==='none'?'':'none';var s=document.getElementById('mosque-search');if(s&&d.style.display!=='none')s.focus();}"><path d="M6 9l6 6 6-6"/></svg>
+                <span class="ynj-mosque-pill__name" id="mosque-name" onclick="var d=document.getElementById('mosque-dropdown');if(d){d.style.display=d.style.display==='block'?'none':'block';var s=document.getElementById('mosque-search');if(s&&d.style.display==='block')s.focus();}" style="cursor:pointer;"><?php echo esc_html( $mosque_name ?: __( 'Finding...', 'yourjannah' ) ); ?></span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:.6;flex-shrink:0;cursor:pointer;" onclick="var d=document.getElementById('mosque-dropdown');if(d){d.style.display=d.style.display==='block'?'none':'block';var s=document.getElementById('mosque-search');if(s&&d.style.display==='block')s.focus();}"><path d="M6 9l6 6 6-6"/></svg>
             </div>
 
             <!-- User account handled by top membership bar -->
