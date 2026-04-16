@@ -80,6 +80,12 @@ add_action('admin_init', function() {
             wp_die('DB upgrade complete. Tables created/updated. <a href="' . admin_url() . '">Back to admin</a>');
         }
     }
+    // Seed mosques trigger (admin only)
+    if (isset($_GET['ynj_seed_mosques'])) {
+        require_once YNJ_DIR . 'seed-import-mosques.php';
+        echo '</pre><p><a href="' . admin_url() . '">Back to admin</a></p>';
+        exit;
+    }
 });
 
 // Register REST API routes

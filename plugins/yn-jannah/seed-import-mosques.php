@@ -1,9 +1,15 @@
 <?php
 /**
  * Import real UK mosques from exported TSV + geocode postcodes.
- * Run via WP-CLI: wp eval-file wp-content/plugins/yn-jannah/seed-import-mosques.php
+ * Run via: ?ynj_seed_mosques=1 in WP admin (admin only)
+ * Or via WP-CLI: wp eval-file wp-content/plugins/yn-jannah/seed-import-mosques.php
  */
 if ( ! defined( 'ABSPATH' ) && php_sapi_name() !== 'cli' ) exit;
+// Web trigger: require admin
+if ( defined( 'ABSPATH' ) && php_sapi_name() !== 'cli' ) {
+    if ( ! current_user_can( 'manage_options' ) ) { wp_die( 'Admin only.' ); }
+    echo '<pre>';
+}
 
 global $wpdb;
 $table = $wpdb->prefix . 'ynj_mosques';
