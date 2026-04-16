@@ -83,6 +83,20 @@ add_action('wp_ajax_ynj_set_session', function() {
     wp_send_json(['ok' => true]); // Already logged in
 });
 
+// Configure wp_mail — set From address and ensure delivery
+add_filter('wp_mail_from', function() { return 'noreply@yourjannah.com'; });
+add_filter('wp_mail_from_name', function() { return 'YourJannah'; });
+
+// Test email endpoint (admin only)
+add_action('admin_init', function() {
+    if (isset($_GET['ynj_test_email'])) {
+        $to = sanitize_email($_GET['ynj_test_email']);
+        if (!$to) wp_die('Provide email: ?ynj_test_email=you@email.com');
+        $sent = wp_mail($to, 'YourJannah Test Email', "This is a test email from YourJannah.\n\nIf you received this, email is working!\n\nTime: " . current_time('mysql'));
+        wp_die($sent ? "Email sent to $to. Check inbox + spam." : "wp_mail() returned false. Server mail may be blocked. Error: " . print_r(error_get_last(), true));
+    }
+});
+
 // Auto-upgrade DB on version change
 add_action('admin_init', function() {
     $installed = get_option('ynj_db_version', '');
