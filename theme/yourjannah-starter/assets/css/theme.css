@@ -50,7 +50,7 @@ img,svg{display:block;max-width:100%;}
 .ynj-back:active{background:rgba(255,255,255,.15);}
 
 /* Header right group */
-.ynj-header__right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.ynj-header__right{margin-left:auto;display:flex;align-items:center;gap:6px;max-width:60%;}
 
 /* Fused mosque pill: [GPS | Mosque Name ▾] */
 .ynj-mosque-pill{
@@ -58,6 +58,7 @@ img,svg{display:block;max-width:100%;}
     background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
     border-radius:22px;color:#fff;cursor:pointer;
     backdrop-filter:blur(4px);transition:all .15s;overflow:hidden;
+    min-width:0;flex-shrink:1;
 }
 .ynj-mosque-pill:hover{background:rgba(255,255,255,.22);}
 .ynj-mosque-pill__gps{
