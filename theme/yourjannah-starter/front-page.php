@@ -9,6 +9,89 @@
  */
 
 get_header();
+
+// ── Fetch prayer times from Aladhan in PHP (server-side, always works) ──
+$_ynj_prayer = [];
+$_ynj_next_prayer = null;
+$_ynj_next_time = '';
+$_ynj_next_name = '';
+$_ynj_walk_leave = '';
+$_ynj_drive_leave = '';
+$_ynj_prayer_overview = [];
+$_ynj_mosque_for_prayer = null;
+
+$_hp_slug = '';
+if ( isset( $_COOKIE['ynj_mosque_slug'] ) ) {
+    $_hp_slug = sanitize_title( $_COOKIE['ynj_mosque_slug'] );
+}
+if ( ! $_hp_slug ) {
+    $_hp_slug = 'yourniyyah-masjid'; // default
+}
+$_ynj_mosque_for_prayer = ynj_get_mosque( $_hp_slug );
+
+if ( $_ynj_mosque_for_prayer && $_ynj_mosque_for_prayer->latitude ) {
+    $lat = (float) $_ynj_mosque_for_prayer->latitude;
+    $lng = (float) $_ynj_mosque_for_prayer->longitude;
+    $today = date( 'd-m-Y' );
+
+    // Cache Aladhan response for 6 hours
+    $cache_key = 'ynj_aladhan_' . md5( $lat . $lng . $today );
+    $aladhan = get_transient( $cache_key );
+
+    if ( ! $aladhan ) {
+        $url = "https://api.aladhan.com/v1/timings/{$today}?latitude={$lat}&longitude={$lng}&method=2&school=0";
+        $response = wp_remote_get( $url, [ 'timeout' => 5 ] );
+        if ( ! is_wp_error( $response ) ) {
+            $body = json_decode( wp_remote_retrieve_body( $response ), true );
+            if ( ! empty( $body['data']['timings'] ) ) {
+                $aladhan = $body['data']['timings'];
+                set_transient( $cache_key, $aladhan, 6 * HOUR_IN_SECONDS );
+            }
+        }
+    }
+
+    if ( $aladhan ) {
+        $prayer_names = [ 'Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha' ];
+        $prayer_keys = [ 'Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha' ];
+        $now = current_time( 'H:i' );
+        $walk_buffer = 15; // minutes
+        $drive_buffer = 5;
+
+        foreach ( $prayer_keys as $p ) {
+            $raw = $aladhan[ $p ] ?? '';
+            $time = preg_replace( '/\s*\(.*\)/', '', $raw );
+            $time = substr( $time, 0, 5 ); // HH:MM
+            $_ynj_prayer[ strtolower( $p ) ] = $time;
+
+            $_ynj_prayer_overview[] = [
+                'name' => $p,
+                'time' => $time,
+            ];
+
+            // Find next prayer (skip Sunrise)
+            if ( $p !== 'Sunrise' && ! $_ynj_next_prayer && $time > $now ) {
+                $_ynj_next_prayer = $p;
+                $_ynj_next_time = $time;
+                $_ynj_next_name = $p;
+
+                // Calculate leave-by times
+                $prayer_ts = strtotime( 'today ' . $time );
+                $walk_ts = $prayer_ts - ( $walk_buffer * 60 );
+                $drive_ts = $prayer_ts - ( $drive_buffer * 60 );
+                $_ynj_walk_leave = date( 'H:i', $walk_ts );
+                $_ynj_drive_leave = date( 'H:i', $drive_ts );
+            }
+        }
+
+        // If all prayers passed
+        if ( ! $_ynj_next_prayer ) {
+            $_ynj_next_name = 'All prayers completed';
+            $_ynj_next_time = 'See you at Fajr tomorrow';
+        }
+    }
+}
+
+$_hp_mosque_name = $_ynj_mosque_for_prayer ? $_ynj_mosque_for_prayer->name : '';
 ?>
 
 <!-- User onboarding overlay (first-time visitors) -->
@@ -160,24 +243,33 @@ get_header();
         </div>
     </div>
 
-    <!-- Next Prayer Hero -->
+    <!-- Next Prayer Hero (PHP-rendered from Aladhan) -->
     <section class="ynj-card ynj-card--hero" id="next-prayer-card">
-        <p class="ynj-label" id="next-prayer-label"><?php esc_html_e( 'Next Prayer', 'yourjannah' ); ?></p>
-        <h2 class="ynj-hero-prayer" id="next-prayer-name">&nbsp;</h2>
-        <p class="ynj-hero-time" id="next-prayer-time">&nbsp;</p>
+        <p class="ynj-label" id="next-prayer-label"><?php echo $_hp_mosque_name ? esc_html( 'Next Prayer at ' . $_hp_mosque_name ) : esc_html__( 'Next Prayer', 'yourjannah' ); ?></p>
+        <h2 class="ynj-hero-prayer" id="next-prayer-name"><?php echo esc_html( $_ynj_next_name ?: '—' ); ?></h2>
+        <p class="ynj-hero-time" id="next-prayer-time"><?php echo esc_html( $_ynj_next_time ?: '—' ); ?></p>
         <div class="ynj-countdown" id="next-prayer-countdown">--:--:--</div>
-        <div class="ynj-hero-travel" id="hero-travel" style="display:none;">
+        <?php if ( $_ynj_walk_leave ) : ?>
+        <div class="ynj-hero-travel" id="hero-travel">
             <div style="display:flex;gap:8px;justify-content:center;width:100%;">
                 <div class="ynj-leave-by" id="leave-by-walk">
                     <span>🚶</span>
-                    <span id="leave-by-walk-text"><?php esc_html_e( 'Leave --:--', 'yourjannah' ); ?></span>
+                    <span id="leave-by-walk-text"><?php echo esc_html( 'Leave ' . $_ynj_walk_leave ); ?></span>
                 </div>
                 <div class="ynj-leave-by" id="leave-by-drive">
                     <span>🚗</span>
-                    <span id="leave-by-drive-text"><?php esc_html_e( 'Leave --:--', 'yourjannah' ); ?></span>
+                    <span id="leave-by-drive-text"><?php echo esc_html( 'Leave ' . $_ynj_drive_leave ); ?></span>
                 </div>
             </div>
         </div>
+        <?php else : ?>
+        <div class="ynj-hero-travel" id="hero-travel" style="display:none;">
+            <div style="display:flex;gap:8px;justify-content:center;width:100%;">
+                <div class="ynj-leave-by" id="leave-by-walk"><span>🚶</span><span id="leave-by-walk-text">Leave --:--</span></div>
+                <div class="ynj-leave-by" id="leave-by-drive"><span>🚗</span><span id="leave-by-drive-text">Leave --:--</span></div>
+            </div>
+        </div>
+        <?php endif; ?>
         <div class="ynj-hero-actions">
             <div class="ynj-hero-gps" id="hero-gps-prompt">
                 <button class="ynj-hero-locate" id="hero-gps-btn" type="button" onclick="requestGps()">
@@ -200,10 +292,26 @@ get_header();
 
     <!-- Location detected via GPS automatically -->
 
-    <!-- Prayer Overview -->
+    <!-- Prayer Overview (PHP-rendered) -->
+    <?php if ( ! empty( $_ynj_prayer_overview ) ) : ?>
+    <section class="ynj-card ynj-card--compact" id="prayer-overview" style="padding:14px 18px;">
+        <div class="ynj-prayer-overview" id="prayer-overview-grid">
+        <?php foreach ( $_ynj_prayer_overview as $po ) :
+            if ( $po['name'] === 'Sunrise' ) continue;
+            $is_next = ( strtolower( $po['name'] ) === strtolower( $_ynj_next_name ) );
+        ?>
+            <div class="ynj-po-item<?php echo $is_next ? ' ynj-po-item--active' : ''; ?>">
+                <span class="ynj-po-name"><?php echo esc_html( $po['name'] ); ?></span>
+                <span class="ynj-po-time"><?php echo esc_html( $po['time'] ); ?></span>
+            </div>
+        <?php endforeach; ?>
+        </div>
+    </section>
+    <?php else : ?>
     <section class="ynj-card ynj-card--compact" id="prayer-overview" style="display:none;padding:14px 18px;">
         <div class="ynj-prayer-overview" id="prayer-overview-grid"></div>
     </section>
+    <?php endif; ?>
 
     <!-- Jumu'ah Card -->
     <section class="ynj-jumuah-card" id="jumuah-card" style="display:none;">

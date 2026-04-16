@@ -27,11 +27,40 @@
 </nav>
 <?php endif; ?>
 
-<!-- Global Mosque Selector Dropdown (works on all pages) -->
-<div class="ynj-dropdown" id="mosque-dropdown" style="display:none;">
+<!-- Global Mosque Selector Dropdown — PHP pre-loaded nearby mosques -->
+<div class="ynj-dropdown" id="mosque-dropdown" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
     <div class="ynj-dropdown__inner">
-        <input class="ynj-dropdown__search" id="mosque-search" type="text" placeholder="<?php esc_attr_e( 'Search mosques...', 'yourjannah' ); ?>" autocomplete="off">
-        <div class="ynj-dropdown__list" id="mosque-list"></div>
+        <form method="get" action="<?php echo esc_url( home_url( '/change-mosque' ) ); ?>" style="display:flex;gap:8px;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+            <input class="ynj-dropdown__search" name="q" type="text" placeholder="<?php esc_attr_e( 'Search mosques...', 'yourjannah' ); ?>" autocomplete="off" style="flex:1;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;">
+            <button type="submit" style="padding:10px 16px;border:none;border-radius:10px;background:#00ADEF;color:#fff;font-weight:700;font-size:13px;cursor:pointer;"><?php esc_html_e( 'Search', 'yourjannah' ); ?></button>
+        </form>
+        <div class="ynj-dropdown__list" id="mosque-list">
+            <p style="padding:8px 16px 4px;font-size:11px;font-weight:700;color:#6b8fa3;text-transform:uppercase;letter-spacing:.5px;">📍 <?php esc_html_e( 'Nearby', 'yourjannah' ); ?></p>
+            <?php
+            $slug_for_dd = ynj_mosque_slug();
+            $mosque_for_dd = ynj_get_mosque( $slug_for_dd );
+            $dd_nearby = [];
+            if ( $mosque_for_dd && $mosque_for_dd->latitude && class_exists( 'YNJ_DB' ) ) {
+                global $wpdb;
+                $mt = YNJ_DB::table( 'mosques' );
+                $dd_nearby = $wpdb->get_results( $wpdb->prepare(
+                    "SELECT slug, name, city, postcode,
+                            ( 6371 * acos( cos(radians(%f)) * cos(radians(latitude)) * cos(radians(longitude) - radians(%f)) + sin(radians(%f)) * sin(radians(latitude)) )) AS distance
+                     FROM $mt WHERE status IN ('active','unclaimed') AND latitude IS NOT NULL
+                     ORDER BY distance ASC LIMIT 5",
+                    $mosque_for_dd->latitude, $mosque_for_dd->longitude, $mosque_for_dd->latitude
+                ) ) ?: [];
+            }
+            foreach ( $dd_nearby as $nm ) :
+                $dist = isset( $nm->distance ) ? number_format( (float) $nm->distance, 1 ) . 'km' : '';
+            ?>
+            <a href="<?php echo esc_url( home_url( '/?ynj_select=' . $nm->slug ) ); ?>" style="display:block;padding:12px 16px;text-decoration:none;color:#0a1628;border-bottom:1px solid #f0f0f0;">
+                <strong style="font-size:14px;display:block;"><?php echo esc_html( $nm->name ); ?></strong>
+                <span style="font-size:11px;color:#6b8fa3;"><?php echo esc_html( implode( ', ', array_filter( [ $nm->city, $nm->postcode ] ) ) ); ?><?php if ( $dist ) echo ' · ' . esc_html( $dist ); ?></span>
+            </a>
+            <?php endforeach; ?>
+            <a href="<?php echo esc_url( home_url( '/change-mosque' ) ); ?>" style="display:block;padding:12px 16px;text-align:center;font-size:13px;font-weight:700;color:#00ADEF;text-decoration:none;"><?php esc_html_e( 'Browse All Mosques →', 'yourjannah' ); ?></a>
+        </div>
     </div>
 </div>
 

@@ -97,14 +97,29 @@ $_tier_labels = [ 'supporter' => 'Bronze', 'guardian' => 'Silver', 'champion' =>
                 ) ) ?: [];
             }
             ?>
-            <!-- Mosque selector — links to change mosque page -->
-            <a href="<?php echo esc_url( home_url( '/change-mosque' ) ); ?>" class="ynj-mosque-pill" style="text-decoration:none;color:#fff;">
-                <span class="ynj-mosque-pill__gps" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;">
+            <?php
+            // Pre-load nearby mosques in PHP for the dropdown
+            $nearby_for_dropdown = [];
+            if ( $mosque && $mosque->latitude && class_exists( 'YNJ_DB' ) ) {
+                global $wpdb;
+                $mt = YNJ_DB::table( 'mosques' );
+                $nearby_for_dropdown = $wpdb->get_results( $wpdb->prepare(
+                    "SELECT slug, name, city, postcode,
+                            ( 6371 * acos( cos(radians(%f)) * cos(radians(latitude)) * cos(radians(longitude) - radians(%f)) + sin(radians(%f)) * sin(radians(latitude)) )) AS distance
+                     FROM $mt WHERE status IN ('active','unclaimed') AND latitude IS NOT NULL
+                     ORDER BY distance ASC LIMIT 5",
+                    $mosque->latitude, $mosque->longitude, $mosque->latitude
+                ) ) ?: [];
+            }
+            ?>
+            <!-- Mosque selector — dropdown on same page -->
+            <div class="ynj-mosque-pill" id="mosque-selector" onclick="var d=document.getElementById('mosque-dropdown');if(d)d.style.display=d.style.display==='block'?'none':'block';" style="cursor:pointer;">
+                <span class="ynj-mosque-pill__gps" id="gps-btn" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
                 </span>
                 <span class="ynj-mosque-pill__name" id="mosque-name"><?php echo esc_html( $mosque_name ?: __( 'Select Mosque', 'yourjannah' ) ); ?></span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:.6;flex-shrink:0;"><path d="M6 9l6 6 6-6"/></svg>
-            </a>
+            </div>
         </div>
     </div>
 </header>
