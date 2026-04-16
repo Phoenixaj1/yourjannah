@@ -104,7 +104,15 @@ $mosque_status = $mosque ? $mosque->status : '';
             🏅 <?php esc_html_e( 'Become a Gold Patron', 'yourjannah' ); ?> &mdash; &pound;20/mo
         </button>
         <div class="ynj-login-prompt" id="login-prompt" style="display:none;">
-            <a href="<?php echo esc_url( home_url( '/login' ) ); ?>"><?php esc_html_e( 'Sign in', 'yourjannah' ); ?></a> <?php esc_html_e( 'or', 'yourjannah' ); ?> <a href="<?php echo esc_url( home_url( '/register' ) ); ?>"><?php esc_html_e( 'create an account', 'yourjannah' ); ?></a> <?php esc_html_e( 'to become a patron.', 'yourjannah' ); ?>
+            <p style="font-size:13px;font-weight:600;margin-bottom:10px;"><?php esc_html_e( 'Create an account to become a patron', 'yourjannah' ); ?></p>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <input type="text" id="reg-name" placeholder="<?php esc_attr_e( 'Your name', 'yourjannah' ); ?>" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;">
+                <input type="email" id="reg-email" placeholder="<?php esc_attr_e( 'Email address', 'yourjannah' ); ?>" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;">
+                <input type="password" id="reg-pass" placeholder="<?php esc_attr_e( 'Password (6+ chars)', 'yourjannah' ); ?>" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;">
+                <button class="ynj-patron-btn" id="reg-and-patron-btn" onclick="registerAndPatron()" style="font-size:14px;padding:14px;"><?php esc_html_e( 'Create Account & Become a Patron', 'yourjannah' ); ?></button>
+                <p id="reg-error" style="font-size:12px;color:#dc2626;text-align:center;"></p>
+            </div>
+            <p style="font-size:12px;color:#6b8fa3;text-align:center;margin-top:8px;"><?php esc_html_e( 'Already have an account?', 'yourjannah' ); ?> <a href="<?php echo esc_url( home_url( '/login?redirect=' ) ); ?><?php echo esc_attr( '/mosque/' . $slug . '/patron' ); ?>" style="font-weight:700;color:#00ADEF;"><?php esc_html_e( 'Sign in', 'yourjannah' ); ?></a></p>
         </div>
     </div>
 
@@ -170,6 +178,60 @@ $mosque_status = $mosque ? $mosque->status : '';
         }
     }
     window.becomePerson = becomePerson;
+
+    // Register + become patron in one flow (for guests)
+    async function registerAndPatron() {
+        var name = document.getElementById('reg-name').value.trim();
+        var email = document.getElementById('reg-email').value.trim();
+        var pass = document.getElementById('reg-pass').value;
+        var errEl = document.getElementById('reg-error');
+        if (!name || !email || !pass) { errEl.textContent = '<?php echo esc_js( __( 'All fields required.', 'yourjannah' ) ); ?>'; return; }
+        if (pass.length < 6) { errEl.textContent = '<?php echo esc_js( __( 'Password must be 6+ characters.', 'yourjannah' ) ); ?>'; return; }
+
+        var btn = document.getElementById('reg-and-patron-btn');
+        btn.disabled = true; btn.textContent = '<?php echo esc_js( __( 'Creating account...', 'yourjannah' ) ); ?>';
+
+        try {
+            // Register
+            var regResp = await fetch(API + 'auth/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name: name, email: email, password: pass, mosque_slug: slug})
+            });
+            var regData = await regResp.json();
+            if (!regData.ok) {
+                errEl.textContent = regData.error || '<?php echo esc_js( __( 'Registration failed.', 'yourjannah' ) ); ?>';
+                btn.disabled = false; btn.textContent = '<?php echo esc_js( __( 'Create Account & Become a Patron', 'yourjannah' ) ); ?>';
+                return;
+            }
+            // Store token + set WP session
+            localStorage.setItem('ynj_user_token', regData.token);
+            await fetch('<?php echo esc_js( admin_url( 'admin-ajax.php' ) ); ?>', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'action=ynj_set_session&wp_user_id=' + (regData.wp_user_id || '')
+            }).catch(function(){});
+
+            // Now checkout as patron
+            btn.textContent = '<?php echo esc_js( __( 'Redirecting to checkout...', 'yourjannah' ) ); ?>';
+            var checkResp = await fetch(API + 'patrons/checkout', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + regData.token},
+                body: JSON.stringify({mosque_slug: slug, tier: selectedTier})
+            });
+            var checkData = await checkResp.json();
+            if (checkData.ok && checkData.checkout_url) {
+                window.location.href = checkData.checkout_url;
+            } else {
+                errEl.textContent = checkData.error || '<?php echo esc_js( __( 'Checkout error.', 'yourjannah' ) ); ?>';
+                btn.disabled = false; btn.textContent = '<?php echo esc_js( __( 'Create Account & Become a Patron', 'yourjannah' ) ); ?>';
+            }
+        } catch(e) {
+            errEl.textContent = '<?php echo esc_js( __( 'Network error.', 'yourjannah' ) ); ?>';
+            btn.disabled = false; btn.textContent = '<?php echo esc_js( __( 'Create Account & Become a Patron', 'yourjannah' ) ); ?>';
+        }
+    }
+    window.registerAndPatron = registerAndPatron;
 
     async function cancelPatron() {
         if (!confirm('<?php echo esc_js( __( 'Cancel your patron membership? You can re-join anytime.', 'yourjannah' ) ); ?>')) return;

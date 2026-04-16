@@ -71,6 +71,18 @@ add_action('init', function() {
     }
 }, 5);
 
+// AJAX handler to set WP auth cookie (called after JS login/register)
+add_action('wp_ajax_nopriv_ynj_set_session', function() {
+    $wp_user_id = absint($_POST['wp_user_id'] ?? 0);
+    if ($wp_user_id && get_userdata($wp_user_id)) {
+        wp_set_auth_cookie($wp_user_id, true);
+    }
+    wp_send_json(['ok' => true]);
+});
+add_action('wp_ajax_ynj_set_session', function() {
+    wp_send_json(['ok' => true]); // Already logged in
+});
+
 // Auto-upgrade DB on version change
 add_action('admin_init', function() {
     $installed = get_option('ynj_db_version', '');

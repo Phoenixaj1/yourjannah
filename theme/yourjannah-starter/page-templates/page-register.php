@@ -60,7 +60,13 @@ document.getElementById('reg-btn').addEventListener('click', async function() {
         if (data.ok && data.token) {
             localStorage.setItem('ynj_user_token', data.token);
             if (data.user) localStorage.setItem('ynj_user', JSON.stringify(data.user));
-            // Redirect to mosque homepage (not empty profile)
+            // Set WP session cookie
+            await fetch('<?php echo esc_js( admin_url( 'admin-ajax.php' ) ); ?>', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'action=ynj_set_session&wp_user_id=' + (data.wp_user_id || '')
+            }).catch(function(){});
+            // Redirect to homepage
             var savedSlug = localStorage.getItem('ynj_mosque_slug');
             window.location.href = savedSlug ? '<?php echo esc_js( home_url( '/mosque/' ) ); ?>' + savedSlug : '<?php echo esc_js( home_url( '/' ) ); ?>';
         } else {
