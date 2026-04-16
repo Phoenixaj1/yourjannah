@@ -27,8 +27,8 @@
 </nav>
 <?php endif; ?>
 
-<!-- Global Mosque Selector Dropdown — PHP pre-loaded nearby mosques -->
-<div class="ynj-dropdown" id="mosque-dropdown" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+<!-- Mosque dropdown now in header.php via <details> element -->
+<div class="ynj-dropdown" id="mosque-dropdown" style="display:none;">
     <div class="ynj-dropdown__inner">
         <form method="get" action="<?php echo esc_url( home_url( '/change-mosque' ) ); ?>" style="display:flex;gap:8px;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
             <input class="ynj-dropdown__search" name="q" type="text" placeholder="<?php esc_attr_e( 'Search mosques...', 'yourjannah' ); ?>" autocomplete="off" style="flex:1;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;">

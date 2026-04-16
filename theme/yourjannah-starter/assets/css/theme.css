@@ -36,6 +36,13 @@ img,svg{display:block;max-width:100%;}
 .ynj-header-user--guest{background:rgba(255,255,255,.15);}
 .ynj-header-user--guest:hover{background:rgba(255,255,255,.25);}
 
+/* Mosque details dropdown */
+.ynj-mosque-details{position:relative;}
+.ynj-mosque-details summary::-webkit-details-marker{display:none;}
+.ynj-mosque-details summary::marker{display:none;content:'';}
+.ynj-mosque-dd{position:absolute;top:100%;right:0;width:300px;max-height:400px;overflow-y:auto;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.2);z-index:200;margin-top:6px;}
+@media(max-width:480px){.ynj-mosque-dd{width:calc(100vw - 32px);right:-16px;}}
+
 /* Header */
 .ynj-header{
     background:linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#00ADEF 100%);
