@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '2.6.0';
+    const SCHEMA_VERSION = '2.7.0';
 
     /**
      * Return the full table name for a given short name.
@@ -854,7 +854,27 @@ class YNJ_DB {
             KEY stripe_payment_intent (stripe_payment_intent)
         ) $charset_collate;";
 
-        // 20. Email Imports — tracks CSV list uploads by mosque admins
+        // 20. Support Tickets — mosque help requests
+        $tables[] = "CREATE TABLE {$t('support_tickets')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            subject varchar(255) NOT NULL DEFAULT '',
+            body text,
+            category varchar(50) NOT NULL DEFAULT 'general',
+            priority varchar(20) NOT NULL DEFAULT 'normal',
+            status varchar(20) NOT NULL DEFAULT 'open',
+            admin_reply text,
+            replied_at datetime DEFAULT NULL,
+            resolved_at datetime DEFAULT NULL,
+            created_by varchar(255) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY priority (priority)
+        ) $charset_collate;";
+
+        // 21. Email Imports — tracks CSV list uploads by mosque admins
         $tables[] = "CREATE TABLE {$t('email_imports')} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,

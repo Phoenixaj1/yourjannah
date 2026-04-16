@@ -185,6 +185,18 @@ class YNJ_API_Admin {
             'permission_callback' => '__return_true',
         ] );
 
+        // --- Support tickets (bearer) ---
+        register_rest_route( self::NS, '/admin/tickets', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'create_ticket' ],
+            'permission_callback' => '__return_true',
+        ] );
+        register_rest_route( self::NS, '/admin/tickets', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'list_tickets' ],
+            'permission_callback' => '__return_true',
+        ] );
+
         // --- Eid management (bearer) ---
         register_rest_route( self::NS, '/admin/eid', [
             'methods'             => 'POST',

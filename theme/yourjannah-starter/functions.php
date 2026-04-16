@@ -247,7 +247,7 @@ add_action( 'init', function() {
     $mosque_pages = [
         'events', 'classes', 'fundraising', 'sponsors', 'rooms',
         'services', 'patron', 'madrassah', 'contact', 'prayers',
-        'donate', 'directory', 'people', 'hub', 'business',
+        'donate', 'directory', 'people', 'hub', 'business', 'help',
     ];
 
     foreach ( $mosque_pages as $page ) {
@@ -360,6 +360,7 @@ add_filter( 'template_include', function( $template ) {
         'business_detail' => 'page-templates/page-business-detail.php',
         'service_detail'  => 'page-templates/page-business-detail.php',
         'listing_edit'    => 'page-templates/page-listing-edit.php',
+        'help'            => 'page-templates/page-help.php',
         'sponsor_join'    => 'page-templates/page-sponsor-join.php',
         'service_join'    => 'page-templates/page-service-join.php',
         'live'            => 'page-templates/page-live.php',

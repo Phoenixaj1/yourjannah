@@ -48,6 +48,9 @@ class YNJ_Platform_Admin {
         add_submenu_page( 'ynj-platform', 'Revenue', 'Revenue', 'manage_options', 'ynj-revenue', [ __CLASS__, 'page_revenue' ] );
         add_submenu_page( 'ynj-platform', 'Pipeline', '🎯 Pipeline', 'manage_options', 'ynj-pipeline', [ __CLASS__, 'page_pipeline' ] );
         add_submenu_page( 'ynj-platform', 'Pool Payouts', '💰 Payouts', 'manage_options', 'ynj-pool-payouts', [ __CLASS__, 'page_pool_payouts' ] );
+        add_submenu_page( 'ynj-platform', 'Earnings', '📊 Earnings', 'manage_options', 'ynj-earnings', [ __CLASS__, 'page_earnings' ] );
+        add_submenu_page( 'ynj-platform', 'Mosque Performance', '🕌 Performance', 'manage_options', 'ynj-performance', [ __CLASS__, 'page_performance' ] );
+        add_submenu_page( 'ynj-platform', 'Support Tickets', '🎫 Help Desk', 'manage_options', 'ynj-helpdesk', [ __CLASS__, 'page_helpdesk' ] );
         add_submenu_page( 'ynj-platform', 'Enquiries', 'Enquiries', 'manage_options', 'ynj-platform-enquiries', [ __CLASS__, 'page_enquiries' ] );
     }
 
@@ -603,6 +606,282 @@ class YNJ_Platform_Admin {
                 </tbody>
             </table>
             <?php endif; ?>
+        </div>
+        <?php
+    }
+
+    // ================================================================
+    // EARNINGS — Platform revenue (5% fee) + pricing reference
+    // ================================================================
+
+    public static function page_earnings() {
+        global $wpdb;
+        $lt = YNJ_DB::table( 'pool_ledger' );
+        $pt = YNJ_DB::table( 'patrons' );
+        $bt = YNJ_DB::table( 'businesses' );
+        $st = YNJ_DB::table( 'services' );
+        $dt = YNJ_DB::table( 'donations' );
+
+        // Platform summary from ledger
+        $summary = $wpdb->get_row( "SELECT COUNT(*) AS total_txns, COALESCE(SUM(gross_pence),0) AS total_gross, COALESCE(SUM(platform_fee_pence),0) AS total_platform, COALESCE(SUM(net_to_mosque_pence),0) AS total_mosque FROM $lt WHERE entry_type IN ('payment','recurring')" );
+
+        // Monthly breakdown (last 6 months)
+        $monthly = $wpdb->get_results( "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS txns, SUM(gross_pence) AS gross, SUM(platform_fee_pence) AS platform FROM $lt WHERE entry_type IN ('payment','recurring') GROUP BY month ORDER BY month DESC LIMIT 6" ) ?: [];
+
+        // Active subscriptions revenue
+        $patron_mrr = (int) $wpdb->get_var( "SELECT COALESCE(SUM(amount_pence),0) FROM $pt WHERE status='active'" );
+        $biz_mrr = (int) $wpdb->get_var( "SELECT COALESCE(SUM(monthly_fee_pence),0) FROM $bt WHERE status='active'" );
+        $svc_mrr = (int) $wpdb->get_var( "SELECT COALESCE(SUM(monthly_fee_pence),0) FROM $st WHERE status='active'" );
+        $total_mrr = $patron_mrr + $biz_mrr + $svc_mrr;
+        $platform_mrr = (int) round( $total_mrr * 5 / 100 );
+
+        // Donation totals
+        $donation_total = (int) $wpdb->get_var( "SELECT COALESCE(SUM(amount_pence),0) FROM $dt WHERE status='succeeded'" );
+        $donation_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $dt WHERE status='succeeded'" );
+        ?>
+        <div class="wrap">
+            <h1>📊 Platform Earnings</h1>
+            <p style="color:#666;">YourJannah takes 5% platform fee. 95% goes to the mosque.</p>
+
+            <!-- MRR Cards -->
+            <div style="display:flex;gap:16px;margin:20px 0;flex-wrap:wrap;">
+                <div style="flex:1;min-width:160px;padding:20px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;">
+                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;">Your 5% (Monthly)</div>
+                    <div style="font-size:28px;font-weight:800;color:#16a34a;">£<?php echo number_format( $platform_mrr / 100, 2 ); ?></div>
+                </div>
+                <div style="flex:1;min-width:160px;padding:20px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;">
+                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;">Total MRR (All Subs)</div>
+                    <div style="font-size:28px;font-weight:800;color:#1a1a2e;">£<?php echo number_format( $total_mrr / 100, 2 ); ?></div>
+                </div>
+                <div style="flex:1;min-width:160px;padding:20px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;">
+                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;">Total Donations</div>
+                    <div style="font-size:28px;font-weight:800;color:#00ADEF;">£<?php echo number_format( $donation_total / 100, 2 ); ?></div>
+                    <div style="font-size:11px;color:#6b7280;"><?php echo $donation_count; ?> donations</div>
+                </div>
+                <div style="flex:1;min-width:160px;padding:20px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;">
+                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;">Lifetime Platform Rev</div>
+                    <div style="font-size:28px;font-weight:800;color:#7c3aed;">£<?php echo number_format( ( $summary->total_platform ?? 0 ) / 100, 2 ); ?></div>
+                </div>
+            </div>
+
+            <!-- MRR Breakdown -->
+            <h2 style="margin-top:30px;">MRR Breakdown</h2>
+            <table class="wp-list-table widefat fixed striped" style="margin-top:10px;">
+                <thead><tr><th>Product</th><th style="text-align:right;">Active</th><th style="text-align:right;">Gross MRR</th><th style="text-align:right;">Your 5%</th></tr></thead>
+                <tbody>
+                    <tr><td>🏅 Patron Memberships (£5–£50/mo)</td><td style="text-align:right;"><?php echo (int) $wpdb->get_var( "SELECT COUNT(*) FROM $pt WHERE status='active'" ); ?></td><td style="text-align:right;">£<?php echo number_format( $patron_mrr / 100, 2 ); ?></td><td style="text-align:right;color:#16a34a;font-weight:700;">£<?php echo number_format( $patron_mrr * 5 / 10000, 2 ); ?></td></tr>
+                    <tr><td>⭐ Business Sponsors (£30–£100/mo)</td><td style="text-align:right;"><?php echo (int) $wpdb->get_var( "SELECT COUNT(*) FROM $bt WHERE status='active'" ); ?></td><td style="text-align:right;">£<?php echo number_format( $biz_mrr / 100, 2 ); ?></td><td style="text-align:right;color:#16a34a;font-weight:700;">£<?php echo number_format( $biz_mrr * 5 / 10000, 2 ); ?></td></tr>
+                    <tr><td>🤝 Service Listings (£10/mo)</td><td style="text-align:right;"><?php echo (int) $wpdb->get_var( "SELECT COUNT(*) FROM $st WHERE status='active'" ); ?></td><td style="text-align:right;">£<?php echo number_format( $svc_mrr / 100, 2 ); ?></td><td style="text-align:right;color:#16a34a;font-weight:700;">£<?php echo number_format( $svc_mrr * 5 / 10000, 2 ); ?></td></tr>
+                    <tr style="font-weight:700;background:#f0fdf4;"><td>Total</td><td></td><td style="text-align:right;">£<?php echo number_format( $total_mrr / 100, 2 ); ?></td><td style="text-align:right;color:#16a34a;">£<?php echo number_format( $platform_mrr / 100, 2 ); ?></td></tr>
+                </tbody>
+            </table>
+
+            <!-- Pricing Reference -->
+            <h2 style="margin-top:30px;">💷 Pricing Reference</h2>
+            <table class="wp-list-table widefat fixed striped" style="margin-top:10px;">
+                <thead><tr><th>Product</th><th>Price</th><th>Mosque Gets</th><th>YJ Gets (5%)</th></tr></thead>
+                <tbody>
+                    <tr><td>🏅 Bronze Patron</td><td>£5/mo</td><td>£4.75</td><td>£0.25</td></tr>
+                    <tr><td>🏅 Silver Patron</td><td>£10/mo</td><td>£9.50</td><td>£0.50</td></tr>
+                    <tr><td>🏅 Gold Patron</td><td>£20/mo</td><td>£19.00</td><td>£1.00</td></tr>
+                    <tr><td>🏅 Platinum Patron</td><td>£50/mo</td><td>£47.50</td><td>£2.50</td></tr>
+                    <tr><td>⭐ Business Sponsor (Standard)</td><td>£30/mo</td><td>£28.50</td><td>£1.50</td></tr>
+                    <tr><td>⭐ Business Sponsor (Featured)</td><td>£50/mo</td><td>£47.50</td><td>£2.50</td></tr>
+                    <tr><td>⭐ Business Sponsor (Premium)</td><td>£100/mo</td><td>£95.00</td><td>£5.00</td></tr>
+                    <tr><td>🤝 Service Listing</td><td>£10/mo</td><td>£9.50</td><td>£0.50</td></tr>
+                    <tr><td>💝 Niyyah Bar Donation</td><td>Variable</td><td>95%</td><td>5%</td></tr>
+                </tbody>
+            </table>
+
+            <!-- Monthly History -->
+            <?php if ( $monthly ) : ?>
+            <h2 style="margin-top:30px;">Monthly History</h2>
+            <table class="wp-list-table widefat fixed striped" style="margin-top:10px;">
+                <thead><tr><th>Month</th><th style="text-align:right;">Transactions</th><th style="text-align:right;">Gross</th><th style="text-align:right;">Your 5%</th></tr></thead>
+                <tbody>
+                <?php foreach ( $monthly as $m ) : ?>
+                    <tr><td><?php echo esc_html( $m->month ); ?></td><td style="text-align:right;"><?php echo (int) $m->txns; ?></td><td style="text-align:right;">£<?php echo number_format( $m->gross / 100, 2 ); ?></td><td style="text-align:right;font-weight:700;color:#16a34a;">£<?php echo number_format( $m->platform / 100, 2 ); ?></td></tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+
+    // ================================================================
+    // MOSQUE PERFORMANCE — Which mosques are earning, uploading, active
+    // ================================================================
+
+    public static function page_performance() {
+        global $wpdb;
+        $mt = YNJ_DB::table( 'mosques' );
+        $pt = YNJ_DB::table( 'patrons' );
+        $bt = YNJ_DB::table( 'businesses' );
+        $st = YNJ_DB::table( 'services' );
+        $sub = YNJ_DB::table( 'subscribers' );
+        $ann = YNJ_DB::table( 'announcements' );
+        $ev = YNJ_DB::table( 'events' );
+        $it = YNJ_DB::table( 'email_imports' );
+        $dt = YNJ_DB::table( 'donations' );
+
+        $mosques = $wpdb->get_results(
+            "SELECT m.id, m.name, m.slug, m.status, m.city, m.postcode,
+                (SELECT COUNT(*) FROM $pt WHERE mosque_id = m.id AND status='active') AS patrons,
+                (SELECT COALESCE(SUM(amount_pence),0) FROM $pt WHERE mosque_id = m.id AND status='active') AS patron_mrr,
+                (SELECT COUNT(*) FROM $bt WHERE mosque_id = m.id AND status='active') AS sponsors,
+                (SELECT COUNT(*) FROM $st WHERE mosque_id = m.id AND status='active') AS services,
+                (SELECT COUNT(*) FROM $sub WHERE mosque_id = m.id AND status='active') AS subscribers,
+                (SELECT COUNT(*) FROM $ann WHERE mosque_id = m.id) AS announcements,
+                (SELECT COUNT(*) FROM $ev WHERE mosque_id = m.id) AS events,
+                (SELECT COALESCE(SUM(imported),0) FROM $it WHERE mosque_id = m.id) AS imported_contacts,
+                (SELECT COALESCE(SUM(amount_pence),0) FROM $dt WHERE mosque_id = m.id AND status='succeeded') AS donation_total
+             FROM $mt m WHERE m.status IN ('active','unclaimed')
+             ORDER BY patron_mrr DESC, subscribers DESC
+             LIMIT 100"
+        ) ?: [];
+        ?>
+        <div class="wrap">
+            <h1>🕌 Mosque Performance</h1>
+            <p style="color:#666;">Which mosques are earning, active, and may need marketing help.</p>
+
+            <table class="wp-list-table widefat fixed striped" style="margin-top:16px;">
+                <thead>
+                    <tr>
+                        <th>Mosque</th>
+                        <th>Status</th>
+                        <th style="text-align:right;">Patrons</th>
+                        <th style="text-align:right;">MRR</th>
+                        <th style="text-align:right;">Sponsors</th>
+                        <th style="text-align:right;">Subscribers</th>
+                        <th style="text-align:right;">Imported</th>
+                        <th style="text-align:right;">Events</th>
+                        <th style="text-align:right;">Donations</th>
+                        <th>Health</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ( $mosques as $m ) :
+                    $mrr = (int) $m->patron_mrr;
+                    $score = (int) $m->patrons + (int) $m->sponsors + (int) $m->subscribers + (int) $m->events + ( $m->imported_contacts > 0 ? 1 : 0 );
+                    if ( $score >= 5 ) { $health = '🟢 Active'; $health_color = '#16a34a'; }
+                    elseif ( $score >= 2 ) { $health = '🟡 Growing'; $health_color = '#ca8a04'; }
+                    else { $health = '🔴 Needs Help'; $health_color = '#dc2626'; }
+                ?>
+                    <tr>
+                        <td><strong><?php echo esc_html( $m->name ); ?></strong><br><span style="font-size:11px;color:#6b7280;"><?php echo esc_html( implode( ', ', array_filter( [ $m->city, $m->postcode ] ) ) ); ?></span></td>
+                        <td><span style="padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;background:<?php echo $m->status === 'active' ? '#dcfce7' : '#fef3c7'; ?>;color:<?php echo $m->status === 'active' ? '#166534' : '#92400e'; ?>;"><?php echo esc_html( ucfirst( $m->status ) ); ?></span></td>
+                        <td style="text-align:right;"><?php echo (int) $m->patrons; ?></td>
+                        <td style="text-align:right;font-weight:700;">£<?php echo number_format( $mrr / 100, 0 ); ?></td>
+                        <td style="text-align:right;"><?php echo (int) $m->sponsors; ?></td>
+                        <td style="text-align:right;"><?php echo (int) $m->subscribers; ?></td>
+                        <td style="text-align:right;"><?php echo $m->imported_contacts > 0 ? number_format( $m->imported_contacts ) : '<span style="color:#dc2626;">0</span>'; ?></td>
+                        <td style="text-align:right;"><?php echo (int) $m->events; ?></td>
+                        <td style="text-align:right;">£<?php echo number_format( (int) $m->donation_total / 100, 0 ); ?></td>
+                        <td style="font-weight:600;color:<?php echo $health_color; ?>;"><?php echo $health; ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php
+    }
+
+    // ================================================================
+    // HELP DESK — Support tickets from mosques
+    // ================================================================
+
+    public static function page_helpdesk() {
+        global $wpdb;
+        $tt = YNJ_DB::table( 'support_tickets' );
+        $mt = YNJ_DB::table( 'mosques' );
+
+        // Handle reply
+        if ( isset( $_POST['ynj_reply_ticket'] ) && wp_verify_nonce( $_POST['_ynj_ticket_nonce'] ?? '', 'ynj_ticket_reply' ) ) {
+            $ticket_id = (int) ( $_POST['ticket_id'] ?? 0 );
+            $reply = sanitize_textarea_field( $_POST['admin_reply'] ?? '' );
+            $new_status = sanitize_text_field( $_POST['new_status'] ?? 'open' );
+            if ( $ticket_id && $reply ) {
+                $update = [ 'admin_reply' => $reply, 'status' => $new_status, 'replied_at' => current_time( 'mysql' ) ];
+                if ( $new_status === 'resolved' ) $update['resolved_at'] = current_time( 'mysql' );
+                $wpdb->update( $tt, $update, [ 'id' => $ticket_id ] );
+                echo '<div class="notice notice-success"><p>Reply saved.</p></div>';
+            }
+        }
+
+        // Stats
+        $open = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $tt WHERE status = 'open'" );
+        $in_progress = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $tt WHERE status = 'in_progress'" );
+        $resolved = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $tt WHERE status = 'resolved'" );
+
+        // Filter
+        $filter = sanitize_text_field( $_GET['status'] ?? '' );
+        $where = $filter ? $wpdb->prepare( "WHERE t.status = %s", $filter ) : "WHERE t.status IN ('open','in_progress')";
+
+        $tickets = $wpdb->get_results(
+            "SELECT t.*, m.name AS mosque_name, m.slug AS mosque_slug
+             FROM $tt t LEFT JOIN $mt m ON m.id = t.mosque_id
+             $where ORDER BY FIELD(t.priority,'urgent','high','normal','low'), t.created_at DESC LIMIT 50"
+        ) ?: [];
+        ?>
+        <div class="wrap">
+            <h1>🎫 Help Desk — Support Tickets</h1>
+
+            <!-- Stats -->
+            <div style="display:flex;gap:12px;margin:16px 0;">
+                <a href="?page=ynj-helpdesk&status=open" style="padding:10px 20px;background:<?php echo $filter === 'open' || !$filter ? '#dc2626' : '#fff'; ?>;color:<?php echo $filter === 'open' || !$filter ? '#fff' : '#dc2626'; ?>;border:1px solid #dc2626;border-radius:8px;text-decoration:none;font-weight:700;">🔴 Open (<?php echo $open; ?>)</a>
+                <a href="?page=ynj-helpdesk&status=in_progress" style="padding:10px 20px;background:<?php echo $filter === 'in_progress' ? '#ca8a04' : '#fff'; ?>;color:<?php echo $filter === 'in_progress' ? '#fff' : '#ca8a04'; ?>;border:1px solid #ca8a04;border-radius:8px;text-decoration:none;font-weight:700;">🟡 In Progress (<?php echo $in_progress; ?>)</a>
+                <a href="?page=ynj-helpdesk&status=resolved" style="padding:10px 20px;background:<?php echo $filter === 'resolved' ? '#16a34a' : '#fff'; ?>;color:<?php echo $filter === 'resolved' ? '#fff' : '#16a34a'; ?>;border:1px solid #16a34a;border-radius:8px;text-decoration:none;font-weight:700;">✅ Resolved (<?php echo $resolved; ?>)</a>
+                <a href="?page=ynj-helpdesk" style="padding:10px 20px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;text-decoration:none;color:#374151;font-weight:600;">All</a>
+            </div>
+
+            <?php if ( empty( $tickets ) ) : ?>
+                <div style="text-align:center;padding:40px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;"><p style="color:#6b7280;">No tickets<?php echo $filter ? ' with status "' . esc_html( $filter ) . '"' : ''; ?>.</p></div>
+            <?php else : ?>
+            <?php foreach ( $tickets as $t ) :
+                $pri_colors = [ 'urgent' => '#dc2626', 'high' => '#ea580c', 'normal' => '#2563eb', 'low' => '#6b7280' ];
+                $pri_color = $pri_colors[ $t->priority ] ?? '#6b7280';
+                $status_bg = [ 'open' => '#fee2e2', 'in_progress' => '#fef3c7', 'resolved' => '#dcfce7' ];
+                $status_fg = [ 'open' => '#991b1b', 'in_progress' => '#92400e', 'resolved' => '#166534' ];
+            ?>
+                <div style="background:#fff;border:1px solid #e5e7eb;border-left:4px solid <?php echo $pri_color; ?>;border-radius:8px;padding:16px 20px;margin-bottom:12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
+                        <div>
+                            <strong style="font-size:15px;">#<?php echo $t->id; ?> — <?php echo esc_html( $t->subject ); ?></strong>
+                            <div style="font-size:12px;color:#6b7280;margin-top:2px;">
+                                🕌 <?php echo esc_html( $t->mosque_name ?: 'Unknown' ); ?>
+                                · <?php echo esc_html( $t->category ); ?>
+                                · by <?php echo esc_html( $t->created_by ); ?>
+                                · <?php echo esc_html( $t->created_at ); ?>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:6px;">
+                            <span style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;background:<?php echo $status_bg[ $t->status ] ?? '#f3f4f6'; ?>;color:<?php echo $status_fg[ $t->status ] ?? '#374151'; ?>;"><?php echo esc_html( ucfirst( str_replace( '_', ' ', $t->status ) ) ); ?></span>
+                            <span style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;color:<?php echo $pri_color; ?>;border:1px solid <?php echo $pri_color; ?>;"><?php echo esc_html( ucfirst( $t->priority ) ); ?></span>
+                        </div>
+                    </div>
+                    <p style="font-size:14px;color:#333;line-height:1.6;margin:8px 0;"><?php echo nl2br( esc_html( $t->body ) ); ?></p>
+
+                    <?php if ( $t->admin_reply ) : ?>
+                    <div style="background:#f0f9ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;margin:8px 0;">
+                        <strong style="font-size:12px;color:#1e40af;">Your Reply (<?php echo esc_html( $t->replied_at ); ?>):</strong>
+                        <p style="font-size:13px;color:#1e40af;margin:4px 0 0;"><?php echo nl2br( esc_html( $t->admin_reply ) ); ?></p>
+                    </div>
+                    <?php endif; ?>
+
+                    <form method="post" style="margin-top:10px;display:flex;gap:8px;align-items:end;">
+                        <?php wp_nonce_field( 'ynj_ticket_reply', '_ynj_ticket_nonce' ); ?>
+                        <input type="hidden" name="ticket_id" value="<?php echo (int) $t->id; ?>">
+                        <textarea name="admin_reply" rows="2" placeholder="Reply..." style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;"><?php echo esc_textarea( $t->admin_reply ?? '' ); ?></textarea>
+                        <select name="new_status" style="padding:8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;">
+                            <option value="open" <?php selected( $t->status, 'open' ); ?>>Open</option>
+                            <option value="in_progress" <?php selected( $t->status, 'in_progress' ); ?>>In Progress</option>
+                            <option value="resolved" <?php selected( $t->status, 'resolved' ); ?>>Resolved</option>
+                        </select>
+                        <button type="submit" name="ynj_reply_ticket" class="button button-primary">Reply</button>
+                    </form>
+                </div>
+            <?php endforeach; endif; ?>
         </div>
         <?php
     }

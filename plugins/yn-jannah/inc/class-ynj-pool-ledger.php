@@ -5,7 +5,7 @@
  * Immutable financial record of all payments flowing through the platform.
  * Tracks what's owed to each mosque and records payouts.
  *
- * Revenue split: 90% mosque, 10% YourJannah platform fee.
+ * Revenue split: 95% mosque, 5% YourJannah platform fee.
  * Mosque share paid out via bank transfer (tracked in pool_payouts table).
  *
  * @package YourJannah
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class YNJ_Pool_Ledger {
 
     /** Platform fee percentage */
-    const PLATFORM_FEE_PCT = 10;
+    const PLATFORM_FEE_PCT = 5;
 
     /**
      * Record a payment in the pool ledger.
