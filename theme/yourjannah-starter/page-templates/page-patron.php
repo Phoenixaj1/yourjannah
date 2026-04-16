@@ -52,9 +52,10 @@ $slug = ynj_mosque_slug();
 
 <main class="ynj-main">
     <div class="ynj-patron-hero">
-        <div style="font-size:42px;margin-bottom:8px;">&#x1F396;</div>
-        <h2 id="patron-title"><?php esc_html_e( 'Become a Patron', 'yourjannah' ); ?></h2>
-        <p><?php esc_html_e( 'Support your masjid with a monthly membership. Patrons receive a badge on their profile and help keep the masjid running.', 'yourjannah' ); ?></p>
+        <div style="font-size:36px;margin-bottom:4px;">🕌</div>
+        <div id="patron-mosque-name" style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.7;margin-bottom:6px;"></div>
+        <h2 id="patron-title" style="font-size:24px;"><?php esc_html_e( 'Become a Patron', 'yourjannah' ); ?></h2>
+        <p><?php esc_html_e( 'Your monthly support keeps this masjid running. Patrons get a badge and recognition on the patron wall.', 'yourjannah' ); ?></p>
     </div>
 
     <!-- Stats -->
@@ -249,8 +250,11 @@ $slug = ynj_mosque_slug();
         .then(resp => {
             const m = resp.mosque || resp;
             mosqueId = m.id;
-            const title = document.getElementById('patron-title');
-            if (title) title.textContent = '<?php echo esc_js( __( 'Become a', 'yourjannah' ) ); ?> ' + (m.name || 'Masjid') + ' <?php echo esc_js( __( 'Patron', 'yourjannah' ) ); ?>';
+            var mosName = m.name || 'Masjid';
+            var nameEl = document.getElementById('patron-mosque-name');
+            if (nameEl) nameEl.textContent = mosName;
+            var title = document.getElementById('patron-title');
+            if (title) title.textContent = '<?php echo esc_js( __( 'Become a Patron', 'yourjannah' ) ); ?>';
 
             // Show intention section for unclaimed mosques (and always for non-logged-in users)
             if (m.status === 'unclaimed' || !token) {
