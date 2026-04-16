@@ -261,6 +261,13 @@ add_action( 'init', function() {
         'top'
     );
 
+    // Service listing: /mosque/{slug}/services/join
+    add_rewrite_rule(
+        '^mosque/([^/]+)/services/join/?$',
+        'index.php?ynj_mosque_slug=$matches[1]&ynj_page_type=service_join',
+        'top'
+    );
+
     // Mosque profile: /mosque/{slug}
     add_rewrite_rule(
         '^mosque/([^/]+)/?$',
@@ -316,6 +323,7 @@ add_filter( 'template_include', function( $template ) {
         'hub'             => 'page-templates/page-masjid-hub.php',
         'business'        => 'page-templates/page-business.php',
         'sponsor_join'    => 'page-templates/page-sponsor-join.php',
+        'service_join'    => 'page-templates/page-service-join.php',
         'live'            => 'page-templates/page-live.php',
         'login'           => 'page-templates/page-login.php',
         'register'        => 'page-templates/page-register.php',
