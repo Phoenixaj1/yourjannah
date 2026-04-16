@@ -20,18 +20,21 @@
                 showGreeting();
                 loadPoints();
 
-                // Instant load: use cached mosque data if available
+                // Instant load: use cached mosque — don't wait for GPS
                 var cachedMosque = null;
                 try { cachedMosque = JSON.parse(localStorage.getItem('ynj_cached_mosque')); } catch(e) {}
-                if (cachedMosque && cachedMosque.slug && mosqueSlug === cachedMosque.slug) {
-                    // Instantly render with cached data — no wait for GPS
-                    document.getElementById('mosque-name').textContent = cachedMosque.name || mosqueSlug;
-                    loadMosque(cachedMosque.slug);
-                    loadFeed(cachedMosque.slug);
-                    updateNavLinks(cachedMosque.slug);
+                var savedSlug = mosqueSlug || localStorage.getItem('ynj_mosque_slug');
+
+                if (savedSlug) {
+                    // Instantly render with saved mosque — no GPS wait
+                    mosqueSlug = savedSlug;
+                    document.getElementById('mosque-name').textContent = (cachedMosque && cachedMosque.name) || savedSlug;
+                    loadMosque(savedSlug);
+                    loadFeed(savedSlug);
+                    updateNavLinks(savedSlug);
                 }
 
-                // GPS refreshes in background (updates travel time, finds nearest)
+                // GPS runs in background — only updates travel times, doesn't block
                 requestGps();
             }
 
@@ -117,7 +120,10 @@
 
                 const gpsBtn = document.getElementById('gps-btn');
                 gpsBtn.classList.add('ynj-gps-btn--loading');
-                document.getElementById('mosque-name').textContent = 'Locating...';
+                // Only show "Locating..." if no mosque is cached
+                if (!mosqueSlug) {
+                    document.getElementById('mosque-name').textContent = 'Locating...';
+                }
 
                 navigator.geolocation.getCurrentPosition(
                     pos => { gpsBtn.classList.remove('ynj-gps-btn--loading'); onGeo(pos); },
