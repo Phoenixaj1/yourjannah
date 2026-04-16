@@ -13,7 +13,8 @@ $slug = ynj_mosque_slug();
 ?>
 
 <main class="ynj-main">
-    <h2 id="hub-title" style="font-size:18px;font-weight:700;margin-bottom:14px;"><?php esc_html_e( 'Your Masjid', 'yourjannah' ); ?></h2>
+    <?php $mosque = ynj_get_mosque( $slug ); $mosque_name = $mosque ? $mosque->name : __( 'Your Masjid', 'yourjannah' ); ?>
+    <h2 id="hub-title" style="font-size:18px;font-weight:700;margin-bottom:14px;"><?php echo esc_html( $mosque_name ); ?></h2>
 
     <!-- Quick Book Section -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">

@@ -164,6 +164,28 @@ add_action( 'wp_head', function() {
     // Output ynjData early in <head> so inline template scripts can use it
     $vapid = class_exists( 'YNJ_Push' ) ? YNJ_Push::get_public_key() : '';
     $mosque_slug = get_query_var( 'ynj_mosque_slug', '' );
+
+    // Pre-load mosque data to avoid API call on every page load
+    $mosque_data = null;
+    if ( $mosque_slug && class_exists( 'YNJ_DB' ) ) {
+        $mosque_obj = ynj_get_mosque( $mosque_slug );
+        if ( $mosque_obj ) {
+            $mosque_data = [
+                'id'        => (int) $mosque_obj->id,
+                'name'      => $mosque_obj->name,
+                'slug'      => $mosque_obj->slug,
+                'address'   => $mosque_obj->address,
+                'city'      => $mosque_obj->city,
+                'postcode'  => $mosque_obj->postcode,
+                'latitude'  => $mosque_obj->latitude ? (float) $mosque_obj->latitude : null,
+                'longitude' => $mosque_obj->longitude ? (float) $mosque_obj->longitude : null,
+                'phone'     => $mosque_obj->phone,
+                'website'   => $mosque_obj->website,
+                'dfm_slug'  => $mosque_obj->dfm_slug ?? '',
+            ];
+        }
+    }
+
     $data = [
         'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
         'restUrl'    => rest_url( 'ynj/v1/' ),
@@ -172,6 +194,7 @@ add_action( 'wp_head', function() {
         'themeUrl'   => YNJ_THEME_URI . '/',
         'vapidKey'   => $vapid,
         'mosqueSlug' => $mosque_slug,
+        'mosque'     => $mosque_data,
         'isLoggedIn' => is_user_logged_in(),
         'userToken'  => '',
     ];

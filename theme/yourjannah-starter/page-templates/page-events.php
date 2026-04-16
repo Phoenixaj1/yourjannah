@@ -51,7 +51,8 @@ $slug = ynj_mosque_slug();
 </style>
 
 <main class="ynj-main">
-    <h2 id="ev-title" style="font-size:18px;font-weight:700;margin-bottom:4px;"><?php esc_html_e( 'Events', 'yourjannah' ); ?></h2>
+    <?php $mosque = ynj_get_mosque( $slug ); $mosque_name = $mosque ? $mosque->name : __( 'Events', 'yourjannah' ); ?>
+    <h2 id="ev-title" style="font-size:18px;font-weight:700;margin-bottom:4px;"><?php echo esc_html( $mosque_name ); ?> — <?php esc_html_e( 'Events', 'yourjannah' ); ?></h2>
     <p class="ynj-text-muted" style="margin-bottom:12px;"><?php esc_html_e( 'Upcoming events', 'yourjannah' ); ?></p>
 
     <div class="ynj-ev-filter" id="ev-filters">

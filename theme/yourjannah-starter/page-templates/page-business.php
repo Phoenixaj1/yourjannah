@@ -13,7 +13,10 @@ $slug = ynj_mosque_slug();
 ?>
 
 <main class="ynj-main">
-    <!-- Search bar at the very top -->
+    <?php $mosque = ynj_get_mosque( $slug ); $mosque_name = $mosque ? $mosque->name : __( 'Your Masjid', 'yourjannah' ); ?>
+    <h2 style="font-size:18px;font-weight:700;margin-bottom:12px;"><?php echo esc_html( $mosque_name ); ?> — <?php esc_html_e( 'Business Directory', 'yourjannah' ); ?></h2>
+
+    <!-- Search bar -->
     <div style="display:flex;gap:8px;margin-bottom:14px;">
         <div style="flex:1;position:relative;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b8fa3" stroke-width="2" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>

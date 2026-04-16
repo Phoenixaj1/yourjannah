@@ -24,8 +24,12 @@ $slug = ynj_mosque_slug();
 </style>
 
 <main class="ynj-main">
-    <h2 id="fundraising-title" style="font-size:18px;font-weight:700;margin-bottom:4px;"><?php esc_html_e( 'Donate & Fundraise', 'yourjannah' ); ?></h2>
-    <p class="ynj-text-muted" style="margin-bottom:14px;"><?php esc_html_e( 'Support your masjid — every contribution makes a difference', 'yourjannah' ); ?></p>
+    <?php
+    $mosque = ynj_get_mosque( $slug );
+    $mosque_name = $mosque ? $mosque->name : __( 'Your Masjid', 'yourjannah' );
+    ?>
+    <h2 id="fundraising-title" style="font-size:18px;font-weight:700;margin-bottom:4px;"><?php echo esc_html( $mosque_name ); ?> — <?php esc_html_e( 'Donate & Fundraise', 'yourjannah' ); ?></h2>
+    <p class="ynj-text-muted" style="margin-bottom:14px;"><?php printf( esc_html__( 'Support %s — every contribution makes a difference', 'yourjannah' ), esc_html( $mosque_name ) ); ?></p>
 
     <!-- Quick Donate -->
     <div style="background:#fff;border-radius:14px;padding:20px;margin-bottom:16px;border:1px solid rgba(0,0,0,.06);box-shadow:0 2px 8px rgba(0,0,0,.04);">
@@ -57,7 +61,7 @@ $slug = ynj_mosque_slug();
         <button id="donate-go" onclick="submitDonate()" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">
             <?php esc_html_e( 'Donate — opens DonationForMasjid', 'yourjannah' ); ?>
         </button>
-        <p class="ynj-text-muted" style="text-align:center;margin-top:8px;font-size:11px;"><?php esc_html_e( '100% reaches your masjid — zero platform fees', 'yourjannah' ); ?></p>
+        <p class="ynj-text-muted" style="text-align:center;margin-top:8px;font-size:11px;"><?php printf( esc_html__( '100%% reaches %s — zero platform fees', 'yourjannah' ), esc_html( $mosque_name ) ); ?></p>
     </div>
     <style>
     .ynj-freq-btn{flex:1;padding:8px 4px;border-radius:8px;border:1px solid #e0e8ed;background:#fff;color:#0a1628;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;text-align:center;transition:all .15s;}
