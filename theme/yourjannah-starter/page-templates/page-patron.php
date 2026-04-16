@@ -150,6 +150,8 @@ $slug = ynj_mosque_slug();
     let selectedTier = 'supporter';
     let mosqueId = 0;
 
+    // Mosque name set instantly by theme.js from localStorage
+
     const tierPrices = { supporter: 5, guardian: 10, champion: 20, platinum: 50 };
 
     function selectTier(tier) {

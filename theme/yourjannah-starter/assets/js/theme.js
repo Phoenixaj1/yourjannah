@@ -134,4 +134,29 @@
         });
     }
 
+    // ================================================================
+    // INSTANT MOSQUE NAME — set from localStorage cache on every page
+    // Prevents 10-15s delay waiting for API response
+    // ================================================================
+
+    var _cachedMosqueName = localStorage.getItem('ynj_mosque_name') || '';
+    if (_cachedMosqueName) {
+        // Map of element IDs → text content patterns
+        var _nameTargets = {
+            'patron-bar-text':    'Become a Patron of ' + _cachedMosqueName,
+            'feed-heading':       "What's Happening at " + _cachedMosqueName,
+            'next-prayer-label':  'Next Prayer at ' + _cachedMosqueName,
+            'cta-sponsor-help':   'Funds go to supporting ' + _cachedMosqueName,
+            'cta-services-help':  'Proceeds help fund ' + _cachedMosqueName,
+            'patron-mosque-name': _cachedMosqueName,
+            'mp-name':            _cachedMosqueName,
+            'pt-mosque-name':     _cachedMosqueName,
+            'dn-mosque-name':     _cachedMosqueName,
+        };
+        for (var _id in _nameTargets) {
+            var _el = document.getElementById(_id);
+            if (_el) _el.textContent = _nameTargets[_id];
+        }
+    }
+
 })();

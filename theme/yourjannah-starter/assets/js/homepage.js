@@ -39,19 +39,7 @@
                     var ttLink = document.getElementById('timetable-link');
                     if (ttLink) ttLink.href = '/mosque/' + savedSlug + '/prayers';
 
-                    // Set all mosque-name headings INSTANTLY from cache (no API wait)
-                    if (cachedName && cachedName !== savedSlug) {
-                        var pb = document.getElementById('patron-bar-text');
-                        if (pb) pb.textContent = 'Become a Patron of ' + cachedName;
-                        var fh = document.getElementById('feed-heading');
-                        if (fh) fh.textContent = "What's Happening at " + cachedName;
-                        var npl = document.getElementById('next-prayer-label');
-                        if (npl) npl.textContent = 'Next Prayer at ' + cachedName;
-                        var sh = document.getElementById('cta-sponsor-help');
-                        if (sh) sh.textContent = 'Funds go to supporting ' + cachedName;
-                        var svh = document.getElementById('cta-services-help');
-                        if (svh) svh.textContent = 'Proceeds help fund ' + cachedName;
-                    }
+                    // Mosque-name headings set instantly by theme.js from localStorage
 
                     if (isCacheFresh && cachedPrayers) {
                         // Use today's cached prayer times — instant render
