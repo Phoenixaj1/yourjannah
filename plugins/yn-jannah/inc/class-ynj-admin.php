@@ -36,11 +36,39 @@ class YNJ_Admin {
             }
         }
 
-        $mosques = $wpdb->get_results("SELECT * FROM $table ORDER BY created_at DESC LIMIT 100");
+        $status_filter = sanitize_text_field($_GET['status'] ?? '');
+        $paged = max(1, absint($_GET['paged'] ?? 1));
+        $per_page = 50;
+        $offset = ($paged - 1) * $per_page;
+
+        $where = "1=1";
+        if ($status_filter === 'active') $where = "status = 'active'";
+        elseif ($status_filter === 'unclaimed') $where = "status = 'unclaimed'";
+
+        $total = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table WHERE $where");
+        $mosques = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE $where ORDER BY created_at DESC LIMIT %d OFFSET %d", $per_page, $offset));
         $sub_table = YNJ_DB::table('subscribers');
+        $total_pages = ceil($total / $per_page);
+
+        $count_all = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table");
+        $count_active = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table WHERE status = 'active'");
+        $count_unclaimed = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table WHERE status = 'unclaimed'");
         ?>
         <div class="wrap">
-            <h1>YourJannah — Mosques (<?php echo count($mosques); ?>)</h1>
+            <h1>YourJannah — Mosques (<?php echo number_format($total); ?>)</h1>
+            <ul class="subsubsub" style="margin:8px 0 16px;">
+                <li><a href="<?php echo esc_url(add_query_arg(['status'=>'','paged'=>1])); ?>" <?php echo !$status_filter ? 'class="current"' : ''; ?>>All <span class="count">(<?php echo number_format($count_all); ?>)</span></a> |</li>
+                <li><a href="<?php echo esc_url(add_query_arg(['status'=>'active','paged'=>1])); ?>" <?php echo $status_filter==='active' ? 'class="current"' : ''; ?>>Active <span class="count">(<?php echo $count_active; ?>)</span></a> |</li>
+                <li><a href="<?php echo esc_url(add_query_arg(['status'=>'unclaimed','paged'=>1])); ?>" <?php echo $status_filter==='unclaimed' ? 'class="current"' : ''; ?>>Unclaimed <span class="count">(<?php echo number_format($count_unclaimed); ?>)</span></a></li>
+            </ul>
+            <?php if ($total_pages > 1) : ?>
+            <div class="tablenav"><div class="tablenav-pages">
+                <span class="displaying-num"><?php echo number_format($total); ?> mosques</span>
+                <?php if ($paged > 1) : ?><a class="button" href="<?php echo esc_url(add_query_arg('paged', $paged - 1)); ?>">&laquo; Prev</a><?php endif; ?>
+                <span class="tablenav-pages-navspan button disabled">Page <?php echo $paged; ?> of <?php echo $total_pages; ?></span>
+                <?php if ($paged < $total_pages) : ?><a class="button" href="<?php echo esc_url(add_query_arg('paged', $paged + 1)); ?>">Next &raquo;</a><?php endif; ?>
+            </div></div>
+            <?php endif; ?>
             <table class="wp-list-table widefat striped">
                 <thead>
                     <tr><th>ID</th><th>Name</th><th>City</th><th>Email</th><th>Subscribers</th><th>Status</th><th>Created</th><th>Actions</th></tr>
