@@ -110,7 +110,7 @@ $_tier_labels = [ 'supporter' => 'Bronze', 'guardian' => 'Silver', 'champion' =>
 </header>
 
 <!-- Mosque selector modal (JS-driven) -->
-<div class="ynj-mosque-modal" id="ynj-mosque-modal">
+<div class="ynj-mosque-modal" id="ynj-mosque-modal" style="display:none">
     <div class="ynj-mosque-modal__overlay"></div>
     <div class="ynj-mosque-modal__box">
         <button type="button" class="ynj-mosque-modal__close">&times;</button>

@@ -47,6 +47,7 @@
         var gpsTriggered = false;
 
         function openModal() {
+            modal.style.display = 'flex';
             modal.classList.add('ynj-mosque-modal--open');
             document.body.style.overflow = 'hidden';
             if (searchIn) searchIn.value = '';
@@ -68,6 +69,7 @@
         }
 
         function closeModal() {
+            modal.style.display = 'none';
             modal.classList.remove('ynj-mosque-modal--open');
             document.body.style.overflow = '';
         }
