@@ -226,11 +226,24 @@ class YNJ_API_Directory {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => 'mosque_id and business_name are required.' ], 400 );
         }
 
+        // Resolve user_id from Bearer token (optional — anonymous submissions allowed).
+        $user_id = 0;
+        $auth_header = $request->get_header( 'Authorization' );
+        if ( $auth_header && preg_match( '/^Bearer\s+(.+)$/i', $auth_header, $matches ) ) {
+            if ( class_exists( 'YNJ_User_Auth' ) ) {
+                $user = YNJ_User_Auth::verify_token( $matches[1] );
+                if ( $user ) {
+                    $user_id = (int) $user->id;
+                }
+            }
+        }
+
         global $wpdb;
         $table = YNJ_DB::table( 'businesses' );
 
         $insert = [
             'mosque_id'     => $mosque_id,
+            'user_id'       => $user_id,
             'business_name' => $business_name,
             'owner_name'    => sanitize_text_field( $data['owner_name'] ?? '' ),
             'category'      => sanitize_text_field( $data['category'] ?? '' ),
@@ -271,11 +284,24 @@ class YNJ_API_Directory {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => 'mosque_id and provider_name are required.' ], 400 );
         }
 
+        // Resolve user_id from Bearer token (optional — anonymous submissions allowed).
+        $user_id = 0;
+        $auth_header = $request->get_header( 'Authorization' );
+        if ( $auth_header && preg_match( '/^Bearer\s+(.+)$/i', $auth_header, $matches ) ) {
+            if ( class_exists( 'YNJ_User_Auth' ) ) {
+                $user = YNJ_User_Auth::verify_token( $matches[1] );
+                if ( $user ) {
+                    $user_id = (int) $user->id;
+                }
+            }
+        }
+
         global $wpdb;
         $table = YNJ_DB::table( 'services' );
 
         $insert = [
             'mosque_id'      => $mosque_id,
+            'user_id'        => $user_id,
             'provider_name'  => $provider_name,
             'phone'          => sanitize_text_field( $data['phone'] ?? '' ),
             'email'          => sanitize_email( $data['email'] ?? '' ),

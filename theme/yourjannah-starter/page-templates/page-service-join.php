@@ -65,6 +65,7 @@ if ( $mosque ) $mosque_name = $mosque->name;
             </div>
             <div class="ynj-field"><label><?php esc_html_e( 'Description', 'yourjannah' ); ?> *</label><textarea name="description" rows="3" required placeholder="<?php esc_attr_e( 'Describe your service, experience, and availability...', 'yourjannah' ); ?>"></textarea></div>
         </form>
+        <p id="svc-logged-in-note" style="margin-bottom:8px;font-size:12px;color:#166534;display:none;"><?php esc_html_e( 'Logged in — your details have been pre-filled.', 'yourjannah' ); ?></p>
         <button class="ynj-btn" id="svc-submit" type="button" style="width:100%;justify-content:center;margin-top:16px;"><?php esc_html_e( 'Submit Listing', 'yourjannah' ); ?></button>
         <p id="svc-error" style="margin-top:8px;font-size:13px;color:#dc2626;"></p>
         <p id="svc-success" style="margin-top:8px;font-size:13px;color:#166534;display:none;"></p>
@@ -76,6 +77,19 @@ if ( $mosque ) $mosque_name = $mosque->name;
 (function(){
     var slug = <?php echo wp_json_encode( $slug ); ?>;
     var API = ynjData.restUrl;
+    var userToken = localStorage.getItem('ynj_user_token') || '';
+
+    // Auto-fill form for logged-in users.
+    try {
+        var userData = JSON.parse(localStorage.getItem('ynj_user'));
+        if (userData && userToken) {
+            var form = document.getElementById('svc-form');
+            if (userData.name) form.querySelector('[name="provider_name"]').value = userData.name;
+            if (userData.email) form.querySelector('[name="email"]').value = userData.email;
+            if (userData.phone) form.querySelector('[name="phone"]').value = userData.phone;
+            document.getElementById('svc-logged-in-note').style.display = '';
+        }
+    } catch(e) {}
 
     document.getElementById('svc-submit').addEventListener('click', async function() {
         var btn = this;
@@ -90,6 +104,9 @@ if ( $mosque ) $mosque_name = $mosque->name;
             return;
         }
 
+        var headers = {'Content-Type': 'application/json'};
+        if (userToken) headers['Authorization'] = 'Bearer ' + userToken;
+
         btn.disabled = true; btn.textContent = '<?php echo esc_js( __( 'Submitting...', 'yourjannah' ) ); ?>';
         document.getElementById('svc-error').textContent = '';
 
@@ -100,7 +117,7 @@ if ( $mosque ) $mosque_name = $mosque->name;
 
             var resp = await fetch(API + 'services', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: headers,
                 body: JSON.stringify({
                     mosque_id: mosqueId,
                     provider_name: name,

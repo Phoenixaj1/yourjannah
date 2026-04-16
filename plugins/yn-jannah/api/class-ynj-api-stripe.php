@@ -328,12 +328,25 @@ class YNJ_API_Stripe {
 
         $tier_config = $tiers[ $tier ] ?? $tiers['standard'];
 
+        // Resolve user_id from Bearer token (optional — anonymous submissions allowed).
+        $user_id = 0;
+        $auth_header = $request->get_header( 'Authorization' );
+        if ( $auth_header && preg_match( '/^Bearer\s+(.+)$/i', $auth_header, $matches ) ) {
+            if ( class_exists( 'YNJ_User_Auth' ) ) {
+                $user = YNJ_User_Auth::verify_token( $matches[1] );
+                if ( $user ) {
+                    $user_id = (int) $user->id;
+                }
+            }
+        }
+
         // Insert business as pending
         global $wpdb;
         $table = YNJ_DB::table( 'businesses' );
 
         $wpdb->insert( $table, [
             'mosque_id'         => $mosque_id,
+            'user_id'           => $user_id,
             'business_name'     => $name,
             'owner_name'        => sanitize_text_field( $data['owner_name'] ?? '' ),
             'category'          => $category,

@@ -69,6 +69,7 @@ $slug = ynj_mosque_slug();
             <div class="ynj-field"><label><?php esc_html_e( 'Address / Postcode', 'yourjannah' ); ?></label><input type="text" name="address"></div>
             <div class="ynj-field"><label><?php esc_html_e( 'Description', 'yourjannah' ); ?> *</label><textarea name="description" rows="3" required placeholder="<?php esc_attr_e( 'Tell the community about your business...', 'yourjannah' ); ?>"></textarea></div>
         </form>
+        <p id="sponsor-logged-in-note" style="margin-bottom:8px;font-size:12px;color:#166534;display:none;"><?php esc_html_e( 'Logged in — your details have been pre-filled.', 'yourjannah' ); ?></p>
         <button class="ynj-btn" id="sponsor-submit" type="button" style="width:100%;justify-content:center;margin-top:16px;"><?php esc_html_e( 'Continue to Payment', 'yourjannah' ); ?></button>
         <p class="ynj-text-muted" id="sponsor-error" style="margin-top:8px;color:#dc2626;"></p>
         <p class="ynj-text-muted" style="margin-top:12px;text-align:center;font-size:11px;"><?php esc_html_e( 'You can cancel anytime. 90% goes directly to the masjid.', 'yourjannah' ); ?></p>
@@ -79,6 +80,18 @@ $slug = ynj_mosque_slug();
 (function(){
     var slug = <?php echo wp_json_encode( $slug ); ?>;
     var API = ynjData.restUrl;
+    var userToken = localStorage.getItem('ynj_user_token') || '';
+
+    // Auto-fill form for logged-in users.
+    try {
+        var userData = JSON.parse(localStorage.getItem('ynj_user'));
+        if (userData && userToken) {
+            var form = document.getElementById('sponsor-form');
+            if (userData.email) form.querySelector('[name="email"]').value = userData.email;
+            if (userData.phone) form.querySelector('[name="phone"]').value = userData.phone;
+            document.getElementById('sponsor-logged-in-note').style.display = '';
+        }
+    } catch(e) {}
 
     document.getElementById('sponsor-submit').addEventListener('click', async function() {
         var btn = this;
@@ -95,11 +108,14 @@ $slug = ynj_mosque_slug();
         var tier = document.querySelector('input[name="tier"]:checked');
         var tierValue = tier ? tier.value : 'standard';
 
+        var headers = {'Content-Type': 'application/json'};
+        if (userToken) headers['Authorization'] = 'Bearer ' + userToken;
+
         btn.disabled = true; btn.textContent = 'Processing...';
         try {
             var resp = await fetch(API + 'stripe/checkout/business', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: headers,
                 body: JSON.stringify({
                     mosque_slug: slug,
                     business_name: name,

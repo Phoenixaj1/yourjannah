@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '2.1.0';
+    const SCHEMA_VERSION = '2.2.0';
 
     /**
      * Return the full table name for a given short name.
@@ -319,6 +319,7 @@ class YNJ_DB {
         $tables[] = "CREATE TABLE {$t('businesses')} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
             business_name varchar(255) NOT NULL DEFAULT '',
             owner_name varchar(255) NOT NULL DEFAULT '',
             category varchar(50) NOT NULL DEFAULT '',
@@ -340,6 +341,7 @@ class YNJ_DB {
             updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             KEY mosque_id (mosque_id),
+            KEY user_id (user_id),
             KEY status (status),
             KEY category (category)
         ) $charset_collate;";
@@ -348,6 +350,7 @@ class YNJ_DB {
         $tables[] = "CREATE TABLE {$t('services')} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
             provider_name varchar(255) NOT NULL DEFAULT '',
             phone varchar(50) NOT NULL DEFAULT '',
             email varchar(255) NOT NULL DEFAULT '',
@@ -361,6 +364,7 @@ class YNJ_DB {
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             KEY mosque_id (mosque_id),
+            KEY user_id (user_id),
             KEY status (status),
             KEY service_type (service_type)
         ) $charset_collate;";
