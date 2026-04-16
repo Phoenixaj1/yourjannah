@@ -9,6 +9,11 @@
 
 get_header();
 $slug = ynj_mosque_slug();
+
+// --- Server-side pre-load: mosque data ---
+$mosque = ynj_get_mosque( $slug );
+$mosque_name = $mosque ? $mosque->name : '';
+$mosque_json = wp_json_encode( $mosque ? $mosque : null );
 ?>
 <style>
 .ynj-tt-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
@@ -44,7 +49,7 @@ $slug = ynj_mosque_slug();
 
     <!-- Today's Times -->
     <section class="ynj-card" id="today-card">
-        <h2 class="ynj-card__title" id="pt-mosque-name"><?php esc_html_e( 'Loading...', 'yourjannah' ); ?></h2>
+        <h2 class="ynj-card__title" id="pt-mosque-name"><?php echo $mosque_name ? esc_html( $mosque_name ) : esc_html__( 'Loading...', 'yourjannah' ); ?></h2>
         <div id="today-grid" class="ynj-prayer-grid"></div>
     </section>
 
@@ -101,28 +106,26 @@ $slug = ynj_mosque_slug();
 
     const T = s => s ? String(s).replace(/:\d{2}$/,'').replace(/\s*\(.*\)/,'') : '\u2014';
 
-    // Load mosque + today's times
-    fetch(API + 'mosques/' + slug)
-        .then(r => r.json())
-        .then(resp => {
-            const m = resp.mosque || resp;
-            mosqueName = m.name || slug;
-            document.getElementById('pt-mosque-name').textContent = mosqueName;
-            document.getElementById('print-mosque').textContent = mosqueName;
+    // --- Pre-loaded mosque data from PHP (no API fetch needed) ---
+    const mosqueData = <?php echo $mosque_json; ?>;
+    if (mosqueData) {
+        mosqueName = mosqueData.name || slug;
+        document.getElementById('pt-mosque-name').textContent = mosqueName;
+        document.getElementById('print-mosque').textContent = mosqueName;
 
-            if (m.prayer_times && !m.prayer_times.error) {
-                const pt = m.prayer_times;
-                const labels = [['fajr','Fajr'],['sunrise','Sunrise'],['dhuhr','Dhuhr'],['asr','Asr'],['maghrib','Maghrib'],['isha','Isha']];
-                document.getElementById('today-grid').innerHTML = labels.map(([k,v]) => {
-                    const adhan = T(pt[k]);
-                    const jamat = pt[k+'_jamat'] ? T(pt[k+'_jamat']) : '';
-                    return '<div class="ynj-prayer-row">' +
-                        '<span class="ynj-prayer-row__name">' + v + '</span>' +
-                        '<span class="ynj-prayer-row__time">' + adhan + (jamat ? ' <span style="color:#00ADEF;font-size:12px;">Jam: ' + jamat + '</span>' : '') + '</span>' +
-                    '</div>';
-                }).join('');
-            }
-        });
+        if (mosqueData.prayer_times && !mosqueData.prayer_times.error) {
+            const pt = mosqueData.prayer_times;
+            const labels = [['fajr','Fajr'],['sunrise','Sunrise'],['dhuhr','Dhuhr'],['asr','Asr'],['maghrib','Maghrib'],['isha','Isha']];
+            document.getElementById('today-grid').innerHTML = labels.map(([k,v]) => {
+                const adhan = T(pt[k]);
+                const jamat = pt[k+'_jamat'] ? T(pt[k+'_jamat']) : '';
+                return '<div class="ynj-prayer-row">' +
+                    '<span class="ynj-prayer-row__name">' + v + '</span>' +
+                    '<span class="ynj-prayer-row__time">' + adhan + (jamat ? ' <span style="color:#00ADEF;font-size:12px;">Jam: ' + jamat + '</span>' : '') + '</span>' +
+                '</div>';
+            }).join('');
+        }
+    }
 
     // Load Jumu'ah
     fetch(API + 'mosques/' + slug + '/jumuah')

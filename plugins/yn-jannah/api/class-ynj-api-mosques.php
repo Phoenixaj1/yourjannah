@@ -145,6 +145,13 @@ class YNJ_API_Mosques {
     public static function get_by_slug( \WP_REST_Request $request ) {
         $slug = sanitize_text_field( $request->get_param( 'slug' ) );
 
+        // Cache mosque profile for 5 minutes — biggest speed win
+        $cache_key = 'ynj_mosque_' . md5( $slug );
+        $cached = get_transient( $cache_key );
+        if ( $cached !== false ) {
+            return new \WP_REST_Response( $cached );
+        }
+
         global $wpdb;
         $table = YNJ_DB::table( 'mosques' );
 
@@ -185,7 +192,9 @@ class YNJ_API_Mosques {
         // Attach today's prayer times
         $profile['prayer_times'] = YNJ_Prayer::get_times( $mosque->id, date( 'Y-m-d' ) );
 
-        return new \WP_REST_Response( [ 'ok' => true, 'mosque' => $profile ] );
+        $response = [ 'ok' => true, 'mosque' => $profile ];
+        set_transient( $cache_key, $response, 300 ); // 5 min cache
+        return new \WP_REST_Response( $response );
     }
 
     /**

@@ -9,6 +9,27 @@
 
 get_header();
 $slug = ynj_mosque_slug();
+
+// Pre-load ALL data server-side — zero API calls needed
+$mosque = ynj_get_mosque( $slug );
+$mosque_id = $mosque ? (int) $mosque->id : 0;
+$businesses = [];
+$services = [];
+if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
+    global $wpdb;
+    $biz_table = YNJ_DB::table( 'businesses' );
+    $svc_table = YNJ_DB::table( 'services' );
+    $businesses = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, business_name, owner_name, category, description, phone, email, website, logo_url, address, postcode, monthly_fee_pence, featured_position
+         FROM $biz_table WHERE mosque_id = %d AND status = 'active' AND (expires_at IS NULL OR expires_at > NOW())
+         ORDER BY monthly_fee_pence DESC, business_name ASC LIMIT 50", $mosque_id
+    ) ) ?: [];
+    $services = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, provider_name, phone, email, service_type, description, hourly_rate_pence, area_covered
+         FROM $svc_table WHERE mosque_id = %d AND status = 'active'
+         ORDER BY monthly_fee_pence DESC, provider_name ASC LIMIT 50", $mosque_id
+    ) ) ?: [];
+}
 ?>
 
 <main class="ynj-main">
@@ -39,11 +60,30 @@ $slug = ynj_mosque_slug();
     const API = ynjData.restUrl;
     let mosqueId = null;
     let mosqueLat = null, mosqueLng = null;
-    let localBiz = [];
+    // Pre-loaded from PHP — instant, no API calls
+    let localBiz = <?php echo wp_json_encode( array_map( function( $b ) {
+        return [
+            'id' => (int) $b->id, 'business_name' => $b->business_name, 'owner_name' => $b->owner_name,
+            'category' => $b->category, 'description' => $b->description, 'phone' => $b->phone,
+            'email' => $b->email, 'website' => $b->website, 'logo_url' => $b->logo_url,
+            'address' => $b->address, 'postcode' => $b->postcode,
+            'featured' => (int) $b->featured_position > 0,
+        ];
+    }, $businesses ) ); ?>;
     let nearbyBiz = [];
     let nearbyLoaded = false;
+    let mosqueId = <?php echo $mosque_id; ?>;
+    let mosqueLat = <?php echo $mosque ? ( (float) $mosque->latitude ?: 'null' ) : 'null'; ?>;
+    let mosqueLng = <?php echo $mosque ? ( (float) $mosque->longitude ?: 'null' ) : 'null'; ?>;
 
     let svcLoaded = false;
+    let preloadedServices = <?php echo wp_json_encode( array_map( function( $s ) {
+        return [
+            'id' => (int) $s->id, 'provider_name' => $s->provider_name, 'phone' => $s->phone,
+            'email' => $s->email, 'service_type' => $s->service_type, 'description' => $s->description,
+            'hourly_rate_pence' => (int) $s->hourly_rate_pence, 'area_covered' => $s->area_covered,
+        ];
+    }, $services ) ); ?>;
 
     document.querySelectorAll('[data-nav-mosque]').forEach(el => {
         el.href = el.dataset.navMosque.replace('{slug}', slug);
@@ -67,13 +107,12 @@ $slug = ynj_mosque_slug();
     }
 
     function loadServices() {
-        fetch(API + 'mosques/' + slug + '/directory').then(r=>r.json()).then(data => {
-            const svcs = data.services || [];
-            const el = document.getElementById('local-svc-list');
-            if (!svcs.length) { el.innerHTML = '<p class="ynj-text-muted">No services listed yet.</p>'; return; }
-            el.innerHTML = svcs.map(s => renderSvcCard(s)).join('');
-            svcLoaded = true;
-        }).catch(() => { document.getElementById('local-svc-list').innerHTML = '<p class="ynj-text-muted">Could not load.</p>'; });
+        // Use pre-loaded data — instant
+        const svcs = preloadedServices;
+        const el = document.getElementById('local-svc-list');
+        if (!svcs.length) { el.innerHTML = '<p class="ynj-text-muted">No services listed yet. <a href="/mosque/' + slug + '/services/join">List yours</a></p>'; return; }
+        el.innerHTML = svcs.map(s => renderSvcCard(s)).join('');
+        svcLoaded = true;
     }
 
     function renderBiz(b, rank, showMosque) {
@@ -118,19 +157,8 @@ $slug = ynj_mosque_slug();
         list.innerHTML = all.map((b,i) => renderBiz(b, radius > 0 ? null : i+1, !!b.mosque_name)).join('');
     }
 
-    // Load mosque + sponsors in parallel for speed
-    Promise.all([
-        fetch(API + 'mosques/' + slug).then(r => r.json()),
-        fetch(API + 'mosques/' + slug + '/directory').then(r => r.json())
-    ]).then(function([mosqueResp, dirResp]) {
-        const m = mosqueResp.mosque || mosqueResp;
-        mosqueId = m.id; mosqueLat = m.latitude; mosqueLng = m.longitude;
-        localBiz = dirResp.businesses || [];
-        renderList();
-    }).catch(function(err) {
-        console.error('Sponsors load error:', err);
-        document.getElementById('local-biz-list').innerHTML = '<p class="ynj-text-muted">No sponsors yet. Be the first to <a href="<?php echo esc_js( home_url( "/mosque/" ) ); ?>' + slug + '/sponsors/join">sponsor this masjid</a>!</p>';
-    });
+    // Render instantly from PHP pre-loaded data — no API calls
+    renderList();
 
     // Radius change
     window.onRadiusChange = function() {

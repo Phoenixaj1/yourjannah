@@ -143,15 +143,7 @@ $slug = ynj_mosque_slug();
         window.open(url, '_blank');
     };
 
-    // Get mosque name + set donate link
-    fetch(API + 'mosques/' + slug)
-        .then(r => r.json())
-        .then(resp => {
-            const m = resp.mosque || resp;
-            const ftEl = document.getElementById('fundraising-title');
-            if (ftEl) ftEl.textContent = (m.name || 'Your Masjid') + ' Fundraising';
-        })
-        .catch(() => {});
+    // Mosque name already rendered server-side — no API fetch needed
 
     fetch(API + 'mosques/' + slug + '/campaigns')
         .then(r => r.json())

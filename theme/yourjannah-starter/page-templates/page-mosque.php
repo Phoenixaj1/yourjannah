@@ -9,11 +9,43 @@
 
 get_header();
 $slug = ynj_mosque_slug();
+
+// --- Server-side pre-load: mosque, announcements, events ---
+$mosque = ynj_get_mosque( $slug );
+$mosque_id = $mosque ? (int) $mosque->id : 0;
+$mosque_name = $mosque ? $mosque->name : '';
+$mosque_address = $mosque ? ( $mosque->address ?? '' ) : '';
+$mosque_status = $mosque ? ( $mosque->status ?? '' ) : '';
+
+// Pre-load announcements
+$announcements = [];
+if ( $mosque_id ) {
+    global $wpdb;
+    $ann_table = YNJ_DB::table( 'announcements' );
+    $announcements = $wpdb->get_results( $wpdb->prepare(
+        "SELECT * FROM $ann_table WHERE mosque_id = %d AND status = 'published' ORDER BY pinned DESC, published_at DESC LIMIT 20", $mosque_id
+    ) );
+}
+
+// Pre-load events
+$events = [];
+if ( $mosque_id ) {
+    global $wpdb;
+    $evt_table = YNJ_DB::table( 'events' );
+    $events = $wpdb->get_results( $wpdb->prepare(
+        "SELECT * FROM $evt_table WHERE mosque_id = %d AND status = 'published' AND event_date >= CURDATE() ORDER BY event_date ASC LIMIT 20", $mosque_id
+    ) );
+}
+
+// Encode for JS consumption
+$mosque_json = wp_json_encode( $mosque ? $mosque : null );
+$announcements_json = wp_json_encode( $announcements );
+$events_json = wp_json_encode( $events );
 ?>
 <main class="ynj-main" id="mosque-profile">
     <section class="ynj-card ynj-card--hero">
-        <h1 class="ynj-mosque-name" id="mp-name"><?php esc_html_e( 'Loading&hellip;', 'yourjannah' ); ?></h1>
-        <p class="ynj-text-muted" id="mp-address" style="color:rgba(255,255,255,.7);"></p>
+        <h1 class="ynj-mosque-name" id="mp-name"><?php echo $mosque ? esc_html( $mosque_name ) : esc_html__( 'Mosque not found', 'yourjannah' ); ?></h1>
+        <p class="ynj-text-muted" id="mp-address" style="color:rgba(255,255,255,.7);"><?php echo esc_html( $mosque_address ); ?></p>
         <div id="mp-subscribe" style="margin-top:12px;display:none;">
             <button id="mp-sub-btn" class="ynj-btn" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;justify-content:center;width:100%;" onclick="toggleSubscribe()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
@@ -116,71 +148,63 @@ $slug = ynj_mosque_slug();
             }).catch(() => {});
     }
 
-    fetch(API + 'mosques/' + slug)
-        .then(r => r.json())
-        .then(resp => {
-            const data = resp.mosque || resp;
-            if (!data) return;
-            mosqueId = data.id;
-            document.getElementById('mp-name').textContent = data.name || slug;
-            document.getElementById('mp-address').textContent = data.address || '';
+    // --- Pre-loaded data from PHP (no API fetch needed) ---
+    const mosqueData = <?php echo $mosque_json; ?>;
+    const preAnnouncements = <?php echo $announcements_json; ?>;
+    const preEvents = <?php echo $events_json; ?>;
 
-            // Track page view
-            if (data.id) {
-                fetch(API + 'mosques/' + data.id + '/view', {
-                    method: 'POST',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({source: 'page'})
-                }).catch(function(){});
-            }
+    if (mosqueData) {
+        mosqueId = mosqueData.id;
 
-            // Unclaimed mosque — show claim + patron CTA
-            if (data.status === 'unclaimed') {
-                var claimHtml = '<div style="margin-top:16px;">' +
-                    '<a href="/mosque/' + slug + '/patron" class="ynj-btn" style="background:#00ADEF;color:#fff;justify-content:center;width:100%;margin-bottom:8px;">🏅 <?php echo esc_js( __( 'Become a Patron', 'yourjannah' ) ); ?></a>' +
-                    '<p style="text-align:center;font-size:12px;color:rgba(255,255,255,.7);margin-bottom:12px;"><?php echo esc_js( __( 'Support this mosque monthly through YourJannah', 'yourjannah' ) ); ?></p>' +
-                    '<a href="<?php echo esc_js( home_url( '/register?claim=' ) ); ?>' + slug + '" style="display:block;text-align:center;font-size:12px;color:#fbbf24;font-weight:700;text-decoration:underline;"><?php echo esc_js( __( 'Are you the mosque admin? Claim this page', 'yourjannah' ) ); ?></a>' +
-                    '</div>';
-                document.getElementById('mp-subscribe').insertAdjacentHTML('afterend', claimHtml);
-                // Hide announcements/events sections — unclaimed mosques have none
-                document.getElementById('mp-announcements').style.display = 'none';
-                document.getElementById('mp-events').style.display = 'none';
-            }
+        // Track page view (fire-and-forget, fine as async)
+        if (mosqueData.id) {
+            fetch(API + 'mosques/' + mosqueData.id + '/view', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({source: 'page'})
+            }).catch(function(){});
+        }
 
-            checkSub();
-            loadSubCount();
-            if (data.prayer_times && !data.prayer_times.error) {
-                const grid = document.getElementById('mp-prayer-grid');
-                grid.innerHTML = '';
-                ['fajr','sunrise','dhuhr','asr','maghrib','isha'].forEach(p => {
-                    if (!data.prayer_times[p]) return;
-                    const t = String(data.prayer_times[p]).replace(/:\d{2}$/,'').replace(/\s*\(.*\)/,'');
-                    grid.innerHTML += '<div class="ynj-prayer-row"><span class="ynj-prayer-row__name">' + p.charAt(0).toUpperCase()+p.slice(1) + '</span><span class="ynj-prayer-row__time">' + t + '</span></div>';
-                });
-            }
-        })
-        .catch(() => { document.getElementById('mp-name').textContent = '<?php echo esc_js( __( 'Mosque not found', 'yourjannah' ) ); ?>'; });
+        // Unclaimed mosque — show claim + patron CTA
+        if (mosqueData.status === 'unclaimed') {
+            var claimHtml = '<div style="margin-top:16px;">' +
+                '<a href="/mosque/' + slug + '/patron" class="ynj-btn" style="background:#00ADEF;color:#fff;justify-content:center;width:100%;margin-bottom:8px;">🏅 <?php echo esc_js( __( 'Become a Patron', 'yourjannah' ) ); ?></a>' +
+                '<p style="text-align:center;font-size:12px;color:rgba(255,255,255,.7);margin-bottom:12px;"><?php echo esc_js( __( 'Support this mosque monthly through YourJannah', 'yourjannah' ) ); ?></p>' +
+                '<a href="<?php echo esc_js( home_url( '/register?claim=' ) ); ?>' + slug + '" style="display:block;text-align:center;font-size:12px;color:#fbbf24;font-weight:700;text-decoration:underline;"><?php echo esc_js( __( 'Are you the mosque admin? Claim this page', 'yourjannah' ) ); ?></a>' +
+                '</div>';
+            document.getElementById('mp-subscribe').insertAdjacentHTML('afterend', claimHtml);
+            document.getElementById('mp-announcements').style.display = 'none';
+            document.getElementById('mp-events').style.display = 'none';
+        }
 
-    fetch(API + 'mosques/' + slug + '/announcements')
-        .then(r => r.json())
-        .then(data => {
-            if (data.announcements && data.announcements.length) {
-                document.getElementById('mp-feed').innerHTML = data.announcements.map(a =>
-                    '<div class="ynj-feed-item"><h4>' + esc(a.title) + '</h4><p>' + esc(a.body) + '</p><time>' + esc(a.published_at||'') + '</time></div>'
-                ).join('');
-            }
-        }).catch(() => {});
+        checkSub();
+        loadSubCount();
 
-    fetch(API + 'mosques/' + slug + '/events?upcoming=1')
-        .then(r => r.json())
-        .then(data => {
-            if (data.events && data.events.length) {
-                document.getElementById('mp-events-list').innerHTML = data.events.map(e => {
-                    const t = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
-                    return '<div class="ynj-feed-item"><h4>' + esc(e.title) + '</h4><p>' + esc(e.event_date||'') + ' &middot; ' + t + '</p></div>';
-                }).join('');
-            }
-        }).catch(() => {});
+        if (mosqueData.prayer_times && !mosqueData.prayer_times.error) {
+            const grid = document.getElementById('mp-prayer-grid');
+            grid.innerHTML = '';
+            ['fajr','sunrise','dhuhr','asr','maghrib','isha'].forEach(p => {
+                if (!mosqueData.prayer_times[p]) return;
+                const t = String(mosqueData.prayer_times[p]).replace(/:\d{2}$/,'').replace(/\s*\(.*\)/,'');
+                grid.innerHTML += '<div class="ynj-prayer-row"><span class="ynj-prayer-row__name">' + p.charAt(0).toUpperCase()+p.slice(1) + '</span><span class="ynj-prayer-row__time">' + t + '</span></div>';
+            });
+        }
+    }
+
+    // Render pre-loaded announcements
+    if (preAnnouncements && preAnnouncements.length) {
+        document.getElementById('mp-feed').innerHTML = preAnnouncements.map(a =>
+            '<div class="ynj-feed-item"><h4>' + esc(a.title) + '</h4><p>' + esc(a.body) + '</p><time>' + esc(a.published_at||'') + '</time></div>'
+        ).join('');
+    }
+
+    // Render pre-loaded events
+    if (preEvents && preEvents.length) {
+        document.getElementById('mp-events-list').innerHTML = preEvents.map(e => {
+            const t = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
+            return '<div class="ynj-feed-item"><h4>' + esc(e.title) + '</h4><p>' + esc(e.event_date||'') + ' &middot; ' + t + '</p></div>';
+        }).join('');
+    }
 })();
 </script>
 <?php
