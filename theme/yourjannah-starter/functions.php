@@ -119,10 +119,11 @@ add_action( 'wp_enqueue_scripts', function() {
         'userToken'  => '', // Set via localStorage on client
     ] );
 
-    // Homepage script — ONLY on front page, never on mosque sub-pages
+    // Homepage script — on front page AND mosque profile pages (same layout)
     $request_path = trim( wp_parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH ), '/' );
     $is_homepage = ( $request_path === '' || is_front_page() ) && ! get_query_var( 'ynj_mosque_slug' ) && ! get_query_var( 'ynj_page_type' );
-    if ( $is_homepage ) {
+    $is_mosque_profile = ( get_query_var( 'ynj_page_type' ) === 'mosque_profile' );
+    if ( $is_homepage || $is_mosque_profile ) {
         wp_enqueue_script(
             'ynj-homepage',
             YNJ_THEME_URI . '/assets/js/homepage.js',
@@ -190,7 +191,8 @@ add_action( 'wp_head', function() {
                 'longitude' => $mosque_obj->longitude ? (float) $mosque_obj->longitude : null,
                 'phone'     => $mosque_obj->phone,
                 'website'   => $mosque_obj->website,
-                'dfm_slug'  => $mosque_obj->dfm_slug ?? '',
+                'dfm_slug'      => $mosque_obj->dfm_slug ?? '',
+                'prayer_times'  => isset( $mosque_obj->prayer_times ) ? ( is_string( $mosque_obj->prayer_times ) ? json_decode( $mosque_obj->prayer_times, true ) : $mosque_obj->prayer_times ) : null,
             ];
         }
     }
