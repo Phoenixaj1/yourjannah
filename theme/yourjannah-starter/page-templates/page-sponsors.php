@@ -33,6 +33,8 @@ if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
 ?>
 
 <main class="ynj-main">
+    <p style="font-size:14px;font-weight:600;color:#0a1628;margin-bottom:12px;line-height:1.4;"><?php esc_html_e( 'These people and businesses support your masjid. Support them back.', 'yourjannah' ); ?></p>
+
     <!-- CTA Buttons -->
     <div style="display:flex;gap:8px;margin-bottom:14px;">
         <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/sponsors/join' ) ); ?>" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 16px;border-radius:12px;background:linear-gradient(135deg,#00ADEF,#0369a1);color:#fff;font-size:14px;font-weight:700;text-decoration:none;text-align:center;box-shadow:0 4px 12px rgba(0,173,239,.25);">⭐ <?php esc_html_e( 'Sponsor Your Masjid', 'yourjannah' ); ?></a>
