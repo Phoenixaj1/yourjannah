@@ -286,7 +286,43 @@ img,svg{display:block;max-width:100%;}
 .ynj-support-card--services{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;}
 .ynj-support-card--services .ynj-support-card__help{background:rgba(255,255,255,.15);color:rgba(255,255,255,.9);}
 
-/* Patron CTA */
+/* Patron Hero — prominent above sponsors */
+.ynj-patron-hero{
+    margin-bottom:12px;border-radius:16px;overflow:hidden;
+    background:linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#0e4d3c 100%);
+    color:#fff;
+}
+.ynj-patron-hero__inner{padding:16px 18px;}
+.ynj-patron-hero__badge{font-size:28px;margin-bottom:4px;}
+.ynj-patron-hero__text{margin-bottom:12px;}
+.ynj-patron-hero__text strong{font-size:16px;font-weight:800;display:block;margin-bottom:2px;}
+.ynj-patron-hero__text span{font-size:12px;opacity:.8;line-height:1.4;}
+.ynj-patron-hero__tiers{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.ynj-patron-tier{
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:12px 6px 10px;border-radius:12px;text-decoration:none;color:#fff;
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);
+    transition:all .2s;position:relative;
+}
+.ynj-patron-tier:hover,.ynj-patron-tier:active{
+    background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.3);
+    transform:translateY(-2px);
+}
+.ynj-patron-tier--popular{
+    background:rgba(0,173,239,.25);border-color:rgba(0,173,239,.5);
+}
+.ynj-patron-tier--popular:hover{
+    background:rgba(0,173,239,.35);border-color:rgba(0,173,239,.7);
+}
+.ynj-patron-tier__badge{
+    position:absolute;top:-6px;left:50%;transform:translateX(-50%);
+    font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;
+    padding:2px 8px;border-radius:6px;background:#00ADEF;color:#fff;white-space:nowrap;
+}
+.ynj-patron-tier__price{font-size:20px;font-weight:900;line-height:1;}
+.ynj-patron-tier__label{font-size:10px;font-weight:600;opacity:.7;text-transform:uppercase;letter-spacing:.5px;}
+
+/* Legacy patron CTA (kept for backward compat) */
 .ynj-patron-cta{
     display:flex;align-items:center;justify-content:space-between;gap:12px;
     padding:14px 18px;border-radius:14px;text-decoration:none;

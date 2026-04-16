@@ -108,6 +108,36 @@ get_header();
     <!-- Welcome / Greeting (JS populates) -->
     <div id="ynj-greeting" style="display:none;"></div>
 
+    <!-- Patron Membership CTA — prominent, above sponsors -->
+    <div class="ynj-patron-hero" id="patron-hero">
+        <div class="ynj-patron-hero__inner">
+            <div class="ynj-patron-hero__badge">🏅</div>
+            <div class="ynj-patron-hero__text">
+                <strong><?php esc_html_e( 'Become a Patron', 'yourjannah' ); ?></strong>
+                <span><?php esc_html_e( 'Support your masjid monthly — earn badges & rewards', 'yourjannah' ); ?></span>
+            </div>
+            <div class="ynj-patron-hero__tiers">
+                <a href="#" class="ynj-patron-tier" data-amount="5" data-nav-mosque="/mosque/{slug}/patron">
+                    <span class="ynj-patron-tier__price">£5</span>
+                    <span class="ynj-patron-tier__label"><?php esc_html_e( 'Bronze', 'yourjannah' ); ?></span>
+                </a>
+                <a href="#" class="ynj-patron-tier ynj-patron-tier--popular" data-amount="10" data-nav-mosque="/mosque/{slug}/patron">
+                    <span class="ynj-patron-tier__badge"><?php esc_html_e( 'Popular', 'yourjannah' ); ?></span>
+                    <span class="ynj-patron-tier__price">£10</span>
+                    <span class="ynj-patron-tier__label"><?php esc_html_e( 'Silver', 'yourjannah' ); ?></span>
+                </a>
+                <a href="#" class="ynj-patron-tier" data-amount="20" data-nav-mosque="/mosque/{slug}/patron">
+                    <span class="ynj-patron-tier__price">£20</span>
+                    <span class="ynj-patron-tier__label"><?php esc_html_e( 'Gold', 'yourjannah' ); ?></span>
+                </a>
+                <a href="#" class="ynj-patron-tier" data-amount="50" data-nav-mosque="/mosque/{slug}/patron">
+                    <span class="ynj-patron-tier__price">£50</span>
+                    <span class="ynj-patron-tier__label"><?php esc_html_e( 'Platinum', 'yourjannah' ); ?></span>
+                </a>
+            </div>
+        </div>
+    </div>
+
     <!-- Sponsor Ticker -->
     <div class="ynj-ticker" id="sponsor-ticker" style="display:none;">
         <span class="ynj-ticker__label">⭐ <?php esc_html_e( 'Sponsors', 'yourjannah' ); ?></span>
@@ -236,19 +266,7 @@ get_header();
         </a>
     </div>
 
-    <!-- Patron membership CTA -->
-    <a class="ynj-patron-cta" id="patron-cta" href="#" data-nav-mosque="/mosque/{slug}/patron">
-        <div class="ynj-patron-cta__left">
-            <span style="font-size:20px;">🕌</span>
-            <div>
-                <strong><?php esc_html_e( 'Become a Patron', 'yourjannah' ); ?></strong>
-                <span><?php esc_html_e( 'Support your masjid monthly', 'yourjannah' ); ?></span>
-            </div>
-        </div>
-        <div class="ynj-patron-cta__tiers">
-            <span>£5</span><span>£10</span><span>£20</span>
-        </div>
-    </a>
+    <!-- (Patron CTA moved above sponsor ticker) -->
 
     </div><!-- end left column -->
     <div class="ynj-desktop-grid__right">

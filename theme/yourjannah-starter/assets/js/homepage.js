@@ -20,22 +20,45 @@
                 showGreeting();
                 loadPoints();
 
-                // Instant load: use cached mosque — don't wait for GPS
-                var cachedMosque = null;
-                try { cachedMosque = JSON.parse(localStorage.getItem('ynj_cached_mosque')); } catch(e) {}
                 var savedSlug = mosqueSlug || localStorage.getItem('ynj_mosque_slug');
+                var today = new Date().toDateString();
+                var cacheDate = localStorage.getItem('ynj_cache_date');
+                var isCacheFresh = (cacheDate === today);
+
+                // Try to load from today's cache first (instant)
+                var cachedPrayers = null;
+                var cachedFeed = null;
+                try { cachedPrayers = JSON.parse(localStorage.getItem('ynj_cached_prayers')); } catch(e) {}
+                try { cachedFeed = JSON.parse(localStorage.getItem('ynj_cached_feed')); } catch(e) {}
 
                 if (savedSlug) {
-                    // Instantly render with saved mosque — no GPS wait
                     mosqueSlug = savedSlug;
-                    document.getElementById('mosque-name').textContent = (cachedMosque && cachedMosque.name) || savedSlug;
-                    loadMosque(savedSlug);
-                    loadFeed(savedSlug);
+                    var cachedName = localStorage.getItem('ynj_mosque_name') || savedSlug;
+                    document.getElementById('mosque-name').textContent = cachedName;
                     updateNavLinks(savedSlug);
+                    document.getElementById('timetable-link').href = '/mosque/' + savedSlug + '/prayers';
+
+                    if (isCacheFresh && cachedPrayers) {
+                        // Use today's cached prayer times — instant render
+                        setPrayerTimes(cachedPrayers);
+                    }
+
+                    if (isCacheFresh && cachedFeed) {
+                        // Use today's cached feed — instant render
+                        allFeedItems = cachedFeed;
+                        renderFeed();
+                    }
+
+                    // Always load fresh data in background (updates cache)
+                    // If cache was used, load silently (no "Loading..." flash)
+                    loadMosque(savedSlug);
+                    loadFeed(savedSlug, isCacheFresh && cachedFeed);
                 }
 
-                // GPS runs in background — only updates travel times, doesn't block
-                requestGps();
+                // Only auto-GPS on first visit or if cache is stale
+                if (!savedSlug || !isCacheFresh) {
+                    requestGps();
+                }
             }
 
             function showGreeting() {
@@ -148,6 +171,10 @@
 
             function setupGpsButton() {
                 document.getElementById('gps-btn').addEventListener('click', () => {
+                    // Clear daily cache — force fresh location + data
+                    localStorage.removeItem('ynj_cache_date');
+                    localStorage.removeItem('ynj_cached_prayers');
+                    localStorage.removeItem('ynj_cached_feed');
                     requestGps();
                 });
             }
@@ -392,17 +419,22 @@
             }
 
             /* ---- Prayer Times ---- */
+            var countdownInterval = null;
             function setPrayerTimes(times) {
                 prayerTimes = {};
                 ['fajr','sunrise','dhuhr','asr','maghrib','isha'].forEach(p => {
                     if (times[p]) {
-                        // Strip timezone suffix first, then strip seconds only (keep HH:MM)
                         var raw = String(times[p]).replace(/\s*\(.*\)/,'');
                         prayerTimes[p] = raw.replace(/^(\d{1,2}:\d{2}):\d{2}$/, '$1');
                     }
                 });
+                // Cache prayer times for today
+                try {
+                    localStorage.setItem('ynj_cached_prayers', JSON.stringify(prayerTimes));
+                    localStorage.setItem('ynj_cache_date', new Date().toDateString());
+                } catch(e) {}
                 updateCountdown();
-                setInterval(updateCountdown, 1000);
+                if (!countdownInterval) countdownInterval = setInterval(updateCountdown, 1000);
                 renderPrayerOverview();
             }
 
@@ -624,9 +656,9 @@
             let nearbyFeedItems = [];
             let nearbyLoaded = false;
 
-            function loadFeed(slug) {
+            function loadFeed(slug, silent) {
                 var feedEl = document.getElementById('feed-list');
-                if (feedEl) feedEl.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">Loading...</p>';
+                if (feedEl && !silent) feedEl.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">Loading...</p>';
 
                 Promise.all([
                     fetch(`${API}/mosques/${slug}/announcements`).then(r => r.ok ? r.json() : {announcements:[]}).catch(() => ({announcements:[]})),
@@ -663,6 +695,8 @@
                         });
                     });
                     sortFeedItems(allFeedItems);
+                    // Cache feed for today
+                    try { localStorage.setItem('ynj_cached_feed', JSON.stringify(allFeedItems)); } catch(e) {}
                     renderFeed();
                 }).catch(function(err) {
                     console.error('Feed load error:', err);

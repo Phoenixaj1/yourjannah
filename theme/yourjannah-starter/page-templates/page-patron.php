@@ -11,7 +11,7 @@ get_header();
 $slug = ynj_mosque_slug();
 ?>
 <style>
-.ynj-patron-hero{text-align:center;padding:30px 20px 20px;}
+.ynj-main .ynj-patron-hero{text-align:center;padding:30px 20px 20px;background:none;border-radius:0;margin-bottom:0;}
 .ynj-patron-hero h2{font-size:22px;font-weight:800;margin-bottom:6px;}
 .ynj-patron-hero p{font-size:14px;color:#6b8fa3;line-height:1.5;}
 .ynj-tier{background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-radius:16px;padding:24px 20px;margin-bottom:12px;border:2px solid transparent;transition:all .2s;cursor:pointer;position:relative;}
@@ -69,7 +69,7 @@ $slug = ynj_mosque_slug();
     <!-- Tier cards -->
     <div id="tier-cards">
         <div class="ynj-tier selected" data-tier="supporter" onclick="selectTier('supporter')">
-            <span class="ynj-tier__badge ynj-tier__badge--supporter"><?php esc_html_e( 'Supporter', 'yourjannah' ); ?></span>
+            <span class="ynj-tier__badge ynj-tier__badge--supporter"><?php esc_html_e( 'Bronze', 'yourjannah' ); ?></span>
             <div class="ynj-tier__price">&pound;5 <span><?php esc_html_e( '/month', 'yourjannah' ); ?></span></div>
             <ul>
                 <li><?php esc_html_e( 'Patron badge on your profile', 'yourjannah' ); ?></li>
@@ -78,21 +78,31 @@ $slug = ynj_mosque_slug();
             </ul>
         </div>
         <div class="ynj-tier" data-tier="guardian" onclick="selectTier('guardian')">
-            <span class="ynj-tier__badge ynj-tier__badge--guardian"><?php esc_html_e( 'Guardian', 'yourjannah' ); ?></span>
+            <span class="ynj-tier__badge ynj-tier__badge--guardian"><?php esc_html_e( 'Silver', 'yourjannah' ); ?></span>
             <div class="ynj-tier__price">&pound;10 <span><?php esc_html_e( '/month', 'yourjannah' ); ?></span></div>
             <ul>
-                <li><?php esc_html_e( 'Everything in Supporter', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Guardian tier badge', 'yourjannah' ); ?></li>
+                <li><?php esc_html_e( 'Everything in Bronze', 'yourjannah' ); ?></li>
+                <li><?php esc_html_e( 'Silver tier badge', 'yourjannah' ); ?></li>
                 <li><?php esc_html_e( 'Priority event booking', 'yourjannah' ); ?></li>
             </ul>
         </div>
         <div class="ynj-tier" data-tier="champion" onclick="selectTier('champion')">
-            <span class="ynj-tier__badge ynj-tier__badge--champion"><?php esc_html_e( 'Champion', 'yourjannah' ); ?></span>
+            <span class="ynj-tier__badge ynj-tier__badge--champion"><?php esc_html_e( 'Gold', 'yourjannah' ); ?></span>
             <div class="ynj-tier__price">&pound;20 <span><?php esc_html_e( '/month', 'yourjannah' ); ?></span></div>
             <ul>
-                <li><?php esc_html_e( 'Everything in Guardian', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Champion tier badge', 'yourjannah' ); ?></li>
+                <li><?php esc_html_e( 'Everything in Silver', 'yourjannah' ); ?></li>
+                <li><?php esc_html_e( 'Gold tier badge', 'yourjannah' ); ?></li>
                 <li><?php esc_html_e( 'Featured on patron wall', 'yourjannah' ); ?></li>
+            </ul>
+        </div>
+        <div class="ynj-tier" data-tier="platinum" onclick="selectTier('platinum')">
+            <span class="ynj-tier__badge" style="background:#fef3c7;color:#92400e;"><?php esc_html_e( 'Platinum', 'yourjannah' ); ?></span>
+            <div class="ynj-tier__price">&pound;50 <span><?php esc_html_e( '/month', 'yourjannah' ); ?></span></div>
+            <ul>
+                <li><?php esc_html_e( 'Everything in Gold', 'yourjannah' ); ?></li>
+                <li><?php esc_html_e( 'Platinum badge & VIP recognition', 'yourjannah' ); ?></li>
+                <li><?php esc_html_e( 'Priority room bookings', 'yourjannah' ); ?></li>
+                <li><?php esc_html_e( 'Exclusive masjid updates', 'yourjannah' ); ?></li>
             </ul>
         </div>
     </div>
@@ -122,7 +132,7 @@ $slug = ynj_mosque_slug();
     let selectedTier = 'supporter';
     let mosqueId = 0;
 
-    const tierPrices = { supporter: 5, guardian: 10, champion: 20 };
+    const tierPrices = { supporter: 5, guardian: 10, champion: 20, platinum: 50 };
 
     function selectTier(tier) {
         selectedTier = tier;
