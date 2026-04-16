@@ -287,10 +287,15 @@ add_action('init', function() {
     }
 });
 
-// Prayer reminder cron
+// Prayer reminder cron — auto-schedule if not already running
 add_action('ynj_prayer_reminder_cron', ['YNJ_Cron', 'check_prayers']);
 register_activation_hook(__FILE__, ['YNJ_Cron', 'schedule']);
 register_deactivation_hook(__FILE__, ['YNJ_Cron', 'unschedule']);
+add_action('init', function() {
+    if ( ! wp_next_scheduled( 'ynj_prayer_reminder_cron' ) ) {
+        YNJ_Cron::schedule();
+    }
+}, 20);
 
 // Admin email notifications
 add_action('ynj_new_enquiry', ['YNJ_Notify', 'on_enquiry'], 10, 2);
