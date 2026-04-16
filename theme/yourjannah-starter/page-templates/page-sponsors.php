@@ -46,11 +46,55 @@ if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
     </div>
 
     <div id="biz-panel-sponsors">
-        <div id="local-biz-list" class="ynj-sponsors-grid"><p class="ynj-text-muted">Loading&hellip;</p></div>
+        <div id="local-biz-list" class="ynj-sponsors-grid">
+        <?php if ( empty( $businesses ) ) : ?>
+            <p class="ynj-text-muted"><?php esc_html_e( 'No sponsors yet. Be the first!', 'yourjannah' ); ?></p>
+        <?php else : foreach ( $businesses as $i => $b ) :
+            $rank = $i + 1;
+            $tierClass = $rank <= 3 ? ' ynj-biz--' . ( $rank === 1 ? 'premium' : ( $rank === 2 ? 'featured' : 'standard' ) ) : '';
+            $tierLabel = $rank <= 3 ? [ '🥇 Premium', '🥈 Featured', '🥉 Standard' ][ $rank - 1 ] : '';
+            $medal = $rank <= 3 ? [ '🥇', '🥈', '🥉' ][ $rank - 1 ] : '';
+            $initial = strtoupper( substr( $b->business_name ?: '?', 0, 1 ) );
+        ?>
+            <div class="ynj-biz-card<?php echo $tierClass; ?>">
+                <?php if ( $tierLabel ) : ?><div class="ynj-biz-tier"><?php echo $tierLabel; ?> Sponsor</div><?php endif; ?>
+                <div class="ynj-biz-header">
+                    <div class="ynj-biz-logo"><?php echo esc_html( $initial ); ?></div>
+                    <div class="ynj-biz-info">
+                        <h3 class="ynj-biz-name"><?php echo esc_html( $b->business_name ); ?></h3>
+                        <span class="ynj-biz-cat"><?php echo esc_html( $b->category ); ?></span>
+                    </div>
+                </div>
+                <?php if ( $b->description ) : ?><p class="ynj-biz-desc"><?php echo esc_html( mb_strimwidth( $b->description, 0, 180, '...' ) ); ?></p><?php endif; ?>
+                <div class="ynj-biz-details">
+                    <?php if ( $b->address || $b->postcode ) : ?><div class="ynj-biz-detail"><span>📍</span> <?php echo esc_html( implode( ', ', array_filter( [ $b->address, $b->postcode ] ) ) ); ?></div><?php endif; ?>
+                    <?php if ( $b->phone ) : ?><div class="ynj-biz-detail"><a href="tel:<?php echo esc_attr( $b->phone ); ?>">📞 <?php echo esc_html( $b->phone ); ?></a></div><?php endif; ?>
+                    <?php if ( $b->email ) : ?><div class="ynj-biz-detail"><a href="mailto:<?php echo esc_attr( $b->email ); ?>">✉️ <?php echo esc_html( $b->email ); ?></a></div><?php endif; ?>
+                </div>
+                <div class="ynj-biz-actions">
+                    <?php if ( $b->phone ) : ?><a href="tel:<?php echo esc_attr( $b->phone ); ?>" class="ynj-biz-btn">📞 Call</a><?php endif; ?>
+                    <?php if ( $b->website ) : ?><a href="<?php echo esc_url( $b->website ); ?>" target="_blank" rel="noopener" class="ynj-biz-btn ynj-biz-btn--outline">🌐 Website</a><?php endif; ?>
+                </div>
+            </div>
+        <?php endforeach; endif; ?>
+        </div>
     </div>
 
     <div id="biz-panel-services" style="display:none;">
-        <div id="local-svc-list"><p class="ynj-text-muted">Loading&hellip;</p></div>
+        <div id="local-svc-list">
+        <?php if ( empty( $services ) ) : ?>
+            <p class="ynj-text-muted"><?php esc_html_e( 'No services listed yet.', 'yourjannah' ); ?> <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/services/join' ) ); ?>"><?php esc_html_e( 'List yours', 'yourjannah' ); ?></a></p>
+        <?php else : foreach ( $services as $s ) : ?>
+            <div class="ynj-svc-card">
+                <div class="ynj-svc-card__body">
+                    <h4><?php echo esc_html( $s->provider_name ); ?></h4>
+                    <span class="ynj-badge"><?php echo esc_html( $s->service_type ); ?></span>
+                    <p class="ynj-text-muted"><?php echo esc_html( mb_strimwidth( $s->description, 0, 100, '...' ) ); ?></p>
+                    <?php if ( $s->phone ) : ?><a href="tel:<?php echo esc_attr( $s->phone ); ?>" class="ynj-svc-card__phone"><?php echo esc_html( $s->phone ); ?></a><?php endif; ?>
+                </div>
+            </div>
+        <?php endforeach; endif; ?>
+        </div>
     </div>
 </main>
 
