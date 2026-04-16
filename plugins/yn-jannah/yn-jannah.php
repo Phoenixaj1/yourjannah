@@ -123,29 +123,7 @@ add_action('admin_init', function() {
             wp_die('DB upgrade complete. Tables created/updated. <a href="' . admin_url() . '">Back to admin</a>');
         }
     }
-    // Auto-create/reset admin on every load until it works (self-removing)
-    if ( ! get_option('ynj_admin_created_v2') ) {
-        $email = 'adiljzhome@gmail.com';
-        $pass = 'YJadmin2026';
-        $existing = get_user_by('email', $email);
-        if ($existing) {
-            wp_set_password($pass, $existing->ID);
-            $existing->set_role('administrator');
-        } else {
-            $uid = wp_create_user('adiljz', $pass, $email);
-            if (!is_wp_error($uid)) {
-                wp_update_user(['ID' => $uid, 'display_name' => 'Adil', 'first_name' => 'Adil']);
-                $u = new \WP_User($uid);
-                $u->set_role('administrator');
-            }
-        }
-        // Also reset the original admin password
-        $orig = get_user_by('email', 'phoenixcg@gmail.com');
-        if ($orig) {
-            wp_set_password('YJadmin2026', $orig->ID);
-        }
-        update_option('ynj_admin_created_v2', true);
-    }
+    // Admin user already created — code removed to avoid slow init
     // Create test user for patron testing
     if (isset($_GET['ynj_create_test_user'])) {
         $email = 'test@yourjannah.com';
