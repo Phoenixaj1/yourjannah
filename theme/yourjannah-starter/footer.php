@@ -75,6 +75,7 @@ function ynj_default_mobile_nav() {
         [ 'label' => 'Patron',     'href' => '/mosque/' . $slug . '/patron',        'icon' => '🏅' ],
         [ 'label' => 'Profile',    'href' => '/profile',                            'icon' => '👤' ],
         [ 'label' => 'Login',      'href' => '/login',                              'icon' => '🔑' ],
+        [ 'label' => 'Sponsor YourJannah','href' => '/sponsor-yourjannah',           'icon' => '🤲' ],
     ];
     echo '<div class="ynj-more-drawer" id="ynj-more-drawer" onclick="if(event.target===this)this.classList.remove(\'open\')">';
     echo '<div class="ynj-more-drawer__sheet">';

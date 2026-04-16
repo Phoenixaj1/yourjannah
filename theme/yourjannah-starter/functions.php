@@ -277,6 +277,7 @@ add_action( 'init', function() {
     add_rewrite_rule( '^reset-password/?$', 'index.php?ynj_page_type=reset_password', 'top' );
     add_rewrite_rule( '^dashboard/?$', 'index.php?ynj_page_type=dashboard', 'top' );
     add_rewrite_rule( '^classes/?$', 'index.php?ynj_page_type=classes_browse', 'top' );
+    add_rewrite_rule( '^sponsor-yourjannah/?$', 'index.php?ynj_page_type=sponsor_yourjannah', 'top' );
 
 } );
 
@@ -322,7 +323,8 @@ add_filter( 'template_include', function( $template ) {
         'forgot_password' => 'page-templates/page-forgot-password.php',
         'reset_password'  => 'page-templates/page-reset-password.php',
         'dashboard'       => 'page-templates/page-dashboard.php',
-        'classes_browse'  => 'page-templates/page-classes-browse.php',
+        'classes_browse'       => 'page-templates/page-classes-browse.php',
+        'sponsor_yourjannah'   => 'page-templates/page-sponsor-yourjannah.php',
     ];
 
     if ( isset( $template_map[ $page_type ] ) ) {
