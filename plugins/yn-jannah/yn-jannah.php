@@ -124,7 +124,7 @@ add_action('init', function() {
     }
 }, 1);
 
-// Also try to create a physical sw.js at the web root on plugin activation/admin load
+// Also create physical sw.js at web root on admin load
 add_action('admin_init', function() {
     $root_sw = ABSPATH . 'sw.js';
     $source_sw = YNJ_DIR . 'assets/js/sw.js';
@@ -132,6 +132,21 @@ add_action('admin_init', function() {
         @copy($source_sw, $root_sw);
     }
 }, 5);
+
+// Serve SW via REST API as ultimate fallback
+add_action('rest_api_init', function() {
+    register_rest_route('ynj/v1', '/sw', [
+        'methods' => 'GET',
+        'callback' => function() {
+            header('Content-Type: application/javascript');
+            header('Service-Worker-Allowed: /');
+            header('Cache-Control: no-cache, must-revalidate');
+            readfile(YNJ_DIR . 'assets/js/sw.js');
+            exit;
+        },
+        'permission_callback' => '__return_true',
+    ]);
+});
 
 // Serve /.well-known/assetlinks.json for Android TWA verification
 add_action('init', function() {

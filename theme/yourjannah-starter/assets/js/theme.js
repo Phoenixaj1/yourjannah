@@ -121,12 +121,17 @@
     // ================================================================
 
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' })
-            .then(function(reg) {
-                // Check for SW updates every 30 minutes
+        // Register SW — try /sw.js first, then REST API fallback
+        function regSW(url) {
+            return navigator.serviceWorker.register(url, { scope: '/' }).then(function(reg) {
                 setInterval(function() { reg.update(); }, 30 * 60 * 1000);
-            })
-            .catch(function(err) { console.warn('SW registration failed:', err); });
+            });
+        }
+        regSW('/sw.js').catch(function() {
+            regSW('/wp-json/ynj/v1/sw').catch(function(err) {
+                console.warn('SW registration failed:', err);
+            });
+        });
     }
 
 })();
