@@ -5,7 +5,7 @@
  * Handles push notifications for mosque announcements and prayer reminders.
  */
 
-const CACHE_VERSION = '2.2.0';
+const CACHE_VERSION = '2.5.0';
 const CACHE_NAME = 'ynj-v' + CACHE_VERSION;
 
 // Only pre-cache static assets — NEVER cache HTML pages
@@ -85,9 +85,10 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Static assets only (CSS/JS/images): cache with network update.
+    // Static assets (CSS/JS/images): network-first, fall back to cache.
+    // This ensures code updates are always immediate — no stale serving.
     if (isStaticAsset(url.pathname)) {
-        event.respondWith(cacheFirst(request));
+        event.respondWith(networkFirstAsset(request));
         return;
     }
 
@@ -136,29 +137,21 @@ async function networkFirstWithOffline(request) {
 }
 
 /**
- * Stale-while-revalidate strategy (for static assets).
- * Returns cached version immediately, fetches update in background.
+ * Network-first strategy for static assets.
+ * Always tries network first so code updates are immediate.
+ * Falls back to cache only when offline.
  */
-async function cacheFirst(request) {
-    const cached = await caches.match(request);
-
-    // Fetch update in background regardless
-    const fetchPromise = fetch(request).then((response) => {
+async function networkFirstAsset(request) {
+    try {
+        const response = await fetch(request);
         if (response.ok) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
         return response;
-    }).catch(() => null);
-
-    // Return cached immediately if available, otherwise wait for network
-    if (cached) return cached;
-
-    try {
-        const response = await fetchPromise;
-        return response || new Response('', { status: 503 });
     } catch (err) {
-        return new Response('', { status: 503 });
+        const cached = await caches.match(request);
+        return cached || new Response('', { status: 503 });
     }
 }
 
