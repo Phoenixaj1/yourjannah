@@ -260,11 +260,29 @@
             function selectMosque(slug, name, lat, lng, distKm) {
                 mosqueSlug = slug;
                 mosqueLat = lat; mosqueLng = lng;
+                var displayName = name || slug;
                 localStorage.setItem('ynj_mosque_slug', slug);
-                localStorage.setItem('ynj_mosque_name', name || slug);
+                localStorage.setItem('ynj_mosque_name', displayName);
                 // Cache mosque for instant load next time
                 try { localStorage.setItem('ynj_cached_mosque', JSON.stringify({slug:slug,name:name,lat:lat,lng:lng})); } catch(e){}
-                document.getElementById('mosque-name').textContent = name || slug;
+                // Clear stale daily cache so fresh data loads for new mosque
+                localStorage.removeItem('ynj_cache_date');
+                localStorage.removeItem('ynj_cached_prayers');
+                localStorage.removeItem('ynj_cached_feed');
+
+                // Update ALL headings immediately — no waiting for API
+                document.getElementById('mosque-name').textContent = displayName;
+                var pb = document.getElementById('patron-bar-text');
+                if (pb) pb.textContent = 'Become a Patron of ' + displayName;
+                var fh = document.getElementById('feed-heading');
+                if (fh) fh.textContent = "What's Happening at " + displayName;
+                var npl = document.getElementById('next-prayer-label');
+                if (npl) npl.textContent = 'Next Prayer at ' + displayName;
+                var sh = document.getElementById('cta-sponsor-help');
+                if (sh) sh.textContent = 'Funds go to supporting ' + displayName;
+                var svh = document.getElementById('cta-services-help');
+                if (svh) svh.textContent = 'Proceeds help fund ' + displayName;
+
                 updateNavLinks(slug);
 
                 // Timetable link
@@ -285,7 +303,16 @@
                     }
                 }
 
-                // Fetch prayer times
+                // Clear old mosque data immediately when switching
+                var tickerEl = document.getElementById('sponsor-ticker');
+                if (tickerEl) tickerEl.style.display = 'none';
+                var jumuahEl = document.getElementById('jumuah-card');
+                if (jumuahEl) jumuahEl.style.display = 'none';
+                allFeedItems = [];
+                var feedEl = document.getElementById('feed-list');
+                if (feedEl) feedEl.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">Loading...</p>';
+
+                // Fetch fresh data for new mosque
                 loadMosque(slug);
 
                 // Fetch feed
