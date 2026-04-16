@@ -389,7 +389,7 @@ function ynj_get_mosque( $slug = null ) {
 
     global $wpdb;
     $mosque = $wpdb->get_row( $wpdb->prepare(
-        "SELECT * FROM " . YNJ_DB::table( 'mosques' ) . " WHERE slug = %s AND status = 'active'",
+        "SELECT * FROM " . YNJ_DB::table( 'mosques' ) . " WHERE slug = %s AND status IN ('active','unclaimed')",
         $slug
     ) );
 

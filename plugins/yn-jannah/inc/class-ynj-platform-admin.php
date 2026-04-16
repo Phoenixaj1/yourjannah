@@ -46,6 +46,7 @@ class YNJ_Platform_Admin {
         add_submenu_page( 'ynj-platform', 'All Members', 'Members', 'manage_options', 'ynj-members', [ __CLASS__, 'page_members' ] );
         add_submenu_page( 'ynj-platform', 'Messaging', 'Messaging', 'manage_options', 'ynj-messaging', [ __CLASS__, 'page_messaging' ] );
         add_submenu_page( 'ynj-platform', 'Revenue', 'Revenue', 'manage_options', 'ynj-revenue', [ __CLASS__, 'page_revenue' ] );
+        add_submenu_page( 'ynj-platform', 'Pipeline', '🎯 Pipeline', 'manage_options', 'ynj-pipeline', [ __CLASS__, 'page_pipeline' ] );
         add_submenu_page( 'ynj-platform', 'Enquiries', 'Enquiries', 'manage_options', 'ynj-platform-enquiries', [ __CLASS__, 'page_enquiries' ] );
     }
 
@@ -475,6 +476,122 @@ class YNJ_Platform_Admin {
                 <?php endforeach; ?>
                 </tbody>
             </table>
+        </div>
+        <?php
+    }
+
+    // ================================================================
+    // PIPELINE — Unclaimed mosques ranked by demand (patrons + intentions)
+    // ================================================================
+
+    public static function page_pipeline() {
+        global $wpdb;
+        $mt = YNJ_DB::table( 'mosques' );
+        $pt = YNJ_DB::table( 'patrons' );
+        $it = YNJ_DB::table( 'patron_intentions' );
+
+        // Summary stats
+        $unclaimed_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $mt WHERE status = 'unclaimed'" );
+        $active_count    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $mt WHERE status = 'active'" );
+
+        $patron_stats = $wpdb->get_row(
+            "SELECT COUNT(*) AS total, COALESCE(SUM(p.amount_pence),0) AS monthly_pence
+             FROM $pt p
+             JOIN $mt m ON m.id = p.mosque_id
+             WHERE p.status = 'active' AND m.status = 'unclaimed'"
+        );
+
+        $intention_stats = $wpdb->get_row(
+            "SELECT COUNT(*) AS total, COALESCE(SUM(i.amount_pence),0) AS total_pence
+             FROM $it i
+             JOIN $mt m ON m.id = i.mosque_id
+             WHERE i.status = 'active' AND m.status = 'unclaimed'"
+        );
+
+        // Pipeline: unclaimed mosques ranked by demand
+        $pipeline = $wpdb->get_results(
+            "SELECT m.id, m.name, m.city, m.postcode, m.slug,
+                    COALESCE(pc.patron_count, 0) AS patron_count,
+                    COALESCE(pc.patron_revenue, 0) AS patron_revenue,
+                    COALESCE(ic.intention_count, 0) AS intention_count,
+                    COALESCE(ic.intention_pence, 0) AS intention_pence,
+                    (COALESCE(pc.patron_count, 0) + COALESCE(ic.intention_count, 0)) AS total_demand
+             FROM $mt m
+             LEFT JOIN (
+                 SELECT mosque_id, COUNT(*) AS patron_count, SUM(amount_pence) AS patron_revenue
+                 FROM $pt WHERE status = 'active' GROUP BY mosque_id
+             ) pc ON pc.mosque_id = m.id
+             LEFT JOIN (
+                 SELECT mosque_id, COUNT(*) AS intention_count, SUM(amount_pence) AS intention_pence
+                 FROM $it WHERE status = 'active' GROUP BY mosque_id
+             ) ic ON ic.mosque_id = m.id
+             WHERE m.status = 'unclaimed'
+             HAVING total_demand > 0
+             ORDER BY total_demand DESC
+             LIMIT 100"
+        );
+        ?>
+        <div class="wrap">
+            <h1>🎯 Sales Pipeline — Unclaimed Mosques</h1>
+            <p>Mosques with the highest demand from patrons and intentions. Approach these first.</p>
+
+            <div style="display:flex;gap:16px;margin:20px 0;">
+                <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:16px 24px;text-align:center;">
+                    <div style="font-size:28px;font-weight:800;color:#0369a1;"><?php echo number_format( $unclaimed_count ); ?></div>
+                    <div style="font-size:12px;color:#6b7280;">Unclaimed Mosques</div>
+                </div>
+                <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:16px 24px;text-align:center;">
+                    <div style="font-size:28px;font-weight:800;color:#166534;"><?php echo number_format( $active_count ); ?></div>
+                    <div style="font-size:12px;color:#6b7280;">Active (Claimed)</div>
+                </div>
+                <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:16px 24px;text-align:center;">
+                    <div style="font-size:28px;font-weight:800;color:#00ADEF;"><?php echo (int) $patron_stats->total; ?></div>
+                    <div style="font-size:12px;color:#6b7280;">Paying Patrons (unclaimed)</div>
+                </div>
+                <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:16px 24px;text-align:center;">
+                    <div style="font-size:28px;font-weight:800;color:#7c3aed;"><?php echo (int) $intention_stats->total; ?></div>
+                    <div style="font-size:12px;color:#6b7280;">Intentions</div>
+                </div>
+                <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:16px 24px;text-align:center;">
+                    <div style="font-size:28px;font-weight:800;color:#b45309;">&pound;<?php echo number_format( ( (int) $patron_stats->monthly_pence + (int) $intention_stats->total_pence ) / 100 ); ?></div>
+                    <div style="font-size:12px;color:#6b7280;">Potential Monthly Revenue</div>
+                </div>
+            </div>
+
+            <?php if ( $pipeline ) : ?>
+            <table class="wp-list-table widefat fixed striped" style="margin-top:16px;">
+                <thead>
+                    <tr>
+                        <th>Mosque</th>
+                        <th>City</th>
+                        <th>Postcode</th>
+                        <th style="text-align:center;">Paying Patrons</th>
+                        <th style="text-align:center;">Intentions</th>
+                        <th style="text-align:right;">Monthly Revenue</th>
+                        <th style="text-align:right;">Potential</th>
+                        <th>Link</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ( $pipeline as $row ) : ?>
+                    <tr>
+                        <td><strong><?php echo esc_html( $row->name ); ?></strong></td>
+                        <td><?php echo esc_html( $row->city ); ?></td>
+                        <td><?php echo esc_html( $row->postcode ); ?></td>
+                        <td style="text-align:center;"><?php echo (int) $row->patron_count; ?></td>
+                        <td style="text-align:center;"><?php echo (int) $row->intention_count; ?></td>
+                        <td style="text-align:right;">&pound;<?php echo number_format( (int) $row->patron_revenue / 100 ); ?>/mo</td>
+                        <td style="text-align:right;">&pound;<?php echo number_format( ( (int) $row->patron_revenue + (int) $row->intention_pence ) / 100 ); ?>/mo</td>
+                        <td><a href="<?php echo esc_url( home_url( '/mosque/' . $row->slug ) ); ?>" target="_blank">View</a></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php else : ?>
+            <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:40px;text-align:center;margin-top:16px;">
+                <p style="font-size:16px;color:#6b7280;">No demand yet. Run ads to start collecting patron signups and intentions for unclaimed mosques.</p>
+            </div>
+            <?php endif; ?>
         </div>
         <?php
     }

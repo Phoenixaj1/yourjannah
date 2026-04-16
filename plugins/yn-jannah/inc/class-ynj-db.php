@@ -615,6 +615,25 @@ class YNJ_DB {
             KEY stripe_subscription_id (stripe_subscription_id)
         ) $charset_collate;";
 
+        // 20. Patron Intentions (pledge/waitlist for unclaimed mosques)
+        $tables[] = "CREATE TABLE {$t('patron_intentions')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            name varchar(255) NOT NULL DEFAULT '',
+            email varchar(255) NOT NULL DEFAULT '',
+            phone varchar(50) NOT NULL DEFAULT '',
+            tier varchar(30) NOT NULL DEFAULT 'supporter',
+            amount_pence int(11) NOT NULL DEFAULT 500,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            notified_at datetime DEFAULT NULL,
+            converted_at datetime DEFAULT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY email (email),
+            KEY status (status)
+        ) $charset_collate;";
+
         // 15. Masjid Services (mosque-offered bookable services: nikkah, funeral, etc.)
         $tables[] = "CREATE TABLE {$t('masjid_services')} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -743,7 +762,7 @@ class YNJ_DB {
         $table = self::table( 'mosques' );
 
         return $wpdb->get_var( $wpdb->prepare(
-            "SELECT id FROM $table WHERE slug = %s AND status = 'active' LIMIT 1",
+            "SELECT id FROM $table WHERE slug = %s AND status IN ('active','unclaimed') LIMIT 1",
             sanitize_text_field( $slug )
         ) );
     }

@@ -59,14 +59,14 @@ class YNJ_API_Mosques {
         $table = YNJ_DB::table( 'mosques' );
 
         $results = $wpdb->get_results( $wpdb->prepare(
-            "SELECT id, name, slug, city, postcode, address, latitude, longitude, logo_url,
+            "SELECT id, name, slug, city, postcode, address, latitude, longitude, logo_url, status,
                     ( 6371 * acos(
                         cos( radians(%f) ) * cos( radians(latitude) )
                         * cos( radians(longitude) - radians(%f) )
                         + sin( radians(%f) ) * sin( radians(latitude) )
                     )) AS distance
              FROM $table
-             WHERE status = 'active' AND latitude IS NOT NULL AND longitude IS NOT NULL
+             WHERE status IN ('active','unclaimed') AND latitude IS NOT NULL AND longitude IS NOT NULL
              ORDER BY distance ASC
              LIMIT %d",
             $lat, $lng, $lat, $limit
@@ -84,6 +84,7 @@ class YNJ_API_Mosques {
                 'longitude' => (float) $row->longitude,
                 'logo_url'  => $row->logo_url,
                 'distance'  => round( (float) $row->distance, 2 ),
+                'status'    => $row->status,
             ];
         }, $results );
 
@@ -108,7 +109,7 @@ class YNJ_API_Mosques {
         $results = $wpdb->get_results( $wpdb->prepare(
             "SELECT id, name, slug, city, postcode, address, latitude, longitude, logo_url
              FROM $table
-             WHERE status = 'active' AND ( name LIKE %s OR postcode LIKE %s )
+             WHERE status IN ('active','unclaimed') AND ( name LIKE %s OR postcode LIKE %s )
              ORDER BY name ASC
              LIMIT %d",
             $like, $like, $limit
@@ -141,7 +142,7 @@ class YNJ_API_Mosques {
         $table = YNJ_DB::table( 'mosques' );
 
         $mosque = $wpdb->get_row( $wpdb->prepare(
-            "SELECT * FROM $table WHERE slug = %s AND status = 'active' LIMIT 1",
+            "SELECT * FROM $table WHERE slug = %s AND status IN ('active','unclaimed') LIMIT 1",
             $slug
         ) );
 
@@ -170,6 +171,8 @@ class YNJ_API_Mosques {
             'has_wudu'          => (bool) $mosque->has_wudu,
             'has_parking'       => (bool) $mosque->has_parking,
             'capacity'          => (int) $mosque->capacity,
+            'status'            => $mosque->status,
+            'setup_complete'    => (bool) ( $mosque->setup_complete ?? false ),
         ];
 
         // Attach today's prayer times

@@ -8,12 +8,10 @@ if ( ! defined( 'ABSPATH' ) && php_sapi_name() !== 'cli' ) exit;
 global $wpdb;
 $table = $wpdb->prefix . 'ynj_mosques';
 
-// Check if already imported
+// Show existing count
 $existing = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table" );
-if ( $existing > 10 ) {
-    echo "Already have $existing mosques. Skipping import. Delete first if you want to re-import.\n";
-    exit;
-}
+echo "Existing mosques: $existing\n";
+// Allow re-import — will skip existing slugs
 
 // Read TSV
 $file = __DIR__ . '/data-mosques.tsv';
@@ -63,7 +61,7 @@ foreach ( $lines as $line ) {
         'has_parking'       => (int) $row['has_parking'],
         'has_wudu'          => (int) $row['has_wudu'],
         'description'       => trim( $row['description'] ),
-        'status'            => 'active',
+        'status'            => 'unclaimed',
     ];
 
     if ( $postcode ) {
@@ -109,13 +107,10 @@ foreach ( $chunks as $i => $chunk ) {
 
 echo "Total geocoded: " . count( $coords ) . " / " . count( $postcodes ) . "\n\n";
 
-// Clear existing data (keep ID=1 test mosque)
-$wpdb->query( "DELETE FROM $table WHERE id > 1" );
-echo "Cleared existing mosques (kept ID 1).\n";
-
-// Insert mosques
+// Insert mosques (skip existing by slug — never overwrite active mosques)
 $inserted = 0;
 $skipped = 0;
+$no_coords = 0;
 foreach ( $mosques as $m ) {
     // Look up coordinates
     $pc_clean = str_replace( ' ', '', $m['postcode'] );
@@ -124,25 +119,27 @@ foreach ( $mosques as $m ) {
 
     // Skip if no coordinates (can't show on GPS)
     if ( ! $lat || ! $lng ) {
+        $no_coords++;
+        continue;
+    }
+
+    // Skip if slug already exists (never overwrite active/claimed mosques)
+    $exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table WHERE slug = %s", $m['slug'] ) );
+    if ( $exists ) {
         $skipped++;
         continue;
     }
 
-    // Check for duplicate slug
-    $exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table WHERE slug = %s", $m['slug'] ) );
-    if ( $exists ) {
-        $m['slug'] .= '-' . substr( md5( $m['postcode'] ), 0, 4 );
-    }
-
-    $m['latitude']  = $lat;
-    $m['longitude'] = $lng;
-    $m['timezone']  = 'Europe/London';
+    $m['latitude']       = $lat;
+    $m['longitude']      = $lng;
+    $m['timezone']       = 'Europe/London';
+    $m['setup_complete'] = 0;
 
     $wpdb->insert( $table, $m );
     $inserted++;
 }
 
-echo "\nDone! Inserted: $inserted, Skipped (no coords): $skipped\n";
+echo "\nDone! Inserted: $inserted, Skipped (existing): $skipped, No coords: $no_coords\n";
 echo "Total mosques in DB: " . $wpdb->get_var( "SELECT COUNT(*) FROM $table" ) . "\n";
 
 // Show top cities

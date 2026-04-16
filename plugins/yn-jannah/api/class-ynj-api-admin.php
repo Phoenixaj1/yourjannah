@@ -157,6 +157,13 @@ class YNJ_API_Admin {
             'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
+        // --- Claim unclaimed mosque (WP auth — for new mosque admins) ---
+        register_rest_route( self::NS, '/admin/claim', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'claim_mosque' ],
+            'permission_callback' => '__return_true', // Public — creates WP user + assigns role
+        ] );
+
         // --- Broadcast message to subscribers (bearer) ---
         register_rest_route( self::NS, '/admin/broadcast', [
             'methods'             => 'POST',
@@ -1141,5 +1148,89 @@ class YNJ_API_Admin {
 
         set_transient( $transient, $count + 1, 60 );
         return true;
+    }
+
+    // ================================================================
+    // CLAIM MOSQUE (for unclaimed mosque pages)
+    // ================================================================
+
+    public static function claim_mosque( \WP_REST_Request $request ) {
+        $data = $request->get_json_params();
+
+        $mosque_slug = sanitize_text_field( $data['mosque_slug'] ?? '' );
+        $name        = sanitize_text_field( $data['name'] ?? '' );
+        $email       = sanitize_email( $data['email'] ?? '' );
+        $password    = $data['password'] ?? '';
+
+        if ( ! $mosque_slug || ! $name || ! $email || strlen( $password ) < 6 ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'All fields required. Password must be 6+ characters.' ], 400 );
+        }
+
+        global $wpdb;
+        $table = YNJ_DB::table( 'mosques' );
+
+        // Find the unclaimed mosque
+        $mosque = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM $table WHERE slug = %s AND status = 'unclaimed' LIMIT 1",
+            $mosque_slug
+        ) );
+
+        if ( ! $mosque ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Mosque not found or already claimed.' ], 404 );
+        }
+
+        // Create WP user or get existing
+        $existing_user = get_user_by( 'email', $email );
+        if ( $existing_user ) {
+            $wp_user_id = $existing_user->ID;
+            // Add mosque admin role if not already
+            $existing_user->add_role( 'ynj_mosque_admin' );
+        } else {
+            $wp_user_id = wp_create_user( $email, $password, $email );
+            if ( is_wp_error( $wp_user_id ) ) {
+                return new \WP_REST_Response( [ 'ok' => false, 'error' => $wp_user_id->get_error_message() ], 400 );
+            }
+            wp_update_user( [ 'ID' => $wp_user_id, 'display_name' => $name, 'first_name' => explode( ' ', $name )[0] ] );
+            $user = new \WP_User( $wp_user_id );
+            $user->add_role( 'ynj_mosque_admin' );
+        }
+
+        // Assign mosque to admin
+        $mosque_ids = get_user_meta( $wp_user_id, 'ynj_mosque_ids', true ) ?: [];
+        if ( ! in_array( (int) $mosque->id, $mosque_ids ) ) {
+            $mosque_ids[] = (int) $mosque->id;
+            update_user_meta( $wp_user_id, 'ynj_mosque_ids', $mosque_ids );
+        }
+
+        // Activate the mosque
+        $wpdb->update( $table, [
+            'status'         => 'active',
+            'admin_email'    => $email,
+            'setup_complete' => 0, // Will trigger setup wizard on dashboard
+        ], [ 'id' => $mosque->id ] );
+
+        // Generate bearer token for dashboard
+        $token = bin2hex( random_bytes( 32 ) );
+        $wpdb->update( $table, [
+            'admin_token_hash'      => hash( 'sha256', $token ),
+            'admin_token_last_used' => current_time( 'mysql', true ),
+        ], [ 'id' => $mosque->id ] );
+
+        // Count intentions for this mosque
+        $int_table = YNJ_DB::table( 'patron_intentions' );
+        $intention_count = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM $int_table WHERE mosque_id = %d AND status = 'active'",
+            $mosque->id
+        ) );
+
+        return new \WP_REST_Response( [
+            'ok'               => true,
+            'message'          => 'Mosque claimed successfully! Welcome to YourJannah.',
+            'token'            => $token,
+            'mosque_id'        => (int) $mosque->id,
+            'mosque_name'      => $mosque->name,
+            'dashboard_url'    => home_url( '/dashboard' ),
+            'intention_count'  => $intention_count,
+        ] );
     }
 }

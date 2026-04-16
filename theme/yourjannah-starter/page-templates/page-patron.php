@@ -117,6 +117,23 @@ $slug = ynj_mosque_slug();
         </div>
     </div>
 
+    <!-- Make Your Intention (alternative for people not ready to pay) -->
+    <div id="intention-section" style="display:none;">
+        <div style="text-align:center;margin:12px 0 8px;font-size:13px;color:#6b8fa3;font-weight:600;"><?php esc_html_e( '— or —', 'yourjannah' ); ?></div>
+        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:14px;padding:18px;">
+            <h4 style="font-size:14px;font-weight:700;margin-bottom:4px;">🤲 <?php esc_html_e( 'Make Your Intention', 'yourjannah' ); ?></h4>
+            <p style="font-size:12px;color:#6b8fa3;margin-bottom:12px;"><?php esc_html_e( 'Not ready to pay yet? Register your intention and we\'ll notify you when this mosque is fully set up on YourJannah.', 'yourjannah' ); ?></p>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <input type="text" id="int-name" placeholder="<?php esc_attr_e( 'Your name', 'yourjannah' ); ?>" style="padding:10px 14px;border:1px solid #e0e0e0;border-radius:10px;font-size:14px;font-family:inherit;">
+                <input type="email" id="int-email" placeholder="<?php esc_attr_e( 'Your email', 'yourjannah' ); ?>" style="padding:10px 14px;border:1px solid #e0e0e0;border-radius:10px;font-size:14px;font-family:inherit;">
+                <input type="tel" id="int-phone" placeholder="<?php esc_attr_e( 'Phone (optional)', 'yourjannah' ); ?>" style="padding:10px 14px;border:1px solid #e0e0e0;border-radius:10px;font-size:14px;font-family:inherit;">
+                <button id="int-btn" onclick="submitIntention()" style="padding:12px;border:none;border-radius:10px;background:#0369a1;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">🤲 <?php esc_html_e( 'Register My Intention', 'yourjannah' ); ?></button>
+            </div>
+            <p id="int-msg" style="font-size:12px;text-align:center;margin-top:8px;color:#166534;display:none;"></p>
+            <p id="int-count" style="font-size:11px;text-align:center;margin-top:6px;color:#6b8fa3;"></p>
+        </div>
+    </div>
+
     <!-- Patron wall -->
     <div class="ynj-patron-wall" id="patron-wall" style="display:none;">
         <h3>&#x1F396; <?php esc_html_e( 'Patron Wall', 'yourjannah' ); ?></h3>
@@ -193,6 +210,39 @@ $slug = ynj_mosque_slug();
     }
     window.cancelPatron = cancelPatron;
 
+    // Submit intention (pledge)
+    async function submitIntention() {
+        var name = document.getElementById('int-name').value.trim();
+        var email = document.getElementById('int-email').value.trim();
+        var phone = document.getElementById('int-phone').value.trim();
+        var btn = document.getElementById('int-btn');
+        var msg = document.getElementById('int-msg');
+        if (!name || !email) { msg.style.display = ''; msg.style.color = '#dc2626'; msg.textContent = '<?php echo esc_js( __( 'Name and email are required.', 'yourjannah' ) ); ?>'; return; }
+        btn.disabled = true; btn.textContent = '<?php echo esc_js( __( 'Submitting...', 'yourjannah' ) ); ?>';
+        try {
+            var res = await fetch(API + 'intentions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mosque_slug: slug, name: name, email: email, phone: phone, tier: selectedTier })
+            });
+            var data = await res.json();
+            if (data.ok) {
+                msg.style.display = ''; msg.style.color = '#166534';
+                msg.textContent = '<?php echo esc_js( __( 'Your intention has been recorded. We\'ll notify you when this mosque joins!', 'yourjannah' ) ); ?>';
+                btn.textContent = '<?php echo esc_js( __( 'Intention Recorded ✓', 'yourjannah' ) ); ?>';
+                btn.style.background = '#166534';
+                if (data.total) document.getElementById('int-count').textContent = data.total + ' <?php echo esc_js( __( 'people have shown their intention', 'yourjannah' ) ); ?>';
+            } else {
+                msg.style.display = ''; msg.style.color = '#dc2626'; msg.textContent = data.error || '<?php echo esc_js( __( 'Something went wrong.', 'yourjannah' ) ); ?>';
+                btn.disabled = false; btn.textContent = '🤲 <?php echo esc_js( __( 'Register My Intention', 'yourjannah' ) ); ?>';
+            }
+        } catch(e) {
+            msg.style.display = ''; msg.style.color = '#dc2626'; msg.textContent = '<?php echo esc_js( __( 'Network error.', 'yourjannah' ) ); ?>';
+            btn.disabled = false; btn.textContent = '🤲 <?php echo esc_js( __( 'Register My Intention', 'yourjannah' ) ); ?>';
+        }
+    }
+    window.submitIntention = submitIntention;
+
     // Get mosque info
     fetch(API + 'mosques/' + slug)
         .then(r => r.json())
@@ -201,6 +251,25 @@ $slug = ynj_mosque_slug();
             mosqueId = m.id;
             const title = document.getElementById('patron-title');
             if (title) title.textContent = '<?php echo esc_js( __( 'Become a', 'yourjannah' ) ); ?> ' + (m.name || 'Masjid') + ' <?php echo esc_js( __( 'Patron', 'yourjannah' ) ); ?>';
+
+            // Show intention section for unclaimed mosques (and always for non-logged-in users)
+            if (m.status === 'unclaimed' || !token) {
+                document.getElementById('intention-section').style.display = '';
+                // Load intention count
+                fetch(API + 'mosques/' + m.id + '/intentions')
+                    .then(r => r.json())
+                    .then(iData => {
+                        if (iData.total > 0) {
+                            document.getElementById('int-count').textContent = iData.total + ' <?php echo esc_js( __( 'people have shown their intention', 'yourjannah' ) ); ?>';
+                        }
+                    }).catch(() => {});
+            }
+
+            // Unclaimed mosque messaging
+            if (m.status === 'unclaimed') {
+                var heroDesc = document.querySelector('.ynj-patron-hero p');
+                if (heroDesc) heroDesc.textContent = '<?php echo esc_js( __( 'This mosque hasn\'t claimed their YourJannah page yet. Your support goes through YourJannah — when they join, they receive it directly.', 'yourjannah' ) ); ?>';
+            }
 
             // Load patron wall
             return fetch(API + 'mosques/' + m.id + '/patrons');

@@ -124,6 +124,20 @@ $slug = ynj_mosque_slug();
             mosqueId = data.id;
             document.getElementById('mp-name').textContent = data.name || slug;
             document.getElementById('mp-address').textContent = data.address || '';
+
+            // Unclaimed mosque — show claim + patron CTA
+            if (data.status === 'unclaimed') {
+                var claimHtml = '<div style="margin-top:16px;">' +
+                    '<a href="/mosque/' + slug + '/patron" class="ynj-btn" style="background:#00ADEF;color:#fff;justify-content:center;width:100%;margin-bottom:8px;">🏅 <?php echo esc_js( __( 'Become a Patron', 'yourjannah' ) ); ?></a>' +
+                    '<p style="text-align:center;font-size:12px;color:rgba(255,255,255,.7);margin-bottom:12px;"><?php echo esc_js( __( 'Support this mosque monthly through YourJannah', 'yourjannah' ) ); ?></p>' +
+                    '<a href="<?php echo esc_js( home_url( '/register?claim=' ) ); ?>' + slug + '" style="display:block;text-align:center;font-size:12px;color:#fbbf24;font-weight:700;text-decoration:underline;"><?php echo esc_js( __( 'Are you the mosque admin? Claim this page', 'yourjannah' ) ); ?></a>' +
+                    '</div>';
+                document.getElementById('mp-subscribe').insertAdjacentHTML('afterend', claimHtml);
+                // Hide announcements/events sections — unclaimed mosques have none
+                document.getElementById('mp-announcements').style.display = 'none';
+                document.getElementById('mp-events').style.display = 'none';
+            }
+
             checkSub();
             loadSubCount();
             if (data.prayer_times && !data.prayer_times.error) {
