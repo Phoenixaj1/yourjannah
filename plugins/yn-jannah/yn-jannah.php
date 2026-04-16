@@ -53,6 +53,7 @@ spl_autoload_register(function($class) {
         'YNJ_API_Points'           => 'api/class-ynj-api-points.php',
         'YNJ_API_Intentions'       => 'api/class-ynj-api-intentions.php',
         'YNJ_API_Sponsor_YJ'       => 'api/class-ynj-api-sponsor-yj.php',
+        'YNJ_Pool_Ledger'          => 'inc/class-ynj-pool-ledger.php',
     ];
     if (isset($map[$class])) {
         require_once YNJ_DIR . $map[$class];

@@ -47,6 +47,7 @@ class YNJ_Platform_Admin {
         add_submenu_page( 'ynj-platform', 'Messaging', 'Messaging', 'manage_options', 'ynj-messaging', [ __CLASS__, 'page_messaging' ] );
         add_submenu_page( 'ynj-platform', 'Revenue', 'Revenue', 'manage_options', 'ynj-revenue', [ __CLASS__, 'page_revenue' ] );
         add_submenu_page( 'ynj-platform', 'Pipeline', '🎯 Pipeline', 'manage_options', 'ynj-pipeline', [ __CLASS__, 'page_pipeline' ] );
+        add_submenu_page( 'ynj-platform', 'Pool Payouts', '💰 Payouts', 'manage_options', 'ynj-pool-payouts', [ __CLASS__, 'page_pool_payouts' ] );
         add_submenu_page( 'ynj-platform', 'Enquiries', 'Enquiries', 'manage_options', 'ynj-platform-enquiries', [ __CLASS__, 'page_enquiries' ] );
     }
 
@@ -458,6 +459,150 @@ class YNJ_Platform_Admin {
                 <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+        <?php
+    }
+
+    // ================================================================
+    // POOL PAYOUTS — DFM-style fund distribution tracking
+    // ================================================================
+
+    public static function page_pool_payouts() {
+        global $wpdb;
+
+        // Handle payout action
+        if ( isset( $_POST['ynj_record_payout'] ) && wp_verify_nonce( $_POST['_ynj_payout_nonce'] ?? '', 'ynj_payout' ) ) {
+            $mosque_id = (int) ( $_POST['mosque_id'] ?? 0 );
+            $bank_ref  = sanitize_text_field( $_POST['bank_reference'] ?? '' );
+            $notes     = sanitize_text_field( $_POST['notes'] ?? '' );
+            if ( $mosque_id ) {
+                $payout_id = YNJ_Pool_Ledger::record_payout( [
+                    'mosque_id'      => $mosque_id,
+                    'bank_reference' => $bank_ref,
+                    'notes'          => $notes,
+                    'method'         => 'bank_transfer',
+                ] );
+                if ( $payout_id ) {
+                    echo '<div class="notice notice-success"><p>Payout recorded (#' . esc_html( $payout_id ) . ')</p></div>';
+                }
+            }
+        }
+
+        $balances = YNJ_Pool_Ledger::get_outstanding_balances();
+        $payouts  = YNJ_Pool_Ledger::get_payouts( 30 );
+        $summary  = YNJ_Pool_Ledger::get_platform_summary();
+        ?>
+        <div class="wrap">
+            <h1>💰 Pool Payouts — Mosque Fund Distribution</h1>
+            <p style="color:#666;">Revenue split: 90% to mosque, 10% YourJannah platform fee. Payouts tracked here.</p>
+
+            <!-- Summary Cards -->
+            <div style="display:flex;gap:16px;margin:20px 0;flex-wrap:wrap;">
+                <div style="flex:1;min-width:180px;padding:20px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;">
+                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;">Total Received</div>
+                    <div style="font-size:28px;font-weight:800;color:#1a1a2e;">£<?php echo number_format( ( $summary->total_gross ?? 0 ) / 100, 2 ); ?></div>
+                </div>
+                <div style="flex:1;min-width:180px;padding:20px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;">
+                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;">Platform Revenue (10%)</div>
+                    <div style="font-size:28px;font-weight:800;color:#16a34a;">£<?php echo number_format( ( $summary->total_platform_revenue ?? 0 ) / 100, 2 ); ?></div>
+                </div>
+                <div style="flex:1;min-width:180px;padding:20px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;">
+                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;">Owed to Mosques (90%)</div>
+                    <div style="font-size:28px;font-weight:800;color:#00ADEF;">£<?php echo number_format( ( $summary->total_owed_mosques ?? 0 ) / 100, 2 ); ?></div>
+                </div>
+                <div style="flex:1;min-width:180px;padding:20px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;">
+                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;">Transactions</div>
+                    <div style="font-size:28px;font-weight:800;color:#1a1a2e;"><?php echo (int) ( $summary->total_entries ?? 0 ); ?></div>
+                </div>
+            </div>
+
+            <!-- Outstanding Balances -->
+            <h2 style="margin-top:30px;">Outstanding Balances</h2>
+            <?php if ( empty( $balances ) ) : ?>
+                <p style="color:#6b7280;">No payments recorded yet. Balances will appear here once Stripe payments come through.</p>
+            <?php else : ?>
+            <table class="wp-list-table widefat fixed striped" style="margin-top:10px;">
+                <thead>
+                    <tr>
+                        <th>Mosque</th>
+                        <th style="text-align:right;">Payments</th>
+                        <th style="text-align:right;">Gross</th>
+                        <th style="text-align:right;">Platform Fee</th>
+                        <th style="text-align:right;">Net Owed</th>
+                        <th style="text-align:right;">Paid Out</th>
+                        <th style="text-align:right;">Outstanding</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ( $balances as $b ) : ?>
+                    <tr>
+                        <td><strong><?php echo esc_html( $b->mosque_name ); ?></strong></td>
+                        <td style="text-align:right;"><?php echo (int) $b->entry_count; ?></td>
+                        <td style="text-align:right;">£<?php echo number_format( $b->total_gross / 100, 2 ); ?></td>
+                        <td style="text-align:right;">£<?php echo number_format( $b->total_platform_fee / 100, 2 ); ?></td>
+                        <td style="text-align:right;">£<?php echo number_format( $b->total_net_owed / 100, 2 ); ?></td>
+                        <td style="text-align:right;">£<?php echo number_format( $b->total_paid_out / 100, 2 ); ?></td>
+                        <td style="text-align:right;font-weight:700;color:<?php echo $b->outstanding > 0 ? '#dc2626' : '#16a34a'; ?>;">
+                            £<?php echo number_format( $b->outstanding / 100, 2 ); ?>
+                        </td>
+                        <td>
+                            <?php if ( $b->outstanding > 0 ) : ?>
+                            <form method="post" style="display:inline;">
+                                <?php wp_nonce_field( 'ynj_payout', '_ynj_payout_nonce' ); ?>
+                                <input type="hidden" name="mosque_id" value="<?php echo (int) $b->mosque_id; ?>">
+                                <input type="text" name="bank_reference" placeholder="Bank ref" style="width:100px;font-size:12px;padding:4px 8px;">
+                                <input type="text" name="notes" placeholder="Notes" style="width:100px;font-size:12px;padding:4px 8px;">
+                                <button type="submit" name="ynj_record_payout" class="button button-small" onclick="return confirm('Record payout of £<?php echo number_format( $b->outstanding / 100, 2 ); ?> to <?php echo esc_js( $b->mosque_name ); ?>?');">
+                                    Pay £<?php echo number_format( $b->outstanding / 100, 2 ); ?>
+                                </button>
+                            </form>
+                            <?php else : ?>
+                            <span style="color:#16a34a;font-size:12px;">✓ Settled</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+
+            <!-- Payout History -->
+            <h2 style="margin-top:30px;">Payout History</h2>
+            <?php if ( empty( $payouts ) ) : ?>
+                <p style="color:#6b7280;">No payouts recorded yet.</p>
+            <?php else : ?>
+            <table class="wp-list-table widefat fixed striped" style="margin-top:10px;">
+                <thead>
+                    <tr>
+                        <th>Ref</th>
+                        <th>Mosque</th>
+                        <th style="text-align:right;">Amount</th>
+                        <th>Method</th>
+                        <th>Bank Ref</th>
+                        <th>Entries</th>
+                        <th>Covers</th>
+                        <th>Status</th>
+                        <th>Sent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ( $payouts as $po ) : ?>
+                    <tr>
+                        <td><code><?php echo esc_html( $po->payout_ref ); ?></code></td>
+                        <td><?php echo esc_html( $po->mosque_name ); ?></td>
+                        <td style="text-align:right;font-weight:700;">£<?php echo number_format( $po->amount_pence / 100, 2 ); ?></td>
+                        <td><?php echo esc_html( ucwords( str_replace( '_', ' ', $po->method ) ) ); ?></td>
+                        <td><?php echo esc_html( $po->bank_reference ); ?></td>
+                        <td><?php echo (int) $po->entries_count; ?></td>
+                        <td style="font-size:11px;"><?php echo $po->covers_from ? esc_html( substr( $po->covers_from, 0, 10 ) . ' → ' . substr( $po->covers_to, 0, 10 ) ) : '—'; ?></td>
+                        <td><span style="padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:<?php echo $po->status === 'sent' ? '#dcfce7' : '#f3f4f6'; ?>;color:<?php echo $po->status === 'sent' ? '#166534' : '#374151'; ?>;"><?php echo esc_html( ucfirst( $po->status ) ); ?></span></td>
+                        <td style="font-size:11px;"><?php echo esc_html( $po->sent_at ? substr( $po->sent_at, 0, 16 ) : '—' ); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
         </div>
         <?php
     }

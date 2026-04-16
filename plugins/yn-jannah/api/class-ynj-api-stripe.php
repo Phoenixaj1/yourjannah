@@ -205,6 +205,63 @@ class YNJ_API_Stripe {
                 }
                 break;
         }
+
+        // Record in pool ledger for all payment types
+        self::record_ledger_entry( $session, $type, $item_id );
+    }
+
+    /**
+     * Record a payment in the pool ledger.
+     */
+    private static function record_ledger_entry( $session, $type, $item_id ) {
+        global $wpdb;
+        $mosque_id = 0;
+        $description = '';
+        $payer_name = '';
+        $payer_email = $session->customer_email ?? '';
+
+        // Resolve mosque_id and description from the item
+        switch ( $type ) {
+            case 'patron_membership':
+                $row = $wpdb->get_row( $wpdb->prepare( "SELECT mosque_id, user_name, tier, amount_pence FROM " . YNJ_DB::table( 'patrons' ) . " WHERE id = %d", $item_id ) );
+                if ( $row ) { $mosque_id = (int) $row->mosque_id; $payer_name = $row->user_name; $description = ucfirst( $row->tier ) . ' Patron (£' . number_format( $row->amount_pence / 100, 0 ) . '/mo)'; }
+                break;
+            case 'business_sponsor':
+                $row = $wpdb->get_row( $wpdb->prepare( "SELECT mosque_id, business_name, owner_name, monthly_fee_pence FROM " . YNJ_DB::table( 'businesses' ) . " WHERE id = %d", $item_id ) );
+                if ( $row ) { $mosque_id = (int) $row->mosque_id; $payer_name = $row->owner_name ?: $row->business_name; $description = 'Business: ' . $row->business_name; }
+                break;
+            case 'professional_service':
+                $row = $wpdb->get_row( $wpdb->prepare( "SELECT mosque_id, provider_name, service_type FROM " . YNJ_DB::table( 'services' ) . " WHERE id = %d", $item_id ) );
+                if ( $row ) { $mosque_id = (int) $row->mosque_id; $payer_name = $row->provider_name; $description = 'Service: ' . $row->service_type; }
+                break;
+            case 'event_donation':
+                $row = $wpdb->get_row( $wpdb->prepare( "SELECT mosque_id, title FROM " . YNJ_DB::table( 'events' ) . " WHERE id = %d", $item_id ) );
+                if ( $row ) { $mosque_id = (int) $row->mosque_id; $description = 'Event donation: ' . $row->title; }
+                break;
+            default:
+                // room_booking, event_ticket, class_enrolment, madrassah_fee
+                $mosque_id = (int) ( $session->metadata->mosque_id ?? 0 );
+                $description = ucfirst( str_replace( '_', ' ', $type ) );
+                break;
+        }
+
+        if ( ! $mosque_id ) return;
+
+        $gross = (int) ( $session->amount_total ?? 0 );
+        if ( ! $gross ) return;
+
+        YNJ_Pool_Ledger::record( [
+            'mosque_id'              => $mosque_id,
+            'entry_type'             => 'payment',
+            'payment_type'           => $type,
+            'item_id'                => $item_id,
+            'gross_pence'            => $gross,
+            'stripe_payment_id'      => $session->payment_intent ?? '',
+            'stripe_subscription_id' => $session->subscription ?? '',
+            'payer_name'             => $payer_name,
+            'payer_email'            => $payer_email,
+            'description'            => $description,
+        ] );
     }
 
     /**
@@ -239,10 +296,27 @@ class YNJ_API_Stripe {
         // Check patrons
         $patron_table = YNJ_DB::table( 'patrons' );
         $patron = $wpdb->get_row( $wpdb->prepare(
-            "SELECT id FROM $patron_table WHERE stripe_subscription_id = %s", $sub_id
+            "SELECT * FROM $patron_table WHERE stripe_subscription_id = %s", $sub_id
         ) );
         if ( $patron ) {
             $wpdb->update( $patron_table, [ 'status' => 'active' ], [ 'id' => $patron->id ] );
+            // Record recurring patron payment in pool ledger
+            $amount = (int) ( $invoice->amount_paid ?? 0 );
+            if ( $amount > 0 ) {
+                YNJ_Pool_Ledger::record( [
+                    'mosque_id'              => (int) $patron->mosque_id,
+                    'entry_type'             => 'recurring',
+                    'payment_type'           => 'patron_membership',
+                    'item_id'                => (int) $patron->id,
+                    'gross_pence'            => $amount,
+                    'stripe_payment_id'      => $invoice->payment_intent ?? '',
+                    'stripe_subscription_id' => $sub_id,
+                    'payer_name'             => $patron->user_name ?? '',
+                    'payer_email'            => $patron->user_email ?? '',
+                    'description'            => ucfirst( $patron->tier ?? '' ) . ' Patron renewal',
+                ] );
+            }
+            return;
         }
     }
 

@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '2.2.0';
+    const SCHEMA_VERSION = '2.3.0';
 
     /**
      * Return the full table name for a given short name.
@@ -71,6 +71,7 @@ class YNJ_DB {
             [ self::table( 'user_subscriptions' ),    'idx_usub_user_status',           'user_id, status' ],
             [ self::table( 'user_subscriptions' ),    'idx_usub_mosque',                'mosque_id' ],
             [ self::table( 'patrons' ),               'idx_patrons_mosque_status',      'mosque_id, status' ],
+            [ self::table( 'pool_ledger' ),           'idx_pool_mosque_payout',         'mosque_id, payout_id' ],
         ];
 
         foreach ( $indexes as $idx ) {
@@ -763,6 +764,54 @@ class YNJ_DB {
             PRIMARY KEY  (id),
             KEY event_id (event_id),
             KEY mosque_id (mosque_id)
+        ) $charset_collate;";
+
+        // 19. Pool Ledger — immutable financial record of all payments
+        $tables[] = "CREATE TABLE {$t('pool_ledger')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            entry_ref varchar(30) NOT NULL DEFAULT '',
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            entry_type varchar(30) NOT NULL DEFAULT 'payment',
+            payment_type varchar(30) NOT NULL DEFAULT '',
+            item_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            gross_pence int(11) NOT NULL DEFAULT 0,
+            platform_fee_pence int(11) NOT NULL DEFAULT 0,
+            net_to_mosque_pence int(11) NOT NULL DEFAULT 0,
+            currency varchar(5) NOT NULL DEFAULT 'gbp',
+            stripe_payment_id varchar(100) NOT NULL DEFAULT '',
+            stripe_subscription_id varchar(100) NOT NULL DEFAULT '',
+            payer_name varchar(255) NOT NULL DEFAULT '',
+            payer_email varchar(255) NOT NULL DEFAULT '',
+            description varchar(500) NOT NULL DEFAULT '',
+            payout_id bigint(20) unsigned DEFAULT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY entry_type (entry_type),
+            KEY payout_id (payout_id),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+
+        // 20. Pool Payouts — record of distributions to mosques
+        $tables[] = "CREATE TABLE {$t('pool_payouts')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            payout_ref varchar(30) NOT NULL DEFAULT '',
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            amount_pence int(11) NOT NULL DEFAULT 0,
+            currency varchar(5) NOT NULL DEFAULT 'gbp',
+            method varchar(30) NOT NULL DEFAULT 'bank_transfer',
+            bank_reference varchar(100) NOT NULL DEFAULT '',
+            entries_count int(11) NOT NULL DEFAULT 0,
+            covers_from datetime DEFAULT NULL,
+            covers_to datetime DEFAULT NULL,
+            status varchar(20) NOT NULL DEFAULT 'sent',
+            notes text,
+            sent_at datetime DEFAULT NULL,
+            created_by bigint(20) unsigned NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status)
         ) $charset_collate;";
 
         return $tables;
