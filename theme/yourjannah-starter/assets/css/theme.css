@@ -36,12 +36,14 @@ img,svg{display:block;max-width:100%;}
 .ynj-header-user--guest{background:rgba(255,255,255,.15);}
 .ynj-header-user--guest:hover{background:rgba(255,255,255,.25);}
 
-/* Mosque details dropdown */
-.ynj-mosque-details{position:relative;}
-.ynj-mosque-details summary::-webkit-details-marker{display:none;}
-.ynj-mosque-details summary::marker{display:none;content:'';}
-.ynj-mosque-dd{position:absolute;top:100%;right:0;width:300px;max-height:400px;overflow-y:auto;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.2);z-index:200;margin-top:6px;}
-@media(max-width:480px){.ynj-mosque-dd{width:calc(100vw - 32px);right:-16px;}}
+/* Mosque modal — CSS :target popup (no JS) */
+.ynj-modal{display:none;position:fixed;inset:0;z-index:500;align-items:center;justify-content:center;}
+.ynj-modal:target{display:flex;}
+.ynj-modal__overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);}
+.ynj-modal__box{position:relative;background:#fff;border-radius:20px;padding:24px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:ynjModalIn .2s ease;}
+@keyframes ynjModalIn{from{opacity:0;transform:scale(.95) translateY(10px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.ynj-modal__close{position:absolute;top:12px;right:16px;font-size:24px;color:#6b8fa3;text-decoration:none;line-height:1;font-weight:300;}
+.ynj-modal__close:hover{color:#0a1628;}
 
 /* Header */
 .ynj-header{

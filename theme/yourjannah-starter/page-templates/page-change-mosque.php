@@ -51,15 +51,18 @@ if ( class_exists( 'YNJ_DB' ) ) {
 }
 ?>
 
-<main class="ynj-main" style="max-width:500px;margin:0 auto;">
-    <h2 style="font-size:20px;font-weight:800;margin-bottom:4px;">🕌 <?php esc_html_e( 'Find Your Mosque', 'yourjannah' ); ?></h2>
+<main class="ynj-main" style="max-width:500px;margin:0 auto;padding-top:8px;">
+    <!-- Back button -->
+    <a href="javascript:history.back()" style="display:inline-flex;align-items:center;gap:4px;font-size:13px;color:#6b8fa3;text-decoration:none;margin-bottom:12px;">← <?php esc_html_e( 'Back', 'yourjannah' ); ?></a>
+
+    <h2 style="font-size:22px;font-weight:800;margin-bottom:4px;">🕌 <?php esc_html_e( 'Find Your Mosque', 'yourjannah' ); ?></h2>
     <p class="ynj-text-muted" style="margin-bottom:16px;"><?php esc_html_e( 'Search by name, city, or postcode.', 'yourjannah' ); ?></p>
 
-    <!-- Search form — standard HTML, no JS needed -->
+    <!-- Search form -->
     <form method="get" action="<?php echo esc_url( home_url( '/change-mosque' ) ); ?>" style="margin-bottom:20px;">
         <div style="display:flex;gap:8px;">
-            <input type="text" name="q" value="<?php echo esc_attr( $search_q ); ?>" placeholder="<?php esc_attr_e( 'Search mosques...', 'yourjannah' ); ?>" autofocus style="flex:1;padding:12px 16px;border:2px solid #d1d5db;border-radius:12px;font-size:15px;font-family:inherit;">
-            <button type="submit" style="padding:12px 20px;border:none;border-radius:12px;background:#00ADEF;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;"><?php esc_html_e( 'Search', 'yourjannah' ); ?></button>
+            <input type="text" name="q" value="<?php echo esc_attr( $search_q ); ?>" placeholder="<?php esc_attr_e( 'Search mosques...', 'yourjannah' ); ?>" autofocus style="flex:1;padding:14px 16px;border:2px solid #d1d5db;border-radius:12px;font-size:16px;font-family:inherit;">
+            <button type="submit" style="padding:14px 20px;border:none;border-radius:12px;background:#00ADEF;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;"><?php esc_html_e( 'Search', 'yourjannah' ); ?></button>
         </div>
     </form>
 
