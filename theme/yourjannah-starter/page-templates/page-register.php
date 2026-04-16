@@ -6,6 +6,13 @@
  */
 
 get_header();
+
+if ( is_user_logged_in() ) {
+    echo '<script>window.location.href = ' . wp_json_encode( home_url( '/profile' ) ) . ';</script>';
+    echo '<main class="ynj-main" style="padding:40px 20px;text-align:center;"><p>' . esc_html__( 'Already signed in. Redirecting...', 'yourjannah' ) . '</p></main>';
+    get_footer();
+    return;
+}
 ?>
 <main class="ynj-main" style="padding-top:24px;">
     <section class="ynj-card" style="text-align:center;padding:32px 20px 20px;">

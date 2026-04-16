@@ -81,6 +81,28 @@ add_action('admin_init', function() {
             wp_die('DB upgrade complete. Tables created/updated. <a href="' . admin_url() . '">Back to admin</a>');
         }
     }
+    // Create test user for patron testing
+    if (isset($_GET['ynj_create_test_user'])) {
+        $email = 'test@yourjannah.com';
+        $pass = 'test1234';
+        if (!email_exists($email)) {
+            $uid = wp_create_user($email, $pass, $email);
+            wp_update_user(['ID' => $uid, 'display_name' => 'Test User', 'first_name' => 'Test']);
+            $u = new \WP_User($uid);
+            $u->add_role('ynj_congregation');
+            // Create ynj_users record
+            global $wpdb;
+            $wpdb->insert(YNJ_DB::table('users'), [
+                'name' => 'Test User', 'email' => $email, 'phone' => '',
+                'password_hash' => wp_hash_password($pass), 'status' => 'active',
+            ]);
+            $ynj_id = $wpdb->insert_id;
+            update_user_meta($uid, 'ynj_user_id', $ynj_id);
+            wp_die("Test user created: $email / $pass (WP ID: $uid, YNJ ID: $ynj_id). <a href='" . admin_url() . "'>Back</a>");
+        } else {
+            wp_die("User $email already exists. Password: $pass. <a href='" . admin_url() . "'>Back</a>");
+        }
+    }
     // Fix duplicate jumuah/announcements/events from double-seed
     if (isset($_GET['ynj_fix_dupes'])) {
         global $wpdb;
