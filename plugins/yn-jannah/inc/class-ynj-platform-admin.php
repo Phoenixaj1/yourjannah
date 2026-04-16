@@ -57,7 +57,8 @@ class YNJ_Platform_Admin {
     public static function page_dashboard() {
         global $wpdb;
 
-        $mosques    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . YNJ_DB::table( 'mosques' ) . " WHERE status = 'active'" );
+        $mosques    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . YNJ_DB::table( 'mosques' ) . " WHERE status IN ('active','unclaimed')" );
+        $unclaimed  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . YNJ_DB::table( 'mosques' ) . " WHERE status = 'unclaimed'" );
         $users      = (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . YNJ_DB::table( 'users' ) . " WHERE status = 'active'" );
         $wp_users   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $wpdb->users" );
         $subs       = (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . YNJ_DB::table( 'user_subscriptions' ) . " WHERE status = 'active'" );
@@ -73,7 +74,7 @@ class YNJ_Platform_Admin {
             <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:20px 0;">
                 <?php
                 $stats = [
-                    [ 'num' => $mosques,    'label' => 'Active Mosques',    'color' => '#16a34a' ],
+                    [ 'num' => $mosques,    'label' => 'Total Mosques (' . $unclaimed . ' unclaimed)', 'color' => '#16a34a' ],
                     [ 'num' => $users,      'label' => 'Members',           'color' => '#0369a1' ],
                     [ 'num' => $subs,       'label' => 'Subscriptions',     'color' => '#7c3aed' ],
                     [ 'num' => $patrons,    'label' => 'Active Patrons',    'color' => '#d97706' ],
@@ -123,7 +124,10 @@ class YNJ_Platform_Admin {
         $per_page = 50;
         $offset = ( $paged - 1 ) * $per_page;
 
-        $where = "m.status = 'active'";
+        $status_filter = sanitize_text_field( $_GET['status'] ?? '' );
+        $where = "m.status IN ('active','unclaimed')";
+        if ( $status_filter === 'active' ) $where = "m.status = 'active'";
+        elseif ( $status_filter === 'unclaimed' ) $where = "m.status = 'unclaimed'";
         if ( $search ) {
             $like = '%' . $wpdb->esc_like( $search ) . '%';
             $where .= $wpdb->prepare( " AND (m.name LIKE %s OR m.city LIKE %s OR m.postcode LIKE %s)", $like, $like, $like );
@@ -145,8 +149,19 @@ class YNJ_Platform_Admin {
         ?>
         <div class="wrap">
             <h1>🕌 All Mosques (<?php echo esc_html( $total ); ?>)</h1>
-            <form method="get" style="margin:16px 0;">
+            <?php
+            $count_all = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table WHERE status IN ('active','unclaimed')" );
+            $count_active = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table WHERE status = 'active'" );
+            $count_unclaimed = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table WHERE status = 'unclaimed'" );
+            ?>
+            <ul class="subsubsub" style="margin:8px 0 16px;">
+                <li><a href="<?php echo esc_url( add_query_arg( ['status'=>'','paged'=>1] ) ); ?>" <?php echo !$status_filter ? 'class="current"' : ''; ?>>All <span class="count">(<?php echo $count_all; ?>)</span></a> |</li>
+                <li><a href="<?php echo esc_url( add_query_arg( ['status'=>'active','paged'=>1] ) ); ?>" <?php echo $status_filter==='active' ? 'class="current"' : ''; ?>>Active <span class="count">(<?php echo $count_active; ?>)</span></a> |</li>
+                <li><a href="<?php echo esc_url( add_query_arg( ['status'=>'unclaimed','paged'=>1] ) ); ?>" <?php echo $status_filter==='unclaimed' ? 'class="current"' : ''; ?>>Unclaimed <span class="count">(<?php echo $count_unclaimed; ?>)</span></a></li>
+            </ul>
+            <form method="get" style="margin:0 0 16px;">
                 <input type="hidden" name="page" value="ynj-mosques">
+                <?php if ($status_filter) : ?><input type="hidden" name="status" value="<?php echo esc_attr($status_filter); ?>"><?php endif; ?>
                 <input type="search" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="Search mosques..." class="regular-text">
                 <?php submit_button( 'Search', 'secondary', '', false ); ?>
             </form>

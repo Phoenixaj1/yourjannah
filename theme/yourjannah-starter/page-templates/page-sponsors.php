@@ -124,23 +124,19 @@ $slug = ynj_mosque_slug();
         list.innerHTML = all.map((b,i) => renderBiz(b, radius > 0 ? null : i+1, !!b.mosque_name)).join('');
     }
 
-    // Load mosque sponsors
-    fetch(API + 'mosques/' + slug)
-        .then(r => r.json())
-        .then(resp => {
-            const m = resp.mosque||resp;
-            mosqueId = m.id; mosqueLat = m.latitude; mosqueLng = m.longitude;
-            return fetch(API + 'mosques/' + slug + '/directory');
-        })
-        .then(r => r.json())
-        .then(data => {
-            localBiz = data.businesses || [];
-            renderList();
-        })
-        .catch(function(err) {
-            console.error('Sponsors load error:', err);
-            document.getElementById('local-biz-list').innerHTML = '<p class="ynj-text-muted">No sponsors yet. Be the first to <a href="' + '<?php echo esc_js( home_url( "/mosque/" ) ); ?>' + slug + '/sponsors/join">sponsor this masjid</a>!</p>';
-        });
+    // Load mosque + sponsors in parallel for speed
+    Promise.all([
+        fetch(API + 'mosques/' + slug).then(r => r.json()),
+        fetch(API + 'mosques/' + slug + '/directory').then(r => r.json())
+    ]).then(function([mosqueResp, dirResp]) {
+        const m = mosqueResp.mosque || mosqueResp;
+        mosqueId = m.id; mosqueLat = m.latitude; mosqueLng = m.longitude;
+        localBiz = dirResp.businesses || [];
+        renderList();
+    }).catch(function(err) {
+        console.error('Sponsors load error:', err);
+        document.getElementById('local-biz-list').innerHTML = '<p class="ynj-text-muted">No sponsors yet. Be the first to <a href="<?php echo esc_js( home_url( "/mosque/" ) ); ?>' + slug + '/sponsors/join">sponsor this masjid</a>!</p>';
+    });
 
     // Radius change
     window.onRadiusChange = function() {
