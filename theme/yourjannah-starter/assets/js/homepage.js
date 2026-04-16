@@ -1,6 +1,9 @@
         (function(){
             'use strict';
 
+            // Only run on homepage — bail if prayer card doesn't exist
+            if (!document.getElementById('next-prayer-card')) return;
+
             const API = ynjData.restUrl.replace(/\/+$/, '');
             const VAPID = ynjData.vapidKey;
 
