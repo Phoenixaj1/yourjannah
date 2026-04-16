@@ -34,10 +34,9 @@ $slug = ynj_mosque_slug();
         <!-- Frequency -->
         <p style="font-size:12px;font-weight:600;color:#6b8fa3;margin-bottom:6px;"><?php esc_html_e( 'How often?', 'yourjannah' ); ?></p>
         <div style="display:flex;gap:6px;margin-bottom:14px;" id="freq-row">
-            <button class="ynj-freq-btn ynj-freq-btn--active" onclick="setFreq('one-off',this)">One-off</button>
-            <button class="ynj-freq-btn" onclick="setFreq('weekly',this)">Weekly</button>
-            <button class="ynj-freq-btn" onclick="setFreq('monthly',this)">Monthly</button>
-            <button class="ynj-freq-btn" onclick="setFreq('friday',this)">Every Friday</button>
+            <button class="ynj-freq-btn ynj-freq-btn--active" onclick="setFreq('friday',this)"><?php esc_html_e( 'Every Friday', 'yourjannah' ); ?></button>
+            <button class="ynj-freq-btn" onclick="setFreq('monthly',this)"><?php esc_html_e( 'Monthly', 'yourjannah' ); ?></button>
+            <button class="ynj-freq-btn" onclick="setFreq('one-off',this)"><?php esc_html_e( 'One-off', 'yourjannah' ); ?></button>
         </div>
 
         <!-- Amount -->
@@ -97,7 +96,7 @@ $slug = ynj_mosque_slug();
         'equipment':'\ud83d\udee0\ufe0f','roof':'\ud83c\udfe0','heating':'\ud83d\udd25','parking':'\ud83c\udd7f\ufe0f'
     };
 
-    var selectedFreq = 'one-off';
+    var selectedFreq = 'friday';
     var selectedAmt = 10;
 
     window.setFreq = function(freq, btn) {
