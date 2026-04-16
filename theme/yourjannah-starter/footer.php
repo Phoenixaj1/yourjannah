@@ -70,6 +70,12 @@
 // Shows on all pages when a mosque is selected
 // ============================================================
 $_nb_slug = ynj_mosque_slug();
+if ( ! $_nb_slug && isset( $_COOKIE['ynj_mosque_slug'] ) ) {
+    $_nb_slug = sanitize_title( $_COOKIE['ynj_mosque_slug'] );
+}
+if ( ! $_nb_slug ) {
+    $_nb_slug = 'yourniyyah-masjid'; // default
+}
 $_nb_mosque = $_nb_slug ? ynj_get_mosque( $_nb_slug ) : null;
 $_nb_name = $_nb_mosque ? $_nb_mosque->name : '';
 $_nb_id = $_nb_mosque ? (int) $_nb_mosque->id : 0;
