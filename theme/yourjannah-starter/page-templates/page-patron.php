@@ -108,23 +108,6 @@ $mosque_status = $mosque ? $mosque->status : '';
         </div>
     </div>
 
-    <!-- Make Your Intention (alternative for people not ready to pay) -->
-    <div id="intention-section" style="display:none;">
-        <div style="text-align:center;margin:12px 0 8px;font-size:13px;color:#6b8fa3;font-weight:600;"><?php esc_html_e( '— or —', 'yourjannah' ); ?></div>
-        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:14px;padding:18px;">
-            <h4 style="font-size:14px;font-weight:700;margin-bottom:4px;">🤲 <?php esc_html_e( 'Make Your Intention', 'yourjannah' ); ?></h4>
-            <p style="font-size:12px;color:#6b8fa3;margin-bottom:12px;"><?php esc_html_e( 'Not ready to pay yet? Register your intention and we\'ll notify you when this mosque is fully set up on YourJannah.', 'yourjannah' ); ?></p>
-            <div style="display:flex;flex-direction:column;gap:8px;">
-                <input type="text" id="int-name" placeholder="<?php esc_attr_e( 'Your name', 'yourjannah' ); ?>" style="padding:10px 14px;border:1px solid #e0e0e0;border-radius:10px;font-size:14px;font-family:inherit;">
-                <input type="email" id="int-email" placeholder="<?php esc_attr_e( 'Your email', 'yourjannah' ); ?>" style="padding:10px 14px;border:1px solid #e0e0e0;border-radius:10px;font-size:14px;font-family:inherit;">
-                <input type="tel" id="int-phone" placeholder="<?php esc_attr_e( 'Phone (optional)', 'yourjannah' ); ?>" style="padding:10px 14px;border:1px solid #e0e0e0;border-radius:10px;font-size:14px;font-family:inherit;">
-                <button id="int-btn" onclick="submitIntention()" style="padding:12px;border:none;border-radius:10px;background:#0369a1;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">🤲 <?php esc_html_e( 'Register My Intention', 'yourjannah' ); ?></button>
-            </div>
-            <p id="int-msg" style="font-size:12px;text-align:center;margin-top:8px;color:#166534;display:none;"></p>
-            <p id="int-count" style="font-size:11px;text-align:center;margin-top:6px;color:#6b8fa3;"></p>
-        </div>
-    </div>
-
     <!-- Patron wall -->
     <div class="ynj-patron-wall" id="patron-wall" style="display:none;">
         <h3>&#x1F396; <?php esc_html_e( 'Patron Wall', 'yourjannah' ); ?></h3>
