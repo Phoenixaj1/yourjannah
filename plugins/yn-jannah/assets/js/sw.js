@@ -5,7 +5,7 @@
  * Handles push notifications for mosque announcements and prayer reminders.
  */
 
-const CACHE_VERSION = '2.5.0';
+const CACHE_VERSION = '2.8.0';
 const CACHE_NAME = 'ynj-v' + CACHE_VERSION;
 
 // Only pre-cache static assets — NEVER cache HTML pages

@@ -11,7 +11,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YNJ_THEME_VERSION', '2.8.0' );
+define( 'YNJ_THEME_VERSION', '2.9.0' );
 define( 'YNJ_THEME_DIR', get_stylesheet_directory() );
 define( 'YNJ_THEME_URI', get_stylesheet_directory_uri() );
 
@@ -119,10 +119,9 @@ add_action( 'wp_enqueue_scripts', function() {
         'userToken'  => '', // Set via localStorage on client
     ] );
 
-    // Homepage script (prayer card, feed, mosque selector, GPS)
-    // Only load on actual homepage — check URI directly since query vars may not be set during enqueue
+    // Homepage script — ONLY on front page, never on mosque sub-pages
     $request_path = trim( wp_parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH ), '/' );
-    $is_homepage = ( $request_path === '' || $request_path === '/' || is_front_page() );
+    $is_homepage = ( $request_path === '' || is_front_page() ) && ! get_query_var( 'ynj_mosque_slug' ) && ! get_query_var( 'ynj_page_type' );
     if ( $is_homepage ) {
         wp_enqueue_script(
             'ynj-homepage',
