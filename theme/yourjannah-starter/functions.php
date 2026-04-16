@@ -313,6 +313,34 @@ add_filter( 'template_include', function( $template ) {
 } );
 
 // ================================================================
+// DIGITAL ASSET LINKS (for Android TWA verification)
+// ================================================================
+
+add_action( 'init', function() {
+    add_rewrite_rule( '^\.well-known/assetlinks\.json$', 'index.php?ynj_assetlinks=1', 'top' );
+} );
+
+add_filter( 'query_vars', function( $vars ) {
+    $vars[] = 'ynj_assetlinks';
+    return $vars;
+} );
+
+add_action( 'template_redirect', function() {
+    if ( get_query_var( 'ynj_assetlinks' ) ) {
+        header( 'Content-Type: application/json' );
+        echo '[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.yourjannah.app",
+        "sha256_cert_fingerprints": ["94:6F:A2:E2:C0:44:B4:B1:30:17:7A:81:99:D7:9E:89:41:3B:87:EC:42:4A:A3:17:F4:53:C1:BE:E8:68:6E:D7"]
+      }
+    }]';
+        exit;
+    }
+} );
+
+// ================================================================
 // FLUSH REWRITE RULES ON THEME SWITCH
 // ================================================================
 
