@@ -83,17 +83,33 @@ add_action('wp_ajax_ynj_set_session', function() {
     wp_send_json(['ok' => true]); // Already logged in
 });
 
-// Configure wp_mail — set From address and ensure delivery
+// Configure wp_mail — force SMTP via localhost (Cloudways Postfix)
 add_filter('wp_mail_from', function() { return 'noreply@yourjannah.com'; });
 add_filter('wp_mail_from_name', function() { return 'YourJannah'; });
+add_action('phpmailer_init', function($phpmailer) {
+    $phpmailer->isSMTP();
+    $phpmailer->Host = 'localhost';
+    $phpmailer->Port = 25;
+    $phpmailer->SMTPAuth = false;
+    $phpmailer->SMTPAutoTLS = false;
+});
 
-// Test email endpoint (admin only)
-add_action('admin_init', function() {
-    if (isset($_GET['ynj_test_email'])) {
+// Test email endpoint — works without admin login via secret key
+add_action('init', function() {
+    if (isset($_GET['ynj_test_email']) && isset($_GET['key']) && $_GET['key'] === 'ynj_mail_test_2026') {
         $to = sanitize_email($_GET['ynj_test_email']);
-        if (!$to) wp_die('Provide email: ?ynj_test_email=you@email.com');
-        $sent = wp_mail($to, 'YourJannah Test Email', "This is a test email from YourJannah.\n\nIf you received this, email is working!\n\nTime: " . current_time('mysql'));
-        wp_die($sent ? "Email sent to $to. Check inbox + spam." : "wp_mail() returned false. Server mail may be blocked. Error: " . print_r(error_get_last(), true));
+        if (!$to) wp_die('Provide email: ?ynj_test_email=you@email.com&key=ynj_mail_test_2026');
+        $sent = wp_mail($to, 'YourJannah Test Email', "Assalamu Alaikum!\n\nThis is a test email from YourJannah.\nIf you received this, email sending is working.\n\nTime: " . current_time('mysql') . "\n\nYourJannah Team");
+        if ($sent) {
+            wp_die("✅ Email sent to $to. Check inbox + spam folder.");
+        } else {
+            global $phpmailer;
+            $error = '';
+            if (isset($phpmailer) && is_object($phpmailer)) {
+                $error = $phpmailer->ErrorInfo;
+            }
+            wp_die("❌ wp_mail() failed. Error: " . ($error ?: 'Unknown') . "<br>Last PHP error: " . print_r(error_get_last(), true));
+        }
     }
 });
 
