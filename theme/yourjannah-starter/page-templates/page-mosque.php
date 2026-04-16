@@ -86,6 +86,40 @@ if ( $mosque && $mosque->latitude ) {
 }
 ?>
 
+<?php
+// ── Pre-load ALL data in PHP (eliminates JS API calls) ──
+$_mp_id = $mosque ? (int) $mosque->id : 0;
+$_mp_jumuah = [];
+$_mp_sponsors = [];
+$_mp_announcements = [];
+$_mp_events = [];
+$_mp_classes = [];
+$_mp_points = [ 'total' => 0 ];
+
+if ( $_mp_id && class_exists( 'YNJ_DB' ) ) {
+    global $wpdb;
+    $jt = YNJ_DB::table( 'jumuah_slots' );
+    if ( $wpdb->get_var( "SHOW TABLES LIKE '$jt'" ) === $jt ) {
+        $_mp_jumuah = $wpdb->get_results( $wpdb->prepare( "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND status = 'active' ORDER BY salah_time ASC", $_mp_id ) ) ?: [];
+    }
+    $bt = YNJ_DB::table( 'businesses' );
+    $_mp_sponsors = $wpdb->get_results( $wpdb->prepare( "SELECT id, business_name, category, monthly_fee_pence FROM $bt WHERE mosque_id = %d AND status = 'active' ORDER BY monthly_fee_pence DESC LIMIT 20", $_mp_id ) ) ?: [];
+    $at = YNJ_DB::table( 'announcements' );
+    $_mp_announcements = $wpdb->get_results( $wpdb->prepare( "SELECT id, title, body, type, pinned, published_at FROM $at WHERE mosque_id = %d AND status = 'published' ORDER BY pinned DESC, published_at DESC LIMIT 20", $_mp_id ) ) ?: [];
+    $et = YNJ_DB::table( 'events' );
+    $_mp_events = $wpdb->get_results( $wpdb->prepare( "SELECT id, title, description, event_date, start_time, end_time, location, category, ticket_price_pence, max_capacity, rsvp_count FROM $et WHERE mosque_id = %d AND status = 'published' AND event_date >= CURDATE() ORDER BY event_date ASC LIMIT 20", $_mp_id ) ) ?: [];
+    $ct = YNJ_DB::table( 'classes' );
+    $_mp_classes = $wpdb->get_results( $wpdb->prepare( "SELECT id, title, description, instructor_name, day_of_week, start_time, end_time, price_pence, category, max_capacity, enrolled_count FROM $ct WHERE mosque_id = %d AND status = 'active' ORDER BY day_of_week ASC LIMIT 20", $_mp_id ) ) ?: [];
+    if ( is_user_logged_in() ) {
+        $ynj_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+        if ( $ynj_uid ) {
+            $ut = YNJ_DB::table( 'users' );
+            $_mp_points = [ 'ok' => true, 'total' => (int) $wpdb->get_var( $wpdb->prepare( "SELECT total_points FROM $ut WHERE id = %d", $ynj_uid ) ) ];
+        }
+    }
+}
+?>
+
 <?php if ( ! $mosque ) : ?>
 <main class="ynj-main">
     <section class="ynj-card" style="text-align:center;padding:40px 20px;">
@@ -307,6 +341,18 @@ localStorage.setItem('ynj_mosque_name', <?php echo wp_json_encode( $mosque_name 
     </div><!-- end right column -->
   </div><!-- end desktop grid -->
 </main>
+
+<script>
+window.ynjPreloaded = {
+    jumuah: <?php echo wp_json_encode( $_mp_jumuah ); ?>,
+    sponsors: <?php echo wp_json_encode( $_mp_sponsors ); ?>,
+    announcements: <?php echo wp_json_encode( $_mp_announcements ); ?>,
+    events: <?php echo wp_json_encode( $_mp_events ); ?>,
+    classes: <?php echo wp_json_encode( $_mp_classes ); ?>,
+    points: <?php echo wp_json_encode( $_mp_points ); ?>,
+    mosqueId: <?php echo (int) $_mp_id; ?>
+};
+</script>
 
 <?php
 get_footer();

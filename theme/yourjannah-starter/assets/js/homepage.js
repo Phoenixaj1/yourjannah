@@ -94,11 +94,21 @@
                 }
             }
 
-            // Load points for logged-in users
+            // Load points — use PHP pre-loaded data if available
             function loadPoints() {
-                var token = localStorage.getItem('ynj_user_token');
                 var card = document.getElementById('ynj-points-card');
-                // Show points card for both token auth and WP cookie auth
+                var pre = window.ynjPreloaded;
+
+                // Try pre-loaded data first (PHP, instant)
+                if (pre && pre.points && pre.points.ok) {
+                    if (card) card.style.display = '';
+                    var el = document.getElementById('points-total');
+                    if (el) el.textContent = pre.points.total || 0;
+                    return;
+                }
+
+                // Fallback to API for token-only users
+                var token = localStorage.getItem('ynj_user_token');
                 if (!token && !document.cookie.match(/wordpress_logged_in/)) return;
                 if (card) card.style.display = '';
 
@@ -358,45 +368,53 @@
                         var fh = document.getElementById('feed-heading');
                         if (fh) fh.textContent = "What's Happening at " + mName;
 
-                        // Jumu'ah times
-                        fetch(`${API}/mosques/${slug}/jumuah`)
-                            .then(r => r.ok ? r.json() : {slots:[]})
-                            .then(jData => {
-                                var slots = jData.slots || [];
-                                if (slots.length) {
-                                    var el = document.getElementById('jumuah-slots');
-                                    el.innerHTML = slots.map(function(s) {
-                                        var khutbah = s.khutbah_time ? String(s.khutbah_time).substring(0,5) : '';
-                                        var salah = s.salah_time ? String(s.salah_time).substring(0,5) : '';
-                                        var lang = s.language ? '<div class="ynj-jumuah-slot__lang">' + s.language + '</div>' : '';
-                                        return '<div class="ynj-jumuah-slot"><div><div class="ynj-jumuah-slot__name">' + (s.slot_name || 'Jumu\'ah') + '</div>' + lang + '</div><div class="ynj-jumuah-slot__times">' + (khutbah ? 'Khutbah ' + khutbah + ' · ' : '') + 'Salah ' + salah + '</div></div>';
-                                    }).join('');
-                                    document.getElementById('jumuah-card').style.display = '';
-                                }
-                            })
-                            .catch(function(){});
+                        // Jumu'ah times — use PHP pre-loaded data if available
+                        var jumuahData = (window.ynjPreloaded && window.ynjPreloaded.jumuah) || null;
+                        if (jumuahData) {
+                            renderJumuah(jumuahData);
+                        } else {
+                            fetch(`${API}/mosques/${slug}/jumuah`)
+                                .then(r => r.ok ? r.json() : {slots:[]})
+                                .then(jData => { renderJumuah(jData.slots || []); })
+                                .catch(function(){});
+                        }
 
-                        // Sponsor ticker
-                        fetch(`${API}/mosques/${slug}/directory`)
-                            .then(r => r.json())
-                            .then(dirData => {
-                                const biz = dirData.businesses || [];
-                                if (biz.length) {
-                                    const ticker = document.getElementById('sponsor-ticker');
-                                    const content = document.getElementById('ticker-content');
-                                    // Duplicate items for seamless loop
-                                    const items = biz.map((b, i) =>
-                                        `<a href="/mosque/${slug}/sponsors" class="ynj-ticker__item"><span class="ynj-ticker__rank">#${i+1}</span>${b.business_name}<span class="ynj-ticker__cat">${b.category}</span></a>`
-                                    ).join('');
-                                    content.innerHTML = items + items; // duplicate for seamless scroll
-                                    ticker.style.display = '';
-                                    // Adjust speed based on content width
-                                    const width = content.scrollWidth / 2;
-                                    const speed = Math.max(10, Math.round(width / 40));
-                                    content.style.animationDuration = speed + 's';
-                                }
-                            })
-                            .catch(() => {});
+                        function renderJumuah(slots) {
+                            if (!slots || !slots.length) return;
+                            var el = document.getElementById('jumuah-slots');
+                            el.innerHTML = slots.map(function(s) {
+                                var khutbah = s.khutbah_time ? String(s.khutbah_time).substring(0,5) : '';
+                                var salah = s.salah_time ? String(s.salah_time).substring(0,5) : '';
+                                var lang = s.language ? '<div class="ynj-jumuah-slot__lang">' + s.language + '</div>' : '';
+                                return '<div class="ynj-jumuah-slot"><div><div class="ynj-jumuah-slot__name">' + (s.slot_name || 'Jumu\'ah') + '</div>' + lang + '</div><div class="ynj-jumuah-slot__times">' + (khutbah ? 'Khutbah ' + khutbah + ' · ' : '') + 'Salah ' + salah + '</div></div>';
+                            }).join('');
+                            document.getElementById('jumuah-card').style.display = '';
+                        }
+
+                        // Sponsor ticker — use PHP pre-loaded data if available
+                        var sponsorData = (window.ynjPreloaded && window.ynjPreloaded.sponsors) || null;
+                        if (sponsorData) {
+                            renderTicker(sponsorData);
+                        } else {
+                            fetch(`${API}/mosques/${slug}/directory`)
+                                .then(r => r.json())
+                                .then(dirData => { renderTicker(dirData.businesses || []); })
+                                .catch(() => {});
+                        }
+
+                        function renderTicker(biz) {
+                            if (!biz || !biz.length) return;
+                            const ticker = document.getElementById('sponsor-ticker');
+                            const content = document.getElementById('ticker-content');
+                            const items = biz.map((b, i) =>
+                                `<a href="/mosque/${slug}/sponsors" class="ynj-ticker__item"><span class="ynj-ticker__rank">#${i+1}</span>${b.business_name}<span class="ynj-ticker__cat">${b.category}</span></a>`
+                            ).join('');
+                            content.innerHTML = items + items;
+                            ticker.style.display = '';
+                            const width = content.scrollWidth / 2;
+                            const speed = Math.max(10, Math.round(width / 40));
+                            content.style.animationDuration = speed + 's';
+                        }
 
                         // Donate button — link to DonationForMasjid
                         const dfmSlug = m.dfm_slug || m.slug || slug;
@@ -753,11 +771,29 @@
                 var feedEl = document.getElementById('feed-list');
                 if (feedEl && !silent) feedEl.innerHTML = '<p class="ynj-text-muted" style="padding:16px;text-align:center;">Loading...</p>';
 
+                // Use PHP pre-loaded data if available (instant, no API calls)
+                var pre = window.ynjPreloaded;
+                if (pre && pre.mosqueId && (pre.announcements || pre.events || pre.classes)) {
+                    processFeedData(
+                        { announcements: pre.announcements || [] },
+                        { events: pre.events || [] },
+                        { classes: pre.classes || [] },
+                        slug, silent
+                    );
+                    return;
+                }
+
+                // Fallback: fetch from API (only when mosque changes dynamically)
                 Promise.all([
                     fetch(`${API}/mosques/${slug}/announcements`).then(r => r.ok ? r.json() : {announcements:[]}).catch(() => ({announcements:[]})),
                     fetch(`${API}/mosques/${slug}/events?upcoming=1`).then(r => r.ok ? r.json() : {events:[]}).catch(() => ({events:[]})),
                     fetch(`${API}/mosques/${slug}/classes`).then(r => r.ok ? r.json() : {classes:[]}).catch(() => ({classes:[]}))
                 ]).then(([aData, eData, cData]) => {
+                    processFeedData(aData, eData, cData, slug, silent);
+                }).catch(() => {});
+            }
+
+            function processFeedData(aData, eData, cData, slug, silent) {
                     allFeedItems = [];
                     (aData.announcements || []).forEach(a => {
                         allFeedItems.push({ type:'announcement', title:a.title, body:a.body, date:a.published_at||'', pinned:a.pinned });
@@ -791,10 +827,6 @@
                     // Cache feed for today
                     try { localStorage.setItem('ynj_cached_feed', JSON.stringify(allFeedItems)); } catch(e) {}
                     renderFeed();
-                }).catch(function(err) {
-                    console.error('Feed load error:', err);
-                    if (feedEl) feedEl.innerHTML = '<p class="ynj-text-muted" style="padding:12px;text-align:center;">No announcements or events yet.</p>';
-                });
             }
 
             function sortFeedItems(items) {

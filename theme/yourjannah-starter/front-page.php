@@ -92,6 +92,66 @@ if ( $_ynj_mosque_for_prayer && $_ynj_mosque_for_prayer->latitude ) {
 }
 
 $_hp_mosque_name = $_ynj_mosque_for_prayer ? $_ynj_mosque_for_prayer->name : '';
+$_hp_mosque_id = $_ynj_mosque_for_prayer ? (int) $_ynj_mosque_for_prayer->id : 0;
+
+// ── Pre-load ALL data in PHP (eliminates 7 JS API calls) ──
+$_hp_jumuah = [];
+$_hp_sponsors = [];
+$_hp_announcements = [];
+$_hp_events = [];
+$_hp_classes = [];
+$_hp_points = [ 'total' => 0 ];
+
+if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
+    global $wpdb;
+
+    // Jumu'ah slots
+    $jt = YNJ_DB::table( 'jumuah_slots' );
+    if ( $wpdb->get_var( "SHOW TABLES LIKE '$jt'" ) === $jt ) {
+        $_hp_jumuah = $wpdb->get_results( $wpdb->prepare(
+            "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND status = 'active' ORDER BY salah_time ASC",
+            $_hp_mosque_id
+        ) ) ?: [];
+    }
+
+    // Sponsor ticker (businesses for this mosque)
+    $bt = YNJ_DB::table( 'businesses' );
+    $_hp_sponsors = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, business_name, category, monthly_fee_pence FROM $bt WHERE mosque_id = %d AND status = 'active' ORDER BY monthly_fee_pence DESC, business_name ASC LIMIT 20",
+        $_hp_mosque_id
+    ) ) ?: [];
+
+    // Announcements
+    $at = YNJ_DB::table( 'announcements' );
+    $_hp_announcements = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, title, body, type, pinned, published_at FROM $at WHERE mosque_id = %d AND status = 'published' ORDER BY pinned DESC, published_at DESC LIMIT 20",
+        $_hp_mosque_id
+    ) ) ?: [];
+
+    // Upcoming events
+    $et = YNJ_DB::table( 'events' );
+    $_hp_events = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, title, description, event_date, start_time, end_time, location, category, ticket_price_pence, max_capacity, rsvp_count FROM $et WHERE mosque_id = %d AND status = 'published' AND event_date >= CURDATE() ORDER BY event_date ASC LIMIT 20",
+        $_hp_mosque_id
+    ) ) ?: [];
+
+    // Classes
+    $ct = YNJ_DB::table( 'classes' );
+    $_hp_classes = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, title, description, instructor_name, day_of_week, start_time, end_time, price_pence, category, max_capacity, enrolled_count FROM $ct WHERE mosque_id = %d AND status = 'active' ORDER BY day_of_week ASC, start_time ASC LIMIT 20",
+        $_hp_mosque_id
+    ) ) ?: [];
+
+    // User points (if logged in)
+    if ( is_user_logged_in() ) {
+        $ynj_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+        if ( $ynj_uid ) {
+            $ut = YNJ_DB::table( 'users' );
+            $pts = (int) $wpdb->get_var( $wpdb->prepare( "SELECT total_points FROM $ut WHERE id = %d", $ynj_uid ) );
+            $_hp_points = [ 'ok' => true, 'total' => $pts ];
+        }
+    }
+}
 ?>
 
 <!-- User onboarding overlay (first-time visitors) -->
@@ -406,13 +466,18 @@ $_hp_mosque_name = $_ynj_mosque_for_prayer ? $_ynj_mosque_for_prayer->name : '';
   </div><!-- end desktop grid -->
 </main>
 
-<!-- Mosque selector dropdown -->
-<div class="ynj-dropdown" id="mosque-dropdown" style="display:none;">
-    <div class="ynj-dropdown__inner">
-        <input class="ynj-dropdown__search" id="mosque-search" type="text" placeholder="<?php esc_attr_e( 'Search mosques...', 'yourjannah' ); ?>" autocomplete="off">
-        <div class="ynj-dropdown__list" id="mosque-list"></div>
-    </div>
-</div>
+<!-- Pre-loaded data for homepage.js (eliminates 7 API calls) -->
+<script>
+window.ynjPreloaded = {
+    jumuah: <?php echo wp_json_encode( $_hp_jumuah ); ?>,
+    sponsors: <?php echo wp_json_encode( $_hp_sponsors ); ?>,
+    announcements: <?php echo wp_json_encode( $_hp_announcements ); ?>,
+    events: <?php echo wp_json_encode( $_hp_events ); ?>,
+    classes: <?php echo wp_json_encode( $_hp_classes ); ?>,
+    points: <?php echo wp_json_encode( $_hp_points ); ?>,
+    mosqueId: <?php echo (int) $_hp_mosque_id; ?>
+};
+</script>
 
 <?php
 get_footer();
