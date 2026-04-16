@@ -7,7 +7,7 @@
  */
 if (!defined('ABSPATH')) exit;
 
-define('YNJ_VERSION', '2.3.0');
+define('YNJ_VERSION', '2.4.0');
 define('YNJ_DIR', plugin_dir_path(__FILE__));
 define('YNJ_URL', plugin_dir_url(__FILE__));
 define('YNJ_TABLE_PREFIX', 'ynj_');
