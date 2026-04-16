@@ -27,6 +27,14 @@
 </nav>
 <?php endif; ?>
 
+<!-- Global Mosque Selector Dropdown (works on all pages) -->
+<div class="ynj-dropdown" id="mosque-dropdown" style="display:none;">
+    <div class="ynj-dropdown__inner">
+        <input class="ynj-dropdown__search" id="mosque-search" type="text" placeholder="<?php esc_attr_e( 'Search mosques...', 'yourjannah' ); ?>" autocomplete="off">
+        <div class="ynj-dropdown__list" id="mosque-list"></div>
+    </div>
+</div>
+
 <?php wp_footer(); ?>
 </body>
 </html>

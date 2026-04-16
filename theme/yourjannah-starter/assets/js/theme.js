@@ -57,14 +57,78 @@
         });
     }
 
-    // Mosque pill click — open dropdown on homepage, or go to homepage on other pages
+    // Mosque pill click — open search dropdown on ALL pages
     var _mosquePill = document.getElementById('mosque-selector');
-    if (_mosquePill && !_isHomepage) {
+    var _mosqueDropdown = document.getElementById('mosque-dropdown');
+    var _mosqueSearch = document.getElementById('mosque-search');
+    var _mosqueList = document.getElementById('mosque-list');
+
+    if (_mosquePill && _mosqueDropdown && !_isHomepage) {
         _mosquePill.addEventListener('click', function(e) {
-            if (e.target.closest('#gps-btn')) return; // don't intercept GPS button
-            window.location.href = '/';
+            if (e.target.closest('#gps-btn')) return;
+            _mosqueDropdown.style.display = _mosqueDropdown.style.display === 'none' ? '' : 'none';
+            if (_mosqueDropdown.style.display !== 'none' && _mosqueSearch) {
+                _mosqueSearch.focus();
+                _mosqueSearch.value = '';
+                _mosqueList.innerHTML = '<p style="padding:12px;color:#6b8fa3;font-size:13px;text-align:center;">Type to search mosques...</p>';
+            }
         });
         _mosquePill.style.cursor = 'pointer';
+
+        // Close on click outside
+        _mosqueDropdown.addEventListener('click', function(e) {
+            if (e.target === _mosqueDropdown) _mosqueDropdown.style.display = 'none';
+        });
+
+        // Search handler
+        var _searchTimer = null;
+        if (_mosqueSearch) {
+            _mosqueSearch.addEventListener('input', function() {
+                var q = this.value.trim();
+                if (q.length < 2) {
+                    _mosqueList.innerHTML = '<p style="padding:12px;color:#6b8fa3;font-size:13px;text-align:center;">Type to search mosques...</p>';
+                    return;
+                }
+                clearTimeout(_searchTimer);
+                _searchTimer = setTimeout(function() {
+                    _mosqueList.innerHTML = '<p style="padding:12px;color:#6b8fa3;font-size:13px;text-align:center;">Searching...</p>';
+                    fetch(ynjData.restUrl + 'mosques/search?q=' + encodeURIComponent(q) + '&limit=10')
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            var mosques = data.mosques || [];
+                            if (!mosques.length) {
+                                _mosqueList.innerHTML = '<p style="padding:12px;color:#6b8fa3;font-size:13px;text-align:center;">No mosques found.</p>';
+                                return;
+                            }
+                            _mosqueList.innerHTML = mosques.map(function(m) {
+                                return '<button class="ynj-dropdown__item" data-slug="' + m.slug + '" data-name="' + (m.name || '').replace(/"/g, '') + '" style="display:block;width:100%;text-align:left;padding:12px 16px;border:none;background:none;cursor:pointer;font-family:inherit;border-bottom:1px solid #f0f0f0;">' +
+                                    '<strong style="font-size:14px;display:block;">' + m.name + '</strong>' +
+                                    '<span style="font-size:11px;color:#6b8fa3;">' + [m.city, m.postcode].filter(Boolean).join(', ') + '</span>' +
+                                    '</button>';
+                            }).join('');
+
+                            // Click handler for results
+                            _mosqueList.querySelectorAll('.ynj-dropdown__item').forEach(function(btn) {
+                                btn.addEventListener('click', function() {
+                                    var s = this.dataset.slug;
+                                    var n = this.dataset.name;
+                                    localStorage.setItem('ynj_mosque_slug', s);
+                                    localStorage.setItem('ynj_mosque_name', n);
+                                    localStorage.removeItem('ynj_cache_date');
+                                    localStorage.removeItem('ynj_cached_prayers');
+                                    localStorage.removeItem('ynj_cached_feed');
+                                    _mosqueDropdown.style.display = 'none';
+                                    // Redirect to this mosque
+                                    window.location.href = '/mosque/' + s;
+                                });
+                            });
+                        })
+                        .catch(function() {
+                            _mosqueList.innerHTML = '<p style="padding:12px;color:#dc2626;font-size:13px;text-align:center;">Search failed.</p>';
+                        });
+                }, 300);
+            });
+        }
     }
 
     // ================================================================
