@@ -35,7 +35,8 @@ if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
 ?>
 
 <main class="ynj-main">
-    <h2 style="font-size:18px;font-weight:700;margin-bottom:12px;"><?php echo esc_html( $mosque_name ); ?> — <?php esc_html_e( 'Business Directory', 'yourjannah' ); ?></h2>
+    <h2 style="font-size:18px;font-weight:700;margin-bottom:4px;"><?php echo esc_html( $mosque_name ); ?> — <?php esc_html_e( 'Business Directory', 'yourjannah' ); ?></h2>
+    <p style="font-size:14px;font-weight:600;color:#0a1628;margin-bottom:12px;line-height:1.4;"><?php esc_html_e( 'These people and businesses support your masjid. Support them back.', 'yourjannah' ); ?></p>
 
     <!-- Search bar -->
     <div style="display:flex;gap:8px;margin-bottom:14px;">
