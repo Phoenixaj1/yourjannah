@@ -78,7 +78,8 @@ if ( $_nb_id && $_nb_pk ) :
 ?>
 <script src="https://js.stripe.com/v3/" async></script>
 <style>
-.ynj-niyyah{position:fixed;bottom:0;left:0;right:0;z-index:200;background:linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#00ADEF 100%);color:#fff;border-radius:18px 18px 0 0;box-shadow:0 -4px 30px rgba(0,0,0,.3);transform:translateY(calc(100% - 48px));transition:transform .3s ease;max-width:500px;margin:0 auto;}
+.ynj-niyyah{position:fixed;bottom:60px;left:0;right:0;z-index:199;background:linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#00ADEF 100%);color:#fff;border-radius:18px 18px 0 0;box-shadow:0 -4px 30px rgba(0,0,0,.3);transform:translateY(calc(100% - 48px));transition:transform .3s ease;max-width:500px;margin:0 auto;}
+@media(min-width:901px){.ynj-niyyah{bottom:0;}}
 .ynj-niyyah--open{transform:translateY(0);}
 .ynj-niyyah__handle{display:flex;justify-content:center;padding:10px 0 4px;cursor:pointer;}
 .ynj-niyyah__handle span{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.3);}
