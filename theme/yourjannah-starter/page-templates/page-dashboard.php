@@ -21,6 +21,17 @@ $mosque_ids = get_user_meta( $wp_uid, 'ynj_mosque_ids', true ) ?: [];
 // Also check ynj_mosque_admin role
 $is_admin = current_user_can( 'manage_options' ) || in_array( 'ynj_mosque_admin', (array) wp_get_current_user()->roles );
 
+// WP admins (manage_options) without a mosque_id: auto-assign first mosque
+if ( $is_admin && ! $mosque_id && class_exists( 'YNJ_DB' ) ) {
+    global $wpdb;
+    $first_mosque = $wpdb->get_var( "SELECT id FROM " . YNJ_DB::table( 'mosques' ) . " WHERE status IN ('active','unclaimed') ORDER BY id ASC LIMIT 1" );
+    if ( $first_mosque ) {
+        $mosque_id = (int) $first_mosque;
+        update_user_meta( $wp_uid, 'ynj_mosque_id', $mosque_id );
+        update_user_meta( $wp_uid, 'ynj_mosque_ids', [ $mosque_id ] );
+    }
+}
+
 if ( ! $is_admin || ! $mosque_id ) {
     get_header(); ?>
     <main class="ynj-main">
