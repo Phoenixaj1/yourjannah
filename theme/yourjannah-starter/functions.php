@@ -233,6 +233,7 @@ add_filter( 'query_vars', function( $vars ) {
     $vars[] = 'ynj_mosque_slug';
     $vars[] = 'ynj_page_type';
     $vars[] = 'ynj_item_id';
+    $vars[] = 'ynj_listing_type';
     return $vars;
 } );
 
@@ -273,6 +274,17 @@ add_action( 'init', function() {
     add_rewrite_rule(
         '^mosque/([^/]+)/service/(\d+)/?$',
         'index.php?ynj_mosque_slug=$matches[1]&ynj_page_type=service_detail&ynj_item_id=$matches[2]',
+        'top'
+    );
+    // Edit listing: /mosque/{slug}/business/{id}/edit
+    add_rewrite_rule(
+        '^mosque/([^/]+)/business/(\d+)/edit/?$',
+        'index.php?ynj_mosque_slug=$matches[1]&ynj_page_type=listing_edit&ynj_item_id=$matches[2]&ynj_listing_type=business',
+        'top'
+    );
+    add_rewrite_rule(
+        '^mosque/([^/]+)/service/(\d+)/edit/?$',
+        'index.php?ynj_mosque_slug=$matches[1]&ynj_page_type=listing_edit&ynj_item_id=$matches[2]&ynj_listing_type=service',
         'top'
     );
 
@@ -347,6 +359,7 @@ add_filter( 'template_include', function( $template ) {
         'business'        => 'page-templates/page-business.php',
         'business_detail' => 'page-templates/page-business-detail.php',
         'service_detail'  => 'page-templates/page-business-detail.php',
+        'listing_edit'    => 'page-templates/page-listing-edit.php',
         'sponsor_join'    => 'page-templates/page-sponsor-join.php',
         'service_join'    => 'page-templates/page-service-join.php',
         'live'            => 'page-templates/page-live.php',

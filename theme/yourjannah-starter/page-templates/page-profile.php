@@ -511,7 +511,7 @@ $action_pts = [
                 <?php endif; ?>
                 <div style="display:flex;gap:6px;margin-top:8px;">
                     <a href="<?php echo esc_url( home_url( '/mosque/' . ( $biz->mosque_slug ?: $slug ) . '/business/' . $biz->id ) ); ?>" style="font-size:12px;font-weight:600;color:#00ADEF;text-decoration:none;">View →</a>
-                    <button type="button" class="ynj-edit-listing-btn" data-type="business" data-id="<?php echo (int) $biz->id; ?>" style="font-size:12px;font-weight:600;color:#7c3aed;background:none;border:none;cursor:pointer;padding:0;font-family:inherit;">✏️ Edit</button>
+                    <a href="<?php echo esc_url( home_url( '/mosque/' . ( $biz->mosque_slug ?: $slug ) . '/business/' . $biz->id . '/edit' ) ); ?>" style="font-size:12px;font-weight:600;color:#7c3aed;text-decoration:none;">✏️ Edit</a>
                 </div>
             </div>
         <?php endforeach; ?>
@@ -543,7 +543,7 @@ $action_pts = [
                 <?php endif; ?>
                 <div style="display:flex;gap:6px;margin-top:8px;">
                     <a href="<?php echo esc_url( home_url( '/mosque/' . ( $svc->mosque_slug ?: $slug ) . '/service/' . $svc->id ) ); ?>" style="font-size:12px;font-weight:600;color:#00ADEF;text-decoration:none;">View →</a>
-                    <button type="button" class="ynj-edit-listing-btn" data-type="service" data-id="<?php echo (int) $svc->id; ?>" style="font-size:12px;font-weight:600;color:#7c3aed;background:none;border:none;cursor:pointer;padding:0;font-family:inherit;">✏️ Edit</button>
+                    <a href="<?php echo esc_url( home_url( '/mosque/' . ( $svc->mosque_slug ?: $slug ) . '/service/' . $svc->id . '/edit' ) ); ?>" style="font-size:12px;font-weight:600;color:#7c3aed;text-decoration:none;">✏️ Edit</a>
                 </div>
             </div>
         <?php endforeach; ?>
@@ -655,102 +655,6 @@ $action_pts = [
         });
     };
 
-    /* ── Edit Listing Modal ── */
-    document.querySelectorAll('.ynj-edit-listing-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var type = this.dataset.type; // business or service
-            var id = this.dataset.id;
-            // Fetch current data
-            fetch(API + 'my-listing/' + type + '/' + id, { credentials:'same-origin', headers:headers })
-                .then(function(r){ return r.json(); })
-                .then(function(data) {
-                    if (!data.ok) { alert(data.error || 'Could not load listing.'); return; }
-                    var item = data.listing;
-                    var modal = document.getElementById('edit-listing-modal');
-                    modal.dataset.type = type;
-                    modal.dataset.id = id;
-                    if (type === 'business') {
-                        document.getElementById('el-name').value = item.business_name || '';
-                        document.getElementById('el-category').value = item.category || '';
-                        document.getElementById('el-desc').value = item.description || '';
-                        document.getElementById('el-phone').value = item.phone || '';
-                        document.getElementById('el-email').value = item.email || '';
-                        document.getElementById('el-website').value = item.website || '';
-                        document.getElementById('el-address').value = item.address || '';
-                        document.getElementById('el-postcode').value = item.postcode || '';
-                        document.getElementById('el-website-row').style.display = '';
-                        document.getElementById('el-address-row').style.display = '';
-                        document.getElementById('el-area-row').style.display = 'none';
-                        document.getElementById('el-rate-row').style.display = 'none';
-                    } else {
-                        document.getElementById('el-name').value = item.provider_name || '';
-                        document.getElementById('el-category').value = item.service_type || '';
-                        document.getElementById('el-desc').value = item.description || '';
-                        document.getElementById('el-phone').value = item.phone || '';
-                        document.getElementById('el-email').value = item.email || '';
-                        document.getElementById('el-website').value = '';
-                        document.getElementById('el-address').value = '';
-                        document.getElementById('el-postcode').value = '';
-                        document.getElementById('el-area').value = item.area_covered || '';
-                        document.getElementById('el-rate').value = item.hourly_rate_pence ? (item.hourly_rate_pence / 100) : '';
-                        document.getElementById('el-website-row').style.display = 'none';
-                        document.getElementById('el-address-row').style.display = 'none';
-                        document.getElementById('el-area-row').style.display = '';
-                        document.getElementById('el-rate-row').style.display = '';
-                    }
-                    document.getElementById('el-error').textContent = '';
-                    modal.style.display = 'flex';
-                });
-        });
-    });
-
-    window.saveEditListing = async function() {
-        var modal = document.getElementById('edit-listing-modal');
-        var type = modal.dataset.type;
-        var id = modal.dataset.id;
-        var btn = document.getElementById('el-save');
-        btn.disabled = true; btn.textContent = 'Saving...';
-        document.getElementById('el-error').textContent = '';
-
-        var body = {
-            description: document.getElementById('el-desc').value,
-            phone: document.getElementById('el-phone').value,
-            email: document.getElementById('el-email').value,
-        };
-        if (type === 'business') {
-            body.business_name = document.getElementById('el-name').value;
-            body.category = document.getElementById('el-category').value;
-            body.website = document.getElementById('el-website').value;
-            body.address = document.getElementById('el-address').value;
-            body.postcode = document.getElementById('el-postcode').value;
-        } else {
-            body.provider_name = document.getElementById('el-name').value;
-            body.service_type = document.getElementById('el-category').value;
-            body.area_covered = document.getElementById('el-area').value;
-            var rate = parseFloat(document.getElementById('el-rate').value);
-            if (rate > 0) body.hourly_rate_pence = Math.round(rate * 100);
-        }
-
-        try {
-            var resp = await fetch(API + 'my-listing/' + type + '/' + id, {
-                method: 'PUT', credentials: 'same-origin',
-                headers: Object.assign({}, headers, {'Content-Type':'application/json'}),
-                body: JSON.stringify(body)
-            });
-            var data = await resp.json();
-            if (data.ok) {
-                modal.style.display = 'none';
-                window.location.reload();
-            } else {
-                document.getElementById('el-error').textContent = data.error || 'Save failed.';
-                btn.disabled = false; btn.textContent = 'Save Changes';
-            }
-        } catch(e) {
-            document.getElementById('el-error').textContent = 'Network error.';
-            btn.disabled = false; btn.textContent = 'Save Changes';
-        }
-    };
-
     /* ── Logout ── */
     document.getElementById('btn-logout').addEventListener('click', function() {
         localStorage.removeItem('ynj_user_token');
@@ -761,25 +665,5 @@ $action_pts = [
 })();
 </script>
 
-<!-- Edit Listing Modal -->
-<div id="edit-listing-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.5);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
-    <div style="background:#fff;border-radius:16px;padding:24px;width:90%;max-width:420px;max-height:85vh;overflow-y:auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <h3 style="font-size:16px;font-weight:700;margin:0;">✏️ <?php esc_html_e( 'Edit Listing', 'yourjannah' ); ?></h3>
-            <button onclick="document.getElementById('edit-listing-modal').style.display='none'" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
-        </div>
-        <div class="ynj-field" style="margin-bottom:10px;"><label style="font-size:12px;font-weight:600;color:#6b8fa3;display:block;margin-bottom:4px;"><?php esc_html_e( 'Name', 'yourjannah' ); ?></label><input type="text" id="el-name" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;"></div>
-        <div class="ynj-field" style="margin-bottom:10px;"><label style="font-size:12px;font-weight:600;color:#6b8fa3;display:block;margin-bottom:4px;"><?php esc_html_e( 'Category / Type', 'yourjannah' ); ?></label><input type="text" id="el-category" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;"></div>
-        <div class="ynj-field" style="margin-bottom:10px;"><label style="font-size:12px;font-weight:600;color:#6b8fa3;display:block;margin-bottom:4px;"><?php esc_html_e( 'Description', 'yourjannah' ); ?></label><textarea id="el-desc" rows="3" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;resize:vertical;"></textarea></div>
-        <div class="ynj-field" style="margin-bottom:10px;"><label style="font-size:12px;font-weight:600;color:#6b8fa3;display:block;margin-bottom:4px;"><?php esc_html_e( 'Phone', 'yourjannah' ); ?></label><input type="tel" id="el-phone" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;"></div>
-        <div class="ynj-field" style="margin-bottom:10px;"><label style="font-size:12px;font-weight:600;color:#6b8fa3;display:block;margin-bottom:4px;"><?php esc_html_e( 'Email', 'yourjannah' ); ?></label><input type="email" id="el-email" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;"></div>
-        <div class="ynj-field" id="el-website-row" style="margin-bottom:10px;"><label style="font-size:12px;font-weight:600;color:#6b8fa3;display:block;margin-bottom:4px;"><?php esc_html_e( 'Website', 'yourjannah' ); ?></label><input type="url" id="el-website" placeholder="https://" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;"></div>
-        <div class="ynj-field" id="el-address-row" style="margin-bottom:10px;"><label style="font-size:12px;font-weight:600;color:#6b8fa3;display:block;margin-bottom:4px;"><?php esc_html_e( 'Address', 'yourjannah' ); ?></label><input type="text" id="el-address" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;"><input type="text" id="el-postcode" placeholder="<?php esc_attr_e( 'Postcode', 'yourjannah' ); ?>" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;margin-top:6px;"></div>
-        <div class="ynj-field" id="el-area-row" style="margin-bottom:10px;display:none;"><label style="font-size:12px;font-weight:600;color:#6b8fa3;display:block;margin-bottom:4px;"><?php esc_html_e( 'Area Covered', 'yourjannah' ); ?></label><input type="text" id="el-area" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;"></div>
-        <div class="ynj-field" id="el-rate-row" style="margin-bottom:10px;display:none;"><label style="font-size:12px;font-weight:600;color:#6b8fa3;display:block;margin-bottom:4px;"><?php esc_html_e( 'Hourly Rate (£)', 'yourjannah' ); ?></label><input type="number" id="el-rate" min="0" step="0.01" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;"></div>
-        <p id="el-error" style="color:#dc2626;font-size:13px;margin-bottom:8px;"></p>
-        <button id="el-save" onclick="saveEditListing()" style="width:100%;padding:14px;border:none;border-radius:12px;background:#00ADEF;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;"><?php esc_html_e( 'Save Changes', 'yourjannah' ); ?></button>
-    </div>
-</div>
 <?php
 get_footer();
