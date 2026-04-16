@@ -65,6 +65,20 @@ class YNJ_API_Directory {
             'callback'            => [ __CLASS__, 'admin_update_business' ],
             'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ]);
+
+        // Listing owner: get own listing
+        register_rest_route( self::NS, '/my-listing/(?P<type>business|service)/(?P<id>\d+)', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'my_listing_get' ],
+            'permission_callback' => '__return_true',
+        ]);
+
+        // Listing owner: update own listing
+        register_rest_route( self::NS, '/my-listing/(?P<type>business|service)/(?P<id>\d+)', [
+            'methods'             => 'PUT',
+            'callback'            => [ __CLASS__, 'my_listing_update' ],
+            'permission_callback' => '__return_true',
+        ]);
     }
 
     // ================================================================
@@ -424,5 +438,112 @@ class YNJ_API_Directory {
             'ok'      => true,
             'message' => 'Business listing updated.',
         ] );
+    }
+
+    // ================================================================
+    // LISTING OWNER — get/update own listings
+    // ================================================================
+
+    /**
+     * Resolve current user from WP cookie or Bearer token.
+     */
+    private static function resolve_owner( \WP_REST_Request $request ) {
+        // WP cookie auth
+        if ( is_user_logged_in() ) {
+            return (object) [
+                'wp_uid' => get_current_user_id(),
+                'email'  => wp_get_current_user()->user_email,
+            ];
+        }
+        // Bearer token auth
+        $token = str_replace( 'Bearer ', '', $request->get_header( 'Authorization' ) ?? '' );
+        if ( $token ) {
+            global $wpdb;
+            $ut = YNJ_DB::table( 'users' );
+            $hash = hash_hmac( 'sha256', $token, 'ynj_user_salt_2024' );
+            $user = $wpdb->get_row( $wpdb->prepare( "SELECT id, email FROM $ut WHERE token_hash = %s AND status = 'active'", $hash ) );
+            if ( $user ) return (object) [ 'wp_uid' => 0, 'email' => $user->email ];
+        }
+        return null;
+    }
+
+    /**
+     * GET /my-listing/{type}/{id} — get own listing for editing.
+     */
+    public static function my_listing_get( \WP_REST_Request $request ) {
+        $owner = self::resolve_owner( $request );
+        if ( ! $owner ) return new \WP_Error( 'auth', 'Login required.', [ 'status' => 401 ] );
+
+        $type = $request->get_param( 'type' );
+        $id   = (int) $request->get_param( 'id' );
+
+        global $wpdb;
+        $table = $type === 'business' ? YNJ_DB::table( 'businesses' ) : YNJ_DB::table( 'services' );
+        $item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $id ) );
+
+        if ( ! $item ) return new \WP_Error( 'not_found', 'Listing not found.', [ 'status' => 404 ] );
+
+        // Verify ownership by email
+        $item_email = $item->email ?? '';
+        if ( strtolower( $item_email ) !== strtolower( $owner->email ) ) {
+            // Also check user_id linkage
+            $item_user_id = (int) ( $item->user_id ?? 0 );
+            $owner_ynj_id = $owner->wp_uid ? (int) get_user_meta( $owner->wp_uid, 'ynj_user_id', true ) : 0;
+            if ( ! $item_user_id || $item_user_id !== $owner_ynj_id ) {
+                return new \WP_Error( 'forbidden', 'You can only edit your own listings.', [ 'status' => 403 ] );
+            }
+        }
+
+        return new \WP_REST_Response( [ 'ok' => true, 'listing' => $item ] );
+    }
+
+    /**
+     * PUT /my-listing/{type}/{id} — update own listing.
+     */
+    public static function my_listing_update( \WP_REST_Request $request ) {
+        $owner = self::resolve_owner( $request );
+        if ( ! $owner ) return new \WP_Error( 'auth', 'Login required.', [ 'status' => 401 ] );
+
+        $type = $request->get_param( 'type' );
+        $id   = (int) $request->get_param( 'id' );
+        $data = $request->get_json_params();
+
+        global $wpdb;
+        $table = $type === 'business' ? YNJ_DB::table( 'businesses' ) : YNJ_DB::table( 'services' );
+        $item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $id ) );
+
+        if ( ! $item ) return new \WP_Error( 'not_found', 'Listing not found.', [ 'status' => 404 ] );
+
+        // Verify ownership
+        $item_email = $item->email ?? '';
+        if ( strtolower( $item_email ) !== strtolower( $owner->email ) ) {
+            $item_user_id = (int) ( $item->user_id ?? 0 );
+            $owner_ynj_id = $owner->wp_uid ? (int) get_user_meta( $owner->wp_uid, 'ynj_user_id', true ) : 0;
+            if ( ! $item_user_id || $item_user_id !== $owner_ynj_id ) {
+                return new \WP_Error( 'forbidden', 'You can only edit your own listings.', [ 'status' => 403 ] );
+            }
+        }
+
+        // Build update array — only allowed fields
+        $update = [];
+        if ( $type === 'business' ) {
+            $allowed = [ 'business_name', 'category', 'description', 'phone', 'email', 'website', 'address', 'postcode' ];
+        } else {
+            $allowed = [ 'provider_name', 'service_type', 'description', 'phone', 'email', 'area_covered', 'hourly_rate_pence' ];
+        }
+
+        foreach ( $allowed as $field ) {
+            if ( isset( $data[ $field ] ) ) {
+                $update[ $field ] = $field === 'hourly_rate_pence' ? (int) $data[ $field ] : sanitize_text_field( $data[ $field ] );
+            }
+        }
+
+        if ( empty( $update ) ) {
+            return new \WP_Error( 'no_changes', 'Nothing to update.', [ 'status' => 400 ] );
+        }
+
+        $wpdb->update( $table, $update, [ 'id' => $id ] );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'message' => 'Listing updated.' ] );
     }
 }
