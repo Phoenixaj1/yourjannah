@@ -109,9 +109,6 @@ localStorage.setItem('ynj_mosque_name', <?php echo wp_json_encode( $mosque_name 
     <!-- Ramadan banner (shown automatically during Ramadan) -->
     <div id="ramadan-banner" style="display:none;background:linear-gradient(135deg,#1a1628,#2d1b69);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:10px;"></div>
 
-    <!-- Welcome / Greeting (JS populates) -->
-    <div id="ynj-greeting" style="display:none;"></div>
-
     <!-- Patron Membership CTA -->
     <div class="ynj-patron-bar" id="patron-hero">
         <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/patron' ) ); ?>" class="ynj-patron-bar__label">🏅 <strong id="patron-bar-text"><?php printf( esc_html__( 'Become a Patron of %s', 'yourjannah' ), esc_html( $mosque_name ) ); ?></strong></a>

@@ -203,9 +203,6 @@ $_hp_mosque_name = $_ynj_mosque_for_prayer ? $_ynj_mosque_for_prayer->name : '';
     <!-- Ramadan banner (shown automatically during Ramadan) -->
     <div id="ramadan-banner" style="display:none;background:linear-gradient(135deg,#1a1628,#2d1b69);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:10px;"></div>
 
-    <!-- Welcome / Greeting (JS populates) -->
-    <div id="ynj-greeting" style="display:none;"></div>
-
     <!-- Patron Membership CTA -->
     <div class="ynj-patron-bar" id="patron-hero">
         <a href="#" class="ynj-patron-bar__label" data-nav-mosque="/mosque/{slug}/patron">🏅 <strong id="patron-bar-text"><?php esc_html_e( 'Become a Patron', 'yourjannah' ); ?></strong></a>

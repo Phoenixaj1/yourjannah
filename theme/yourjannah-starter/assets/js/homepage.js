@@ -21,7 +21,6 @@
                 registerSW();
                 setupMosqueSelector();
                 setupGpsButton();
-                showGreeting();
                 loadPoints();
 
                 var savedSlug = mosqueSlug || localStorage.getItem('ynj_mosque_slug');
