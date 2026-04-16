@@ -108,7 +108,7 @@ get_header();
     <!-- Welcome / Greeting (JS populates) -->
     <div id="ynj-greeting" style="display:none;"></div>
 
-    <!-- Patron Membership CTA — compact single row -->
+    <!-- Patron Membership CTA -->
     <div class="ynj-patron-bar" id="patron-hero">
         <a href="#" class="ynj-patron-bar__label" data-nav-mosque="/mosque/{slug}/patron">🏅 <strong id="patron-bar-text"><?php esc_html_e( 'Become a Patron', 'yourjannah' ); ?></strong></a>
         <div class="ynj-patron-bar__tiers">
@@ -254,7 +254,7 @@ get_header();
 
     <!-- Feed -->
     <section id="feed-section">
-        <h3 style="font-size:16px;font-weight:700;margin:0 0 10px;"><?php esc_html_e( 'What\'s Happening', 'yourjannah' ); ?></h3>
+        <h3 id="feed-heading" style="font-size:16px;font-weight:700;margin:0 0 10px;"><?php esc_html_e( 'What\'s Happening', 'yourjannah' ); ?></h3>
 
         <div class="ynj-filter-chips" id="feed-filters">
             <button class="ynj-chip ynj-chip--active" data-filter="all" onclick="filterFeed('all')">All</button>

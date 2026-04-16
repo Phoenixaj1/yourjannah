@@ -307,14 +307,16 @@
                             }).catch(function(){});
                         }
 
-                        // Update CTA help text + patron bar with mosque name
+                        // Update all headings + CTAs with mosque name
                         var mName = m.name || 'the masjid';
                         var sh = document.getElementById('cta-sponsor-help');
                         var svh = document.getElementById('cta-services-help');
                         if (sh) sh.textContent = 'Funds go to supporting ' + mName;
                         if (svh) svh.textContent = 'Proceeds help fund ' + mName;
                         var pb = document.getElementById('patron-bar-text');
-                        if (pb) pb.textContent = 'Patron of ' + mName;
+                        if (pb) pb.textContent = 'Become a Patron of ' + mName;
+                        var fh = document.getElementById('feed-heading');
+                        if (fh) fh.textContent = "What's Happening at " + mName;
 
                         // Jumu'ah times
                         fetch(`${API}/mosques/${slug}/jumuah`)
@@ -511,7 +513,7 @@
                     document.getElementById('next-prayer-countdown').textContent = '--:--:--';
                     document.getElementById('next-prayer-name').textContent = 'All prayers completed';
                     document.getElementById('next-prayer-time').textContent = 'See you at Fajr tomorrow';
-                    document.getElementById('next-prayer-label').textContent = '';
+                    document.getElementById('next-prayer-label').textContent = mosqueData && mosqueData.name ? mosqueData.name : '';
                     hero.classList.remove('ynj-hero--urgent','ynj-hero--critical');
                     return;
                 }
@@ -529,7 +531,8 @@
                 // Show adhan + jamat time
                 const timeDisplay = nextJamat ? `Adhan ${nextTime} · Jamat ${nextJamat}` : nextTime;
                 document.getElementById('next-prayer-time').textContent = timeDisplay;
-                document.getElementById('next-prayer-label').textContent = 'Next Prayer';
+                var prayerLabel = mosqueData && mosqueData.name ? 'Next Prayer at ' + mosqueData.name : 'Next Prayer';
+                document.getElementById('next-prayer-label').textContent = prayerLabel;
 
                 // Urgency based on leave-by time (jamat - travel - buffer)
                 hero.classList.remove('ynj-hero--urgent','ynj-hero--critical');
