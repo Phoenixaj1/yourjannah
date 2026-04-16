@@ -12,16 +12,10 @@ $slug = ynj_mosque_slug();
 ?>
 
 <main class="ynj-main">
-    <!-- CTA Banner -->
-    <div style="background:linear-gradient(135deg,#00ADEF,#0369a1);border-radius:14px;padding:18px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
-        <div>
-            <h3 style="color:#fff;font-size:15px;font-weight:700;margin-bottom:2px;"><?php esc_html_e( 'Support Your Masjid', 'yourjannah' ); ?></h3>
-            <p style="color:rgba(255,255,255,.8);font-size:12px;"><?php esc_html_e( 'List your business or services — proceeds fund the masjid', 'yourjannah' ); ?></p>
-        </div>
-        <div style="display:flex;gap:6px;">
-            <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/sponsors/join' ) ); ?>" style="display:inline-flex;align-items:center;gap:4px;padding:8px 14px;border-radius:10px;background:#fff;color:#00ADEF;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;">⭐ <?php esc_html_e( 'Sponsor', 'yourjannah' ); ?></a>
-            <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/services' ) ); ?>" style="display:inline-flex;align-items:center;gap:4px;padding:8px 14px;border-radius:10px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;">🤝 <?php esc_html_e( 'List Service', 'yourjannah' ); ?></a>
-        </div>
+    <!-- CTA Buttons -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/sponsors/join' ) ); ?>" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 16px;border-radius:12px;background:linear-gradient(135deg,#00ADEF,#0369a1);color:#fff;font-size:14px;font-weight:700;text-decoration:none;text-align:center;box-shadow:0 4px 12px rgba(0,173,239,.25);">⭐ <?php esc_html_e( 'Sponsor Your Masjid', 'yourjannah' ); ?></a>
+        <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/services/join' ) ); ?>" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 16px;border-radius:12px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:14px;font-weight:700;text-decoration:none;text-align:center;box-shadow:0 4px 12px rgba(124,58,237,.25);">🤝 <?php esc_html_e( 'List Your Service', 'yourjannah' ); ?></a>
     </div>
 
     <!-- Tabs: Sponsors / Services -->
