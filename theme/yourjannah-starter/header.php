@@ -59,58 +59,6 @@ $_tier_labels = [ 'supporter' => 'Bronze', 'guardian' => 'Silver', 'champion' =>
 </div>
 <?php endif; ?>
 
-<script>
-function ynjShowMosqueResults(mosques){
-    var dd=document.getElementById('mosque-dropdown');
-    var ml=document.getElementById('mosque-list');
-    if(dd)dd.style.display='block';
-    if(ml){
-        ml.innerHTML=mosques.map(function(m){
-            var dist=m.distance?(' · '+m.distance.toFixed(1)+'km'):'';
-            var sub=[m.city,m.postcode].filter(Boolean).join(', ')+dist;
-            return '<button style="display:block;width:100%;text-align:left;padding:12px 16px;border:none;background:none;cursor:pointer;font-family:inherit;border-bottom:1px solid #f0f0f0;" onclick="localStorage.setItem(\'ynj_mosque_slug\',\''+m.slug+'\');localStorage.setItem(\'ynj_mosque_name\',\''+m.name.replace(/'/g,'')+'\');localStorage.removeItem(\'ynj_cache_date\');localStorage.removeItem(\'ynj_cached_prayers\');localStorage.removeItem(\'ynj_cached_feed\');window.location.href=\'/\'"><strong style="font-size:14px;display:block;">'+m.name+'</strong><span style="font-size:11px;color:#6b8fa3;">'+sub+'</span></button>';
-        }).join('');
-    }
-}
-function ynjGpsFind(){
-    if(!navigator.geolocation)return;
-    var btn=document.getElementById('gps-btn');
-    btn.classList.add('ynj-gps-btn--loading');
-    navigator.geolocation.getCurrentPosition(function(p){
-        btn.classList.remove('ynj-gps-btn--loading');
-        fetch(ynjData.restUrl+'mosques/nearest?lat='+p.coords.latitude+'&lng='+p.coords.longitude+'&limit=5')
-        .then(function(r){return r.json()})
-        .then(function(d){
-            if(d.ok&&d.mosques&&d.mosques.length) ynjShowMosqueResults(d.mosques);
-        });
-    },function(){
-        btn.classList.remove('ynj-gps-btn--loading');
-    },{timeout:8000,maximumAge:300000});
-}
-function ynjOpenMosqueDropdown(){
-    var dd=document.getElementById('mosque-dropdown');
-    if(!dd)return;
-    if(dd.style.display==='block'){dd.style.display='none';return;}
-    dd.style.display='block';
-    var ml=document.getElementById('mosque-list');
-    var s=document.getElementById('mosque-search');
-    if(s){s.value='';s.focus();}
-    // Auto-load nearby mosques immediately
-    if(ml)ml.innerHTML='<p style="padding:12px;color:#6b8fa3;font-size:13px;text-align:center;">Finding nearby mosques...</p>';
-    if(navigator.geolocation){
-        navigator.geolocation.getCurrentPosition(function(p){
-            fetch(ynjData.restUrl+'mosques/nearest?lat='+p.coords.latitude+'&lng='+p.coords.longitude+'&limit=5')
-            .then(function(r){return r.json()})
-            .then(function(d){
-                if(d.ok&&d.mosques&&d.mosques.length) ynjShowMosqueResults(d.mosques);
-                else if(ml) ml.innerHTML='<p style="padding:12px;color:#6b8fa3;font-size:13px;text-align:center;">Type to search mosques...</p>';
-            });
-        },function(){
-            if(ml)ml.innerHTML='<p style="padding:12px;color:#6b8fa3;font-size:13px;text-align:center;">Type to search mosques...</p>';
-        },{timeout:5000,maximumAge:300000});
-    }
-}
-</script>
 <header class="ynj-header">
     <div class="ynj-header__inner">
         <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="ynj-logo">
@@ -134,17 +82,29 @@ function ynjOpenMosqueDropdown(){
             $mosque_slug = ynj_mosque_slug();
             $mosque = ynj_get_mosque( $mosque_slug );
             $mosque_name = $mosque ? $mosque->name : '';
-            ?>
-            <!-- GPS + Mosque selector fused -->
-            <div class="ynj-mosque-pill" id="mosque-selector">
-                <button class="ynj-mosque-pill__gps" id="gps-btn" type="button" title="<?php esc_attr_e( 'Detect my location', 'yourjannah' ); ?>" onclick="ynjGpsFind()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
-                </button>
-                <span class="ynj-mosque-pill__name" id="mosque-name" onclick="ynjOpenMosqueDropdown()" style="cursor:pointer;"><?php echo esc_html( $mosque_name ?: __( 'Finding...', 'yourjannah' ) ); ?></span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:.6;flex-shrink:0;cursor:pointer;" onclick="ynjOpenMosqueDropdown()"><path d="M6 9l6 6 6-6"/></svg>
-            </div>
 
-            <!-- User account handled by top membership bar -->
+            // Get nearby mosques for dropdown (PHP — always works)
+            $nearby_mosques = [];
+            if ( class_exists( 'YNJ_DB' ) && $mosque && $mosque->latitude ) {
+                global $wpdb;
+                $mt = YNJ_DB::table( 'mosques' );
+                $nearby_mosques = $wpdb->get_results( $wpdb->prepare(
+                    "SELECT slug, name, city, postcode,
+                            ( 6371 * acos( cos(radians(%f)) * cos(radians(latitude)) * cos(radians(longitude) - radians(%f)) + sin(radians(%f)) * sin(radians(latitude)) )) AS distance
+                     FROM $mt WHERE status IN ('active','unclaimed') AND latitude IS NOT NULL AND id != %d
+                     ORDER BY distance ASC LIMIT 10",
+                    $mosque->latitude, $mosque->longitude, $mosque->latitude, $mosque->id
+                ) ) ?: [];
+            }
+            ?>
+            <!-- Mosque selector — links to change mosque page -->
+            <a href="<?php echo esc_url( home_url( '/change-mosque' ) ); ?>" class="ynj-mosque-pill" style="text-decoration:none;color:#fff;">
+                <span class="ynj-mosque-pill__gps" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+                </span>
+                <span class="ynj-mosque-pill__name" id="mosque-name"><?php echo esc_html( $mosque_name ?: __( 'Select Mosque', 'yourjannah' ) ); ?></span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:.6;flex-shrink:0;"><path d="M6 9l6 6 6-6"/></svg>
+            </a>
         </div>
     </div>
 </header>

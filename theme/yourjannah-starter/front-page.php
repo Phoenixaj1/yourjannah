@@ -47,6 +47,21 @@ get_header();
 </div>
 <script>
 (function(){
+    // Handle mosque selection from /change-mosque page
+    var params = new URLSearchParams(window.location.search);
+    var selectSlug = params.get('ynj_select');
+    if (selectSlug) {
+        localStorage.setItem('ynj_mosque_slug', selectSlug);
+        localStorage.removeItem('ynj_cache_date');
+        localStorage.removeItem('ynj_cached_prayers');
+        localStorage.removeItem('ynj_cached_feed');
+        localStorage.removeItem('ynj_mosque_name');
+        // Clean URL and reload
+        window.history.replaceState({}, '', '/');
+        window.location.reload();
+        return;
+    }
+
     // Show onboarding if no token and no "seen" flag
     var hasToken = !!localStorage.getItem('ynj_user_token');
     var hasSeen = !!localStorage.getItem('ynj_onboard_seen');
