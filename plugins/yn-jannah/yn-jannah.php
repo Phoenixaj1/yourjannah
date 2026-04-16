@@ -69,6 +69,8 @@ add_action('init', function() {
     if ( ! get_role( 'ynj_mosque_admin' ) ) {
         YNJ_WP_Auth::install_roles();
     }
+    // Auto-configure Stripe keys on first load
+    YNJ_Stripe::auto_configure();
 }, 5);
 
 // AJAX handler to set WP auth cookie (called after JS login/register)
