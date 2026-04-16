@@ -358,7 +358,7 @@ add_action( 'template_redirect', function() {
       "target": {
         "namespace": "android_app",
         "package_name": "com.yourjannah.app",
-        "sha256_cert_fingerprints": ["94:6F:A2:E2:C0:44:B4:B1:30:17:7A:81:99:D7:9E:89:41:3B:87:EC:42:4A:A3:17:F4:53:C1:BE:E8:68:6E:D7"]
+        "sha256_cert_fingerprints": ["5E:26:90:48:E0:77:EB:8F:92:66:6B:98:E6:CD:7A:91:2C:D3:27:95:DA:3E:95:30:35:A4:5A:2D:03:F6:C3:C9"]
       }
     }]';
         exit;
