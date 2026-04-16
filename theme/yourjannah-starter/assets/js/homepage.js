@@ -97,11 +97,14 @@
             // Load points for logged-in users
             function loadPoints() {
                 var token = localStorage.getItem('ynj_user_token');
-                if (!token) return;
                 var card = document.getElementById('ynj-points-card');
+                // Show points card for both token auth and WP cookie auth
+                if (!token && !document.cookie.match(/wordpress_logged_in/)) return;
                 if (card) card.style.display = '';
 
-                fetch(API + '/points/me', { headers: { 'Authorization': 'Bearer ' + token } })
+                var headers = {};
+                if (token) headers['Authorization'] = 'Bearer ' + token;
+                fetch(API + '/points/me', { credentials: 'same-origin', headers: headers })
                     .then(function(r) { return r.ok ? r.json() : null; })
                     .then(function(d) {
                         if (d && d.ok) {
@@ -114,7 +117,7 @@
 
             window.doCheckIn = function() {
                 var token = localStorage.getItem('ynj_user_token');
-                if (!token) { window.location.href = '/login'; return; }
+                // Allow check-in with WP cookie auth even without JS token
                 if (!mosqueSlug) { alert('Select a mosque first.'); return; }
 
                 var btn = document.getElementById('checkin-btn');
@@ -123,9 +126,12 @@
                 if (!('geolocation' in navigator)) { btn.textContent = 'GPS not available'; btn.disabled = false; return; }
 
                 navigator.geolocation.getCurrentPosition(function(pos) {
+                    var headers = { 'Content-Type': 'application/json' };
+                    if (token) headers['Authorization'] = 'Bearer ' + token;
                     fetch(API + '/points/checkin', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        credentials: 'same-origin',
+                        headers: headers,
                         body: JSON.stringify({ mosque_slug: mosqueSlug, lat: pos.coords.latitude, lng: pos.coords.longitude })
                     })
                     .then(function(r) { return r.json(); })

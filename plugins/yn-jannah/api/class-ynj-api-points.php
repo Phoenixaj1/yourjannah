@@ -81,21 +81,48 @@ class YNJ_API_Points {
         $data  = $request->get_json_params();
         $token = str_replace( 'Bearer ', '', $request->get_header( 'Authorization' ) ?? '' );
 
-        if ( ! $token ) {
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Login required to check in.' ], 401 );
-        }
-
-        // Resolve user from token
         global $wpdb;
         $user_table = YNJ_DB::table( 'users' );
-        $token_hash = hash_hmac( 'sha256', $token, 'ynj_user_salt_2024' );
-        $user = $wpdb->get_row( $wpdb->prepare(
-            "SELECT id, name FROM $user_table WHERE token_hash = %s AND status = 'active'",
-            $token_hash
-        ) );
+        $user = null;
+
+        // Try token auth first
+        if ( $token ) {
+            $token_hash = hash_hmac( 'sha256', $token, 'ynj_user_salt_2024' );
+            $user = $wpdb->get_row( $wpdb->prepare(
+                "SELECT id, name FROM $user_table WHERE token_hash = %s AND status = 'active'",
+                $token_hash
+            ) );
+        }
+
+        // Fallback: WP cookie auth — auto-link or create ynj_user
+        if ( ! $user && is_user_logged_in() ) {
+            $wp_uid = get_current_user_id();
+            $ynj_uid = (int) get_user_meta( $wp_uid, 'ynj_user_id', true );
+            if ( $ynj_uid ) {
+                $user = $wpdb->get_row( $wpdb->prepare( "SELECT id, name FROM $user_table WHERE id = %d", $ynj_uid ) );
+            }
+            if ( ! $user ) {
+                $wp_user = wp_get_current_user();
+                $existing = $wpdb->get_row( $wpdb->prepare( "SELECT id, name FROM $user_table WHERE email = %s LIMIT 1", $wp_user->user_email ) );
+                if ( $existing ) {
+                    $user = $existing;
+                    update_user_meta( $wp_uid, 'ynj_user_id', (int) $existing->id );
+                } else {
+                    $new_token = bin2hex( random_bytes( 32 ) );
+                    $new_hash = hash_hmac( 'sha256', $new_token, 'ynj_user_salt_2024' );
+                    $wpdb->insert( $user_table, [
+                        'name' => $wp_user->display_name, 'email' => $wp_user->user_email,
+                        'password_hash' => '', 'token_hash' => $new_hash, 'status' => 'active',
+                    ] );
+                    $new_id = (int) $wpdb->insert_id;
+                    update_user_meta( $wp_uid, 'ynj_user_id', $new_id );
+                    $user = (object) [ 'id' => $new_id, 'name' => $wp_user->display_name ];
+                }
+            }
+        }
 
         if ( ! $user ) {
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Invalid session.' ], 401 );
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Login required to check in.' ], 401 );
         }
 
         $mosque_slug = sanitize_title( $data['mosque_slug'] ?? '' );
@@ -159,20 +186,29 @@ class YNJ_API_Points {
      */
     public static function my_points( \WP_REST_Request $request ) {
         $token = str_replace( 'Bearer ', '', $request->get_header( 'Authorization' ) ?? '' );
-        if ( ! $token ) {
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Login required.' ], 401 );
-        }
 
         global $wpdb;
         $user_table = YNJ_DB::table( 'users' );
-        $token_hash = hash_hmac( 'sha256', $token, 'ynj_user_salt_2024' );
-        $user = $wpdb->get_row( $wpdb->prepare(
-            "SELECT id, name, total_points FROM $user_table WHERE token_hash = %s AND status = 'active'",
-            $token_hash
-        ) );
+        $user = null;
+
+        if ( $token ) {
+            $token_hash = hash_hmac( 'sha256', $token, 'ynj_user_salt_2024' );
+            $user = $wpdb->get_row( $wpdb->prepare(
+                "SELECT id, name, total_points FROM $user_table WHERE token_hash = %s AND status = 'active'",
+                $token_hash
+            ) );
+        }
+
+        // Fallback: WP cookie auth
+        if ( ! $user && is_user_logged_in() ) {
+            $ynj_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+            if ( $ynj_uid ) {
+                $user = $wpdb->get_row( $wpdb->prepare( "SELECT id, name, total_points FROM $user_table WHERE id = %d", $ynj_uid ) );
+            }
+        }
 
         if ( ! $user ) {
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Invalid session.' ], 401 );
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Login required.' ], 401 );
         }
 
         $points_table = YNJ_DB::table( 'points' );

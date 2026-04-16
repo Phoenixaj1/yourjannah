@@ -33,6 +33,35 @@ $ynj_uid  = (int) get_user_meta( $wp_uid, 'ynj_user_id', true );
 $phone    = get_user_meta( $wp_uid, 'ynj_phone', true ) ?: '';
 $fav_mosque_id = (int) get_user_meta( $wp_uid, 'ynj_favourite_mosque_id', true );
 
+// Auto-link: if WP user exists but ynj_user_id not set, find or create the link
+if ( ! $ynj_uid && $wp_uid && class_exists( 'YNJ_DB' ) ) {
+    global $wpdb;
+    $ut = YNJ_DB::table( 'users' );
+    $email = $wp_user->user_email;
+
+    // Try to find existing ynj_user by email
+    $existing = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM $ut WHERE email = %s LIMIT 1", $email ) );
+    if ( $existing ) {
+        $ynj_uid = (int) $existing->id;
+    } else {
+        // Create ynj_user record for this WP user
+        $token = bin2hex( random_bytes( 32 ) );
+        $token_hash = hash_hmac( 'sha256', $token, 'ynj_user_salt_2024' );
+        $wpdb->insert( $ut, [
+            'name'          => $wp_user->display_name,
+            'email'         => $email,
+            'phone'         => $phone,
+            'password_hash' => '',
+            'token_hash'    => $token_hash,
+            'status'        => 'active',
+        ] );
+        $ynj_uid = (int) $wpdb->insert_id;
+    }
+    if ( $ynj_uid ) {
+        update_user_meta( $wp_uid, 'ynj_user_id', $ynj_uid );
+    }
+}
+
 // Defaults
 $patron       = null;
 $ynj_user     = null;
