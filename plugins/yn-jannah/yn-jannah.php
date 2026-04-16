@@ -73,6 +73,10 @@ add_action('init', function() {
     }
     // Auto-configure Stripe keys on first load
     YNJ_Stripe::auto_configure();
+    // Run DB migrations if schema version changed
+    if ( get_option( 'ynj_db_version' ) !== YNJ_DB::SCHEMA_VERSION ) {
+        YNJ_DB::install();
+    }
 }, 5);
 
 // AJAX handler to set WP auth cookie (called after JS login/register)

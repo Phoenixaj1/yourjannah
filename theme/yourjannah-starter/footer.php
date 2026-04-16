@@ -80,6 +80,25 @@ $_nb_mosque = $_nb_slug ? ynj_get_mosque( $_nb_slug ) : null;
 $_nb_name = $_nb_mosque ? $_nb_mosque->name : '';
 $_nb_id = $_nb_mosque ? (int) $_nb_mosque->id : 0;
 $_nb_pk = class_exists( 'YNJ_Stripe' ) ? YNJ_Stripe::public_key() : '';
+
+// Pre-load mosque funds from DB (instant, no API call)
+$_nb_funds = [];
+if ( $_nb_id && class_exists( 'YNJ_DB' ) ) {
+    global $wpdb;
+    $_nb_ft = YNJ_DB::table( 'mosque_funds' );
+    $_nb_funds = $wpdb->get_results( $wpdb->prepare(
+        "SELECT slug, label, is_default FROM $_nb_ft WHERE mosque_id = %d AND is_active = 1 ORDER BY is_default DESC, sort_order ASC",
+        $_nb_id
+    ) ) ?: [];
+    // If no funds in DB yet, seed them
+    if ( empty( $_nb_funds ) ) {
+        YNJ_DB::seed_default_funds();
+        $_nb_funds = $wpdb->get_results( $wpdb->prepare(
+            "SELECT slug, label, is_default FROM $_nb_ft WHERE mosque_id = %d AND is_active = 1 ORDER BY is_default DESC, sort_order ASC",
+            $_nb_id
+        ) ) ?: [];
+    }
+}
 if ( $_nb_id && $_nb_pk ) :
 ?>
 <script src="https://js.stripe.com/v3/" async></script>
@@ -142,18 +161,12 @@ if ( $_nb_id && $_nb_pk ) :
     <div class="ynj-niyyah__bar" onclick="var b=document.getElementById('ynj-niyyah-bar');b.classList.toggle('ynj-niyyah--open');">
         <span class="ynj-niyyah__bar-label">🕌 Donate</span>
         <select class="ynj-niyyah__bar-fund" id="nb-fund" onclick="event.stopPropagation()">
+            <?php foreach ( $_nb_funds as $f ) : ?>
+            <option value="<?php echo esc_attr( $f->slug ); ?>"><?php echo esc_html( $f->label ); ?></option>
+            <?php endforeach; ?>
+            <?php if ( empty( $_nb_funds ) ) : ?>
             <option value="general">General Donation</option>
-            <option value="welfare">Welfare Fund</option>
-            <option value="maintenance">Maintenance &amp; Repairs</option>
-            <option value="extension">Masjid Extension</option>
-            <option value="sustainability">Sustainability</option>
-            <option value="imam">Imam &amp; Staff</option>
-            <option value="education">Quran &amp; Education</option>
-            <option value="youth">Youth &amp; Family</option>
-            <option value="sadaqah">Sadaqah Jariyah</option>
-            <option value="ramadan">Ramadan &amp; Events</option>
-            <option value="utility">Running Costs</option>
-            <option value="new-mosque">New Mosque</option>
+            <?php endif; ?>
         </select>
         <button type="button" class="ynj-niyyah__toggle" id="nb-toggle" onclick="event.stopPropagation();document.getElementById('ynj-niyyah-bar').classList.toggle('ynj-niyyah--open')">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 15l6-6 6 6"/></svg>

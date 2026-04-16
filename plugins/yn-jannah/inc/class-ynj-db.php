@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '2.4.0';
+    const SCHEMA_VERSION = '2.5.0';
 
     /**
      * Return the full table name for a given short name.
@@ -52,6 +52,9 @@ class YNJ_DB {
 
         // Add composite indexes for production performance
         self::add_performance_indexes();
+
+        // Seed default funds for all mosques that don't have any
+        self::seed_default_funds();
     }
 
     /**
@@ -84,6 +87,49 @@ class YNJ_DB {
             ) );
             if ( ! $exists ) {
                 $wpdb->query( "ALTER TABLE `$table` ADD INDEX `$name` ($cols)" ); // phpcs:ignore
+            }
+        }
+    }
+
+    /**
+     * Default fund types every mosque gets.
+     */
+    public static function default_fund_types() {
+        return [
+            [ 'slug' => 'general',        'label' => 'General Donation',        'is_default' => 1, 'sort_order' => 0 ],
+            [ 'slug' => 'welfare',        'label' => 'Community Welfare Fund',  'is_default' => 0, 'sort_order' => 1 ],
+            [ 'slug' => 'maintenance',    'label' => 'Maintenance & Repairs',   'is_default' => 0, 'sort_order' => 2 ],
+            [ 'slug' => 'extension',      'label' => 'Masjid Extension',        'is_default' => 0, 'sort_order' => 3 ],
+            [ 'slug' => 'sustainability', 'label' => 'Masjid Sustainability',   'is_default' => 0, 'sort_order' => 4 ],
+            [ 'slug' => 'imam',           'label' => 'Imam & Staff Fund',       'is_default' => 0, 'sort_order' => 5 ],
+            [ 'slug' => 'education',      'label' => 'Quran & Education',       'is_default' => 0, 'sort_order' => 6 ],
+            [ 'slug' => 'youth',          'label' => 'Youth & Family',          'is_default' => 0, 'sort_order' => 7 ],
+            [ 'slug' => 'sadaqah',        'label' => 'Sadaqah Jariyah',         'is_default' => 0, 'sort_order' => 8 ],
+            [ 'slug' => 'ramadan',        'label' => 'Ramadan & Events',        'is_default' => 0, 'sort_order' => 9 ],
+            [ 'slug' => 'utility',        'label' => 'Utility & Running Costs', 'is_default' => 0, 'sort_order' => 10 ],
+            [ 'slug' => 'new-mosque',     'label' => 'New Mosque Fund',         'is_default' => 0, 'sort_order' => 11 ],
+        ];
+    }
+
+    /**
+     * Seed default funds for all mosques that have none.
+     */
+    public static function seed_default_funds() {
+        global $wpdb;
+        $ft = self::table( 'mosque_funds' );
+        $mt = self::table( 'mosques' );
+
+        // Get all mosque IDs that have zero funds
+        $all_ids = $wpdb->get_col( "SELECT id FROM $mt" );
+        $has_funds = $wpdb->get_col( "SELECT DISTINCT mosque_id FROM $ft" );
+        $missing = array_diff( $all_ids, $has_funds );
+
+        if ( empty( $missing ) ) return;
+
+        $defaults = self::default_fund_types();
+        foreach ( $missing as $mid ) {
+            foreach ( $defaults as $fund ) {
+                $wpdb->insert( $ft, array_merge( $fund, [ 'mosque_id' => (int) $mid ] ) );
             }
         }
     }
@@ -766,7 +812,25 @@ class YNJ_DB {
             KEY mosque_id (mosque_id)
         ) $charset_collate;";
 
-        // 19. Donations — individual donor gifts to mosques
+        // 19. Mosque Funds — configurable per-mosque donation funds
+        $tables[] = "CREATE TABLE {$t('mosque_funds')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            slug varchar(50) NOT NULL DEFAULT '',
+            label varchar(100) NOT NULL DEFAULT '',
+            description varchar(500) NOT NULL DEFAULT '',
+            target_pence int(11) NOT NULL DEFAULT 0,
+            raised_pence int(11) NOT NULL DEFAULT 0,
+            is_default tinyint(1) NOT NULL DEFAULT 0,
+            is_active tinyint(1) NOT NULL DEFAULT 1,
+            sort_order int(11) NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            UNIQUE KEY mosque_fund (mosque_id, slug)
+        ) $charset_collate;";
+
+        // 20. Donations — individual donor gifts to mosques
         $tables[] = "CREATE TABLE {$t('donations')} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,

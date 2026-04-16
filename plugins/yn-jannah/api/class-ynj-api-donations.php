@@ -45,6 +45,34 @@ class YNJ_API_Donations {
             'callback'            => [ __CLASS__, 'confirm_donation' ],
             'permission_callback' => '__return_true',
         ] );
+
+        // GET /mosques/{slug}/funds — public: list active funds for a mosque
+        register_rest_route( self::NS, '/mosques/(?P<slug>[a-zA-Z][a-zA-Z0-9_-]*)/funds', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'get_mosque_funds' ],
+            'permission_callback' => '__return_true',
+        ] );
+
+        // POST /admin/funds — admin: create a fund
+        register_rest_route( self::NS, '/admin/funds', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'admin_create_fund' ],
+            'permission_callback' => '__return_true',
+        ] );
+
+        // PUT /admin/funds/{id} — admin: update a fund
+        register_rest_route( self::NS, '/admin/funds/(?P<id>\d+)', [
+            'methods'             => 'PUT',
+            'callback'            => [ __CLASS__, 'admin_update_fund' ],
+            'permission_callback' => '__return_true',
+        ] );
+
+        // DELETE /admin/funds/{id} — admin: deactivate a fund
+        register_rest_route( self::NS, '/admin/funds/(?P<id>\d+)', [
+            'methods'             => 'DELETE',
+            'callback'            => [ __CLASS__, 'admin_delete_fund' ],
+            'permission_callback' => '__return_true',
+        ] );
     }
 
     /**
@@ -271,6 +299,136 @@ class YNJ_API_Donations {
             ] );
         }
 
+        return new \WP_REST_Response( [ 'ok' => true ] );
+    }
+
+    // ================================================================
+    // MOSQUE FUNDS — public + admin endpoints
+    // ================================================================
+
+    /**
+     * GET /mosques/{slug}/funds — list active funds for a mosque.
+     */
+    public static function get_mosque_funds( \WP_REST_Request $request ) {
+        $slug = sanitize_title( $request->get_param( 'slug' ) ?? '' );
+        $mosque_id = (int) YNJ_DB::resolve_slug( $slug );
+        if ( ! $mosque_id ) {
+            return new \WP_Error( 'not_found', 'Mosque not found.', [ 'status' => 404 ] );
+        }
+
+        global $wpdb;
+        $ft = YNJ_DB::table( 'mosque_funds' );
+        $funds = $wpdb->get_results( $wpdb->prepare(
+            "SELECT id, slug, label, description, target_pence, raised_pence, is_default, sort_order
+             FROM $ft WHERE mosque_id = %d AND is_active = 1 ORDER BY is_default DESC, sort_order ASC",
+            $mosque_id
+        ) );
+
+        // If no funds exist yet, seed defaults and return them
+        if ( empty( $funds ) ) {
+            foreach ( YNJ_DB::default_fund_types() as $fund ) {
+                $wpdb->insert( $ft, array_merge( $fund, [ 'mosque_id' => $mosque_id ] ) );
+            }
+            $funds = $wpdb->get_results( $wpdb->prepare(
+                "SELECT id, slug, label, description, target_pence, raised_pence, is_default, sort_order
+                 FROM $ft WHERE mosque_id = %d AND is_active = 1 ORDER BY is_default DESC, sort_order ASC",
+                $mosque_id
+            ) );
+        }
+
+        return new \WP_REST_Response( [ 'ok' => true, 'funds' => $funds ] );
+    }
+
+    /**
+     * POST /admin/funds — create a custom fund (admin auth required).
+     */
+    public static function admin_create_fund( \WP_REST_Request $request ) {
+        $auth = YNJ_Auth::bearer_check( $request );
+        if ( is_wp_error( $auth ) ) return $auth;
+
+        global $wpdb;
+        $ft = YNJ_DB::table( 'mosque_funds' );
+
+        $label = sanitize_text_field( $request->get_param( 'label' ) ?? '' );
+        $slug  = sanitize_title( $request->get_param( 'slug' ) ?? $label );
+        $desc  = sanitize_text_field( $request->get_param( 'description' ) ?? '' );
+        $target = (int) ( $request->get_param( 'target_pence' ) ?? 0 );
+
+        if ( ! $label ) {
+            return new \WP_Error( 'missing_label', 'Fund label is required.', [ 'status' => 400 ] );
+        }
+
+        $max_order = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT MAX(sort_order) FROM $ft WHERE mosque_id = %d", $auth->mosque_id
+        ) );
+
+        $wpdb->insert( $ft, [
+            'mosque_id'    => $auth->mosque_id,
+            'slug'         => $slug,
+            'label'        => $label,
+            'description'  => $desc,
+            'target_pence' => $target,
+            'is_default'   => 0,
+            'sort_order'   => $max_order + 1,
+        ] );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'fund_id' => $wpdb->insert_id ] );
+    }
+
+    /**
+     * PUT /admin/funds/{id} — update a fund.
+     */
+    public static function admin_update_fund( \WP_REST_Request $request ) {
+        $auth = YNJ_Auth::bearer_check( $request );
+        if ( is_wp_error( $auth ) ) return $auth;
+
+        $fund_id = (int) $request->get_param( 'id' );
+        global $wpdb;
+        $ft = YNJ_DB::table( 'mosque_funds' );
+
+        $fund = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM $ft WHERE id = %d AND mosque_id = %d", $fund_id, $auth->mosque_id
+        ) );
+        if ( ! $fund ) {
+            return new \WP_Error( 'not_found', 'Fund not found.', [ 'status' => 404 ] );
+        }
+
+        $update = [];
+        if ( $request->get_param( 'label' ) !== null ) $update['label'] = sanitize_text_field( $request->get_param( 'label' ) );
+        if ( $request->get_param( 'description' ) !== null ) $update['description'] = sanitize_text_field( $request->get_param( 'description' ) );
+        if ( $request->get_param( 'target_pence' ) !== null ) $update['target_pence'] = (int) $request->get_param( 'target_pence' );
+        if ( $request->get_param( 'is_active' ) !== null ) $update['is_active'] = (int) $request->get_param( 'is_active' );
+        if ( $request->get_param( 'sort_order' ) !== null ) $update['sort_order'] = (int) $request->get_param( 'sort_order' );
+
+        if ( ! empty( $update ) ) {
+            $wpdb->update( $ft, $update, [ 'id' => $fund_id ] );
+        }
+
+        return new \WP_REST_Response( [ 'ok' => true ] );
+    }
+
+    /**
+     * DELETE /admin/funds/{id} — deactivate a fund (can't delete General).
+     */
+    public static function admin_delete_fund( \WP_REST_Request $request ) {
+        $auth = YNJ_Auth::bearer_check( $request );
+        if ( is_wp_error( $auth ) ) return $auth;
+
+        $fund_id = (int) $request->get_param( 'id' );
+        global $wpdb;
+        $ft = YNJ_DB::table( 'mosque_funds' );
+
+        $fund = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM $ft WHERE id = %d AND mosque_id = %d", $fund_id, $auth->mosque_id
+        ) );
+        if ( ! $fund ) {
+            return new \WP_Error( 'not_found', 'Fund not found.', [ 'status' => 404 ] );
+        }
+        if ( $fund->is_default ) {
+            return new \WP_Error( 'cannot_delete', 'Cannot remove the default General Donation fund.', [ 'status' => 400 ] );
+        }
+
+        $wpdb->update( $ft, [ 'is_active' => 0 ], [ 'id' => $fund_id ] );
         return new \WP_REST_Response( [ 'ok' => true ] );
     }
 
