@@ -79,9 +79,13 @@ $slug = ynj_mosque_slug();
                 (b.website ? '<a href="' + b.website + '" target="_blank" rel="noopener" class="ynj-biz-btn ynj-biz-btn--outline">Website</a>' : '') +
                 '</div></div>';
         }).join('');
+    }
 
-        // Load services
+    // Load data from API
+    fetch(API + 'mosques/' + slug + '/directory').then(function(r){return r.json();}).then(function(data){
+        allBiz = data.businesses || [];
         allSvcs = data.services || [];
+        renderBiz(allBiz);
         renderSvcs(allSvcs);
     }).catch(function(){
         document.getElementById('biz-sponsors').innerHTML = '<p class="ynj-text-muted">Could not load.</p>';

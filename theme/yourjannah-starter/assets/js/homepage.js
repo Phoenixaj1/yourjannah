@@ -1055,7 +1055,7 @@
             /* ---- Push Subscribe ---- */
             const subBtn = document.getElementById('subscribe-btn');
             const subStatus = document.getElementById('subscribe-status');
-            subBtn.addEventListener('click', async () => {
+            if (subBtn) subBtn.addEventListener('click', async () => {
                 if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
                     subStatus.textContent = 'Not supported in this browser.';
                     return;
