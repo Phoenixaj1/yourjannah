@@ -64,16 +64,8 @@
     var _mosqueList = document.getElementById('mosque-list');
 
     if (_mosquePill && _mosqueDropdown && !_isHomepage) {
-        _mosquePill.addEventListener('click', function(e) {
-            if (e.target.closest('#gps-btn')) return;
-            _mosqueDropdown.style.display = _mosqueDropdown.style.display === 'none' ? '' : 'none';
-            if (_mosqueDropdown.style.display !== 'none' && _mosqueSearch) {
-                _mosqueSearch.focus();
-                _mosqueSearch.value = '';
-                _mosqueList.innerHTML = '<p style="padding:12px;color:#6b8fa3;font-size:13px;text-align:center;">Type to search mosques...</p>';
-            }
-        });
-        _mosquePill.style.cursor = 'pointer';
+        // Click handler is on inline onclick in header.php
+        // Just set up the close-on-outside-click and search here
 
         // Close on click outside
         _mosqueDropdown.addEventListener('click', function(e) {
