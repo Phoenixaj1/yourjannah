@@ -11,7 +11,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YNJ_THEME_VERSION', '2.5.0' );
+define( 'YNJ_THEME_VERSION', '2.6.0' );
 define( 'YNJ_THEME_DIR', get_stylesheet_directory() );
 define( 'YNJ_THEME_URI', get_stylesheet_directory_uri() );
 
@@ -374,6 +374,15 @@ add_action( 'template_redirect', function() {
 add_action( 'after_switch_theme', function() {
     flush_rewrite_rules();
 } );
+
+// Auto-flush rewrite rules when theme version changes (catches new routes on deploy)
+add_action( 'init', function() {
+    $stored = get_option( 'ynj_theme_rewrite_version', '' );
+    if ( $stored !== YNJ_THEME_VERSION ) {
+        flush_rewrite_rules();
+        update_option( 'ynj_theme_rewrite_version', YNJ_THEME_VERSION );
+    }
+}, 999 );
 
 // ================================================================
 // HELPER: Get current mosque data
