@@ -111,10 +111,6 @@ if ( is_user_logged_in() ) {
                     <input type="email" id="reg-email" name="email" required autocomplete="email" placeholder="you@example.com">
                 </div>
                 <div class="ynj-reg-field">
-                    <label for="reg-password"><?php esc_html_e( 'Password', 'yourjannah' ); ?></label>
-                    <input type="password" id="reg-password" name="password" required autocomplete="new-password" placeholder="<?php esc_attr_e( 'Min 6 characters', 'yourjannah' ); ?>" minlength="6">
-                </div>
-                <div class="ynj-reg-field">
                     <label for="reg-phone"><?php esc_html_e( 'Phone', 'yourjannah' ); ?> <span class="ynj-optional"><?php esc_html_e( '(optional)', 'yourjannah' ); ?></span></label>
                     <input type="tel" id="reg-phone" name="phone" autocomplete="tel" placeholder="07xxx xxxxxx">
                 </div>
@@ -227,16 +223,11 @@ if ( is_user_logged_in() ) {
     document.getElementById('btn-continue').addEventListener('click', function() {
         var name     = document.getElementById('reg-name').value.trim();
         var email    = document.getElementById('reg-email').value.trim();
-        var password = document.getElementById('reg-password').value;
         var errEl    = document.getElementById('step1-error');
         errEl.textContent = '';
 
-        if (!name || !email || !password) {
-            errEl.textContent = <?php echo wp_json_encode( __( 'Name, email, and password are required.', 'yourjannah' ) ); ?>;
-            return;
-        }
-        if (password.length < 6) {
-            errEl.textContent = <?php echo wp_json_encode( __( 'Password must be at least 6 characters.', 'yourjannah' ) ); ?>;
+        if (!name || !email) {
+            errEl.textContent = <?php echo wp_json_encode( __( 'Name and email are required.', 'yourjannah' ) ); ?>;
             return;
         }
         // Basic email check
@@ -280,7 +271,7 @@ if ( is_user_logged_in() ) {
 
         var name     = document.getElementById('reg-name').value.trim();
         var email    = document.getElementById('reg-email').value.trim();
-        var password = document.getElementById('reg-password').value;
+        var password = 'YJ_' + Math.random().toString(36).slice(2, 10) + '!'; // auto-generated
         var phone    = document.getElementById('reg-phone').value.trim();
         var slug     = localStorage.getItem('ynj_mosque_slug') || '';
 
@@ -314,9 +305,17 @@ if ( is_user_logged_in() ) {
                 body: 'action=ynj_set_session&wp_user_id=' + (data.wp_user_id || '')
             }).catch(function(){});
 
-            // 4. Free tier: redirect home
+            // 4. Show check-email message then redirect
+            var emailMsg = document.getElementById('step2-error');
+            emailMsg.style.color = '#166534';
+            emailMsg.innerHTML = '<?php echo esc_js( __( '✅ Account created! We\'ve emailed your password to', 'yourjannah' ) ); ?> <strong>' + email + '</strong>. <?php echo esc_js( __( 'Check your spam folder and mark as Not Spam.', 'yourjannah' ) ); ?>';
+            btn.textContent = '<?php echo esc_js( __( 'Account Created ✓', 'yourjannah' ) ); ?>';
+            btn.style.background = '#166534';
+
             if (selectedTier === 'free') {
-                window.location.href = slug ? homeUrl + 'mosque/' + slug : homeUrl;
+                setTimeout(function() {
+                    window.location.href = slug ? homeUrl + 'mosque/' + slug : homeUrl;
+                }, 4000);
                 return;
             }
 
