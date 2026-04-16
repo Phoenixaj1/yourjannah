@@ -111,6 +111,17 @@ if (is_admin()) {
 // Frontend routing — now handled by yourjannah-starter theme templates
 // Old router archived to _archive/class-ynj-router.php
 
+// Serve /.well-known/assetlinks.json for Android TWA verification
+add_action('init', function() {
+    $uri = $_SERVER['REQUEST_URI'] ?? '';
+    if (strpos($uri, '/.well-known/assetlinks.json') !== false) {
+        header('Content-Type: application/json');
+        header('Access-Control-Allow-Origin: *');
+        echo '[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"com.yourjannah.app","sha256_cert_fingerprints":["94:6F:A2:E2:C0:44:B4:B1:30:17:7A:81:99:D7:9E:89:41:3B:87:EC:42:4A:A3:17:F4:53:C1:BE:E8:68:6E:D7"]}}]';
+        exit;
+    }
+}, 1);
+
 // PWA headers
 add_action('wp_head', function() {
     echo '<link rel="manifest" href="' . YNJ_URL . 'manifest.json">' . "\n";
