@@ -153,16 +153,15 @@ class YNJ_API_Points {
             ], 400 );
         }
 
-        // Check: max 1 check-in per day per mosque
-        $today = date( 'Y-m-d' );
-        $already = $wpdb->get_var( $wpdb->prepare(
+        // Check: 2-hour gap between check-ins at same mosque
+        $recent = $wpdb->get_var( $wpdb->prepare(
             "SELECT COUNT(*) FROM " . YNJ_DB::table( 'points' ) . "
-             WHERE user_id = %d AND mosque_id = %d AND action = 'check_in' AND DATE(created_at) = %s",
-            $user->id, $mosque->id, $today
+             WHERE user_id = %d AND mosque_id = %d AND action = 'check_in' AND created_at > DATE_SUB(NOW(), INTERVAL 2 HOUR)",
+            $user->id, $mosque->id
         ) );
 
-        if ( $already > 0 ) {
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Already checked in today. Come back tomorrow!' ], 409 );
+        if ( $recent > 0 ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'You checked in recently. Next check-in available in 2 hours.' ], 429 );
         }
 
         // Award points
