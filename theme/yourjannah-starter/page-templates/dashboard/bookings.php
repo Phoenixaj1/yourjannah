@@ -15,7 +15,11 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
 
 $filter = sanitize_text_field( $_GET['status'] ?? '' );
 $where = $filter ? $wpdb->prepare( "AND status=%s", $filter ) : '';
-$bookings = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $bk WHERE mosque_id=%d $where ORDER BY created_at DESC LIMIT 50", $mosque_id ) ) ?: [];
+$rt = YNJ_DB::table( 'rooms' );
+$bookings = $wpdb->get_results( $wpdb->prepare(
+    "SELECT b.*, r.name AS room_name FROM $bk b LEFT JOIN $rt r ON r.id = b.room_id WHERE b.mosque_id=%d $where ORDER BY b.created_at DESC LIMIT 50",
+    $mosque_id
+) ) ?: [];
 ?>
 <div class="d-header"><h1>📋 <?php esc_html_e( 'Bookings', 'yourjannah' ); ?></h1></div>
 <?php if ( ! empty( $success ) ) : ?><div class="d-alert d-alert--success">✅ <?php echo esc_html( $success ); ?></div><?php endif; ?>
@@ -37,7 +41,7 @@ $bookings = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $bk WHERE mosque_
         <?php foreach ( $bookings as $b ) : ?>
         <tr>
             <td><strong><?php echo esc_html( $b->user_name ); ?></strong><br><span style="font-size:11px;color:var(--text-dim);"><?php echo esc_html( $b->user_email ); ?></span></td>
-            <td><?php echo esc_html( $b->booking_type ?? 'room' ); ?></td>
+            <td><?php echo esc_html( $b->room_name ?: ( $b->booking_type ?? 'Room' ) ); ?></td>
             <td style="font-size:12px;"><?php echo esc_html( $b->booking_date ?? substr( $b->created_at, 0, 10 ) ); ?></td>
             <td><span class="d-badge d-badge--<?php echo $b->status==='confirmed'?'green':($b->status==='pending'?'yellow':'red'); ?>"><?php echo esc_html( ucfirst( $b->status ) ); ?></span></td>
             <td>

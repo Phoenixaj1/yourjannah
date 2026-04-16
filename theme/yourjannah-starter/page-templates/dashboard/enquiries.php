@@ -12,7 +12,17 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
         $update = [ 'status' => $new_status ];
         if ( $reply ) $update['admin_notes'] = $reply;
         $wpdb->update( $eq, $update, [ 'id' => $eid, 'mosque_id' => $mosque_id ] );
-        $success = __( 'Enquiry updated.', 'yourjannah' );
+
+        // Actually send the reply via email
+        if ( $reply && $new_status === 'replied' ) {
+            $enq = $wpdb->get_row( $wpdb->prepare( "SELECT name, email, subject FROM $eq WHERE id=%d", $eid ) );
+            if ( $enq && $enq->email ) {
+                $subject = 'Re: ' . ( $enq->subject ?: 'Your enquiry to ' . $mosque_name );
+                $body = "Assalamu alaikum" . ( $enq->name ? ' ' . $enq->name : '' ) . ",\n\n" . $reply . "\n\nJazakAllah khair,\n" . $mosque_name;
+                wp_mail( $enq->email, $subject, nl2br( $body ), [ 'Content-Type: text/html; charset=UTF-8', 'From: ' . $mosque_name . ' <noreply@yourjannah.com>' ] );
+            }
+        }
+        $success = $reply ? __( 'Reply sent to enquirer via email!', 'yourjannah' ) : __( 'Enquiry updated.', 'yourjannah' );
     }
 }
 

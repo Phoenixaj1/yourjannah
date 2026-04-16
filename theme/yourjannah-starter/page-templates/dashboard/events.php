@@ -22,8 +22,31 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
         ];
         if ( ! $data['title'] || ! $data['event_date'] ) { $error = __( 'Title and date required.', 'yourjannah' ); }
         else {
-            if ( $action === 'create' ) { $wpdb->insert( $et, $data ); $success = __( 'Event created!', 'yourjannah' ); }
-            else { $eid = (int) $_POST['event_id']; unset( $data['mosque_id'] ); $wpdb->update( $et, $data, [ 'id' => $eid, 'mosque_id' => $mosque_id ] ); $success = __( 'Event updated!', 'yourjannah' ); }
+            if ( $action === 'create' ) {
+                $wpdb->insert( $et, $data );
+                $created = 1;
+                // Handle recurrence
+                $repeat = sanitize_text_field( $_POST['repeat'] ?? '' );
+                if ( $repeat && $data['event_date'] ) {
+                    $intervals = [ 'weekly_4' => [ 7, 3 ], 'biweekly_4' => [ 14, 3 ], 'monthly_3' => [ 30, 2 ] ];
+                    if ( isset( $intervals[ $repeat ] ) ) {
+                        list( $gap_days, $extra ) = $intervals[ $repeat ];
+                        $base_date = strtotime( $data['event_date'] );
+                        for ( $r = 1; $r <= $extra; $r++ ) {
+                            $next_date = date( 'Y-m-d', $base_date + ( $gap_days * $r * 86400 ) );
+                            $repeat_data = $data;
+                            $repeat_data['event_date'] = $next_date;
+                            $wpdb->insert( $et, $repeat_data );
+                            $created++;
+                        }
+                    }
+                }
+                $success = sprintf( __( '%d event(s) created!', 'yourjannah' ), $created );
+            } else {
+                $eid = (int) $_POST['event_id']; unset( $data['mosque_id'] );
+                $wpdb->update( $et, $data, [ 'id' => $eid, 'mosque_id' => $mosque_id ] );
+                $success = __( 'Event updated!', 'yourjannah' );
+            }
         }
     }
     if ( $action === 'delete' ) { $wpdb->delete( $et, [ 'id' => (int) $_POST['event_id'], 'mosque_id' => $mosque_id ] ); $success = __( 'Event deleted.', 'yourjannah' ); }
@@ -62,6 +85,17 @@ $cats = ['talk','class','course','workshop','community','sports','competition','
             <div class="d-field"><label>Ticket Price (£, 0=free)</label><input type="number" name="ticket_price" min="0" step="0.01" value="<?php echo esc_attr( ( $editing->ticket_price_pence ?? 0 ) / 100 ); ?>"></div>
             <div class="d-field"><label>Status</label><select name="status"><option value="published" <?php selected( $editing->status ?? '', 'published' ); ?>>Published</option><option value="draft" <?php selected( $editing->status ?? '', 'draft' ); ?>>Draft</option></select></div>
         </div>
+        <?php if ( ! $editing ) : ?>
+        <div class="d-field">
+            <label><?php esc_html_e( 'Repeat', 'yourjannah' ); ?></label>
+            <select name="repeat">
+                <option value=""><?php esc_html_e( 'No repeat (one-off)', 'yourjannah' ); ?></option>
+                <option value="weekly_4"><?php esc_html_e( 'Weekly for 4 weeks', 'yourjannah' ); ?></option>
+                <option value="biweekly_4"><?php esc_html_e( 'Every 2 weeks for 4 times', 'yourjannah' ); ?></option>
+                <option value="monthly_3"><?php esc_html_e( 'Monthly for 3 months', 'yourjannah' ); ?></option>
+            </select>
+        </div>
+        <?php endif; ?>
         <div style="display:flex;gap:8px;"><button type="submit" class="d-btn d-btn--primary"><?php echo $editing ? 'Update' : 'Create Event'; ?></button><?php if ( $editing ) : ?><a href="?section=events" class="d-btn d-btn--outline">Cancel</a><?php endif; ?></div>
     </form>
 </div>

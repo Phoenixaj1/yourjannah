@@ -59,8 +59,19 @@ $imports = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $it WHERE mosque_i
 <?php if ( ! empty( $success ) ) : ?><div class="d-alert d-alert--success">✅ <?php echo esc_html( $success ); ?></div><?php endif; ?>
 <?php if ( ! empty( $error ) ) : ?><div class="d-alert d-alert--error">❌ <?php echo esc_html( $error ); ?></div><?php endif; ?>
 
+<?php
+// Rate limit check
+$rl_key = 'ynj_broadcast_count_' . $mosque_id;
+$broadcasts_this_week = (int) get_transient( $rl_key );
+$remaining = max( 0, 3 - $broadcasts_this_week );
+?>
 <div class="d-card" style="background:var(--primary-light);border-color:var(--primary);margin-bottom:16px;">
-    <p style="font-size:14px;font-weight:600;color:var(--primary-dark);">📬 <?php printf( esc_html__( 'Reach up to %d subscribers', 'yourjannah' ), $sub_count ); ?></p>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <p style="font-size:14px;font-weight:600;color:var(--primary-dark);margin:0;">📬 <?php printf( esc_html__( 'Reach up to %d subscribers', 'yourjannah' ), $sub_count ); ?></p>
+        <span style="font-size:12px;font-weight:700;color:<?php echo $remaining > 0 ? '#166534' : '#991b1b'; ?>;background:<?php echo $remaining > 0 ? '#dcfce7' : '#fee2e2'; ?>;padding:4px 10px;border-radius:6px;">
+            <?php printf( esc_html__( '%d/%d broadcasts left this week', 'yourjannah' ), $remaining, 3 ); ?>
+        </span>
+    </div>
 </div>
 
 <div class="d-card">

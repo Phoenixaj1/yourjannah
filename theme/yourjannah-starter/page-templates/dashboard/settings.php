@@ -80,6 +80,55 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
     </form>
 </div>
 
+<!-- Admin Team -->
+<?php
+$at = YNJ_DB::table( 'accounts' );
+$admins = [];
+if ( $wpdb->get_var( "SHOW TABLES LIKE '$at'" ) === $at ) {
+    $admins = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, admin_name, admin_email, status, created_at FROM $at WHERE mosque_id=%d ORDER BY created_at ASC",
+        $mosque_id
+    ) ) ?: [];
+}
+
+// Handle invite
+if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonce'] ?? '', 'ynj_dash_settings' ) && ( $_POST['action'] ?? '' ) === 'invite_admin' ) {
+    $invite_email = sanitize_email( $_POST['invite_email'] ?? '' );
+    if ( $invite_email && is_email( $invite_email ) ) {
+        wp_mail( $invite_email,
+            'You\'ve been invited to manage ' . $mosque_name . ' on YourJannah',
+            "Assalamu alaikum,\n\nYou've been invited to help manage " . $mosque_name . " on YourJannah.\n\nRegister here: " . home_url( '/register?claim=' . $mosque_slug ) . "\n\nJazakAllah khair,\n" . $mosque_name,
+            [ 'Content-Type: text/html; charset=UTF-8', 'From: YourJannah <noreply@yourjannah.com>' ]
+        );
+        $success = sprintf( __( 'Invitation sent to %s!', 'yourjannah' ), $invite_email );
+    }
+}
+?>
+<div class="d-card">
+    <h3>👥 <?php esc_html_e( 'Admin Team', 'yourjannah' ); ?></h3>
+    <?php if ( $admins ) : ?>
+    <table class="d-table" style="margin-bottom:12px;">
+        <thead><tr><th><?php esc_html_e( 'Name', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Email', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Status', 'yourjannah' ); ?></th></tr></thead>
+        <tbody>
+        <?php foreach ( $admins as $a ) : ?>
+        <tr>
+            <td><strong><?php echo esc_html( $a->admin_name ); ?></strong></td>
+            <td style="font-size:12px;"><?php echo esc_html( $a->admin_email ); ?></td>
+            <td><span class="d-badge d-badge--<?php echo $a->status === 'active' ? 'green' : 'yellow'; ?>"><?php echo esc_html( ucfirst( $a->status ) ); ?></span></td>
+        </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    <?php endif; ?>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:8px;"><?php esc_html_e( 'Invite another admin to help manage your mosque:', 'yourjannah' ); ?></p>
+    <form method="post" style="display:flex;gap:8px;">
+        <?php wp_nonce_field( 'ynj_dash_settings', '_ynj_nonce' ); ?>
+        <input type="hidden" name="action" value="invite_admin">
+        <input type="email" name="invite_email" placeholder="admin@email.com" required style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;">
+        <button type="submit" class="d-btn d-btn--primary"><?php esc_html_e( 'Send Invite', 'yourjannah' ); ?></button>
+    </form>
+</div>
+
 <!-- Mosque Page Link -->
 <div class="d-card" style="background:var(--primary-light);border-color:var(--primary);">
     <p style="font-size:13px;font-weight:600;color:var(--primary-dark);">🔗 <?php esc_html_e( 'Your Mosque Page', 'yourjannah' ); ?></p>

@@ -53,7 +53,13 @@ $cats = ['general','welfare','expansion','renovation','education','youth','emerg
             <td><strong><?php echo esc_html( $c->title ); ?></strong><?php if ( $c->recurring ) echo ' <span class="d-badge d-badge--blue">🔄 Monthly</span>'; ?></td>
             <td><span class="d-badge d-badge--gray"><?php echo esc_html( ucfirst( $c->category ) ); ?></span></td>
             <td style="text-align:right;"><?php echo $c->target_pence ? '£' . number_format( $c->target_pence / 100, 0 ) : '—'; ?></td>
-            <td style="text-align:right;font-weight:700;color:#16a34a;">£<?php echo number_format( ( $c->raised_pence ?? 0 ) / 100, 0 ); ?><?php if ( $pct ) echo " ({$pct}%)"; ?></td>
+            <td style="text-align:right;">
+                <strong style="color:#16a34a;">£<?php echo number_format( ( $c->raised_pence ?? 0 ) / 100, 0 ); ?></strong>
+                <?php if ( $c->target_pence > 0 ) : ?>
+                <div style="background:#e5e7eb;border-radius:4px;height:6px;margin-top:4px;overflow:hidden;"><div style="background:#16a34a;height:100%;width:<?php echo $pct; ?>%;border-radius:4px;"></div></div>
+                <span style="font-size:10px;color:var(--text-dim);"><?php echo $pct; ?>%</span>
+                <?php endif; ?>
+            </td>
             <td><span class="d-badge d-badge--<?php echo $c->status==='active'?'green':($c->status==='completed'?'blue':'yellow'); ?>"><?php echo esc_html( ucfirst( $c->status ) ); ?></span></td>
             <td><a href="?section=campaigns&edit=<?php echo (int) $c->id; ?>" class="d-btn d-btn--sm d-btn--outline">✏️</a>
             <form method="post" style="display:inline;" onsubmit="return confirm('Delete?')"><?php wp_nonce_field( 'ynj_dash_camp', '_ynj_nonce' ); ?><input type="hidden" name="action" value="delete"><input type="hidden" name="camp_id" value="<?php echo (int) $c->id; ?>"><button class="d-btn d-btn--sm d-btn--danger">🗑️</button></form></td>
