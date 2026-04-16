@@ -29,18 +29,43 @@ $slug = ynj_mosque_slug();
 
     <!-- Quick Donate -->
     <div style="background:#fff;border-radius:14px;padding:20px;margin-bottom:16px;border:1px solid rgba(0,0,0,.06);box-shadow:0 2px 8px rgba(0,0,0,.04);">
-        <h3 style="font-size:15px;font-weight:700;margin-bottom:4px;">❤️ <?php esc_html_e( 'Donate Now', 'yourjannah' ); ?></h3>
-        <p class="ynj-text-muted" style="margin-bottom:12px;font-size:12px;"><?php esc_html_e( '100% reaches your masjid — zero platform fees', 'yourjannah' ); ?></p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-            <button class="ynj-donate-amt" onclick="donateAmount(5)" style="flex:1;min-width:60px;padding:12px;border-radius:10px;border:2px solid #16a34a;background:#f0fdf4;color:#166534;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;">£5</button>
-            <button class="ynj-donate-amt" onclick="donateAmount(10)" style="flex:1;min-width:60px;padding:12px;border-radius:10px;border:2px solid #16a34a;background:#f0fdf4;color:#166534;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;">£10</button>
-            <button class="ynj-donate-amt" onclick="donateAmount(15)" style="flex:1;min-width:60px;padding:12px;border-radius:10px;border:2px solid #16a34a;background:#f0fdf4;color:#166534;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;">£15</button>
-            <button class="ynj-donate-amt" onclick="donateAmount(20)" style="flex:1;min-width:60px;padding:12px;border-radius:10px;border:2px solid #16a34a;background:#f0fdf4;color:#166534;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;">£20</button>
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;">❤️ <?php esc_html_e( 'Donate Now', 'yourjannah' ); ?></h3>
+
+        <!-- Frequency -->
+        <p style="font-size:12px;font-weight:600;color:#6b8fa3;margin-bottom:6px;"><?php esc_html_e( 'How often?', 'yourjannah' ); ?></p>
+        <div style="display:flex;gap:6px;margin-bottom:14px;" id="freq-row">
+            <button class="ynj-freq-btn ynj-freq-btn--active" onclick="setFreq('one-off',this)">One-off</button>
+            <button class="ynj-freq-btn" onclick="setFreq('weekly',this)">Weekly</button>
+            <button class="ynj-freq-btn" onclick="setFreq('monthly',this)">Monthly</button>
+            <button class="ynj-freq-btn" onclick="setFreq('friday',this)">Every Friday</button>
         </div>
-        <button id="donate-custom-btn" onclick="donateAmount(0)" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">
-            <?php esc_html_e( 'Donate Any Amount', 'yourjannah' ); ?>
+
+        <!-- Amount -->
+        <p style="font-size:12px;font-weight:600;color:#6b8fa3;margin-bottom:6px;"><?php esc_html_e( 'Amount', 'yourjannah' ); ?></p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;" id="amt-row">
+            <button class="ynj-amt-btn" onclick="setAmt(5,this)">£5</button>
+            <button class="ynj-amt-btn ynj-amt-btn--active" onclick="setAmt(10,this)">£10</button>
+            <button class="ynj-amt-btn" onclick="setAmt(20,this)">£20</button>
+            <button class="ynj-amt-btn" onclick="setAmt(50,this)">£50</button>
+            <button class="ynj-amt-btn" onclick="setAmt(100,this)">£100</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;">
+            <span style="font-size:13px;font-weight:600;color:#6b8fa3;">£</span>
+            <input type="number" id="custom-amt" value="10" min="1" placeholder="Other" style="flex:1;padding:10px 14px;border:1px solid #e0e0e0;border-radius:10px;font-size:16px;font-weight:700;font-family:inherit;outline:none;">
+        </div>
+
+        <!-- Donate button -->
+        <button id="donate-go" onclick="submitDonate()" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">
+            <?php esc_html_e( 'Donate — opens DonationForMasjid', 'yourjannah' ); ?>
         </button>
+        <p class="ynj-text-muted" style="text-align:center;margin-top:8px;font-size:11px;"><?php esc_html_e( '100% reaches your masjid — zero platform fees', 'yourjannah' ); ?></p>
     </div>
+    <style>
+    .ynj-freq-btn{flex:1;padding:8px 4px;border-radius:8px;border:1px solid #e0e8ed;background:#fff;color:#0a1628;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;text-align:center;transition:all .15s;}
+    .ynj-freq-btn--active{background:#16a34a;color:#fff;border-color:#16a34a;}
+    .ynj-amt-btn{flex:1;min-width:50px;padding:10px 4px;border-radius:10px;border:2px solid #e0e8ed;background:#fff;color:#0a1628;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;text-align:center;transition:all .15s;}
+    .ynj-amt-btn--active{border-color:#16a34a;background:#f0fdf4;color:#166534;}
+    </style>
 
     <!-- Patron CTA -->
     <a id="patron-link" href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/patron' ) ); ?>" style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#0a1628,#1a3a5c);border-radius:14px;padding:16px 20px;margin-bottom:16px;text-decoration:none;color:#fff;">
@@ -72,11 +97,44 @@ $slug = ynj_mosque_slug();
         'equipment':'\ud83d\udee0\ufe0f','roof':'\ud83c\udfe0','heating':'\ud83d\udd25','parking':'\ud83c\udd7f\ufe0f'
     };
 
-    // Donate with prefilled amount + email — DFM detects mosque via GPS
-    window.donateAmount = function(amount) {
+    var selectedFreq = 'one-off';
+    var selectedAmt = 10;
+
+    window.setFreq = function(freq, btn) {
+        selectedFreq = freq;
+        document.querySelectorAll('.ynj-freq-btn').forEach(function(b){ b.classList.remove('ynj-freq-btn--active'); });
+        btn.classList.add('ynj-freq-btn--active');
+        updateDonateLabel();
+    };
+
+    window.setAmt = function(amt, btn) {
+        selectedAmt = amt;
+        document.getElementById('custom-amt').value = amt;
+        document.querySelectorAll('.ynj-amt-btn').forEach(function(b){ b.classList.remove('ynj-amt-btn--active'); });
+        btn.classList.add('ynj-amt-btn--active');
+        updateDonateLabel();
+    };
+
+    // Sync custom input with buttons
+    document.getElementById('custom-amt').addEventListener('input', function() {
+        selectedAmt = parseInt(this.value) || 0;
+        document.querySelectorAll('.ynj-amt-btn').forEach(function(b){ b.classList.remove('ynj-amt-btn--active'); });
+        updateDonateLabel();
+    });
+
+    function updateDonateLabel() {
+        var label = 'Donate';
+        if (selectedAmt > 0) label += ' £' + selectedAmt;
+        if (selectedFreq !== 'one-off') label += ' ' + selectedFreq;
+        document.getElementById('donate-go').textContent = label;
+    }
+
+    window.submitDonate = function() {
+        var amt = parseInt(document.getElementById('custom-amt').value) || 0;
         var url = 'https://donationformasjid.com';
         var params = [];
-        if (amount > 0) params.push('amount=' + amount);
+        if (amt > 0) params.push('amount=' + amt);
+        if (selectedFreq && selectedFreq !== 'one-off') params.push('frequency=' + selectedFreq);
         try { var user = JSON.parse(localStorage.getItem('ynj_user')); if (user && user.email) params.push('email=' + encodeURIComponent(user.email)); } catch(e){}
         if (params.length) url += '?' + params.join('&');
         window.open(url, '_blank');
