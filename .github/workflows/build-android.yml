@@ -59,35 +59,31 @@ jobs:
           echo ""
           echo "=== IMPORTANT: Add this SHA-256 fingerprint to your assetlinks.json ==="
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Init Bubblewrap project
         run: |
           cd twa
-          bubblewrap init \
-            --manifest="https://yourjannah.com/wp-content/plugins/yn-jannah/manifest.json" \
-            --directory=build/app \
-            --packageId=com.yourjannah.app \
-            --host=yourjannah.com \
-            --name="YourJannah" \
-            --launcherName="YourJannah" \
-            --display=standalone \
-            --themeColor="#0a1628" \
-            --navigationColor="#0a1628" \
-            --backgroundColor="#0a1628" \
-            --startUrl="/?source=twa" \
-            --signingKeyPath=build/android.keystore \
-            --signingKeyAlias=yourjannah \
-            --enableNotifications=true \
-            --skipPlatformCheck
+          # Answer 'n' to JDK install prompt (we have JDK from setup-java)
+          echo "n" | bubblewrap init \
+            --manifest="https://yourjannah.com/wp-content/plugins/yn-jannah/manifest.json"
         env:
           BUBBLEWRAP_KEYSTORE_PASSWORD: yourjannah2024
           BUBBLEWRAP_KEY_PASSWORD: yourjannah2024
 
+      - name: Update TWA config
+        run: |
+          cd twa
+          # Update twa-manifest.json with correct signing key path
+          if [ -f twa-manifest.json ]; then
+            cat twa-manifest.json | jq '.signingKey.path = "./build/android.keystore" | .signingKey.alias = "yourjannah" | .packageId = "com.yourjannah.app"' > tmp.json && mv tmp.json twa-manifest.json
+          fi
+
       - name: Build AAB
         run: |
           cd twa
-          bubblewrap build \
-            --skipPlatformCheck \
-            --directory=build/app
+          echo "n" | bubblewrap build
         env:
           BUBBLEWRAP_KEYSTORE_PASSWORD: yourjannah2024
           BUBBLEWRAP_KEY_PASSWORD: yourjannah2024
