@@ -128,7 +128,7 @@ get_header();
             </section>
 
             <div style="text-align:center;padding:16px 0;">
-                <button class="ynj-btn ynj-btn--outline" onclick="localStorage.removeItem('ynj_user_token');localStorage.removeItem('ynj_user');window.location.href='<?php echo esc_js( home_url( '/' ) ); ?>';" style="color:#dc2626;border-color:#dc2626;"><?php echo esc_js( __( 'Logout', 'yourjannah' ) ); ?></button>
+                <button class="ynj-btn ynj-btn--outline" onclick="localStorage.removeItem('ynj_user_token');localStorage.removeItem('ynj_user');localStorage.removeItem('ynj_cache_date');window.location.href='<?php echo esc_js( wp_logout_url( home_url( '/' ) ) ); ?>';" style="color:#dc2626;border-color:#dc2626;"><?php echo esc_js( __( 'Logout', 'yourjannah' ) ); ?></button>
             </div>
         `;
 

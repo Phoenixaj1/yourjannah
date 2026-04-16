@@ -8,6 +8,54 @@
 <body <?php body_class(); ?>>
 <?php wp_body_open(); ?>
 
+<?php
+// ── Patron Status Bar (pure PHP, no JS) ──
+$_ynj_bar_status = 'guest';
+$_ynj_bar_name   = '';
+$_ynj_bar_tier   = '';
+$_ynj_bar_slug   = get_query_var( 'ynj_mosque_slug', '' );
+
+if ( is_user_logged_in() ) {
+    $_ynj_bar_status = 'member';
+    $_ynj_bar_name   = wp_get_current_user()->display_name;
+    $_wp_uid  = get_current_user_id();
+    $_ynj_uid = (int) get_user_meta( $_wp_uid, 'ynj_user_id', true );
+    if ( $_ynj_uid && class_exists( 'YNJ_DB' ) ) {
+        global $wpdb;
+        $_patron = $wpdb->get_row( $wpdb->prepare(
+            "SELECT tier FROM " . YNJ_DB::table( 'patrons' ) . " WHERE user_id = %d AND status = 'active' ORDER BY amount_pence DESC LIMIT 1",
+            $_ynj_uid
+        ) );
+        if ( $_patron ) {
+            $_ynj_bar_status = 'patron';
+            $_ynj_bar_tier   = $_patron->tier;
+        }
+    }
+}
+
+$_tier_labels = [ 'supporter' => 'Bronze', 'guardian' => 'Silver', 'champion' => 'Gold', 'platinum' => 'Platinum' ];
+?>
+
+<?php if ( $_ynj_bar_status === 'guest' ) : ?>
+<div class="ynj-topbar ynj-topbar--guest">
+    <span>🕌 <?php esc_html_e( 'Welcome to YourJannah', 'yourjannah' ); ?></span>
+    <div class="ynj-topbar__actions">
+        <a href="<?php echo esc_url( home_url( '/login' ) ); ?>"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></a>
+        <a href="<?php echo esc_url( home_url( '/register' ) ); ?>" class="ynj-topbar__cta"><?php esc_html_e( 'Join Free', 'yourjannah' ); ?></a>
+    </div>
+</div>
+<?php elseif ( $_ynj_bar_status === 'member' ) : ?>
+<div class="ynj-topbar ynj-topbar--member">
+    <span>👋 <?php printf( esc_html__( 'Salam, %s', 'yourjannah' ), esc_html( explode( ' ', $_ynj_bar_name )[0] ) ); ?> · <strong><?php esc_html_e( 'Free Member', 'yourjannah' ); ?></strong></span>
+    <a href="<?php echo esc_url( home_url( '/mosque/' . ( $_ynj_bar_slug ?: 'yourniyyah-masjid' ) . '/patron' ) ); ?>" class="ynj-topbar__cta"><?php esc_html_e( 'Become a Patron →', 'yourjannah' ); ?></a>
+</div>
+<?php else : ?>
+<div class="ynj-topbar ynj-topbar--patron">
+    <span>🏅 <?php echo esc_html( explode( ' ', $_ynj_bar_name )[0] ); ?> · <strong><?php echo esc_html( $_tier_labels[ $_ynj_bar_tier ] ?? ucfirst( $_ynj_bar_tier ) ); ?> <?php esc_html_e( 'Patron', 'yourjannah' ); ?></strong></span>
+    <span style="opacity:.7;font-size:10px;"><?php esc_html_e( 'JazakAllah Khayr', 'yourjannah' ); ?></span>
+</div>
+<?php endif; ?>
+
 <header class="ynj-header">
     <div class="ynj-header__inner">
         <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="ynj-logo">

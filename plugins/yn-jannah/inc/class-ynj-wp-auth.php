@@ -394,6 +394,9 @@ class YNJ_WP_Auth {
             }
         }
 
+        // Set WP auth cookie so is_user_logged_in() works on next page load
+        wp_set_auth_cookie( $wp_user_id, true );
+
         return [
             'ok'         => true,
             'token'      => $token,
@@ -474,6 +477,9 @@ class YNJ_WP_Auth {
                 'token_last_used' => current_time( 'mysql', true ),
             ], [ 'id' => $ynj_user_id ] );
         }
+
+        // Set WP auth cookie so is_user_logged_in() works on next page load
+        wp_set_auth_cookie( $user->ID, true );
 
         return [
             'ok'         => true,
