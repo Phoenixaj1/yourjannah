@@ -307,12 +307,14 @@
                             }).catch(function(){});
                         }
 
-                        // Update CTA help text with mosque name
+                        // Update CTA help text + patron bar with mosque name
                         var mName = m.name || 'the masjid';
                         var sh = document.getElementById('cta-sponsor-help');
                         var svh = document.getElementById('cta-services-help');
                         if (sh) sh.textContent = 'Funds go to supporting ' + mName;
                         if (svh) svh.textContent = 'Proceeds help fund ' + mName;
+                        var pb = document.getElementById('patron-bar-text');
+                        if (pb) pb.textContent = 'Patron of ' + mName;
 
                         // Jumu'ah times
                         fetch(`${API}/mosques/${slug}/jumuah`)

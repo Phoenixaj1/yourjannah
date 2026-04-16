@@ -11,43 +11,43 @@ get_header();
 $slug = ynj_mosque_slug();
 ?>
 <style>
-.ynj-main .ynj-patron-hero{text-align:center;padding:30px 20px 20px;background:none;border-radius:0;margin-bottom:0;}
-.ynj-patron-hero h2{font-size:22px;font-weight:800;margin-bottom:6px;}
-.ynj-patron-hero p{font-size:14px;color:#6b8fa3;line-height:1.5;}
-.ynj-tier{background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-radius:16px;padding:24px 20px;margin-bottom:12px;border:2px solid transparent;transition:all .2s;cursor:pointer;position:relative;}
-.ynj-tier:hover,.ynj-tier.selected{border-color:#00ADEF;box-shadow:0 4px 20px rgba(0,173,239,.15);}
-.ynj-tier.selected::after{content:'\2713';position:absolute;top:12px;right:14px;width:24px;height:24px;border-radius:50%;background:#00ADEF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
-.ynj-tier__badge{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 10px;border-radius:6px;margin-bottom:10px;}
-.ynj-tier__badge--supporter{background:#f0f9ff;color:#0369a1;}
-.ynj-tier__badge--guardian{background:#eff6ff;color:#1e40af;}
-.ynj-tier__badge--champion{background:#f0fdf4;color:#166534;}
-.ynj-tier h3{font-size:18px;font-weight:700;margin-bottom:4px;}
-.ynj-tier .ynj-tier__price{font-size:26px;font-weight:800;color:#00ADEF;}
-.ynj-tier .ynj-tier__price span{font-size:14px;font-weight:500;color:#6b8fa3;}
-.ynj-tier ul{list-style:none;margin:12px 0 0;padding:0;font-size:13px;color:#444;}
-.ynj-tier li{padding:4px 0;display:flex;align-items:center;gap:6px;}
-.ynj-tier li::before{content:'\2713';color:#16a34a;font-weight:700;font-size:12px;}
+.ynj-main .ynj-patron-hero{text-align:center;padding:32px 20px 20px;background:linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#0e4d3c 100%);color:#fff;border-radius:0 0 24px 24px;margin:-16px -16px 20px;}
+.ynj-patron-hero h2{font-size:20px;font-weight:800;margin-bottom:6px;color:#fff;}
+.ynj-patron-hero p{font-size:13px;color:rgba(255,255,255,.75);line-height:1.5;max-width:400px;margin:0 auto;}
+.ynj-tier-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.ynj-tier{background:#fff;border-radius:16px;padding:18px 16px;border:2px solid #e5e7eb;transition:all .2s;cursor:pointer;position:relative;text-align:center;}
+.ynj-tier:hover,.ynj-tier.selected{border-color:#00ADEF;box-shadow:0 4px 20px rgba(0,173,239,.12);}
+.ynj-tier.selected::after{content:'\2713';position:absolute;top:8px;right:10px;width:22px;height:22px;border-radius:50%;background:#00ADEF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
+.ynj-tier__badge{display:inline-block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:5px;margin-bottom:6px;}
+.ynj-tier__badge--supporter{background:#dbeafe;color:#1e40af;}
+.ynj-tier__badge--guardian{background:#e0e7ff;color:#4338ca;}
+.ynj-tier__badge--champion{background:#dcfce7;color:#166534;}
+.ynj-tier .ynj-tier__price{font-size:28px;font-weight:900;color:#0a1628;line-height:1;}
+.ynj-tier .ynj-tier__price span{font-size:13px;font-weight:500;color:#6b8fa3;}
+.ynj-tier ul{list-style:none;margin:8px 0 0;padding:0;font-size:12px;color:#555;text-align:left;}
+.ynj-tier li{padding:3px 0;display:flex;align-items:center;gap:5px;}
+.ynj-tier li::before{content:'\2713';color:#16a34a;font-weight:700;font-size:11px;}
 .ynj-patron-cta{margin-top:16px;text-align:center;}
-.ynj-patron-btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:12px;background:#00ADEF;color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;transition:all .15s;box-shadow:0 4px 16px rgba(0,173,239,.25);}
-.ynj-patron-btn:hover{background:#0096d0;box-shadow:0 6px 24px rgba(0,173,239,.35);}
-.ynj-patron-btn:disabled{opacity:.6;cursor:not-allowed;}
+.ynj-patron-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:16px;border-radius:14px;background:linear-gradient(135deg,#00ADEF,#0090d0);color:#fff;font-size:16px;font-weight:800;border:none;cursor:pointer;transition:all .15s;box-shadow:0 4px 16px rgba(0,173,239,.25);font-family:inherit;}
+.ynj-patron-btn:hover{box-shadow:0 6px 24px rgba(0,173,239,.35);transform:translateY(-1px);}
+.ynj-patron-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
 .ynj-patron-wall{margin-top:20px;}
 .ynj-patron-wall h3{font-size:15px;font-weight:700;margin-bottom:10px;}
-.ynj-pw-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.06);}
-.ynj-pw-item:last-child{border-bottom:none;}
-.ynj-pw-avatar{width:36px;height:36px;border-radius:50%;background:#00ADEF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;}
-.ynj-pw-name{font-size:14px;font-weight:600;flex:1;}
-.ynj-pw-tier{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6b8fa3;}
-.ynj-patron-stats{display:flex;gap:12px;justify-content:center;margin-bottom:16px;}
-.ynj-patron-stats div{text-align:center;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-radius:12px;padding:14px 20px;flex:1;max-width:140px;}
-.ynj-patron-stats strong{display:block;font-size:22px;font-weight:800;color:#00ADEF;}
-.ynj-patron-stats span{font-size:11px;color:#6b8fa3;text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
-.ynj-login-prompt{background:rgba(255,255,255,.85);border-radius:12px;padding:16px;text-align:center;margin-top:12px;font-size:13px;color:#6b8fa3;}
+.ynj-pw-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;margin-bottom:4px;background:#f8fafc;}
+.ynj-pw-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#0a1628,#1a3a5c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;}
+.ynj-pw-name{font-size:13px;font-weight:600;flex:1;}
+.ynj-pw-tier{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:5px;background:#f0f9ff;color:#0369a1;}
+.ynj-patron-stats{display:flex;gap:10px;justify-content:center;margin-bottom:16px;}
+.ynj-patron-stats div{text-align:center;background:#fff;border-radius:12px;padding:14px 18px;flex:1;max-width:130px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.ynj-patron-stats strong{display:block;font-size:22px;font-weight:900;color:#00ADEF;}
+.ynj-patron-stats span{font-size:10px;color:#6b8fa3;text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+.ynj-login-prompt{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:16px;text-align:center;margin-top:12px;font-size:13px;color:#6b8fa3;}
 .ynj-login-prompt a{color:#00ADEF;font-weight:700;text-decoration:none;}
-.ynj-status-card{background:rgba(0,173,239,.08);border:1px solid rgba(0,173,239,.2);border-radius:12px;padding:16px;margin-bottom:16px;text-align:center;}
-.ynj-status-card h3{font-size:15px;font-weight:700;color:#0369a1;margin-bottom:4px;}
-.ynj-status-card p{font-size:13px;color:#6b8fa3;}
-.ynj-cancel-link{display:inline-block;margin-top:8px;font-size:12px;color:#dc2626;cursor:pointer;text-decoration:underline;}
+.ynj-status-card{background:linear-gradient(135deg,#0a1628,#1a3a5c);color:#fff;border-radius:14px;padding:20px;margin-bottom:16px;text-align:center;}
+.ynj-status-card h3{font-size:16px;font-weight:700;color:#fff;margin-bottom:4px;}
+.ynj-status-card p{font-size:13px;color:rgba(255,255,255,.75);}
+.ynj-cancel-link{display:inline-block;margin-top:8px;font-size:12px;color:#fca5a5;cursor:pointer;text-decoration:underline;}
+@media(max-width:480px){.ynj-tier-grid{grid-template-columns:1fr;}}
 </style>
 
 <main class="ynj-main">
@@ -67,7 +67,7 @@ $slug = ynj_mosque_slug();
     <div id="active-status" style="display:none;"></div>
 
     <!-- Tier cards -->
-    <div id="tier-cards">
+    <div id="tier-cards" class="ynj-tier-grid">
         <div class="ynj-tier selected" data-tier="supporter" onclick="selectTier('supporter')">
             <span class="ynj-tier__badge ynj-tier__badge--supporter"><?php esc_html_e( 'Bronze', 'yourjannah' ); ?></span>
             <div class="ynj-tier__price">&pound;5 <span><?php esc_html_e( '/month', 'yourjannah' ); ?></span></div>

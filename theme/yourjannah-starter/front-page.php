@@ -110,7 +110,7 @@ get_header();
 
     <!-- Patron Membership CTA — compact single row -->
     <div class="ynj-patron-bar" id="patron-hero">
-        <a href="#" class="ynj-patron-bar__label" data-nav-mosque="/mosque/{slug}/patron">🏅 <strong><?php esc_html_e( 'Become a Patron', 'yourjannah' ); ?></strong></a>
+        <a href="#" class="ynj-patron-bar__label" data-nav-mosque="/mosque/{slug}/patron">🏅 <strong id="patron-bar-text"><?php esc_html_e( 'Become a Patron', 'yourjannah' ); ?></strong></a>
         <div class="ynj-patron-bar__tiers">
             <a href="#" class="ynj-patron-chip" data-nav-mosque="/mosque/{slug}/patron">£5</a>
             <a href="#" class="ynj-patron-chip" data-nav-mosque="/mosque/{slug}/patron">£10</a>
