@@ -9,6 +9,12 @@
 
 get_header();
 $slug = ynj_mosque_slug();
+
+// Pre-load mosque data server-side — instant mosque name, no API call
+$mosque    = ynj_get_mosque( $slug );
+$mosque_id = $mosque ? (int) $mosque->id : 0;
+$mosque_name   = $mosque ? $mosque->name : __( 'Masjid', 'yourjannah' );
+$mosque_status = $mosque ? $mosque->status : '';
 ?>
 <style>
 .ynj-main .ynj-patron-hero{text-align:center;padding:32px 20px 20px;background:linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#0e4d3c 100%);color:#fff;border-radius:0 0 24px 24px;margin:-16px -16px 20px;}
@@ -53,7 +59,7 @@ $slug = ynj_mosque_slug();
 <main class="ynj-main">
     <div class="ynj-patron-hero">
         <div style="font-size:36px;margin-bottom:4px;">🕌</div>
-        <div id="patron-mosque-name" style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.7;margin-bottom:6px;"></div>
+        <div id="patron-mosque-name" style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.7;margin-bottom:6px;"><?php echo esc_html( $mosque_name ); ?></div>
         <h2 id="patron-title" style="font-size:24px;"><?php esc_html_e( 'Become a Patron', 'yourjannah' ); ?></h2>
         <p><?php esc_html_e( 'Your monthly support keeps this masjid running. Patrons get a badge and recognition on the patron wall.', 'yourjannah' ); ?></p>
     </div>
@@ -148,9 +154,9 @@ $slug = ynj_mosque_slug();
     const API  = ynjData.restUrl;
     const token = localStorage.getItem('ynj_user_token') || '';
     let selectedTier = 'supporter';
-    let mosqueId = 0;
+    let mosqueId = <?php echo $mosque_id; ?>;
 
-    // Mosque name set instantly by theme.js from localStorage
+    // Mosque name pre-loaded from PHP — instant, no API call
 
     const tierPrices = { supporter: 5, guardian: 10, champion: 20, platinum: 50 };
 
