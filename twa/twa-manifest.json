@@ -1,0 +1,58 @@
+{
+  "packageId": "com.yourjannah.app",
+  "host": "yourjannah.com",
+  "name": "YourJannah",
+  "launcherName": "YourJannah",
+  "display": "standalone",
+  "themeColor": "#0a1628",
+  "navigationColor": "#0a1628",
+  "navigationColorDark": "#0a1628",
+  "navigationDividerColor": "#0a1628",
+  "navigationDividerColorDark": "#0a1628",
+  "backgroundColor": "#0a1628",
+  "enableNotifications": true,
+  "startUrl": "/?source=twa",
+  "iconUrl": "https://yourjannah.com/wp-content/plugins/yn-jannah/assets/icons/icon-512.png",
+  "maskableIconUrl": "https://yourjannah.com/wp-content/plugins/yn-jannah/assets/icons/icon-512-maskable.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "yourjannah"
+  },
+  "appVersionCode": 1,
+  "appVersionName": "2.0.0",
+  "shortcuts": [
+    {
+      "name": "Prayer Times",
+      "shortName": "Prayers",
+      "url": "/?shortcut=prayers",
+      "chosenIconUrl": "https://yourjannah.com/wp-content/plugins/yn-jannah/assets/icons/icon-96.png"
+    },
+    {
+      "name": "Donate",
+      "shortName": "Donate",
+      "url": "/?shortcut=donate",
+      "chosenIconUrl": "https://yourjannah.com/wp-content/plugins/yn-jannah/assets/icons/icon-96.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://yourjannah.com/wp-content/plugins/yn-jannah/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": true
+    },
+    "playBilling": {
+      "enabled": false
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://yourjannah.com/",
+  "minSdkVersion": 19,
+  "orientation": "portrait"
+}

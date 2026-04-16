@@ -1,25 +1,104 @@
 {
-    "name": "YourJannah \u2014 Mosque Community",
+    "name": "YourJannah — Mosque Community",
     "short_name": "YourJannah",
-    "description": "Prayer times, announcements, events and more from your local mosque",
-    "start_url": "/",
+    "description": "Prayer times, events, donations, and community for your local mosque. Check in, donate, discover events and connect with your masjid.",
+    "start_url": "/?source=pwa",
+    "scope": "/",
     "display": "standalone",
-    "background_color": "#FAFAF8",
-    "theme_color": "#287e61",
-    "orientation": "portrait",
-    "categories": ["lifestyle", "social"],
+    "background_color": "#0a1628",
+    "theme_color": "#0a1628",
+    "orientation": "portrait-primary",
+    "categories": ["lifestyle", "social", "education"],
+    "lang": "en-GB",
+    "dir": "ltr",
+    "prefer_related_applications": false,
     "icons": [
+        {
+            "src": "/wp-content/plugins/yn-jannah/assets/icons/icon-48.png",
+            "sizes": "48x48",
+            "type": "image/png"
+        },
+        {
+            "src": "/wp-content/plugins/yn-jannah/assets/icons/icon-72.png",
+            "sizes": "72x72",
+            "type": "image/png"
+        },
+        {
+            "src": "/wp-content/plugins/yn-jannah/assets/icons/icon-96.png",
+            "sizes": "96x96",
+            "type": "image/png"
+        },
+        {
+            "src": "/wp-content/plugins/yn-jannah/assets/icons/icon-128.png",
+            "sizes": "128x128",
+            "type": "image/png"
+        },
+        {
+            "src": "/wp-content/plugins/yn-jannah/assets/icons/icon-144.png",
+            "sizes": "144x144",
+            "type": "image/png"
+        },
+        {
+            "src": "/wp-content/plugins/yn-jannah/assets/icons/icon-152.png",
+            "sizes": "152x152",
+            "type": "image/png"
+        },
         {
             "src": "/wp-content/plugins/yn-jannah/assets/icons/icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "/wp-content/plugins/yn-jannah/assets/icons/icon-192-maskable.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/wp-content/plugins/yn-jannah/assets/icons/icon-384.png",
+            "sizes": "384x384",
+            "type": "image/png"
         },
         {
             "src": "/wp-content/plugins/yn-jannah/assets/icons/icon-512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "/wp-content/plugins/yn-jannah/assets/icons/icon-512-maskable.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "/wp-content/plugins/yn-jannah/assets/screenshots/home.png",
+            "sizes": "1080x1920",
+            "type": "image/png",
+            "label": "Prayer times with countdown and travel estimates"
+        },
+        {
+            "src": "/wp-content/plugins/yn-jannah/assets/screenshots/events.png",
+            "sizes": "1080x1920",
+            "type": "image/png",
+            "label": "Colour-coded events from your mosque"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Prayer Times",
+            "short_name": "Prayers",
+            "url": "/?shortcut=prayers",
+            "icons": [{"src": "/wp-content/plugins/yn-jannah/assets/icons/icon-96.png", "sizes": "96x96"}]
+        },
+        {
+            "name": "Donate",
+            "short_name": "Donate",
+            "url": "/?shortcut=donate",
+            "icons": [{"src": "/wp-content/plugins/yn-jannah/assets/icons/icon-96.png", "sizes": "96x96"}]
         }
     ]
 }
