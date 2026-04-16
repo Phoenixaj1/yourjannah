@@ -32,7 +32,6 @@ class YNJ_API_Sponsor_YJ {
         $amount_pounds = max( 1, (int) ( $data['amount_pounds'] ?? 50 ) );
         $amount_pence  = $amount_pounds * 100;
         $tier          = sanitize_text_field( $data['tier'] ?? 'tier_50' );
-        $one_off       = ! empty( $data['one_off'] );
         $name          = sanitize_text_field( $data['name'] ?? '' );
         $email         = sanitize_email( $data['email'] ?? '' );
 
@@ -52,9 +51,7 @@ class YNJ_API_Sponsor_YJ {
         ];
         $tier_label = $tier_labels[ $tier ] ?? 'Sponsor';
 
-        $description = $one_off
-            ? "YourJannah Sponsorship — {$tier_label} (One-off)"
-            : "YourJannah Sponsorship — {$tier_label} (Monthly)";
+        $description = "YourJannah Sponsorship — {$tier_label} (Monthly)";
 
         try {
             $stripe = YNJ_Stripe::client();
@@ -63,6 +60,7 @@ class YNJ_API_Sponsor_YJ {
                 'price_data' => [
                     'currency'     => 'gbp',
                     'unit_amount'  => $amount_pence,
+                    'recurring'    => [ 'interval' => 'month' ],
                     'product_data' => [
                         'name'        => $description,
                         'description' => 'Sadaqah Jariyah — Helping mosques across the UK',
@@ -71,13 +69,9 @@ class YNJ_API_Sponsor_YJ {
                 'quantity' => 1,
             ];
 
-            if ( ! $one_off ) {
-                $line_item['price_data']['recurring'] = [ 'interval' => 'month' ];
-            }
-
             $session_params = [
                 'payment_method_types' => [ 'card' ],
-                'mode'                 => $one_off ? 'payment' : 'subscription',
+                'mode'                 => 'subscription',
                 'line_items'           => [ $line_item ],
                 'success_url'          => home_url( '/sponsor-yourjannah?payment=success' ),
                 'cancel_url'           => home_url( '/sponsor-yourjannah?payment=cancelled' ),
@@ -86,7 +80,7 @@ class YNJ_API_Sponsor_YJ {
                     'type'    => 'platform_sponsor',
                     'tier'    => $tier,
                     'name'    => $name,
-                    'one_off' => $one_off ? '1' : '0',
+                    'recurring' => 'monthly',
                 ],
             ];
 

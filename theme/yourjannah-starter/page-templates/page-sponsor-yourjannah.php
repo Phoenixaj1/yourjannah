@@ -89,20 +89,13 @@ get_header();
         </div>
     </div>
 
-    <!-- One-off option -->
-    <div style="text-align:center;margin-bottom:16px;">
-        <label style="font-size:13px;color:#6b8fa3;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
-            <input type="checkbox" id="syj-oneoff" style="accent-color:#00ADEF;"> <?php esc_html_e( 'Make this a one-off donation instead of monthly', 'yourjannah' ); ?>
-        </label>
-    </div>
-
     <!-- Custom amount -->
     <div style="text-align:center;margin-bottom:16px;">
         <label style="font-size:13px;color:#6b8fa3;display:block;margin-bottom:4px;"><?php esc_html_e( 'Or enter a custom amount', 'yourjannah' ); ?></label>
         <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
             <span style="font-size:18px;font-weight:700;color:#0a1628;">&pound;</span>
             <input type="number" id="syj-custom" placeholder="0" min="1" style="width:80px;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;font-weight:700;text-align:center;font-family:inherit;">
-            <span style="font-size:13px;color:#6b8fa3;" id="syj-freq-label">/month</span>
+            <span style="font-size:13px;color:#6b8fa3;">/month</span>
         </div>
     </div>
 
@@ -153,11 +146,6 @@ get_header();
         updateBtn();
     });
 
-    document.getElementById('syj-oneoff').addEventListener('change', function() {
-        document.getElementById('syj-freq-label').textContent = this.checked ? '(one-off)' : '/month';
-        updateBtn();
-    });
-
     function getAmount() {
         var custom = parseInt(document.getElementById('syj-custom').value);
         return custom > 0 ? custom : (tierAmounts[selectedTier] || 10);
@@ -165,9 +153,7 @@ get_header();
 
     function updateBtn() {
         var amount = getAmount();
-        var isOneOff = document.getElementById('syj-oneoff').checked;
-        var label = isOneOff ? '<?php echo esc_js( __( 'Donate', 'yourjannah' ) ); ?> \u00a3' + amount : '<?php echo esc_js( __( 'Sponsor YourJannah', 'yourjannah' ) ); ?> \u2014 \u00a3' + amount + '/month';
-        document.getElementById('syj-btn').innerHTML = '\uD83E\uDD32 ' + label;
+        document.getElementById('syj-btn').innerHTML = '\uD83E\uDD32 <?php echo esc_js( __( 'Sponsor YourJannah', 'yourjannah' ) ); ?> \u2014 \u00a3' + amount + '/month';
     }
 
     window.sponsorYJ = async function() {
@@ -186,14 +172,13 @@ get_header();
         btn.textContent = '<?php echo esc_js( __( 'Redirecting to checkout...', 'yourjannah' ) ); ?>';
 
         var amount = getAmount();
-        var isOneOff = document.getElementById('syj-oneoff').checked;
         var tier = selectedTier === 'custom' ? 'custom' : selectedTier;
 
         try {
             var res = await fetch(ynjData.restUrl + 'sponsor-yj/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount_pounds: amount, tier: tier, one_off: isOneOff, name: name, email: email })
+                body: JSON.stringify({ amount_pounds: amount, tier: tier, name: name, email: email })
             });
             var data = await res.json();
             if (data.ok && data.checkout_url) {
