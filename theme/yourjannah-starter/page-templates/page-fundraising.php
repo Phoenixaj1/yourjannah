@@ -223,7 +223,6 @@ $slug = ynj_mosque_slug();
                     '</div>' +
                 '</div>';
             }).join('');
-        });
     })();
 })();
 </script>
