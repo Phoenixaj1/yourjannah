@@ -27,12 +27,21 @@ $slug = ynj_mosque_slug();
     <h2 id="fundraising-title" style="font-size:18px;font-weight:700;margin-bottom:4px;"><?php esc_html_e( 'Donate & Fundraise', 'yourjannah' ); ?></h2>
     <p class="ynj-text-muted" style="margin-bottom:14px;"><?php esc_html_e( 'Support your masjid — every contribution makes a difference', 'yourjannah' ); ?></p>
 
-    <!-- Quick Donate Banner -->
-    <a id="quick-donate-btn" href="#" target="_blank" rel="noopener" style="display:block;background:linear-gradient(135deg,#16a34a,#15803d);border-radius:14px;padding:20px;margin-bottom:16px;text-decoration:none;color:#fff;text-align:center;">
-        <div style="font-size:28px;margin-bottom:6px;">❤️</div>
-        <div style="font-size:16px;font-weight:700;margin-bottom:4px;"><?php esc_html_e( 'Donate Now', 'yourjannah' ); ?></div>
-        <div style="font-size:12px;opacity:.8;"><?php esc_html_e( '100% reaches your masjid — zero platform fees', 'yourjannah' ); ?></div>
-    </a>
+    <!-- Quick Donate -->
+    <div style="background:#fff;border-radius:14px;padding:20px;margin-bottom:16px;border:1px solid rgba(0,0,0,.06);box-shadow:0 2px 8px rgba(0,0,0,.04);">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:4px;">❤️ <?php esc_html_e( 'Donate Now', 'yourjannah' ); ?></h3>
+        <p class="ynj-text-muted" style="margin-bottom:12px;font-size:12px;"><?php esc_html_e( '100% reaches your masjid — zero platform fees', 'yourjannah' ); ?></p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+            <button class="ynj-donate-amt" onclick="donateAmount(5)" style="flex:1;min-width:60px;padding:12px;border-radius:10px;border:2px solid #16a34a;background:#f0fdf4;color:#166534;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;">£5</button>
+            <button class="ynj-donate-amt" onclick="donateAmount(10)" style="flex:1;min-width:60px;padding:12px;border-radius:10px;border:2px solid #16a34a;background:#f0fdf4;color:#166534;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;">£10</button>
+            <button class="ynj-donate-amt" onclick="donateAmount(15)" style="flex:1;min-width:60px;padding:12px;border-radius:10px;border:2px solid #16a34a;background:#f0fdf4;color:#166534;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;">£15</button>
+            <button class="ynj-donate-amt" onclick="donateAmount(20)" style="flex:1;min-width:60px;padding:12px;border-radius:10px;border:2px solid #16a34a;background:#f0fdf4;color:#166534;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;">£20</button>
+        </div>
+        <button id="donate-custom-btn" onclick="donateAmount(0)" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">
+            <?php esc_html_e( 'Donate Any Amount', 'yourjannah' ); ?>
+        </button>
+    </div>
+    <input type="hidden" id="dfm-base-url" value="">
 
     <!-- Patron CTA -->
     <a id="patron-link" href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/patron' ) ); ?>" style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#0a1628,#1a3a5c);border-radius:14px;padding:16px 20px;margin-bottom:16px;text-decoration:none;color:#fff;">
@@ -64,15 +73,28 @@ $slug = ynj_mosque_slug();
         'equipment':'\ud83d\udee0\ufe0f','roof':'\ud83c\udfe0','heating':'\ud83d\udd25','parking':'\ud83c\udd7f\ufe0f'
     };
 
+    var dfmBaseUrl = '';
+
+    // Donate with prefilled amount + email
+    window.donateAmount = function(amount) {
+        if (!dfmBaseUrl) { alert('Donation link not ready. Please try again.'); return; }
+        var url = dfmBaseUrl;
+        var params = [];
+        if (amount > 0) params.push('amount=' + amount);
+        // Get user email from localStorage
+        try { var user = JSON.parse(localStorage.getItem('ynj_user')); if (user && user.email) params.push('email=' + encodeURIComponent(user.email)); } catch(e){}
+        if (params.length) url += (url.indexOf('?') >= 0 ? '&' : '?') + params.join('&');
+        window.open(url, '_blank');
+    };
+
     // Get mosque name + set donate link
     fetch(API + 'mosques/' + slug)
         .then(r => r.json())
         .then(resp => {
             const m = resp.mosque || resp;
-            // Set quick donate button to DFM
             const dfmSlug = m.dfm_slug || m.slug || slug;
-            const donBtn = document.getElementById('quick-donate-btn');
-            if (donBtn) donBtn.href = 'https://donationformasjid.com/' + dfmSlug;
+            dfmBaseUrl = 'https://donationformasjid.com/' + dfmSlug;
+            document.getElementById('dfm-base-url').value = dfmBaseUrl;
             const ftEl = document.getElementById('fundraising-title');
             if (ftEl) ftEl.textContent = (m.name || 'Your Masjid') + ' Fundraising';
         })
