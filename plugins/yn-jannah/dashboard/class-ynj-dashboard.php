@@ -1852,8 +1852,71 @@ async function renderBroadcast() {
         '<div class="d-field"><label>Send Method</label><select id="bc_method"><option value="both">Both Push + Email (recommended)</option><option value="push">Push Notification Only</option><option value="email">Email Only</option></select></div>' +
         '<button class="d-btn d-btn--primary" style="width:100%" id="bc-send" onclick="sendBroadcast()"><span class="btn-text">\ud83d\udce8 Send Broadcast</span><span class="spinner"></span></button>' +
         '<div id="bc-result" style="margin-top:12px"></div>' +
+        '</div>' +
+
+        // Import Contacts section
+        '<div class="d-card" style="margin-top:16px">' +
+        '<h3 style="margin-bottom:8px">\ud83d\udce5 Import Email List</h3>' +
+        '<p style="font-size:12px;color:var(--text-dim);margin-bottom:12px">Upload a CSV file with your congregation\'s emails. They\'ll be added as subscribers so you can message them to join YourJannah and become patrons.</p>' +
+        '<div class="d-field"><label>CSV File (must have an "email" column)</label><input type="file" id="import-file" accept=".csv,.txt" style="padding:8px;border:1px dashed var(--border);border-radius:8px;width:100%;box-sizing:border-box"></div>' +
+        '<button class="d-btn d-btn--primary" style="width:100%;margin-top:8px" id="import-btn" onclick="importContacts()"><span class="btn-text">\ud83d\udce4 Upload & Import</span><span class="spinner"></span></button>' +
+        '<div id="import-result" style="margin-top:12px"></div>' +
+
+        // Past imports
+        '<div id="import-history" style="margin-top:16px"></div>' +
         '</div>'
     ));
+
+    // Load past imports
+    var imps = await api('admin/imports');
+    if (imps.ok && imps.imports && imps.imports.length) {
+        var html = '<h4 style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text-dim)">Past Imports</h4>';
+        html += '<table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--border)"><th style="text-align:left;padding:6px">File</th><th>Imported</th><th>Dupes</th><th>Date</th></tr></thead><tbody>';
+        imps.imports.forEach(function(imp) {
+            html += '<tr style="border-bottom:1px solid var(--border-light,#f0f0f0)"><td style="padding:6px">' + esc(imp.filename) + '</td><td style="text-align:center;color:#16a34a;font-weight:700">' + imp.imported + '</td><td style="text-align:center;color:#6b7280">' + imp.duplicates + '</td><td style="text-align:center;color:var(--text-dim)">' + (imp.created_at||'').slice(0,10) + '</td></tr>';
+        });
+        html += '</tbody></table>';
+        document.getElementById('import-history').innerHTML = html;
+    }
+}
+
+async function importContacts() {
+    var fileInput = document.getElementById('import-file');
+    if (!fileInput.files || !fileInput.files[0]) { toast('Select a CSV file first.', 'error'); return; }
+
+    var file = fileInput.files[0];
+    if (file.size > 10 * 1024 * 1024) { toast('File too large (max 10MB).', 'error'); return; }
+
+    btn('#import-btn', true);
+    var formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        var headers = {};
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        var resp = await fetch(API + 'admin/import-contacts', {
+            method: 'POST',
+            headers: headers,
+            body: formData
+        });
+        var res = await resp.json();
+        btn('#import-btn', false);
+
+        var el = document.getElementById('import-result');
+        if (res.ok) {
+            el.innerHTML = '<div class="d-alert d-alert--success">\u2705 ' + esc(res.message) + '</div>';
+            toast('Import complete! ' + res.imported + ' contacts added.');
+            fileInput.value = '';
+            // Refresh the page to show updated history
+            renderBroadcast();
+        } else {
+            el.innerHTML = '<div class="d-alert d-alert--error">\u274c ' + esc(res.message || res.error || 'Import failed.') + '</div>';
+            toast(res.error || 'Import failed.', 'error');
+        }
+    } catch(e) {
+        btn('#import-btn', false);
+        toast('Network error during import.', 'error');
+    }
 }
 
 async function sendBroadcast() {

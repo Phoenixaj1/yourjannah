@@ -103,7 +103,10 @@ if ( $_nb_id && $_nb_pk ) :
 ?>
 <script src="https://js.stripe.com/v3/" async></script>
 <style>
-.ynj-niyyah{position:fixed;bottom:60px;left:0;right:0;z-index:199;background:linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#00ADEF 100%);color:#fff;border-radius:18px 18px 0 0;box-shadow:0 -4px 30px rgba(0,0,0,.3);max-width:500px;margin:0 auto;}
+.ynj-niyyah{position:fixed;bottom:60px;left:0;right:0;z-index:199;max-width:500px;margin:0 auto;pointer-events:none;}
+.ynj-niyyah__bar,.ynj-niyyah__body{pointer-events:auto;background:linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#00ADEF 100%);color:#fff;}
+.ynj-niyyah__bar{border-radius:18px 18px 0 0;box-shadow:0 -4px 30px rgba(0,0,0,.3);}
+.ynj-niyyah--open .ynj-niyyah__body{border-radius:0 0 0 0;box-shadow:0 -4px 30px rgba(0,0,0,.3);}
 @media(min-width:901px){.ynj-niyyah{bottom:0;}}
 /* Toggle bar — always visible */
 .ynj-niyyah__bar{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;}

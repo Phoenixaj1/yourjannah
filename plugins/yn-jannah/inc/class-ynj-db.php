@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '2.5.0';
+    const SCHEMA_VERSION = '2.6.0';
 
     /**
      * Return the full table name for a given short name.
@@ -854,7 +854,23 @@ class YNJ_DB {
             KEY stripe_payment_intent (stripe_payment_intent)
         ) $charset_collate;";
 
-        // 20. Pool Ledger — immutable financial record of all payments
+        // 20. Email Imports — tracks CSV list uploads by mosque admins
+        $tables[] = "CREATE TABLE {$t('email_imports')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            filename varchar(255) NOT NULL DEFAULT '',
+            total_rows int(11) NOT NULL DEFAULT 0,
+            imported int(11) NOT NULL DEFAULT 0,
+            skipped int(11) NOT NULL DEFAULT 0,
+            duplicates int(11) NOT NULL DEFAULT 0,
+            status varchar(20) NOT NULL DEFAULT 'completed',
+            created_by bigint(20) unsigned NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id)
+        ) $charset_collate;";
+
+        // 21. Pool Ledger — immutable financial record of all payments
         $tables[] = "CREATE TABLE {$t('pool_ledger')} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             entry_ref varchar(30) NOT NULL DEFAULT '',

@@ -171,6 +171,20 @@ class YNJ_API_Admin {
             'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
+        // --- CSV import: upload email list ---
+        register_rest_route( self::NS, '/admin/import-contacts', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'import_contacts' ],
+            'permission_callback' => '__return_true',
+        ] );
+
+        // --- List past imports ---
+        register_rest_route( self::NS, '/admin/imports', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'list_imports' ],
+            'permission_callback' => '__return_true',
+        ] );
+
         // --- Eid management (bearer) ---
         register_rest_route( self::NS, '/admin/eid', [
             'methods'             => 'POST',
@@ -900,6 +914,171 @@ class YNJ_API_Admin {
     // ================================================================
     // BROADCAST
     // ================================================================
+
+    // ================================================================
+    // CSV IMPORT — Upload mosque email lists
+    // ================================================================
+
+    /**
+     * POST /admin/import-contacts — Upload CSV of emails to subscribers table.
+     */
+    public static function import_contacts( \WP_REST_Request $request ) {
+        $auth = YNJ_Auth::bearer_check( $request );
+        if ( is_wp_error( $auth ) ) return $auth;
+
+        $mosque_id = (int) $auth->mosque_id;
+
+        // Get uploaded file
+        $files = $request->get_file_params();
+        $file = $files['file'] ?? null;
+
+        // Also accept JSON body with contacts array (for dashboard paste)
+        $json_contacts = $request->get_param( 'contacts' );
+
+        $rows = [];
+
+        if ( $file && ! empty( $file['tmp_name'] ) && $file['error'] === UPLOAD_ERR_OK ) {
+            // Parse CSV file
+            $handle = fopen( $file['tmp_name'], 'r' );
+            if ( ! $handle ) {
+                return new \WP_Error( 'file_error', 'Could not read uploaded file.', [ 'status' => 400 ] );
+            }
+
+            // Read header row
+            $header = fgetcsv( $handle );
+            if ( ! $header ) {
+                fclose( $handle );
+                return new \WP_Error( 'empty_file', 'CSV file is empty.', [ 'status' => 400 ] );
+            }
+
+            // Map columns (case-insensitive)
+            $header = array_map( 'strtolower', array_map( 'trim', $header ) );
+            $email_col = self::find_col( $header, [ 'email', 'e-mail', 'email_address', 'emailaddress' ] );
+            $name_col  = self::find_col( $header, [ 'name', 'full_name', 'fullname', 'first_name', 'firstname', 'fn' ] );
+            $phone_col = self::find_col( $header, [ 'phone', 'mobile', 'tel', 'telephone', 'phone_number' ] );
+
+            if ( $email_col === false ) {
+                fclose( $handle );
+                return new \WP_Error( 'no_email_column', 'CSV must have an "email" column.', [ 'status' => 400 ] );
+            }
+
+            while ( ( $row = fgetcsv( $handle ) ) !== false ) {
+                $email = trim( $row[ $email_col ] ?? '' );
+                if ( ! is_email( $email ) ) continue;
+                $rows[] = [
+                    'email' => sanitize_email( $email ),
+                    'name'  => sanitize_text_field( $name_col !== false ? ( $row[ $name_col ] ?? '' ) : '' ),
+                    'phone' => sanitize_text_field( $phone_col !== false ? ( $row[ $phone_col ] ?? '' ) : '' ),
+                ];
+            }
+            fclose( $handle );
+            $filename = sanitize_file_name( $file['name'] ?? 'import.csv' );
+
+        } elseif ( is_array( $json_contacts ) ) {
+            // JSON body: [{email, name, phone}, ...]
+            foreach ( $json_contacts as $c ) {
+                $email = sanitize_email( $c['email'] ?? '' );
+                if ( ! is_email( $email ) ) continue;
+                $rows[] = [
+                    'email' => $email,
+                    'name'  => sanitize_text_field( $c['name'] ?? '' ),
+                    'phone' => sanitize_text_field( $c['phone'] ?? '' ),
+                ];
+            }
+            $filename = 'paste-import';
+
+        } else {
+            return new \WP_Error( 'no_data', 'Upload a CSV file or provide contacts array.', [ 'status' => 400 ] );
+        }
+
+        if ( empty( $rows ) ) {
+            return new \WP_Error( 'no_valid_emails', 'No valid email addresses found.', [ 'status' => 400 ] );
+        }
+
+        // Insert into subscribers table, skip duplicates
+        global $wpdb;
+        $st = YNJ_DB::table( 'subscribers' );
+        $imported = 0;
+        $duplicates = 0;
+        $skipped = 0;
+
+        foreach ( $rows as $r ) {
+            // Check for existing subscriber
+            $exists = $wpdb->get_var( $wpdb->prepare(
+                "SELECT id FROM $st WHERE mosque_id = %d AND email = %s",
+                $mosque_id, $r['email']
+            ) );
+
+            if ( $exists ) {
+                $duplicates++;
+                continue;
+            }
+
+            $result = $wpdb->insert( $st, [
+                'mosque_id' => $mosque_id,
+                'email'     => $r['email'],
+                'name'      => $r['name'],
+                'phone'     => $r['phone'],
+                'status'    => 'active',
+            ] );
+
+            if ( $result ) {
+                $imported++;
+            } else {
+                $skipped++;
+            }
+        }
+
+        // Log the import
+        $it = YNJ_DB::table( 'email_imports' );
+        $wpdb->insert( $it, [
+            'mosque_id'  => $mosque_id,
+            'filename'   => $filename,
+            'total_rows' => count( $rows ),
+            'imported'   => $imported,
+            'skipped'    => $skipped,
+            'duplicates' => $duplicates,
+            'status'     => 'completed',
+        ] );
+
+        return new \WP_REST_Response( [
+            'ok'         => true,
+            'total'      => count( $rows ),
+            'imported'   => $imported,
+            'duplicates' => $duplicates,
+            'skipped'    => $skipped,
+            'message'    => "Imported {$imported} contacts. {$duplicates} duplicates skipped.",
+        ] );
+    }
+
+    /**
+     * GET /admin/imports — list past imports for this mosque.
+     */
+    public static function list_imports( \WP_REST_Request $request ) {
+        $auth = YNJ_Auth::bearer_check( $request );
+        if ( is_wp_error( $auth ) ) return $auth;
+
+        global $wpdb;
+        $it = YNJ_DB::table( 'email_imports' );
+        $imports = $wpdb->get_results( $wpdb->prepare(
+            "SELECT id, filename, total_rows, imported, skipped, duplicates, status, created_at
+             FROM $it WHERE mosque_id = %d ORDER BY created_at DESC LIMIT 20",
+            $auth->mosque_id
+        ) );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'imports' => $imports ?: [] ] );
+    }
+
+    /**
+     * Helper: find column index by aliases (case-insensitive).
+     */
+    private static function find_col( array $header, array $aliases ) {
+        foreach ( $aliases as $alias ) {
+            $idx = array_search( $alias, $header, true );
+            if ( $idx !== false ) return $idx;
+        }
+        return false;
+    }
 
     /**
      * POST /admin/broadcast — Send message to mosque's subscribers.
