@@ -136,12 +136,13 @@
                             var el = document.getElementById('points-total');
                             if (el) el.textContent = d.total;
                         } else {
-                            btn.textContent = d.error || 'Check-in failed';
+                            btn.textContent = '❌ ' + (d.error || 'Check-in failed');
+                            btn.style.background = '#991b1b';
                             btn.disabled = false;
-                            setTimeout(function() { btn.textContent = '📍 Check In'; }, 3000);
+                            setTimeout(function() { btn.textContent = '📍 Check In'; btn.style.background = ''; }, 5000);
                         }
                     })
-                    .catch(function() { btn.textContent = '📍 Check In'; btn.disabled = false; });
+                    .catch(function(e) { btn.textContent = '❌ Network error'; btn.style.background = '#991b1b'; btn.disabled = false; setTimeout(function(){ btn.textContent = '📍 Check In'; btn.style.background = ''; }, 5000); });
                 }, function() {
                     btn.textContent = 'Enable GPS to check in';
                     btn.disabled = false;

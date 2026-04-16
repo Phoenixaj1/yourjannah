@@ -106,9 +106,9 @@ class YNJ_API_Points {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Location and mosque required.' ], 400 );
         }
 
-        // Get mosque
+        // Get mosque (active or unclaimed — users can check in at any listed mosque)
         $mosque = $wpdb->get_row( $wpdb->prepare(
-            "SELECT id, name, latitude, longitude FROM " . YNJ_DB::table( 'mosques' ) . " WHERE slug = %s AND status = 'active'",
+            "SELECT id, name, latitude, longitude FROM " . YNJ_DB::table( 'mosques' ) . " WHERE slug = %s AND status IN ('active','unclaimed')",
             $mosque_slug
         ) );
 
