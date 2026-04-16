@@ -89,6 +89,12 @@ add_action('admin_init', function() {
         $updated = $wpdb->query("UPDATE $t SET status = 'unclaimed' WHERE admin_email = '' AND admin_token_hash = '' AND setup_complete = 0 AND id > 1");
         wp_die("Fixed $updated mosques to 'unclaimed'. <a href='" . admin_url() . "'>Back</a>");
     }
+    // Seed full demo data (admin only)
+    if (isset($_GET['ynj_seed_full'])) {
+        require_once YNJ_DIR . 'seed-full.php';
+        echo '</pre><p><a href="' . admin_url() . '">Back to admin</a></p>';
+        exit;
+    }
     // Seed mosques trigger (admin only)
     if (isset($_GET['ynj_seed_mosques'])) {
         require_once YNJ_DIR . 'seed-import-mosques.php';

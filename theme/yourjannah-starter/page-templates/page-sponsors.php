@@ -127,14 +127,20 @@ $slug = ynj_mosque_slug();
     // Load mosque sponsors
     fetch(API + 'mosques/' + slug)
         .then(r => r.json())
-        .then(resp => { const m = resp.mosque||resp; mosqueId = m.id; mosqueLat = m.latitude; mosqueLng = m.longitude; })
-        .then(() => fetch(API + 'mosques/' + slug + '/directory'))
+        .then(resp => {
+            const m = resp.mosque||resp;
+            mosqueId = m.id; mosqueLat = m.latitude; mosqueLng = m.longitude;
+            return fetch(API + 'mosques/' + slug + '/directory');
+        })
         .then(r => r.json())
         .then(data => {
             localBiz = data.businesses || [];
             renderList();
         })
-        .catch(() => { document.getElementById('local-biz-list').innerHTML = '<p class="ynj-text-muted">Could not load.</p>'; });
+        .catch(function(err) {
+            console.error('Sponsors load error:', err);
+            document.getElementById('local-biz-list').innerHTML = '<p class="ynj-text-muted">No sponsors yet. Be the first to <a href="' + '<?php echo esc_js( home_url( "/mosque/" ) ); ?>' + slug + '/sponsors/join">sponsor this masjid</a>!</p>';
+        });
 
     // Radius change
     window.onRadiusChange = function() {
