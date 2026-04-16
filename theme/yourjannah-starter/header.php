@@ -92,15 +92,6 @@ $_tier_labels = [ 'supporter' => 'Bronze', 'guardian' => 'Silver', 'champion' =>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:.6;flex-shrink:0;"><path d="M6 9l6 6 6-6"/></svg>
             </div>
 
-            <!-- Radius badge -->
-            <select id="ynj-radius" class="ynj-radius-badge" onchange="if(typeof onRadiusChange==='function')onRadiusChange()">
-                <option value="0" selected>+0m</option>
-                <option value="5">+5mi</option>
-                <option value="10">+10mi</option>
-                <option value="25">+25mi</option>
-                <option value="9999">All</option>
-            </select>
-
             <!-- User account handled by top membership bar -->
         </div>
     </div>

@@ -16,63 +16,71 @@
     // GPS DETECTION
     // ================================================================
 
-    const gpsBtn = document.getElementById('gps-btn');
-    if (gpsBtn) {
-        gpsBtn.addEventListener('click', function() {
+    // ================================================================
+    // GPS — works on ALL pages, not just homepage
+    // ================================================================
+
+    var _gpsBtn = document.getElementById('gps-btn');
+    var _isHomepage = !!document.getElementById('next-prayer-card');
+
+    if (_gpsBtn && !_isHomepage) {
+        // On non-homepage pages, GPS finds nearest mosque and redirects
+        _gpsBtn.addEventListener('click', function() {
             if (!('geolocation' in navigator)) return;
-            gpsBtn.classList.add('ynj-gps-btn--loading');
+            _gpsBtn.classList.add('ynj-gps-btn--loading');
+            var nameEl = document.getElementById('mosque-name');
+            if (nameEl) nameEl.textContent = 'Locating...';
 
             navigator.geolocation.getCurrentPosition(
                 function(pos) {
-                    gpsBtn.classList.remove('ynj-gps-btn--loading');
-                    const lat = pos.coords.latitude;
-                    const lng = pos.coords.longitude;
-
-                    // Find nearest mosque
-                    fetch(ynjData.restUrl + 'mosques/nearest?lat=' + lat + '&lng=' + lng + '&limit=1')
-                        .then(r => r.json())
-                        .then(data => {
+                    _gpsBtn.classList.remove('ynj-gps-btn--loading');
+                    fetch(ynjData.restUrl + 'mosques/nearest?lat=' + pos.coords.latitude + '&lng=' + pos.coords.longitude + '&limit=1')
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
                             if (data.ok && data.mosques && data.mosques[0]) {
-                                const m = data.mosques[0];
+                                var m = data.mosques[0];
                                 localStorage.setItem('ynj_mosque_slug', m.slug);
                                 localStorage.setItem('ynj_mosque_name', m.name);
-
-                                // Update mosque name display
-                                const nameEl = document.getElementById('mosque-name-text');
-                                if (nameEl) nameEl.textContent = m.name;
-
-                                // Update nav links
-                                document.querySelectorAll('[data-mosque-link]').forEach(el => {
-                                    el.href = el.dataset.mosqueLink.replace('{slug}', m.slug);
-                                });
+                                localStorage.removeItem('ynj_cache_date');
+                                // Redirect to this mosque's version of current page, or homepage
+                                window.location.href = '/mosque/' + m.slug;
                             }
                         })
-                        .catch(() => {});
+                        .catch(function() { if (nameEl) nameEl.textContent = 'Not found'; });
                 },
                 function() {
-                    gpsBtn.classList.remove('ynj-gps-btn--loading');
+                    _gpsBtn.classList.remove('ynj-gps-btn--loading');
+                    if (nameEl) nameEl.textContent = localStorage.getItem('ynj_mosque_name') || 'Select mosque';
                 },
                 { timeout: 8000, maximumAge: 300000 }
             );
         });
     }
 
+    // Mosque pill click — open dropdown on homepage, or go to homepage on other pages
+    var _mosquePill = document.getElementById('mosque-selector');
+    if (_mosquePill && !_isHomepage) {
+        _mosquePill.addEventListener('click', function(e) {
+            if (e.target.closest('#gps-btn')) return; // don't intercept GPS button
+            window.location.href = '/';
+        });
+        _mosquePill.style.cursor = 'pointer';
+    }
+
     // ================================================================
-    // MOSQUE SLUG WIRING
+    // MOSQUE NAME — set from cache on all pages
     // ================================================================
 
-    const slug = localStorage.getItem('ynj_mosque_slug') || '';
-    if (slug) {
-        // Update mosque name from cache
-        const cachedName = localStorage.getItem('ynj_mosque_name');
-        const nameEl = document.getElementById('mosque-name-text');
-        if (nameEl && cachedName && nameEl.textContent === 'Select Mosque') {
-            nameEl.textContent = cachedName;
+    var _slug = localStorage.getItem('ynj_mosque_slug') || '';
+    var _cachedName2 = localStorage.getItem('ynj_mosque_name') || '';
+    if (_slug && _cachedName2) {
+        var _mnEl = document.getElementById('mosque-name');
+        if (_mnEl && (!_mnEl.textContent || _mnEl.textContent === 'Finding...' || _mnEl.textContent === 'Select Mosque')) {
+            _mnEl.textContent = _cachedName2;
         }
-
-        // Wire up nav links that reference mosque slug
-        document.querySelectorAll('[data-mosque-link]').forEach(el => {
-            el.href = el.dataset.mosqueLink.replace('{slug}', slug);
+        // Wire up nav links
+        document.querySelectorAll('[data-nav-mosque]').forEach(function(el) {
+            el.href = el.dataset.navMosque.replace('{slug}', _slug);
         });
     }
 
