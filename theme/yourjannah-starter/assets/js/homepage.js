@@ -290,9 +290,6 @@
 
                             if (userLat) {
                                 calcTravelFromCoords(m.latitude, m.longitude);
-                            } else {
-                                // No GPS yet — show postcode prompt in travel area
-                                showPostcodePrompt(m.latitude, m.longitude);
                             }
                         }
 
@@ -968,71 +965,7 @@
                 updateLeaveBy();
             };
 
-            function showPostcodePrompt(mLat, mLng) {
-                // Check localStorage for saved postcode first
-                const savedPC = localStorage.getItem('ynj_user_postcode');
-                if (savedPC) {
-                    geocodePostcode(savedPC, mLat, mLng);
-                    return;
-                }
-
-                const travelEl = document.getElementById('hero-travel');
-                travelEl.style.display = '';
-                travelEl.innerHTML = `
-                    <div style="display:flex;align-items:center;gap:8px;width:100%;">
-                        <input type="text" id="pc-input" placeholder="Enter your postcode"
-                            style="flex:1;padding:8px 12px;border:1px solid rgba(255,255,255,.4);border-radius:8px;
-                            background:rgba(255,255,255,.15);color:#fff;font-size:13px;font-family:inherit;
-                            outline:none;text-transform:uppercase;max-width:140px;"
-                            maxlength="8">
-                        <button onclick="submitPostcode()"
-                            style="padding:8px 14px;border:1px solid rgba(255,255,255,.4);border-radius:8px;
-                            background:rgba(255,255,255,.2);color:#fff;font-size:13px;font-weight:600;
-                            cursor:pointer;white-space:nowrap;">
-                            Calculate
-                        </button>
-                    </div>`;
-                // Focus the input
-                setTimeout(() => { const inp = document.getElementById('pc-input'); if(inp) inp.focus(); }, 100);
-            }
-
-            window.submitPostcode = function() {
-                const inp = document.getElementById('pc-input');
-                if (!inp) return;
-                const pc = inp.value.trim().replace(/\s+/g, '');
-                if (pc.length < 3) return;
-                localStorage.setItem('ynj_user_postcode', pc);
-                inp.disabled = true;
-                geocodePostcode(pc, mosqueLat, mosqueLng);
-            };
-
-            function geocodePostcode(pc, mLat, mLng) {
-                const travelEl = document.getElementById('hero-travel');
-                travelEl.style.display = '';
-                travelEl.innerHTML = '<span style="font-size:13px;opacity:.7;">Calculating travel time...</span>';
-
-                fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(pc.replace(/\s/g,''))}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.result && data.result.latitude) {
-                            userLat = data.result.latitude;
-                            userLng = data.result.longitude;
-                            // Restore the travel display elements
-                            travelEl.innerHTML = `
-                                <div class="ynj-leave-by" id="leave-by">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                                    <span id="leave-by-text">Calculating...</span>
-                                </div>
-                                <span class="ynj-travel-dist" id="travel-dist"></span>`;
-                            calcTravelFromCoords(mLat, mLng);
-                        } else {
-                            travelEl.innerHTML = '<span style="font-size:12px;opacity:.7;">Postcode not found. <a href="#" onclick="localStorage.removeItem(\'ynj_user_postcode\');location.reload();return false;" style="color:#fff;text-decoration:underline;">Try again</a></span>';
-                        }
-                    })
-                    .catch(() => {
-                        travelEl.innerHTML = '<span style="font-size:12px;opacity:.7;">Could not look up postcode. <a href="#" onclick="localStorage.removeItem(\'ynj_user_postcode\');location.reload();return false;" style="color:#fff;text-decoration:underline;">Try again</a></span>';
-                    });
-            }
+            /* Postcode functions removed — GPS only */
 
             /* ---- Nav ---- */
             function updateNavLinks(slug) {
