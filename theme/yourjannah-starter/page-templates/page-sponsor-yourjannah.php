@@ -28,15 +28,8 @@ get_header();
 .syj-tier{background:#fff;border:2px solid #e5e7eb;border-radius:16px;padding:20px;text-align:center;transition:all .2s;cursor:pointer;position:relative;}
 .syj-tier:hover,.syj-tier.selected{border-color:#00ADEF;box-shadow:0 4px 20px rgba(0,173,239,.12);}
 .syj-tier.selected::after{content:'\2713';position:absolute;top:10px;right:12px;width:24px;height:24px;border-radius:50%;background:#00ADEF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
-.syj-tier__badge{display:inline-block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:3px 10px;border-radius:6px;margin-bottom:8px;}
-.syj-tier__badge--seed{background:#dbeafe;color:#1e40af;}
-.syj-tier__badge--grow{background:#dcfce7;color:#166534;}
-.syj-tier__badge--sj{background:#fef3c7;color:#92400e;}
 .syj-tier__price{font-size:32px;font-weight:900;color:#0a1628;}
 .syj-tier__price span{font-size:14px;font-weight:500;color:#6b8fa3;}
-.syj-tier__perks{list-style:none;padding:0;margin:12px 0 0;text-align:left;font-size:13px;}
-.syj-tier__perks li{padding:4px 0;display:flex;align-items:center;gap:6px;}
-.syj-tier__perks li::before{content:'\2713';color:#16a34a;font-weight:700;font-size:12px;}
 .syj-cta-btn{display:block;width:100%;padding:16px;border:none;border-radius:14px;background:linear-gradient(135deg,#00ADEF,#0090d0);color:#fff;font-size:16px;font-weight:800;cursor:pointer;text-align:center;text-decoration:none;font-family:inherit;transition:all .15s;box-shadow:0 4px 16px rgba(0,173,239,.25);}
 .syj-cta-btn:hover{background:linear-gradient(135deg,#0090d0,#0070a8);box-shadow:0 6px 24px rgba(0,173,239,.35);}
 .syj-cta-btn:disabled{opacity:.6;cursor:not-allowed;}
@@ -78,76 +71,21 @@ get_header();
         <span>&mdash; Sahih Muslim 1631</span>
     </div>
 
-    <!-- Why Sponsor -->
-    <section class="syj-why">
-        <h2>🤲 <?php esc_html_e( 'Why Sponsor YourJannah?', 'yourjannah' ); ?></h2>
-
-        <div class="syj-feature">
-            <div class="syj-feature__icon">🕌</div>
-            <div class="syj-feature__text">
-                <h4><?php esc_html_e( 'Help Thousands of Masjids', 'yourjannah' ); ?></h4>
-                <p><?php esc_html_e( 'Your sponsorship directly funds the servers, development, and support that keeps YourJannah running for every mosque — free of charge.', 'yourjannah' ); ?></p>
-            </div>
-        </div>
-
-        <div class="syj-feature">
-            <div class="syj-feature__icon">💰</div>
-            <div class="syj-feature__text">
-                <h4><?php esc_html_e( 'Mosques Raise More', 'yourjannah' ); ?></h4>
-                <p><?php esc_html_e( 'Patron memberships, event bookings, and online donations — YourJannah helps mosques become financially self-sustaining.', 'yourjannah' ); ?></p>
-            </div>
-        </div>
-
-        <div class="syj-feature">
-            <div class="syj-feature__icon">📿</div>
-            <div class="syj-feature__text">
-                <h4><?php esc_html_e( 'Sadaqah Jariyah', 'yourjannah' ); ?></h4>
-                <p><?php esc_html_e( 'Every prayer facilitated, every donation made, every community connected through YourJannah — the reward continues.', 'yourjannah' ); ?></p>
-            </div>
-        </div>
-
-        <div class="syj-feature">
-            <div class="syj-feature__icon">🌍</div>
-            <div class="syj-feature__text">
-                <h4><?php esc_html_e( 'Global Impact', 'yourjannah' ); ?></h4>
-                <p><?php esc_html_e( 'Starting with 1,400+ UK mosques, expanding worldwide. Your support scales to every community we reach.', 'yourjannah' ); ?></p>
-            </div>
-        </div>
-    </section>
-
-    <!-- Tiers -->
-    <h2 style="font-size:18px;font-weight:800;margin-bottom:12px;">🌱 <?php esc_html_e( 'Choose Your Level', 'yourjannah' ); ?></h2>
+    <!-- Sponsor amounts -->
+    <h2 style="font-size:18px;font-weight:800;margin-bottom:12px;"><?php esc_html_e( 'Sponsor Our Project', 'yourjannah' ); ?></h2>
 
     <div class="syj-tiers" id="syj-tiers">
-        <div class="syj-tier selected" data-tier="seed" data-amount="10" onclick="selectSyjTier('seed')">
-            <span class="syj-tier__badge syj-tier__badge--seed"><?php esc_html_e( 'Seed', 'yourjannah' ); ?></span>
-            <div class="syj-tier__price">&pound;10 <span>/month</span></div>
-            <ul class="syj-tier__perks">
-                <li><?php esc_html_e( 'Name on Sponsor Wall', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Sponsor badge on your profile', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Monthly impact report email', 'yourjannah' ); ?></li>
-            </ul>
-        </div>
-        <div class="syj-tier" data-tier="grow" data-amount="50" onclick="selectSyjTier('grow')">
-            <span class="syj-tier__badge syj-tier__badge--grow"><?php esc_html_e( 'Growth', 'yourjannah' ); ?></span>
+        <div class="syj-tier selected" data-tier="tier_50" data-amount="50" onclick="selectSyjTier('tier_50')">
             <div class="syj-tier__price">&pound;50 <span>/month</span></div>
-            <ul class="syj-tier__perks">
-                <li><?php esc_html_e( 'Everything in Seed', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Featured on Sponsor Wall', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Social media shoutout', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Early access to new features', 'yourjannah' ); ?></li>
-            </ul>
         </div>
-        <div class="syj-tier" data-tier="sadaqah_jariyah" data-amount="100" onclick="selectSyjTier('sadaqah_jariyah')">
-            <span class="syj-tier__badge syj-tier__badge--sj"><?php esc_html_e( 'Sadaqah Jariyah', 'yourjannah' ); ?></span>
+        <div class="syj-tier" data-tier="tier_100" data-amount="100" onclick="selectSyjTier('tier_100')">
             <div class="syj-tier__price">&pound;100 <span>/month</span></div>
-            <ul class="syj-tier__perks">
-                <li><?php esc_html_e( 'Everything in Growth', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Gold badge + top of Sponsor Wall', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Logo on YourJannah footer', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Quarterly video call with the team', 'yourjannah' ); ?></li>
-                <li><?php esc_html_e( 'Name a feature or mosque onboarding', 'yourjannah' ); ?></li>
-            </ul>
+        </div>
+        <div class="syj-tier" data-tier="tier_250" data-amount="250" onclick="selectSyjTier('tier_250')">
+            <div class="syj-tier__price">&pound;250 <span>/month</span></div>
+        </div>
+        <div class="syj-tier" data-tier="tier_500" data-amount="500" onclick="selectSyjTier('tier_500')">
+            <div class="syj-tier__price">&pound;500 <span>/month</span></div>
         </div>
     </div>
 
@@ -170,23 +108,17 @@ get_header();
 
     <!-- CTA -->
     <button class="syj-cta-btn" id="syj-btn" onclick="sponsorYJ()">
-        🤲 <?php esc_html_e( 'Sponsor YourJannah', 'yourjannah' ); ?> &mdash; &pound;10/month
+        🤲 <?php esc_html_e( 'Sponsor YourJannah', 'yourjannah' ); ?> &mdash; &pound;50/month
     </button>
     <p id="syj-msg" style="text-align:center;font-size:12px;margin-top:8px;display:none;"></p>
 
-    <!-- Sponsor Wall -->
-    <div class="syj-wall" id="syj-wall" style="display:none;">
-        <h3>🌟 <?php esc_html_e( 'Our Sponsors', 'yourjannah' ); ?></h3>
-        <div id="syj-wall-list"></div>
-    </div>
-
-    <!-- How it works -->
+    <!-- Where it goes -->
     <div style="margin-top:24px;padding:20px;background:#f8fafc;border-radius:14px;border:1px solid #e5e7eb;">
         <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;"><?php esc_html_e( 'Where Does Your Money Go?', 'yourjannah' ); ?></h3>
         <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;">
-            <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">🖥️</span> <strong>40%</strong> <?php esc_html_e( 'Servers & infrastructure', 'yourjannah' ); ?></div>
-            <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">👨‍💻</span> <strong>35%</strong> <?php esc_html_e( 'Development & support', 'yourjannah' ); ?></div>
-            <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">🕌</span> <strong>15%</strong> <?php esc_html_e( 'Mosque onboarding & training', 'yourjannah' ); ?></div>
+            <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">👨‍💻</span> <strong>40%</strong> <?php esc_html_e( 'Staff & development', 'yourjannah' ); ?></div>
+            <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">🖥️</span> <strong>30%</strong> <?php esc_html_e( 'Servers & running costs', 'yourjannah' ); ?></div>
+            <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">🕌</span> <strong>20%</strong> <?php esc_html_e( 'Mosque onboarding & support', 'yourjannah' ); ?></div>
             <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">🌍</span> <strong>10%</strong> <?php esc_html_e( 'Expansion to new regions', 'yourjannah' ); ?></div>
         </div>
     </div>
@@ -195,9 +127,8 @@ get_header();
 
 <script>
 (function(){
-    var selectedTier = 'seed';
-    var tierAmounts = { seed: 10, grow: 50, sadaqah_jariyah: 100 };
-    var tierLabels = { seed: 'Seed', grow: 'Growth', sadaqah_jariyah: 'Sadaqah Jariyah' };
+    var selectedTier = 'tier_50';
+    var tierAmounts = { tier_50: 50, tier_100: 100, tier_250: 250, tier_500: 500 };
 
     window.selectSyjTier = function(tier) {
         selectedTier = tier;
