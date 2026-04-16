@@ -1,0 +1,116 @@
+name: Build Android App (TWA)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'twa/**'
+      - 'plugins/yn-jannah/manifest.json'
+      - '.github/workflows/build-android.yml'
+
+jobs:
+  build:
+    name: Build Android AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Bubblewrap CLI
+        run: npm i -g @bubblewrap/cli
+
+      - name: Generate signing keystore
+        run: |
+          mkdir -p twa/build
+          # Generate a keystore for signing (or use existing from secrets)
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > twa/build/android.keystore
+          else
+            keytool -genkeypair \
+              -alias yourjannah \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -keystore twa/build/android.keystore \
+              -storepass yourjannah2024 \
+              -keypass yourjannah2024 \
+              -dname "CN=YourJannah, OU=Mobile, O=YourJannah Ltd, L=Birmingham, ST=West Midlands, C=GB"
+          fi
+
+      - name: Get SHA-256 fingerprint
+        run: |
+          keytool -list -v \
+            -keystore twa/build/android.keystore \
+            -alias yourjannah \
+            -storepass yourjannah2024 2>/dev/null | grep "SHA256:" | head -1
+          echo ""
+          echo "=== IMPORTANT: Add this SHA-256 fingerprint to your assetlinks.json ==="
+
+      - name: Init Bubblewrap project
+        run: |
+          cd twa
+          bubblewrap init \
+            --manifest="https://yourjannah.com/wp-content/plugins/yn-jannah/manifest.json" \
+            --directory=build/app \
+            --packageId=com.yourjannah.app \
+            --host=yourjannah.com \
+            --name="YourJannah" \
+            --launcherName="YourJannah" \
+            --display=standalone \
+            --themeColor="#0a1628" \
+            --navigationColor="#0a1628" \
+            --backgroundColor="#0a1628" \
+            --startUrl="/?source=twa" \
+            --signingKeyPath=build/android.keystore \
+            --signingKeyAlias=yourjannah \
+            --enableNotifications=true \
+            --skipPlatformCheck
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: yourjannah2024
+          BUBBLEWRAP_KEY_PASSWORD: yourjannah2024
+
+      - name: Build AAB
+        run: |
+          cd twa
+          bubblewrap build \
+            --skipPlatformCheck \
+            --directory=build/app
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: yourjannah2024
+          BUBBLEWRAP_KEY_PASSWORD: yourjannah2024
+
+      - name: Find built files
+        run: |
+          echo "=== Looking for AAB/APK files ==="
+          find twa/ -name "*.aab" -o -name "*.apk" 2>/dev/null
+          ls -la twa/build/app/ 2>/dev/null || true
+          ls -la twa/build/app/app/build/outputs/ 2>/dev/null || true
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yourjannah-android
+          path: |
+            twa/**/*.aab
+            twa/**/*.apk
+          if-no-files-found: warn
+
+      - name: Upload keystore (save this!)
+        uses: actions/upload-artifact@v4
+        with:
+          name: yourjannah-keystore
+          path: twa/build/android.keystore
+          if-no-files-found: warn
