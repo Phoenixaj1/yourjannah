@@ -93,7 +93,7 @@ $food_cats = [ 'Restaurant', 'Grocery', 'Butcher', 'Catering', 'Bakery', 'Cafe',
         $search_text = strtolower( $b->business_name . ' ' . $cat . ' ' . ( $b->description ?? '' ) . ' ' . ( $b->address ?? '' ) . ' ' . ( $b->postcode ?? '' ) );
         $detail_url = home_url( '/mosque/' . $slug . '/business/' . $b->id );
     ?>
-        <a href="<?php echo esc_url( $detail_url ); ?>" class="ynj-biz-card<?php echo $tier_class; ?>" data-dir-type="<?php echo $dir_type; ?>" data-category="<?php echo esc_attr( strtolower( $cat ) ); ?>" data-search="<?php echo esc_attr( $search_text ); ?>" style="text-decoration:none;color:inherit;display:block;">
+        <div class="ynj-biz-card<?php echo $tier_class; ?>" data-dir-type="<?php echo $dir_type; ?>" data-category="<?php echo esc_attr( strtolower( $cat ) ); ?>" data-search="<?php echo esc_attr( $search_text ); ?>" onclick="window.location.href='<?php echo esc_url( $detail_url ); ?>'" style="cursor:pointer;">
             <?php if ( $tier_label ) : ?><div class="ynj-biz-tier"><?php echo $tier_label; ?> Sponsor</div><?php endif; ?>
             <div class="ynj-biz-header">
                 <?php if ( $b->logo_url ) : ?>
@@ -115,11 +115,11 @@ $food_cats = [ 'Restaurant', 'Grocery', 'Butcher', 'Catering', 'Bakery', 'Cafe',
                 <?php if ( $b->address || $b->postcode ) : ?><div class="ynj-biz-detail">📍 <?php echo esc_html( implode( ', ', array_filter( [ $b->address, $b->postcode ] ) ) ); ?></div><?php endif; ?>
             </div>
             <div class="ynj-biz-actions" onclick="event.stopPropagation();">
-                <?php if ( $b->phone ) : ?><a href="tel:<?php echo esc_attr( $b->phone ); ?>" class="ynj-biz-btn" onclick="event.preventDefault();window.location.href='tel:<?php echo esc_attr( $b->phone ); ?>';">📞 Call</a><?php endif; ?>
-                <?php if ( $b->email ) : ?><a href="mailto:<?php echo esc_attr( $b->email ); ?>" class="ynj-biz-btn ynj-biz-btn--outline" onclick="event.preventDefault();window.location.href='mailto:<?php echo esc_attr( $b->email ); ?>';">✉️ Email</a><?php endif; ?>
-                <?php if ( $b->website ) : ?><a href="<?php echo esc_url( $b->website ); ?>" target="_blank" rel="noopener" class="ynj-biz-btn ynj-biz-btn--outline" onclick="event.stopPropagation();">🌐 Website</a><?php endif; ?>
+                <?php if ( $b->phone ) : ?><a href="tel:<?php echo esc_attr( $b->phone ); ?>" class="ynj-biz-btn">📞 Call</a><?php endif; ?>
+                <?php if ( $b->email ) : ?><a href="mailto:<?php echo esc_attr( $b->email ); ?>" class="ynj-biz-btn ynj-biz-btn--outline">✉️ Email</a><?php endif; ?>
+                <?php if ( $b->website ) : ?><a href="<?php echo esc_url( $b->website ); ?>" target="_blank" rel="noopener" class="ynj-biz-btn ynj-biz-btn--outline">🌐 Website</a><?php endif; ?>
             </div>
-        </a>
+        </div>
     <?php endforeach;
 
     // Render services
@@ -129,7 +129,7 @@ $food_cats = [ 'Restaurant', 'Grocery', 'Butcher', 'Catering', 'Bakery', 'Cafe',
         $detail_url = home_url( '/mosque/' . $slug . '/service/' . $s->id );
         $rate = $s->hourly_rate_pence ? '£' . number_format( $s->hourly_rate_pence / 100, 0 ) . '/hr' : '';
     ?>
-        <a href="<?php echo esc_url( $detail_url ); ?>" class="ynj-biz-card" data-dir-type="professional" data-category="<?php echo esc_attr( strtolower( $s->service_type ) ); ?>" data-search="<?php echo esc_attr( $search_text ); ?>" style="text-decoration:none;color:inherit;display:block;">
+        <div class="ynj-biz-card" data-dir-type="professional" data-category="<?php echo esc_attr( strtolower( $s->service_type ) ); ?>" data-search="<?php echo esc_attr( $search_text ); ?>" onclick="window.location.href='<?php echo esc_url( $detail_url ); ?>'" style="cursor:pointer;">
             <div class="ynj-biz-header">
                 <div class="ynj-biz-logo" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);"><?php echo esc_html( strtoupper( substr( $s->provider_name ?: '?', 0, 1 ) ) ); ?></div>
                 <div class="ynj-biz-info">
@@ -143,10 +143,10 @@ $food_cats = [ 'Restaurant', 'Grocery', 'Butcher', 'Catering', 'Bakery', 'Cafe',
                 <?php if ( $s->area_covered ) : ?><div class="ynj-biz-detail">📍 <?php echo esc_html( $s->area_covered ); ?></div><?php endif; ?>
             </div>
             <div class="ynj-biz-actions" onclick="event.stopPropagation();">
-                <?php if ( $s->phone ) : ?><a href="tel:<?php echo esc_attr( $s->phone ); ?>" class="ynj-biz-btn" onclick="event.preventDefault();window.location.href='tel:<?php echo esc_attr( $s->phone ); ?>';">📞 Call</a><?php endif; ?>
-                <?php if ( $s->email ) : ?><a href="mailto:<?php echo esc_attr( $s->email ); ?>" class="ynj-biz-btn ynj-biz-btn--outline" onclick="event.preventDefault();window.location.href='mailto:<?php echo esc_attr( $s->email ); ?>';">✉️ Email</a><?php endif; ?>
+                <?php if ( $s->phone ) : ?><a href="tel:<?php echo esc_attr( $s->phone ); ?>" class="ynj-biz-btn">📞 Call</a><?php endif; ?>
+                <?php if ( $s->email ) : ?><a href="mailto:<?php echo esc_attr( $s->email ); ?>" class="ynj-biz-btn ynj-biz-btn--outline">✉️ Email</a><?php endif; ?>
             </div>
-        </a>
+        </div>
     <?php endforeach;
 
     if ( ! $has_items ) : ?>
