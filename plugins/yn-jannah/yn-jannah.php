@@ -7,7 +7,7 @@
  */
 if (!defined('ABSPATH')) exit;
 
-define('YNJ_VERSION', '1.0.0');
+define('YNJ_VERSION', '2.2.0');
 define('YNJ_DIR', plugin_dir_path(__FILE__));
 define('YNJ_URL', plugin_dir_url(__FILE__));
 define('YNJ_TABLE_PREFIX', 'ynj_');
@@ -72,9 +72,12 @@ add_action('init', function() {
 // Auto-upgrade DB on version change
 add_action('admin_init', function() {
     $installed = get_option('ynj_db_version', '');
-    if ($installed !== YNJ_VERSION) {
+    if ($installed !== YNJ_VERSION || isset($_GET['ynj_force_db'])) {
         YNJ_DB::install();
         update_option('ynj_db_version', YNJ_VERSION);
+        if (isset($_GET['ynj_force_db'])) {
+            wp_die('DB upgrade complete. Tables created/updated. <a href="' . admin_url() . '">Back to admin</a>');
+        }
     }
 });
 
