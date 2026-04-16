@@ -13,11 +13,26 @@ $slug = ynj_mosque_slug();
 ?>
 
 <main class="ynj-main">
+    <!-- Search bar at the very top -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <div style="flex:1;position:relative;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b8fa3" stroke-width="2" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="biz-global-search" type="text" placeholder="<?php esc_attr_e( 'Search businesses & professionals...', 'yourjannah' ); ?>" style="width:100%;padding:12px 12px 12px 38px;border:1px solid rgba(0,0,0,.1);border-radius:12px;font-size:14px;font-family:inherit;outline:none;background:rgba(255,255,255,.9);" autocomplete="off" oninput="globalSearch()">
+        </div>
+        <select id="biz-area" style="padding:10px 12px;border-radius:12px;border:1px solid rgba(0,0,0,.1);font-size:12px;font-weight:600;background:rgba(255,255,255,.9);cursor:pointer;" onchange="globalSearch()">
+            <option value="local"><?php esc_html_e( 'This Masjid', 'yourjannah' ); ?></option>
+            <option value="5"><?php esc_html_e( '5 miles', 'yourjannah' ); ?></option>
+            <option value="10"><?php esc_html_e( '10 miles', 'yourjannah' ); ?></option>
+            <option value="25"><?php esc_html_e( '25 miles', 'yourjannah' ); ?></option>
+            <option value="all"><?php esc_html_e( 'Nationwide', 'yourjannah' ); ?></option>
+        </select>
+    </div>
+
     <!-- CTA Banner -->
-    <div style="background:linear-gradient(135deg,#00ADEF,#0369a1);border-radius:14px;padding:18px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+    <div style="background:linear-gradient(135deg,#00ADEF,#0369a1);border-radius:14px;padding:14px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <div>
-            <h3 style="color:#fff;font-size:15px;font-weight:700;margin-bottom:2px;"><?php esc_html_e( 'Support Your Masjid', 'yourjannah' ); ?></h3>
-            <p style="color:rgba(255,255,255,.8);font-size:12px;"><?php esc_html_e( 'List your business or services — proceeds fund the masjid', 'yourjannah' ); ?></p>
+            <h3 style="color:#fff;font-size:14px;font-weight:700;margin-bottom:2px;"><?php esc_html_e( 'Support Your Masjid', 'yourjannah' ); ?></h3>
+            <p style="color:rgba(255,255,255,.8);font-size:11px;"><?php esc_html_e( 'List your business or services — proceeds fund the masjid', 'yourjannah' ); ?></p>
         </div>
         <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/sponsors/join' ) ); ?>" style="display:inline-flex;align-items:center;gap:4px;padding:8px 14px;border-radius:10px;background:#fff;color:#00ADEF;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;">⭐ <?php esc_html_e( 'List Now', 'yourjannah' ); ?></a>
     </div>
@@ -30,12 +45,7 @@ $slug = ynj_mosque_slug();
     <div style="border-top:1px solid #e0e8ed;margin:20px 0;"></div>
 
     <!-- People / Services Directory -->
-    <h3 style="font-size:15px;font-weight:700;margin-bottom:4px;">🤝 <?php esc_html_e( 'Find Local Professionals', 'yourjannah' ); ?></h3>
-    <p class="ynj-text-muted" style="margin-bottom:12px;"><?php esc_html_e( 'Trusted experts from your community', 'yourjannah' ); ?></p>
-
-    <div class="ynj-search-bar" style="margin-bottom:14px;">
-        <input class="ynj-search-bar__input" id="svc-search" type="text" placeholder="<?php esc_attr_e( 'Search (e.g. plumber, solicitor, tutor)...', 'yourjannah' ); ?>" autocomplete="off" oninput="searchSvc()">
-    </div>
+    <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;">🤝 <?php esc_html_e( 'Local Professionals', 'yourjannah' ); ?></h3>
 
     <div id="biz-services"><p class="ynj-text-muted">Loading...</p></div>
 </main>
@@ -45,13 +55,11 @@ $slug = ynj_mosque_slug();
     var slug = <?php echo wp_json_encode( $slug ); ?>;
     var API = ynjData.restUrl;
     var allSvcs = [];
+    var allBiz = [];
 
-    // Load sponsors
-    fetch(API + 'mosques/' + slug + '/directory').then(function(r){return r.json();}).then(function(data){
-        var biz = data.businesses || [];
+    function renderBiz(biz) {
         var el = document.getElementById('biz-sponsors');
-        if(!biz.length){ el.innerHTML = '<p class="ynj-text-muted">No sponsors yet. <a href="/mosque/' + slug + '/sponsors/join" style="font-weight:700;">Be the first!</a></p>'; return; }
-
+        if(!biz.length){ el.innerHTML = '<p class="ynj-text-muted">No sponsors found.</p>'; return; }
         el.innerHTML = biz.map(function(b, i){
             var rank = i + 1;
             var tierClass = rank <= 3 ? (rank===1?'ynj-biz--premium':rank===2?'ynj-biz--featured':'ynj-biz--standard') : '';
@@ -87,8 +95,32 @@ $slug = ynj_mosque_slug();
         }).join('');
     }
 
+    // Global search — filters both sponsors and professionals
+    window.globalSearch = function(){
+        var q = (document.getElementById('biz-global-search').value || '').toLowerCase().trim();
+        var area = document.getElementById('biz-area').value;
+
+        // Filter sponsors
+        if(q){
+            var filteredBiz = allBiz.filter(function(b){ return (b.business_name||'').toLowerCase().indexOf(q)>=0 || (b.category||'').toLowerCase().indexOf(q)>=0 || (b.description||'').toLowerCase().indexOf(q)>=0; });
+            renderBiz(filteredBiz);
+        } else {
+            renderBiz(allBiz);
+        }
+
+        // Filter services
+        if(q){
+            var filteredSvcs = allSvcs.filter(function(s){ return (s.provider_name||'').toLowerCase().indexOf(q)>=0 || (s.service_type||'').toLowerCase().indexOf(q)>=0 || (s.description||'').toLowerCase().indexOf(q)>=0; });
+            renderSvcs(filteredSvcs);
+        } else {
+            renderSvcs(allSvcs);
+        }
+
+        // TODO: if area !== 'local', fetch from nearby mosques via radius API
+    };
+
     window.searchSvc = function(){
-        var q = (document.getElementById('svc-search').value || '').toLowerCase().trim();
+        var q = (document.getElementById('biz-global-search')?.value || '').toLowerCase().trim();
         if(!q){ renderSvcs(allSvcs); return; }
         var filtered = allSvcs.filter(function(s){
             return (s.provider_name||'').toLowerCase().indexOf(q)>=0 || (s.service_type||'').toLowerCase().indexOf(q)>=0 || (s.description||'').toLowerCase().indexOf(q)>=0;
