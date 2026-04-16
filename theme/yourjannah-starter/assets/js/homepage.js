@@ -225,9 +225,12 @@
                     localStorage.removeItem('ynj_cache_date');
                     localStorage.removeItem('ynj_cached_prayers');
                     localStorage.removeItem('ynj_cached_feed');
+                    // Show dropdown with nearby mosques instead of auto-selecting
+                    manualGpsSearch = true;
                     requestGps();
                 });
             }
+            var manualGpsSearch = false;
 
             /* ---- GPS ---- */
             function onGeo(pos) {
@@ -244,11 +247,17 @@
                         nearbyMosques = data.mosques;
                         populateDropdown(nearbyMosques);
 
-                        // Auto-select saved mosque or nearest
-                        const saved = mosqueSlug;
-                        const match = saved ? nearbyMosques.find(m => m.slug === saved) : null;
-                        const chosen = match || nearbyMosques[0];
-                        selectMosque(chosen.slug, chosen.name, chosen.latitude, chosen.longitude, chosen.distance);
+                        if (manualGpsSearch) {
+                            // User clicked GPS — show dropdown so they can choose
+                            manualGpsSearch = false;
+                            document.getElementById('mosque-dropdown').style.display = 'block';
+                        } else {
+                            // Auto-load: select saved mosque or nearest
+                            const saved = mosqueSlug;
+                            const match = saved ? nearbyMosques.find(m => m.slug === saved) : null;
+                            const chosen = match || nearbyMosques[0];
+                            selectMosque(chosen.slug, chosen.name, chosen.latitude, chosen.longitude, chosen.distance);
+                        }
                     })
                     .catch(() => {
                         if (mosqueSlug) loadMosque(mosqueSlug);
