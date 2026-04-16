@@ -634,6 +634,19 @@ class YNJ_DB {
             KEY status (status)
         ) $charset_collate;";
 
+        // 21. Mosque Page Views (lightweight analytics for demand tracking)
+        $tables[] = "CREATE TABLE {$t('mosque_views')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            view_date date NOT NULL,
+            view_count int NOT NULL DEFAULT 1,
+            source varchar(30) NOT NULL DEFAULT 'page',
+            PRIMARY KEY  (id),
+            UNIQUE KEY mosque_date_source (mosque_id, view_date, source),
+            KEY mosque_id (mosque_id),
+            KEY view_date (view_date)
+        ) $charset_collate;";
+
         // 15. Masjid Services (mosque-offered bookable services: nikkah, funeral, etc.)
         $tables[] = "CREATE TABLE {$t('masjid_services')} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,

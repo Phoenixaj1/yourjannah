@@ -508,14 +508,18 @@ class YNJ_Platform_Admin {
              WHERE i.status = 'active' AND m.status = 'unclaimed'"
         );
 
-        // Pipeline: unclaimed mosques ranked by demand
+        $vt = YNJ_DB::table( 'mosque_views' );
+
+        // Pipeline: unclaimed mosques ranked by demand (views + patrons + intentions)
         $pipeline = $wpdb->get_results(
             "SELECT m.id, m.name, m.city, m.postcode, m.slug,
                     COALESCE(pc.patron_count, 0) AS patron_count,
                     COALESCE(pc.patron_revenue, 0) AS patron_revenue,
                     COALESCE(ic.intention_count, 0) AS intention_count,
                     COALESCE(ic.intention_pence, 0) AS intention_pence,
-                    (COALESCE(pc.patron_count, 0) + COALESCE(ic.intention_count, 0)) AS total_demand
+                    COALESCE(vc.total_views, 0) AS total_views,
+                    COALESCE(vc.views_7d, 0) AS views_7d,
+                    (COALESCE(pc.patron_count, 0) * 10 + COALESCE(ic.intention_count, 0) * 5 + COALESCE(vc.views_7d, 0)) AS demand_score
              FROM $mt m
              LEFT JOIN (
                  SELECT mosque_id, COUNT(*) AS patron_count, SUM(amount_pence) AS patron_revenue
@@ -525,9 +529,15 @@ class YNJ_Platform_Admin {
                  SELECT mosque_id, COUNT(*) AS intention_count, SUM(amount_pence) AS intention_pence
                  FROM $it WHERE status = 'active' GROUP BY mosque_id
              ) ic ON ic.mosque_id = m.id
+             LEFT JOIN (
+                 SELECT mosque_id,
+                        SUM(view_count) AS total_views,
+                        SUM(CASE WHEN view_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN view_count ELSE 0 END) AS views_7d
+                 FROM $vt GROUP BY mosque_id
+             ) vc ON vc.mosque_id = m.id
              WHERE m.status = 'unclaimed'
-             HAVING total_demand > 0
-             ORDER BY total_demand DESC
+             HAVING demand_score > 0
+             ORDER BY demand_score DESC
              LIMIT 100"
         );
         ?>
@@ -564,24 +574,26 @@ class YNJ_Platform_Admin {
                     <tr>
                         <th>Mosque</th>
                         <th>City</th>
-                        <th>Postcode</th>
-                        <th style="text-align:center;">Paying Patrons</th>
+                        <th style="text-align:center;">Views (7d)</th>
+                        <th style="text-align:center;">Total Views</th>
+                        <th style="text-align:center;">Patrons</th>
                         <th style="text-align:center;">Intentions</th>
-                        <th style="text-align:right;">Monthly Revenue</th>
-                        <th style="text-align:right;">Potential</th>
+                        <th style="text-align:right;">Revenue</th>
+                        <th style="text-align:center;">Score</th>
                         <th>Link</th>
                     </tr>
                 </thead>
                 <tbody>
                 <?php foreach ( $pipeline as $row ) : ?>
                     <tr>
-                        <td><strong><?php echo esc_html( $row->name ); ?></strong></td>
+                        <td><strong><?php echo esc_html( $row->name ); ?></strong><br><span style="font-size:11px;color:#6b7280;"><?php echo esc_html( $row->postcode ); ?></span></td>
                         <td><?php echo esc_html( $row->city ); ?></td>
-                        <td><?php echo esc_html( $row->postcode ); ?></td>
+                        <td style="text-align:center;font-weight:700;color:#0369a1;"><?php echo number_format( (int) $row->views_7d ); ?></td>
+                        <td style="text-align:center;"><?php echo number_format( (int) $row->total_views ); ?></td>
                         <td style="text-align:center;"><?php echo (int) $row->patron_count; ?></td>
                         <td style="text-align:center;"><?php echo (int) $row->intention_count; ?></td>
-                        <td style="text-align:right;">&pound;<?php echo number_format( (int) $row->patron_revenue / 100 ); ?>/mo</td>
                         <td style="text-align:right;">&pound;<?php echo number_format( ( (int) $row->patron_revenue + (int) $row->intention_pence ) / 100 ); ?>/mo</td>
+                        <td style="text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:<?php echo (int) $row->demand_score > 50 ? '#dcfce7' : ( (int) $row->demand_score > 10 ? '#fef3c7' : '#f0f0f0' ); ?>;color:<?php echo (int) $row->demand_score > 50 ? '#166534' : ( (int) $row->demand_score > 10 ? '#92400e' : '#6b7280' ); ?>;"><?php echo (int) $row->demand_score; ?></span></td>
                         <td><a href="<?php echo esc_url( home_url( '/mosque/' . $row->slug ) ); ?>" target="_blank">View</a></td>
                     </tr>
                 <?php endforeach; ?>

@@ -290,6 +290,16 @@
                         mosqueData = m;
                         document.getElementById('mosque-name').textContent = m.name || slug;
 
+                        // Track page view (fire-and-forget for demand analytics)
+                        if (m.id) {
+                            var src = (userLat && userLng) ? 'gps' : 'page';
+                            fetch(`${API}/mosques/${m.id}/view`, {
+                                method: 'POST',
+                                headers: {'Content-Type':'application/json'},
+                                body: JSON.stringify({source: src})
+                            }).catch(function(){});
+                        }
+
                         // Update CTA help text with mosque name
                         var mName = m.name || 'the masjid';
                         var sh = document.getElementById('cta-sponsor-help');

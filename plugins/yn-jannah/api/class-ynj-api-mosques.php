@@ -37,6 +37,13 @@ class YNJ_API_Mosques {
             'callback'            => [ __CLASS__, 'get_by_slug' ],
             'permission_callback' => '__return_true',
         ]);
+
+        // POST /mosques/{id}/view — Track a page view (lightweight, fire-and-forget)
+        register_rest_route( self::NS, '/mosques/(?P<id>\d+)/view', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'track_view' ],
+            'permission_callback' => '__return_true',
+        ]);
     }
 
     // ================================================================
@@ -179,5 +186,37 @@ class YNJ_API_Mosques {
         $profile['prayer_times'] = YNJ_Prayer::get_times( $mosque->id, date( 'Y-m-d' ) );
 
         return new \WP_REST_Response( [ 'ok' => true, 'mosque' => $profile ] );
+    }
+
+    /**
+     * POST /mosques/{id}/view — Track a page view (fire-and-forget, no auth).
+     * Uses INSERT ... ON DUPLICATE KEY UPDATE for daily aggregation.
+     */
+    public static function track_view( \WP_REST_Request $request ) {
+        $mosque_id = (int) $request->get_param( 'id' );
+        $source    = sanitize_text_field( $request->get_param( 'source' ) ?: 'page' );
+
+        if ( ! $mosque_id ) {
+            return new \WP_REST_Response( [ 'ok' => false ], 400 );
+        }
+
+        // Only allow known sources
+        if ( ! in_array( $source, [ 'page', 'gps', 'search', 'ad' ], true ) ) {
+            $source = 'page';
+        }
+
+        global $wpdb;
+        $table = YNJ_DB::table( 'mosque_views' );
+        $today = date( 'Y-m-d' );
+
+        // Upsert: increment today's count for this mosque+source
+        $wpdb->query( $wpdb->prepare(
+            "INSERT INTO $table (mosque_id, view_date, view_count, source)
+             VALUES (%d, %s, 1, %s)
+             ON DUPLICATE KEY UPDATE view_count = view_count + 1",
+            $mosque_id, $today, $source
+        ) );
+
+        return new \WP_REST_Response( [ 'ok' => true ] );
     }
 }

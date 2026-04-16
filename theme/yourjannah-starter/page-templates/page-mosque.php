@@ -125,6 +125,15 @@ $slug = ynj_mosque_slug();
             document.getElementById('mp-name').textContent = data.name || slug;
             document.getElementById('mp-address').textContent = data.address || '';
 
+            // Track page view
+            if (data.id) {
+                fetch(API + 'mosques/' + data.id + '/view', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({source: 'page'})
+                }).catch(function(){});
+            }
+
             // Unclaimed mosque — show claim + patron CTA
             if (data.status === 'unclaimed') {
                 var claimHtml = '<div style="margin-top:16px;">' +
