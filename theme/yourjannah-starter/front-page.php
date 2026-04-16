@@ -11,6 +11,93 @@
 get_header();
 ?>
 
+<!-- User onboarding overlay (first-time visitors) -->
+<div id="ynj-onboard" style="display:none;position:fixed;inset:0;z-index:500;background:linear-gradient(180deg,#0a1628 0%,#1a3a5c 50%,#00ADEF 100%);color:#fff;overflow-y:auto;">
+    <div style="max-width:400px;margin:0 auto;padding:40px 24px;text-align:center;">
+        <img src="<?php echo esc_url( YNJ_THEME_URI . '/assets/icons/logo2.png' ); ?>" alt="YourJannah" style="height:48px;width:auto;margin:0 auto 20px;">
+        <h1 style="font-size:24px;font-weight:800;margin-bottom:8px;"><?php esc_html_e( 'Welcome to YourJannah', 'yourjannah' ); ?></h1>
+        <p style="font-size:14px;opacity:.8;margin-bottom:30px;"><?php esc_html_e( 'Your mosque community app — prayer times, events, donate, and more.', 'yourjannah' ); ?></p>
+
+        <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(8px);border-radius:16px;padding:24px;text-align:left;">
+            <div style="margin-bottom:16px;">
+                <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;"><?php esc_html_e( 'Your Name', 'yourjannah' ); ?></label>
+                <input type="text" id="ob-name" placeholder="<?php esc_attr_e( 'Full name', 'yourjannah' ); ?>" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-family:inherit;outline:none;">
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;"><?php esc_html_e( 'Email', 'yourjannah' ); ?></label>
+                <input type="email" id="ob-email" placeholder="your@email.com" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-family:inherit;outline:none;">
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;"><?php esc_html_e( 'Password (6+ characters)', 'yourjannah' ); ?></label>
+                <input type="password" id="ob-pass" placeholder="<?php esc_attr_e( 'Create a password', 'yourjannah' ); ?>" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-family:inherit;outline:none;">
+            </div>
+            <button id="ob-submit" onclick="submitOnboard()" style="width:100%;padding:14px;border:none;border-radius:12px;background:#fff;color:#0a1628;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">
+                <?php esc_html_e( 'Get Started', 'yourjannah' ); ?>
+            </button>
+            <p id="ob-error" style="color:#fca5a5;font-size:13px;text-align:center;margin-top:8px;"></p>
+        </div>
+
+        <p style="margin-top:16px;font-size:13px;opacity:.6;">
+            <?php esc_html_e( 'Already have an account?', 'yourjannah' ); ?>
+            <a href="#" onclick="skipOnboard();return false;" style="color:#fff;font-weight:700;text-decoration:underline;"><?php esc_html_e( 'Skip', 'yourjannah' ); ?></a>
+            &nbsp;|&nbsp;
+            <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" style="color:#fff;font-weight:700;text-decoration:underline;"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></a>
+        </p>
+    </div>
+</div>
+<script>
+(function(){
+    // Show onboarding if no token and no "seen" flag
+    var hasToken = !!localStorage.getItem('ynj_user_token');
+    var hasSeen = !!localStorage.getItem('ynj_onboard_seen');
+    if (!hasToken && !hasSeen) {
+        document.getElementById('ynj-onboard').style.display = '';
+    }
+
+    window.submitOnboard = async function() {
+        var name = document.getElementById('ob-name').value.trim();
+        var email = document.getElementById('ob-email').value.trim();
+        var pass = document.getElementById('ob-pass').value;
+        var errEl = document.getElementById('ob-error');
+
+        if (!name || !email) { errEl.textContent = 'Name and email required.'; return; }
+        if (pass && pass.length < 6) { errEl.textContent = 'Password must be 6+ characters.'; return; }
+
+        var btn = document.getElementById('ob-submit');
+        btn.disabled = true; btn.textContent = 'Creating account...';
+
+        try {
+            if (pass) {
+                // Full registration
+                var resp = await fetch(ynjData.restUrl + 'auth/register', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({name:name, email:email, password:pass, mosque_slug: localStorage.getItem('ynj_mosque_slug') || ''})
+                });
+                var data = await resp.json();
+                if (data.ok && data.token) {
+                    localStorage.setItem('ynj_user_token', data.token);
+                    if (data.user) localStorage.setItem('ynj_user', JSON.stringify(data.user));
+                }
+            }
+            // Mark as seen regardless
+            localStorage.setItem('ynj_onboard_seen', '1');
+            localStorage.setItem('ynj_user_name', name);
+            localStorage.setItem('ynj_user_email', email);
+            document.getElementById('ynj-onboard').style.display = 'none';
+        } catch(e) {
+            errEl.textContent = 'Could not create account. You can skip and register later.';
+            btn.disabled = false; btn.textContent = 'Get Started';
+        }
+    };
+
+    window.skipOnboard = function() {
+        localStorage.setItem('ynj_onboard_seen', '1');
+        document.getElementById('ynj-onboard').style.display = 'none';
+    };
+})();
+</script>
+
 <main class="ynj-main">
   <div class="ynj-desktop-grid">
     <div class="ynj-desktop-grid__left">
@@ -80,12 +167,7 @@ get_header();
         </div>
     </section>
 
-    <!-- Location bar -->
-    <div class="ynj-location-bar" id="location-bar">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;color:#6b8fa3;"><circle cx="12" cy="10" r="3"/><path d="M12 2C7.6 2 4 5.4 4 9.5 4 14.3 12 22 12 22s8-7.7 8-12.5C20 5.4 16.4 2 12 2z"/></svg>
-        <input type="text" id="location-postcode" placeholder="<?php esc_attr_e( 'Your postcode for travel times', 'yourjannah' ); ?>" class="ynj-location-bar__input" maxlength="8">
-        <button id="location-update" class="ynj-location-bar__btn" onclick="updatePostcode()"><?php esc_html_e( 'Update', 'yourjannah' ); ?></button>
-    </div>
+    <!-- Location detected via GPS automatically -->
 
     <!-- Prayer Overview -->
     <section class="ynj-card ynj-card--compact" id="prayer-overview" style="display:none;padding:14px 18px;">
