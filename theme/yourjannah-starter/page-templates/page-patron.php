@@ -120,7 +120,7 @@ $mosque_status = $mosque ? $mosque->status : '';
     const slug = <?php echo wp_json_encode( $slug ); ?>;
     const API  = ynjData.restUrl;
     const token = localStorage.getItem('ynj_user_token') || '';
-    let selectedTier = 'champion'; // Gold default (most popular)
+    let selectedTier = sessionStorage.getItem('ynj_patron_tier') || 'champion';
     let mosqueId = <?php echo $mosque_id; ?>;
 
     const tierPrices = { supporter: 5, guardian: 10, champion: 20, platinum: 50 };
@@ -128,13 +128,17 @@ $mosque_status = $mosque ? $mosque->status : '';
 
     function selectTier(tier) {
         selectedTier = tier;
+        sessionStorage.setItem('ynj_patron_tier', tier);
         document.querySelectorAll('.ynj-ptier').forEach(el => {
             el.classList.toggle('selected', el.dataset.tier === tier);
         });
         const btn = document.getElementById('patron-btn');
-        if (btn) btn.textContent = '🏅 <?php echo esc_js( __( 'Become a', 'yourjannah' ) ); ?> ' + (tierNames[tier] || '') + ' <?php echo esc_js( __( 'Patron', 'yourjannah' ) ); ?> \u2014 \u00a3' + tierPrices[tier] + '/mo';
+        if (btn) btn.textContent = '\uD83C\uDFC5 <?php echo esc_js( __( 'Become a', 'yourjannah' ) ); ?> ' + (tierNames[tier] || '') + ' <?php echo esc_js( __( 'Patron', 'yourjannah' ) ); ?> \u2014 \u00a3' + tierPrices[tier] + '/mo';
     }
     window.selectTier = selectTier;
+
+    // Apply saved selection on page load
+    selectTier(selectedTier);
 
     async function becomePerson() {
         if (!token) {
