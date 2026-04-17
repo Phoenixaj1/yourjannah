@@ -104,8 +104,8 @@ $_tier_labels = [ 'supporter' => 'Bronze', 'guardian' => 'Silver', 'champion' =>
             <!-- Notification bell (logged-in users only) -->
             <style>
             .ynj-notif-bell{position:relative;display:inline-flex;align-items:center;margin-right:8px}
-            .ynj-notif-bell__btn{background:none;border:none;cursor:pointer;padding:6px;border-radius:50%;color:#333;position:relative;display:flex;align-items:center;justify-content:center;transition:background .2s}
-            .ynj-notif-bell__btn:hover{background:rgba(0,0,0,.06)}
+            .ynj-notif-bell__btn{background:none;border:none;cursor:pointer;padding:6px;border-radius:50%;color:#00ADEF;position:relative;display:flex;align-items:center;justify-content:center;transition:background .2s}
+            .ynj-notif-bell__btn:hover{background:rgba(0,173,239,.1)}
             .ynj-notif-badge{position:absolute;top:0;right:0;background:#e53e3e;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;line-height:1;border:2px solid #fff}
             .ynj-notif-panel{display:none;position:absolute;right:0;top:calc(100% + 6px);width:360px;max-height:420px;background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.15);z-index:9999;overflow:hidden}
             .ynj-notif-panel--open{display:block}
@@ -140,6 +140,9 @@ $_tier_labels = [ 'supporter' => 'Bronze', 'guardian' => 'Silver', 'champion' =>
                     </div>
                     <div class="ynj-notif-list" id="ynj-notif-list">
                         <div class="ynj-notif-empty">Loading...</div>
+                    </div>
+                    <div style="padding:10px 16px;border-top:1px solid #eee;text-align:center;">
+                        <a href="<?php echo esc_url( home_url( '/profile#interests' ) ); ?>" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#00ADEF;text-decoration:none;">⚙️ Set Interests &amp; Radius</a>
                     </div>
                 </div>
             </div>

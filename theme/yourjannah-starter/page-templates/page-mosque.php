@@ -294,13 +294,14 @@ if ( $mosque && is_user_logged_in() ) {
         <h2 class="ynj-hero-prayer" id="next-prayer-name"><?php echo esc_html( $_ynj_next_name ?: '—' ); ?></h2>
         <p class="ynj-hero-time" id="next-prayer-time"><?php echo esc_html( $_ynj_next_time ?: '—' ); ?></p>
         <?php if ( $_ynj_is_friday && ! empty( $_ynj_jumuah_slots ) && count( $_ynj_jumuah_slots ) > 0 ) : ?>
-        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:8px 0;" id="jumuah-slots">
-            <?php foreach ( $_ynj_jumuah_slots as $idx => $js ) : ?>
-            <div class="ynj-jumuah-slot<?php echo $idx === 0 ? ' active' : ''; ?>" onclick="selectJumuahSlot(this, '<?php echo esc_attr( substr( $js->salah_time, 0, 5 ) ); ?>')" data-salah="<?php echo esc_attr( substr( $js->salah_time, 0, 5 ) ); ?>" style="background:rgba(255,255,255,<?php echo $idx === 0 ? '.25' : '.1'; ?>);border-radius:12px;padding:10px 16px;text-align:center;cursor:pointer;border:2px solid <?php echo $idx === 0 ? 'rgba(255,255,255,.5)' : 'rgba(255,255,255,.15)'; ?>;transition:all .15s;min-width:120px;">
-                <div style="font-size:12px;font-weight:600;margin-bottom:4px;"><?php echo esc_html( $js->slot_name ?: 'Jumu\'ah' ); ?></div>
-                <?php if ( $js->khutbah_time ) : ?><div style="font-size:11px;opacity:.6;">Khutbah <?php echo esc_html( substr( $js->khutbah_time, 0, 5 ) ); ?></div><?php endif; ?>
-                <div style="font-size:18px;font-weight:800;margin:2px 0;">Salah <?php echo esc_html( substr( $js->salah_time, 0, 5 ) ); ?></div>
-                <?php if ( $js->language ) : ?><div style="font-size:10px;opacity:.5;"><?php echo esc_html( $js->language ); ?></div><?php endif; ?>
+        <div id="jumuah-slots" style="margin:10px 0;width:100%;">
+            <?php foreach ( $_ynj_jumuah_slots as $idx => $js ) :
+                $is_active = ( $idx === 0 );
+            ?>
+            <div class="ynj-jumuah-slot<?php echo $is_active ? ' active' : ''; ?>" onclick="selectJumuahSlot(this,'<?php echo esc_attr( substr( $js->salah_time, 0, 5 ) ); ?>')" data-salah="<?php echo esc_attr( substr( $js->salah_time, 0, 5 ) ); ?>" style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,<?php echo $is_active ? '.2' : '.08'; ?>);border:2px solid <?php echo $is_active ? 'rgba(255,255,255,.4)' : 'transparent'; ?>;border-radius:10px;padding:8px 14px;margin-bottom:6px;cursor:pointer;transition:all .15s;">
+                <span style="display:block;font-size:13px;font-weight:600;"><?php echo esc_html( $js->slot_name ?: 'Jumu\'ah' ); ?></span>
+                <span style="display:block;font-size:12px;opacity:.7;"><?php if ( $js->khutbah_time ) : ?>Khutbah <?php echo esc_html( substr( $js->khutbah_time, 0, 5 ) ); ?> · <?php endif; ?>Salah <strong style="font-size:14px;"><?php echo esc_html( substr( $js->salah_time, 0, 5 ) ); ?></strong></span>
+                <span style="display:block;font-size:11px;opacity:.5;"><?php echo esc_html( $js->language ?: '' ); ?></span>
             </div>
             <?php endforeach; ?>
         </div>
