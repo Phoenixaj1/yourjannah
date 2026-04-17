@@ -309,12 +309,21 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
     var obEmailExists = false;
     var API = '<?php echo esc_url_raw( rest_url( 'ynj/v1/' ) ); ?>';
 
-    // Auto-GPS: fires on modal open, loads mosque list inline
+    // Auto-GPS: uses watchPosition so it fires as soon as permission is granted
+    var obGpsWatchId = null;
+    var obGpsResolved = false;
     window.obAutoGps = function() {
         var listEl = document.getElementById('ob-mosque-list');
         listEl.innerHTML = '<div style="padding:12px;opacity:.5;font-size:13px;text-align:center;">📍 Detecting your location...</div>';
-        navigator.geolocation.getCurrentPosition(
+        if (!navigator.geolocation) {
+            listEl.innerHTML = '<div style="padding:12px;opacity:.5;font-size:13px;text-align:center;">Location not supported. Search below.</div>';
+            return;
+        }
+        obGpsWatchId = navigator.geolocation.watchPosition(
             function(pos) {
+                if (obGpsResolved) return; // Only process first fix
+                obGpsResolved = true;
+                navigator.geolocation.clearWatch(obGpsWatchId);
                 fetch(API + 'mosques/nearest?lat=' + pos.coords.latitude + '&lng=' + pos.coords.longitude + '&limit=6')
                     .then(function(r){ return r.json(); })
                     .then(function(d){
@@ -325,11 +334,14 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
                         }
                     });
             },
-            function() {
+            function(err) {
+                if (obGpsResolved) return;
+                obGpsResolved = true;
+                if (obGpsWatchId) navigator.geolocation.clearWatch(obGpsWatchId);
                 listEl.innerHTML = '<div style="padding:12px;opacity:.5;font-size:13px;text-align:center;">Location not available. Search your mosque below.</div>';
                 document.getElementById('ob-search-input').focus();
             },
-            { timeout: 8000 }
+            { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
         );
     };
 
