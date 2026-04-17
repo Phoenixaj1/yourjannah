@@ -241,6 +241,7 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
 ?>
 
 <!-- Smart onboarding: GPS → Masjid → Email → In (always in DOM, JS controls visibility) -->
+<style>.ob-search-ph::placeholder{color:rgba(255,255,255,.6);}</style>
 <div id="ynj-onboard" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);overflow-y:auto;align-items:center;justify-content:center;padding:20px;">
     <div style="max-width:420px;width:100%;background:linear-gradient(180deg,#0a1628 0%,#1a3a5c 60%,#00ADEF 100%);color:#fff;border-radius:24px;padding:36px 28px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);position:relative;">
         <img src="<?php echo esc_url( YNJ_THEME_URI . '/assets/icons/logo2.png' ); ?>" alt="YourJannah" style="height:40px;width:auto;margin:0 auto 12px;">
@@ -264,7 +265,7 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
             <div id="ob-mosque-list" style="text-align:left;max-height:200px;overflow-y:auto;margin-bottom:8px;">
                 <div style="padding:12px;opacity:.5;font-size:13px;text-align:center;">📍 Detecting your location...</div>
             </div>
-            <input type="text" id="ob-search-input" placeholder="🔍 Search mosque by name..." oninput="obSearchMosques(this.value)" style="width:100%;padding:10px 14px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.08);color:#fff;font-size:13px;font-family:inherit;outline:none;">
+            <input type="text" id="ob-search-input" placeholder="🔍 Search mosque by name..." oninput="obSearchMosques(this.value)" style="width:100%;padding:10px 14px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.15);color:#fff;font-size:13px;font-family:inherit;outline:none;" class="ob-search-ph">
         </div>
 
         <button id="ob-submit" onclick="obSubmitEmail()" style="width:100%;padding:14px;border:none;border-radius:12px;background:#fff;color:#0a1628;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">
