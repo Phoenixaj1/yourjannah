@@ -443,33 +443,54 @@ h1, h2, h3 {
     padding: 6px 16px !important;
     letter-spacing: 0.5px !important;
 }
-.ynj-biz--premium .ynj-biz-tier {
+body .ynj-biz--premium .ynj-biz-tier {
     background: #111827 !important;
+    background-image: none !important;
     color: #F59E0B !important;
 }
-.ynj-biz--featured .ynj-biz-tier {
+body .ynj-biz--featured .ynj-biz-tier {
     background: #111827 !important;
+    background-image: none !important;
     color: #00ADEF !important;
 }
-.ynj-biz--standard .ynj-biz-tier {
+body .ynj-biz--standard .ynj-biz-tier {
     background: #F3F4F6 !important;
+    background-image: none !important;
     color: #6B7280 !important;
 }
 
 /* Card borders: uniform subtle */
-.ynj-biz--premium {
-    border: 1px solid rgba(245,158,11,.2) !important;
+body .ynj-biz--premium {
+    border: 1px solid rgba(245,158,11,.15) !important;
     background: #FFFFFF !important;
     box-shadow: 0 2px 8px rgba(245,158,11,.06) !important;
 }
-.ynj-biz--featured {
-    border: 1px solid rgba(0,173,239,.15) !important;
+body .ynj-biz--featured {
+    border: 1px solid rgba(0,173,239,.12) !important;
     background: #FFFFFF !important;
     box-shadow: 0 2px 8px rgba(0,173,239,.06) !important;
 }
-.ynj-biz--standard {
+body .ynj-biz--standard {
     border: 1px solid rgba(0,0,0,.06) !important;
     background: #FFFFFF !important;
+}
+
+/* Call buttons: modern dark style */
+body .ynj-biz-btn {
+    background: #111827 !important;
+    color: #fff !important;
+    border-radius: 10px !important;
+    font-size: 12px !important;
+    padding: 8px 16px !important;
+    border: none !important;
+}
+body .ynj-biz-btn--outline {
+    background: #fff !important;
+    color: #374151 !important;
+    border: 1px solid #D1D5DB !important;
+}
+body .ynj-biz-btn--outline:hover {
+    background: #F3F4F6 !important;
 }
 
 /* Business card header: cleaner */
