@@ -766,9 +766,33 @@
                         ${snippet ? `<div class="ynj-feed-card__body">${snippet}</div>` : ''}
                         <div class="ynj-feed-card__meta">${meta.join(' ')}${item.type !== 'announcement' && item.mosque_slug ? ` <a href="#" onclick="ynjWhatsApp('${item.title.replace(/'/g,"\\'")}','${ynjData.siteUrl}mosque/${item.mosque_slug}/events/${item.event_id||''}');return false;" style="color:#25D366;font-weight:700;">WhatsApp</a>` : ''}</div>
                         ${mosqueTag}
+                        <button class="ynj-interested-btn" onclick="event.stopPropagation();toggleInterest(this,'${item.type}',${item.event_id||0},'${(item.title||'').replace(/'/g,"\\'")}')">
+                            <span class="ynj-interested-icon">🤍</span> <span class="ynj-interested-text">Interested</span>
+                        </button>
                     </div>
                 </div>`;
             }
+
+            window.toggleInterest = function(btn, type, id, title) {
+                var key = 'ynj_interest_' + type + '_' + id;
+                var interested = !localStorage.getItem(key);
+                if (interested) {
+                    localStorage.setItem(key, '1');
+                    btn.querySelector('.ynj-interested-icon').textContent = '❤️';
+                    btn.querySelector('.ynj-interested-text').textContent = 'Interested!';
+                    btn.style.color = '#dc2626';
+                    // Fire-and-forget API call
+                    fetch(ynjData.restUrl + 'interest', {
+                        method: 'POST', headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({type: type, item_id: id, title: title, mosque_slug: mosqueSlug})
+                    }).catch(function(){});
+                } else {
+                    localStorage.removeItem(key);
+                    btn.querySelector('.ynj-interested-icon').textContent = '🤍';
+                    btn.querySelector('.ynj-interested-text').textContent = 'Interested';
+                    btn.style.color = '';
+                }
+            };
 
             let allFeedItems = [];
             let nearbyFeedItems = [];

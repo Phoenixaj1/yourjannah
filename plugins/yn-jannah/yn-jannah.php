@@ -256,6 +256,33 @@ add_action('admin_init', function() {
 
 // Serve SW via REST API as ultimate fallback
 add_action('rest_api_init', function() {
+    // Interest tracking — records when users tap "Interested" on events/announcements
+    register_rest_route('ynj/v1', '/interest', [
+        'methods' => 'POST',
+        'callback' => function( $request ) {
+            $data = $request->get_json_params();
+            $type = sanitize_text_field( $data['type'] ?? '' );
+            $item_id = (int) ( $data['item_id'] ?? 0 );
+            $title = sanitize_text_field( $data['title'] ?? '' );
+            $mosque_slug = sanitize_title( $data['mosque_slug'] ?? '' );
+            if ( ! $type || ! $mosque_slug ) return new WP_REST_Response( [ 'ok' => false ] );
+
+            // Simple: increment a transient counter per item
+            $key = 'ynj_interest_' . $type . '_' . $item_id;
+            $count = (int) get_transient( $key );
+            set_transient( $key, $count + 1, 30 * DAY_IN_SECONDS );
+
+            // Also store in options for the dashboard to read
+            $all = get_option( 'ynj_interest_log', [] );
+            $all[] = [ 'type' => $type, 'id' => $item_id, 'title' => $title, 'mosque' => $mosque_slug, 'at' => current_time( 'mysql' ) ];
+            if ( count( $all ) > 500 ) $all = array_slice( $all, -500 );
+            update_option( 'ynj_interest_log', $all );
+
+            return new WP_REST_Response( [ 'ok' => true, 'count' => $count + 1 ] );
+        },
+        'permission_callback' => '__return_true',
+    ]);
+
     register_rest_route('ynj/v1', '/sw', [
         'methods' => 'GET',
         'callback' => function() {

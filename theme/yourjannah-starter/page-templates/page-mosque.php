@@ -64,6 +64,26 @@ if ( $mosque && $mosque->latitude ) {
         }
     }
 
+    // Load jamat times + Jumu'ah slots
+    $_ynj_jamat = [];
+    $_ynj_jumuah_slots = [];
+    $_ynj_is_friday = ( date( 'N' ) == 5 );
+    if ( $mosque && class_exists( 'YNJ_DB' ) ) {
+        global $wpdb;
+        $pt_table = YNJ_DB::table( 'prayer_times' );
+        $db_row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $pt_table WHERE mosque_id = %d AND date = %s", (int) $mosque->id, date( 'Y-m-d' ) ) );
+        if ( $db_row ) {
+            foreach ( [ 'fajr', 'dhuhr', 'asr', 'maghrib', 'isha' ] as $pk ) {
+                $jk = $pk . '_jamat';
+                if ( ! empty( $db_row->$jk ) ) $_ynj_jamat[ $pk ] = substr( $db_row->$jk, 0, 5 );
+            }
+        }
+        if ( $_ynj_is_friday ) {
+            $jt = YNJ_DB::table( 'jumuah_slots' );
+            $_ynj_jumuah_slots = $wpdb->get_results( $wpdb->prepare( "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND status = 'active' ORDER BY salah_time ASC", (int) $mosque->id ) ) ?: [];
+        }
+    }
+
     if ( $aladhan ) {
         $prayer_keys = [ 'Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha' ];
         $now = current_time( 'H:i' );
@@ -74,23 +94,30 @@ if ( $mosque && $mosque->latitude ) {
             $raw = $aladhan[ $p ] ?? '';
             $time = preg_replace( '/\s*\(.*\)/', '', $raw );
             $time = substr( $time, 0, 5 );
-            $_ynj_prayer[ strtolower( $p ) ] = $time;
+            $pk = strtolower( $p );
+            $_ynj_prayer[ $pk ] = $time;
 
-            $_ynj_prayer_overview[] = [
-                'name' => $p,
-                'time' => $time,
-            ];
+            $display_time = isset( $_ynj_jamat[ $pk ] ) ? $_ynj_jamat[ $pk ] : $time;
+            $jamat_display = isset( $_ynj_jamat[ $pk ] ) ? $_ynj_jamat[ $pk ] : '';
 
-            if ( $p !== 'Sunrise' && ! $_ynj_next_prayer && $time > $now ) {
-                $_ynj_next_prayer = $p;
-                $_ynj_next_time = $time;
-                $_ynj_next_name = $p;
-
-                $prayer_ts = strtotime( 'today ' . $time );
-                $walk_ts = $prayer_ts - ( $walk_buffer * 60 );
-                $drive_ts = $prayer_ts - ( $drive_buffer * 60 );
-                $_ynj_walk_leave = date( 'H:i', $walk_ts );
-                $_ynj_drive_leave = date( 'H:i', $drive_ts );
+            if ( $_ynj_is_friday && $p === 'Dhuhr' && ! empty( $_ynj_jumuah_slots ) ) {
+                $first_jumuah = $_ynj_jumuah_slots[0];
+                $jumuah_time = substr( $first_jumuah->salah_time, 0, 5 );
+                $_ynj_prayer_overview[] = [ 'name' => "Jumu'ah", 'time' => $jumuah_time, 'jamat' => $jumuah_time, 'is_jumuah' => true ];
+                if ( ! $_ynj_next_prayer && $jumuah_time > $now ) {
+                    $_ynj_next_prayer = "Jumu'ah"; $_ynj_next_time = $jumuah_time; $_ynj_next_name = "Jumu'ah";
+                    $prayer_ts = strtotime( 'today ' . $jumuah_time );
+                    $_ynj_walk_leave = date( 'H:i', $prayer_ts - ( $walk_buffer * 60 ) );
+                    $_ynj_drive_leave = date( 'H:i', $prayer_ts - ( $drive_buffer * 60 ) );
+                }
+            } else {
+                $_ynj_prayer_overview[] = [ 'name' => $p, 'time' => $time, 'jamat' => $jamat_display ];
+                if ( $p !== 'Sunrise' && ! $_ynj_next_prayer && $display_time > $now ) {
+                    $_ynj_next_prayer = $p; $_ynj_next_time = $display_time; $_ynj_next_name = $p;
+                    $prayer_ts = strtotime( 'today ' . $display_time );
+                    $_ynj_walk_leave = date( 'H:i', $prayer_ts - ( $walk_buffer * 60 ) );
+                    $_ynj_drive_leave = date( 'H:i', $prayer_ts - ( $drive_buffer * 60 ) );
+                }
             }
         }
 
@@ -252,10 +279,15 @@ localStorage.setItem('ynj_mosque_name', <?php echo wp_json_encode( $mosque_name 
         <?php foreach ( $_ynj_prayer_overview as $po ) :
             if ( $po['name'] === 'Sunrise' ) continue;
             $is_next = ( strtolower( $po['name'] ) === strtolower( $_ynj_next_name ) );
+            $jamat = $po['jamat'] ?? '';
+            $is_jumuah = ! empty( $po['is_jumuah'] );
         ?>
             <div class="ynj-po-item<?php echo $is_next ? ' ynj-po-item--active' : ''; ?>">
                 <span class="ynj-po-name"><?php echo esc_html( $po['name'] ); ?></span>
-                <span class="ynj-po-time"><?php echo esc_html( $po['time'] ); ?></span>
+                <span class="ynj-po-time"><?php echo esc_html( $jamat ?: $po['time'] ); ?></span>
+                <?php if ( $jamat && ! $is_jumuah && $is_next ) : ?>
+                <span style="font-size:9px;color:rgba(255,255,255,.6);display:block;"><?php esc_html_e( 'Iqamah', 'yourjannah' ); ?></span>
+                <?php endif; ?>
             </div>
         <?php endforeach; ?>
         </div>
