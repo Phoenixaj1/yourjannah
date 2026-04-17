@@ -147,6 +147,13 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
         $_hp_mosque_id
     ) ) ?: [];
 
+    // Service listings (people/professionals)
+    $svt = YNJ_DB::table( 'services' );
+    $_hp_services = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, provider_name, service_type, phone, area_covered, hourly_rate_pence FROM $svt WHERE mosque_id = %d AND status = 'active' ORDER BY RAND() LIMIT 10",
+        $_hp_mosque_id
+    ) ) ?: [];
+
     // Announcements
     $at = YNJ_DB::table( 'announcements' );
     $_hp_announcements = $wpdb->get_results( $wpdb->prepare(
@@ -453,7 +460,37 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
         </a>
     </div>
 
-    <!-- (Patron CTA moved above sponsor ticker) -->
+    <!-- People / Service Listings — rotating 5 at a time -->
+    <?php if ( ! empty( $_hp_services ) ) :
+        // Randomise and take 5 for this page load
+        $display_services = array_slice( $_hp_services, 0, 5 );
+    ?>
+    <div style="margin-top:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <h3 style="font-size:13px;font-weight:700;color:#0a1628;margin:0;">🤝 <?php esc_html_e( 'Local Professionals', 'yourjannah' ); ?></h3>
+            <a href="<?php echo esc_url( home_url( '/mosque/' . $_hp_slug . '/sponsors' ) ); ?>" style="font-size:11px;font-weight:600;color:#00ADEF;text-decoration:none;"><?php esc_html_e( 'View All →', 'yourjannah' ); ?></a>
+        </div>
+        <?php foreach ( $display_services as $svc ) :
+            $rate = $svc->hourly_rate_pence ? '£' . number_format( $svc->hourly_rate_pence / 100, 0 ) . '/hr' : '';
+            $initial = strtoupper( substr( $svc->provider_name ?: '?', 0, 1 ) );
+        ?>
+        <a href="<?php echo esc_url( home_url( '/mosque/' . $_hp_slug . '/service/' . $svc->id ) ); ?>" style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:4px;border-radius:10px;background:#fff;border:1px solid #e5e7eb;text-decoration:none;color:#0a1628;transition:all .15s;">
+            <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;"><?php echo esc_html( $initial ); ?></div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?php echo esc_html( $svc->provider_name ); ?></div>
+                <div style="font-size:11px;color:#6b8fa3;"><?php echo esc_html( $svc->service_type ); ?><?php if ( $svc->area_covered ) echo ' · ' . esc_html( $svc->area_covered ); ?></div>
+            </div>
+            <?php if ( $rate ) : ?>
+            <div style="font-size:12px;font-weight:700;color:#16a34a;flex-shrink:0;"><?php echo esc_html( $rate ); ?></div>
+            <?php endif; ?>
+            <?php if ( $svc->phone ) : ?>
+            <span onclick="event.preventDefault();event.stopPropagation();window.location.href='tel:<?php echo esc_attr( $svc->phone ); ?>'" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:#e8f4f8;font-size:14px;flex-shrink:0;cursor:pointer;">📞</span>
+            <?php endif; ?>
+        </a>
+        <?php endforeach; ?>
+        <a href="<?php echo esc_url( home_url( '/mosque/' . $_hp_slug . '/services/join' ) ); ?>" style="display:block;text-align:center;padding:8px;margin-top:4px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:12px;font-weight:700;text-decoration:none;">🤝 <?php esc_html_e( 'List Your Service — from £10/mo', 'yourjannah' ); ?></a>
+    </div>
+    <?php endif; ?>
 
     </div><!-- end left column -->
     <div class="ynj-desktop-grid__right">
