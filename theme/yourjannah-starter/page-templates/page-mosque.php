@@ -189,7 +189,7 @@ $_ynj_member_count = $mosque ? (int) ( $mosque->member_count ?? 0 ) : 0;
 // Social proof: unclaimed mosques with 0 members show a seeded number (1-10)
 if ( $_ynj_member_count === 0 && $mosque ) {
     // Deterministic per mosque so it doesn't change on every refresh
-    $_ynj_member_count = ( crc32( $mosque->slug ?? '' ) % 10 ) + 1;
+    $_ynj_member_count = ( crc32( $mosque->slug ?? '' ) % 16 ) + 5;
 }
 if ( $mosque && is_user_logged_in() ) {
     $ynj_uid_check = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );

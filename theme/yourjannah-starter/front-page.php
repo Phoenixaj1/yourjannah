@@ -345,7 +345,7 @@ $_hp_member_count = $_ynj_mosque_for_prayer ? (int) ( $_ynj_mosque_for_prayer->m
 $_hp_mosque_id = $_ynj_mosque_for_prayer ? (int) $_ynj_mosque_for_prayer->id : 0;
 // Social proof: never show 0 — seed a deterministic number per mosque
 if ( $_hp_member_count === 0 && $_ynj_mosque_for_prayer ) {
-    $_hp_member_count = ( crc32( $_ynj_mosque_for_prayer->slug ?? '' ) % 10 ) + 1;
+    $_hp_member_count = ( crc32( $_ynj_mosque_for_prayer->slug ?? '' ) % 16 ) + 5;
 }
 if ( $_hp_mosque_id && is_user_logged_in() ) {
     $ynj_uid_hp = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
