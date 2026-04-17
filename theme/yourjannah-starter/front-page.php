@@ -240,8 +240,7 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
 }
 ?>
 
-<!-- Smart onboarding: GPS → Masjid → Email → In -->
-<?php if ( ! is_user_logged_in() ) : ?>
+<!-- Smart onboarding: GPS → Masjid → Email → In (always in DOM, JS controls visibility) -->
 <div id="ynj-onboard" style="display:none;position:fixed;inset:0;z-index:500;background:linear-gradient(180deg,#0a1628 0%,#1a3a5c 50%,#00ADEF 100%);color:#fff;overflow-y:auto;">
     <div style="max-width:400px;margin:0 auto;padding:40px 24px;text-align:center;">
         <img src="<?php echo esc_url( YNJ_THEME_URI . '/assets/icons/logo2.png' ); ?>" alt="YourJannah" style="height:48px;width:auto;margin:0 auto 20px;">
@@ -302,7 +301,6 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
         </p>
     </div>
 </div>
-<?php endif; ?>
 
 <script>
 (function(){
@@ -320,14 +318,13 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
         return;
     }
 
-    // Show onboarding if not logged in and no "seen" flag
-    <?php if ( ! is_user_logged_in() ) : ?>
+    // Show onboarding if not logged in (WP or localStorage) and not seen
+    var wpLoggedIn = <?php echo is_user_logged_in() ? 'true' : 'false'; ?>;
     var hasToken = !!localStorage.getItem('ynj_user_token');
     var hasSeen = !!localStorage.getItem('ynj_onboard_seen');
-    if (!hasToken && !hasSeen) {
+    if (!wpLoggedIn && !hasToken && !hasSeen) {
         document.getElementById('ynj-onboard').style.display = '';
     }
-    <?php endif; ?>
 
     var obSelectedSlug = '';
     var obSelectedName = '';
