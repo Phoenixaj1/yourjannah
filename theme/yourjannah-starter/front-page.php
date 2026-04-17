@@ -240,40 +240,70 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
 }
 ?>
 
-<!-- User onboarding overlay (first-time visitors) -->
+<!-- Smart onboarding: GPS → Masjid → Email → In -->
+<?php if ( ! is_user_logged_in() ) : ?>
 <div id="ynj-onboard" style="display:none;position:fixed;inset:0;z-index:500;background:linear-gradient(180deg,#0a1628 0%,#1a3a5c 50%,#00ADEF 100%);color:#fff;overflow-y:auto;">
     <div style="max-width:400px;margin:0 auto;padding:40px 24px;text-align:center;">
         <img src="<?php echo esc_url( YNJ_THEME_URI . '/assets/icons/logo2.png' ); ?>" alt="YourJannah" style="height:48px;width:auto;margin:0 auto 20px;">
-        <h1 style="font-size:24px;font-weight:800;margin-bottom:8px;"><?php esc_html_e( 'Welcome to YourJannah', 'yourjannah' ); ?></h1>
-        <p style="font-size:14px;opacity:.8;margin-bottom:30px;"><?php esc_html_e( 'Your mosque community app — prayer times, events, donate, and more.', 'yourjannah' ); ?></p>
+        <h1 style="font-size:22px;font-weight:800;margin-bottom:4px;">Fall in love with your Masjid</h1>
+        <p style="font-size:14px;opacity:.7;margin-bottom:24px;">Prayer times, events, community — all in one place</p>
 
-        <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(8px);border-radius:16px;padding:24px;text-align:left;">
-            <div style="margin-bottom:16px;">
-                <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;"><?php esc_html_e( 'Your Name', 'yourjannah' ); ?></label>
-                <input type="text" id="ob-name" placeholder="<?php esc_attr_e( 'Full name', 'yourjannah' ); ?>" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-family:inherit;outline:none;">
-            </div>
-            <div style="margin-bottom:16px;">
-                <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;"><?php esc_html_e( 'Email', 'yourjannah' ); ?></label>
-                <input type="email" id="ob-email" placeholder="your@email.com" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-family:inherit;outline:none;">
-            </div>
-            <div style="margin-bottom:20px;">
-                <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;"><?php esc_html_e( 'Password (6+ characters)', 'yourjannah' ); ?></label>
-                <input type="password" id="ob-pass" placeholder="<?php esc_attr_e( 'Create a password', 'yourjannah' ); ?>" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-family:inherit;outline:none;">
-            </div>
-            <button id="ob-submit" onclick="submitOnboard()" style="width:100%;padding:14px;border:none;border-radius:12px;background:#fff;color:#0a1628;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">
-                <?php esc_html_e( 'Get Started', 'yourjannah' ); ?>
+        <!-- Step 1: GPS -->
+        <div id="ob-step1">
+            <div style="font-size:48px;margin-bottom:16px;">🕌</div>
+            <h2 style="font-size:18px;font-weight:700;margin-bottom:8px;">Find Your Masjid</h2>
+            <p style="font-size:13px;opacity:.7;margin-bottom:20px;">Allow location access so we can find mosques near you</p>
+            <button onclick="obDetectGps()" id="ob-gps-btn" style="width:100%;padding:14px;border:none;border-radius:12px;background:#fff;color:#0a1628;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+                Allow Location
             </button>
-            <p id="ob-error" style="color:#fca5a5;font-size:13px;text-align:center;margin-top:8px;"></p>
+            <div style="margin-top:12px;">
+                <a href="#" onclick="obShowSearch();return false;" style="color:rgba(255,255,255,.6);font-size:13px;text-decoration:underline;">Search by name instead</a>
+            </div>
+            <div id="ob-search-box" style="display:none;margin-top:16px;">
+                <input type="text" id="ob-search-input" placeholder="Type mosque name..." oninput="obSearchMosques(this.value)" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-family:inherit;outline:none;">
+            </div>
         </div>
 
-        <p style="margin-top:16px;font-size:13px;opacity:.6;">
-            <?php esc_html_e( 'Already have an account?', 'yourjannah' ); ?>
-            <a href="#" onclick="skipOnboard();return false;" style="color:#fff;font-weight:700;text-decoration:underline;"><?php esc_html_e( 'Skip', 'yourjannah' ); ?></a>
-            &nbsp;|&nbsp;
-            <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" style="color:#fff;font-weight:700;text-decoration:underline;"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></a>
+        <!-- Step 2: Select Masjid -->
+        <div id="ob-step2" style="display:none;">
+            <h2 style="font-size:18px;font-weight:700;margin-bottom:4px;">Select Your Masjid</h2>
+            <p style="font-size:13px;opacity:.7;margin-bottom:16px;">Tap your mosque to continue</p>
+            <div id="ob-mosque-list" style="text-align:left;"></div>
+            <div style="margin-top:12px;">
+                <a href="#" onclick="obBackToStep1();return false;" style="color:rgba(255,255,255,.6);font-size:13px;text-decoration:underline;">← Search again</a>
+            </div>
+        </div>
+
+        <!-- Step 3: Email -->
+        <div id="ob-step3" style="display:none;">
+            <div style="font-size:36px;margin-bottom:8px;">🤝</div>
+            <h2 style="font-size:18px;font-weight:700;margin-bottom:4px;">Join <span id="ob-mosque-name-display"></span></h2>
+            <p style="font-size:13px;opacity:.7;margin-bottom:20px;">Enter your email to become a member</p>
+            <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(8px);border-radius:16px;padding:24px;text-align:left;">
+                <div style="margin-bottom:16px;">
+                    <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;">Email</label>
+                    <input type="email" id="ob-email" placeholder="your@email.com" autocomplete="email" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-family:inherit;outline:none;">
+                </div>
+                <div id="ob-pass-row" style="display:none;margin-bottom:16px;">
+                    <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;">Welcome back! Enter your password</label>
+                    <input type="password" id="ob-pass" placeholder="Your password" autocomplete="current-password" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-family:inherit;outline:none;">
+                    <a href="<?php echo esc_url( home_url( '/forgot-password' ) ); ?>" style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px;display:block;">Forgot password?</a>
+                </div>
+                <button id="ob-submit" onclick="obSubmitEmail()" style="width:100%;padding:14px;border:none;border-radius:12px;background:#fff;color:#0a1628;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">
+                    Continue
+                </button>
+                <p id="ob-error" style="color:#fca5a5;font-size:13px;text-align:center;margin-top:8px;"></p>
+            </div>
+        </div>
+
+        <p style="margin-top:20px;font-size:12px;opacity:.4;">
+            <a href="#" onclick="obSkip();return false;" style="color:#fff;text-decoration:underline;">Skip for now</a>
         </p>
     </div>
 </div>
+<?php endif; ?>
+
 <script>
 (function(){
     // Handle mosque selection from /change-mosque page
@@ -285,57 +315,192 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
         localStorage.removeItem('ynj_cached_prayers');
         localStorage.removeItem('ynj_cached_feed');
         localStorage.removeItem('ynj_mosque_name');
-        // Clean URL and reload
         window.history.replaceState({}, '', '/');
         window.location.reload();
         return;
     }
 
-    // Show onboarding if no token and no "seen" flag
+    // Show onboarding if not logged in and no "seen" flag
+    <?php if ( ! is_user_logged_in() ) : ?>
     var hasToken = !!localStorage.getItem('ynj_user_token');
     var hasSeen = !!localStorage.getItem('ynj_onboard_seen');
     if (!hasToken && !hasSeen) {
         document.getElementById('ynj-onboard').style.display = '';
     }
+    <?php endif; ?>
 
-    window.submitOnboard = async function() {
-        var name = document.getElementById('ob-name').value.trim();
+    var obSelectedSlug = '';
+    var obSelectedName = '';
+    var obEmailExists = false;
+    var API = '<?php echo esc_url_raw( rest_url( 'ynj/v1/' ) ); ?>';
+
+    // Step 1: GPS
+    window.obDetectGps = function() {
+        var btn = document.getElementById('ob-gps-btn');
+        btn.textContent = 'Detecting...'; btn.disabled = true;
+        navigator.geolocation.getCurrentPosition(
+            function(pos) {
+                fetch(API + 'mosques/nearest?lat=' + pos.coords.latitude + '&lng=' + pos.coords.longitude + '&limit=8')
+                    .then(function(r){ return r.json(); })
+                    .then(function(d){
+                        if (d.ok && d.mosques && d.mosques.length) {
+                            obRenderMosques(d.mosques);
+                        } else {
+                            btn.textContent = 'No mosques found nearby';
+                            btn.disabled = false;
+                            obShowSearch();
+                        }
+                    });
+            },
+            function() {
+                btn.textContent = 'Location denied — search instead';
+                btn.disabled = false;
+                obShowSearch();
+            },
+            { timeout: 8000 }
+        );
+    };
+
+    window.obShowSearch = function() {
+        document.getElementById('ob-search-box').style.display = '';
+        document.getElementById('ob-search-input').focus();
+    };
+
+    window.obBackToStep1 = function() {
+        document.getElementById('ob-step2').style.display = 'none';
+        document.getElementById('ob-step1').style.display = '';
+    };
+
+    var searchTimer;
+    window.obSearchMosques = function(q) {
+        if (q.length < 2) return;
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function(){
+            fetch(API + 'mosques/search?q=' + encodeURIComponent(q) + '&limit=8')
+                .then(function(r){ return r.json(); })
+                .then(function(d){ if (d.ok) obRenderMosques(d.mosques || []); });
+        }, 300);
+    };
+
+    function obRenderMosques(mosques) {
+        var html = '';
+        mosques.forEach(function(m) {
+            var dist = m.distance ? ' · ' + parseFloat(m.distance).toFixed(1) + ' mi' : '';
+            html += '<div onclick="obSelectMosque(\'' + m.slug + '\',\'' + (m.name||'').replace(/'/g,"\\'") + '\')" style="padding:12px 16px;background:rgba(255,255,255,.1);border-radius:10px;margin-bottom:8px;cursor:pointer;border:2px solid transparent;transition:all .15s;" onmouseover="this.style.borderColor=\'rgba(255,255,255,.4)\'" onmouseout="this.style.borderColor=\'transparent\'">'
+                + '<div style="font-weight:600;font-size:14px;">' + (m.name||'') + '</div>'
+                + '<div style="font-size:12px;opacity:.6;">' + (m.city||'') + (m.postcode ? ' ' + m.postcode : '') + dist + '</div>'
+                + '</div>';
+        });
+        if (!mosques.length) html = '<div style="padding:20px;opacity:.6;font-size:13px;">No mosques found. Try a different search.</div>';
+        document.getElementById('ob-mosque-list').innerHTML = html;
+        document.getElementById('ob-step1').style.display = 'none';
+        document.getElementById('ob-step2').style.display = '';
+    }
+
+    // Step 2: Select mosque
+    window.obSelectMosque = function(slug, name) {
+        obSelectedSlug = slug;
+        obSelectedName = name;
+        localStorage.setItem('ynj_mosque_slug', slug);
+        localStorage.setItem('ynj_mosque_name', name);
+        document.getElementById('ob-mosque-name-display').textContent = name;
+        document.getElementById('ob-step2').style.display = 'none';
+        document.getElementById('ob-step3').style.display = '';
+        document.getElementById('ob-email').focus();
+    };
+
+    // Step 3: Email check + register/login
+    window.obSubmitEmail = async function() {
         var email = document.getElementById('ob-email').value.trim();
         var pass = document.getElementById('ob-pass').value;
         var errEl = document.getElementById('ob-error');
-
-        if (!name || !email) { errEl.textContent = 'Name and email required.'; return; }
-        if (pass && pass.length < 6) { errEl.textContent = 'Password must be 6+ characters.'; return; }
-
         var btn = document.getElementById('ob-submit');
-        btn.disabled = true; btn.textContent = 'Creating account...';
+        errEl.textContent = '';
 
-        try {
-            if (pass) {
-                // Full registration
-                var resp = await fetch(ynjData.restUrl + 'auth/register', {
-                    method: 'POST',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({name:name, email:email, password:pass, mosque_slug: localStorage.getItem('ynj_mosque_slug') || ''})
+        if (!email || email.indexOf('@') < 1) { errEl.textContent = 'Please enter a valid email.'; return; }
+
+        // If password field is showing, this is a login attempt
+        if (document.getElementById('ob-pass-row').style.display !== 'none' && pass) {
+            btn.disabled = true; btn.textContent = 'Signing in...';
+            try {
+                var resp = await fetch(API + 'auth/login', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({email: email, password: pass})
                 });
                 var data = await resp.json();
                 if (data.ok && data.token) {
                     localStorage.setItem('ynj_user_token', data.token);
-                    if (data.user) localStorage.setItem('ynj_user', JSON.stringify(data.user));
+                    localStorage.setItem('ynj_onboard_seen', '1');
+                    // Set WP session
+                    if (data.wp_user_id) {
+                        await fetch('<?php echo admin_url("admin-ajax.php"); ?>', {
+                            method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                            body: 'action=ynj_set_session&wp_user_id=' + data.wp_user_id, credentials: 'same-origin'
+                        });
+                    }
+                    window.location.reload();
+                } else {
+                    errEl.textContent = data.error || 'Incorrect password. Try again.';
+                    btn.disabled = false; btn.textContent = 'Sign In';
                 }
-            }
-            // Mark as seen regardless
-            localStorage.setItem('ynj_onboard_seen', '1');
-            localStorage.setItem('ynj_user_name', name);
-            localStorage.setItem('ynj_user_email', email);
-            document.getElementById('ynj-onboard').style.display = 'none';
-        } catch(e) {
-            errEl.textContent = 'Could not create account. You can skip and register later.';
-            btn.disabled = false; btn.textContent = 'Get Started';
+            } catch(e) { errEl.textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Sign In'; }
+            return;
         }
+
+        // First: check if email exists
+        btn.disabled = true; btn.textContent = 'Checking...';
+        try {
+            var checkResp = await fetch(API + 'auth/check-email', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({email: email})
+            });
+            var checkData = await checkResp.json();
+
+            if (checkData.exists) {
+                // Show password field
+                document.getElementById('ob-pass-row').style.display = '';
+                document.getElementById('ob-pass').focus();
+                btn.textContent = 'Sign In';
+                btn.disabled = false;
+                return;
+            }
+
+            // New user: auto-register
+            btn.textContent = 'Creating your account...';
+            var name = email.split('@')[0].replace(/[._]/g, ' ');
+            var autoPass = 'YJ_' + Math.random().toString(36).slice(2, 10) + '!';
+            var regResp = await fetch(API + 'auth/register', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({name: name, email: email, password: autoPass, mosque_slug: obSelectedSlug})
+            });
+            var regData = await regResp.json();
+            if (regData.ok && regData.token) {
+                localStorage.setItem('ynj_user_token', regData.token);
+                localStorage.setItem('ynj_onboard_seen', '1');
+                // Join the mosque as member
+                if (regData.wp_user_id) {
+                    await fetch('<?php echo admin_url("admin-ajax.php"); ?>', {
+                        method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                        body: 'action=ynj_set_session&wp_user_id=' + regData.wp_user_id, credentials: 'same-origin'
+                    });
+                }
+                // Auto-join mosque
+                try {
+                    await fetch(API + 'auth/join-mosque', {
+                        method: 'POST', headers: {'Content-Type':'application/json', 'X-WP-Nonce': '<?php echo wp_create_nonce("wp_rest"); ?>'},
+                        credentials: 'same-origin',
+                        body: JSON.stringify({mosque_slug: obSelectedSlug, set_primary: true})
+                    });
+                } catch(e) {}
+                window.location.reload();
+            } else {
+                errEl.textContent = regData.error || 'Could not create account. Try again.';
+                btn.disabled = false; btn.textContent = 'Continue';
+            }
+        } catch(e) { errEl.textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Continue'; }
     };
 
-    window.skipOnboard = function() {
+    window.obSkip = function() {
         localStorage.setItem('ynj_onboard_seen', '1');
         document.getElementById('ynj-onboard').style.display = 'none';
     };

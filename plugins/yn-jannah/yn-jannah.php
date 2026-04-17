@@ -307,6 +307,36 @@ add_action('rest_api_init', function() {
         'permission_callback' => '__return_true',
     ]);
 
+    // --- Smart onboarding: check if email exists ---
+    register_rest_route('ynj/v1', '/auth/check-email', [
+        'methods' => 'POST',
+        'callback' => function( $request ) {
+            $data = $request->get_json_params();
+            $email = sanitize_email( $data['email'] ?? '' );
+            if ( ! $email || ! is_email( $email ) ) {
+                return new WP_REST_Response( [ 'ok' => false, 'error' => 'Valid email required.' ], 400 );
+            }
+            // Rate limit: 10 per IP per minute
+            $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+            $rl_key = 'ynj_check_email_' . md5( $ip );
+            $rl_count = (int) get_transient( $rl_key );
+            if ( $rl_count >= 10 ) {
+                return new WP_REST_Response( [ 'ok' => false, 'error' => 'Too many requests.' ], 429 );
+            }
+            set_transient( $rl_key, $rl_count + 1, 60 );
+
+            // Check WP users + ynj_users
+            $exists = (bool) get_user_by( 'email', $email );
+            if ( ! $exists ) {
+                global $wpdb;
+                $ut = YNJ_DB::table( 'users' );
+                $exists = (bool) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $ut WHERE email = %s", $email ) );
+            }
+            return new WP_REST_Response( [ 'ok' => true, 'exists' => $exists ] );
+        },
+        'permission_callback' => '__return_true',
+    ]);
+
     // --- Notification endpoints (authenticated) ---
 
     // GET /auth/notifications — Get user's notifications (last 50)
