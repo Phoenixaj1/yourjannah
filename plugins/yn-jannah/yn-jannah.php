@@ -102,8 +102,8 @@ add_action('wp_ajax_ynj_set_session', function() {
 });
 
 // Configure wp_mail — Postmark SMTP (reliable delivery)
-// Use send.yourniyyah.com which is DKIM-verified in Postmark
-add_filter('wp_mail_from', function() { return 'noreply@send.yourniyyah.com'; });
+// yourjannah.com is DKIM + Return-Path verified in Postmark
+add_filter('wp_mail_from', function() { return 'noreply@yourjannah.com'; });
 add_filter('wp_mail_from_name', function() { return 'YourJannah'; });
 add_action('phpmailer_init', function($phpmailer) {
     $token = get_option('ynj_postmark_token', '');
