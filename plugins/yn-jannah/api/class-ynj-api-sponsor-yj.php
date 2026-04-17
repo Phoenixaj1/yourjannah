@@ -53,49 +53,51 @@ class YNJ_API_Sponsor_YJ {
 
         $description = "YourJannah Sponsorship — {$tier_label} (Monthly)";
 
-        try {
-            $stripe = YNJ_Stripe::client();
+        $secret = YNJ_Stripe::secret_key();
+        if ( ! $secret ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Stripe not configured.' ], 500 );
+        }
 
-            $line_item = [
-                'price_data' => [
-                    'currency'     => 'gbp',
-                    'unit_amount'  => $amount_pence,
-                    'recurring'    => [ 'interval' => 'month' ],
-                    'product_data' => [
-                        'name'        => $description,
-                        'description' => 'Sadaqah Jariyah — Helping mosques across the UK',
-                    ],
-                ],
-                'quantity' => 1,
-            ];
+        $post_fields = [
+            'mode'                        => 'subscription',
+            'success_url'                 => home_url( '/sponsor-yourjannah?payment=success' ),
+            'cancel_url'                  => home_url( '/sponsor-yourjannah?payment=cancelled' ),
+            'customer_email'              => $email,
+            'payment_method_types[0]'     => 'card',
+            'line_items[0][price_data][currency]'                      => 'gbp',
+            'line_items[0][price_data][unit_amount]'                   => $amount_pence,
+            'line_items[0][price_data][recurring][interval]'           => 'month',
+            'line_items[0][price_data][product_data][name]'            => $description,
+            'line_items[0][price_data][product_data][description]'     => 'Sadaqah Jariyah — Helping mosques across the UK',
+            'line_items[0][quantity]'      => 1,
+            'metadata[type]'              => 'platform_sponsor',
+            'metadata[tier]'              => $tier,
+            'metadata[name]'              => $name,
+            'metadata[recurring]'         => 'monthly',
+        ];
 
-            $session_params = [
-                'payment_method_types' => [ 'card' ],
-                'mode'                 => 'subscription',
-                'line_items'           => [ $line_item ],
-                'success_url'          => home_url( '/sponsor-yourjannah?payment=success' ),
-                'cancel_url'           => home_url( '/sponsor-yourjannah?payment=cancelled' ),
-                'customer_email'       => $email,
-                'metadata'             => [
-                    'type'    => 'platform_sponsor',
-                    'tier'    => $tier,
-                    'name'    => $name,
-                    'recurring' => 'monthly',
-                ],
-            ];
+        $ch = curl_init( 'https://api.stripe.com/v1/checkout/sessions' );
+        curl_setopt_array( $ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_USERPWD        => $secret . ':',
+            CURLOPT_POSTFIELDS     => http_build_query( $post_fields ),
+            CURLOPT_TIMEOUT        => 15,
+        ] );
+        $response = curl_exec( $ch );
+        curl_close( $ch );
 
-            $session = $stripe->checkout->sessions->create( $session_params );
-
+        $session = json_decode( $response, true );
+        if ( ! empty( $session['url'] ) ) {
             return new \WP_REST_Response( [
                 'ok'           => true,
-                'checkout_url' => $session->url,
+                'checkout_url' => $session['url'],
             ] );
-
-        } catch ( \Exception $e ) {
-            return new \WP_REST_Response( [
-                'ok'    => false,
-                'error' => 'Checkout error: ' . $e->getMessage(),
-            ], 500 );
         }
+
+        return new \WP_REST_Response( [
+            'ok'    => false,
+            'error' => 'Could not create checkout session.',
+        ], 500 );
     }
 }

@@ -217,7 +217,7 @@ class YNJ_API_Admin {
 
     public static function submit_enquiry( \WP_REST_Request $request ) {
         $ip = self::get_ip();
-        if ( ! self::rate_limit( 'enquiry_' . $ip, 3 ) ) {
+        if ( self::rate_limit( 'enquiry_' . $ip, 3 ) ) {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Too many requests. Please wait.' ], 429 );
         }
 
@@ -282,7 +282,7 @@ class YNJ_API_Admin {
      */
     public static function handle_register( \WP_REST_Request $request ) {
         $ip = self::get_ip();
-        if ( ! self::rate_limit( 'register_' . $ip, 3 ) ) {
+        if ( self::rate_limit( 'register_' . $ip, 3 ) ) {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Too many requests. Try again later.' ], 429 );
         }
 
@@ -316,7 +316,7 @@ class YNJ_API_Admin {
      */
     public static function handle_login( \WP_REST_Request $request ) {
         $ip = self::get_ip();
-        if ( ! self::rate_limit( 'login_' . $ip, 10 ) ) {
+        if ( self::rate_limit( 'login_' . $ip, 10 ) ) {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Too many login attempts. Try again later.' ], 429 );
         }
 
@@ -872,11 +872,11 @@ class YNJ_API_Admin {
         $users_table = YNJ_DB::table( 'users' );
 
         $members = $wpdb->get_results( $wpdb->prepare(
-            "SELECT u.id, u.name, u.email, u.phone, us.created_at as joined_at
+            "SELECT u.id, u.name, u.email, u.phone, us.subscribed_at as joined_at
              FROM $us_table us
              JOIN $users_table u ON u.id = us.user_id
              WHERE us.mosque_id = %d
-             ORDER BY us.created_at DESC
+             ORDER BY us.subscribed_at DESC
              LIMIT 500",
             $mosque_id
         ) );
@@ -1334,11 +1334,11 @@ class YNJ_API_Admin {
         $count     = (int) get_transient( $transient );
 
         if ( $count >= $max_per_minute ) {
-            return false;
+            return true;
         }
 
         set_transient( $transient, $count + 1, 60 );
-        return true;
+        return false;
     }
 
     // ================================================================

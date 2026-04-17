@@ -15,7 +15,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
             'start_time'         => sanitize_text_field( $_POST['start_time'] ?? '' ),
             'end_time'           => sanitize_text_field( $_POST['end_time'] ?? '' ),
             'location'           => sanitize_text_field( $_POST['location'] ?? '' ),
-            'category'           => sanitize_text_field( $_POST['category'] ?? 'community' ),
+            'event_type'         => sanitize_text_field( $_POST['category'] ?? 'community' ),
             'max_capacity'       => (int) ( $_POST['max_capacity'] ?? 0 ),
             'ticket_price_pence' => (int) ( floatval( $_POST['ticket_price'] ?? 0 ) * 100 ),
             'status'             => sanitize_text_field( $_POST['status'] ?? 'published' ),
@@ -71,7 +71,7 @@ $cats = ['talk','class','course','workshop','community','sports','competition','
         <div class="d-field"><label>Description</label><textarea name="description" rows="3"><?php echo esc_textarea( $editing->description ?? '' ); ?></textarea></div>
         <div class="d-row">
             <div class="d-field"><label>Date *</label><input type="date" name="event_date" value="<?php echo esc_attr( $editing->event_date ?? '' ); ?>" required></div>
-            <div class="d-field"><label>Category</label><select name="category"><?php foreach ( $cats as $c ) : ?><option value="<?php echo $c; ?>" <?php selected( $editing->category ?? '', $c ); ?>><?php echo ucfirst( $c ); ?></option><?php endforeach; ?></select></div>
+            <div class="d-field"><label>Category</label><select name="category"><?php foreach ( $cats as $c ) : ?><option value="<?php echo $c; ?>" <?php selected( $editing->event_type ?? '', $c ); ?>><?php echo ucfirst( $c ); ?></option><?php endforeach; ?></select></div>
         </div>
         <div class="d-row">
             <div class="d-field"><label>Start Time</label><input type="time" name="start_time" value="<?php echo esc_attr( $editing->start_time ?? '' ); ?>"></div>
@@ -110,7 +110,7 @@ $cats = ['talk','class','course','workshop','community','sports','competition','
             <td><strong><?php echo esc_html( $e->title ); ?></strong><?php if ( $e->ticket_price_pence > 0 ) echo ' <span class="d-badge d-badge--green">£' . number_format( $e->ticket_price_pence / 100, 0 ) . '</span>'; ?></td>
             <td><?php echo esc_html( $e->event_date ); ?></td>
             <td><?php echo $e->start_time ? esc_html( substr( $e->start_time, 0, 5 ) ) : '—'; ?></td>
-            <td><span class="d-badge d-badge--gray"><?php echo esc_html( ucfirst( $e->category ) ); ?></span></td>
+            <td><span class="d-badge d-badge--gray"><?php echo esc_html( ucfirst( $e->event_type ) ); ?></span></td>
             <td><span class="d-badge d-badge--<?php echo $e->status === 'published' ? 'green' : 'yellow'; ?>"><?php echo esc_html( ucfirst( $e->status ) ); ?></span></td>
             <td>
                 <a href="?section=events&edit=<?php echo (int) $e->id; ?>" class="d-btn d-btn--sm d-btn--outline">✏️</a>

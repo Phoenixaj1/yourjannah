@@ -829,14 +829,14 @@ class YNJ_API_Stripe {
         $cancel_url  = home_url( '/mosque/' . ( $mosque->slug ?? '' ) . '/classes' );
 
         $session = YNJ_Stripe::create_checkout(
+            'class_enrolment',
+            $enrolment_id,
             $class->price_pence,
             $class->title . ' — Class Enrolment' . $price_label,
             $success_url,
             $cancel_url,
             [
-                'type'          => 'class_enrolment',
                 'class_id'      => (string) $class_id,
-                'enrolment_id'  => (string) $enrolment_id,
                 'mosque_id'     => (string) $class->mosque_id,
                 'user_email'    => $user_email,
             ]

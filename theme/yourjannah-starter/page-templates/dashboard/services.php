@@ -9,7 +9,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
     if ( $action === 'create' || $action === 'update' ) {
         $data = [
             'mosque_id'         => $mosque_id,
-            'name'              => sanitize_text_field( $_POST['name'] ?? '' ),
+            'title'             => sanitize_text_field( $_POST['name'] ?? '' ),
             'category'          => sanitize_text_field( $_POST['category'] ?? 'general' ),
             'description'       => sanitize_textarea_field( $_POST['description'] ?? '' ),
             'price_pence'       => (int) ( floatval( $_POST['price'] ?? 0 ) * 100 ),
@@ -20,7 +20,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
             'requires_approval' => (int) ( $_POST['requires_approval'] ?? 0 ),
             'status'            => sanitize_text_field( $_POST['status'] ?? 'active' ),
         ];
-        if ( ! $data['name'] ) { $error = __( 'Service name required.', 'yourjannah' ); }
+        if ( ! $data['title'] ) { $error = __( 'Service name required.', 'yourjannah' ); }
         elseif ( $action === 'create' ) {
             $wpdb->insert( $st, $data );
             $success = __( 'Service added!', 'yourjannah' );
@@ -38,7 +38,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
 }
 
 $services = $wpdb->get_results( $wpdb->prepare(
-    "SELECT * FROM $st WHERE mosque_id=%d ORDER BY status ASC, name ASC",
+    "SELECT * FROM $st WHERE mosque_id=%d ORDER BY status ASC, title ASC",
     $mosque_id
 ) ) ?: [];
 
@@ -71,7 +71,7 @@ $svc_icons = [ 'nikkah' => '💍', 'funeral' => '🕊️', 'counselling' => '�
         <div class="d-row">
             <div class="d-field">
                 <label><?php esc_html_e( 'Service Name *', 'yourjannah' ); ?></label>
-                <input type="text" name="name" value="<?php echo esc_attr( $editing->name ?? '' ); ?>" required placeholder="<?php esc_attr_e( 'e.g. Nikkah Ceremony', 'yourjannah' ); ?>">
+                <input type="text" name="name" value="<?php echo esc_attr( $editing->title ?? '' ); ?>" required placeholder="<?php esc_attr_e( 'e.g. Nikkah Ceremony', 'yourjannah' ); ?>">
             </div>
             <div class="d-field">
                 <label><?php esc_html_e( 'Category', 'yourjannah' ); ?></label>
@@ -149,7 +149,7 @@ $svc_icons = [ 'nikkah' => '💍', 'funeral' => '🕊️', 'counselling' => '�
         <tbody>
         <?php foreach ( $services as $s ) : ?>
         <tr>
-            <td><strong><?php echo esc_html( $s->name ); ?></strong></td>
+            <td><strong><?php echo esc_html( $s->title ); ?></strong></td>
             <td><?php echo ( $svc_icons[ $s->category ] ?? '' ) . ' ' . esc_html( ucfirst( $s->category ) ); ?></td>
             <td style="text-align:right;"><?php echo $s->price_pence > 0 ? '£' . number_format( $s->price_pence / 100, 0 ) : esc_html( $s->price_label ?: __( 'Contact', 'yourjannah' ) ); ?></td>
             <td><?php echo $s->requires_approval ? '✓ Yes' : '—'; ?></td>

@@ -372,6 +372,7 @@ class YNJ_DB {
             type varchar(30) NOT NULL DEFAULT 'general',
             status varchar(20) NOT NULL DEFAULT 'new',
             replied_at datetime DEFAULT NULL,
+            admin_notes text NOT NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             KEY mosque_id (mosque_id),

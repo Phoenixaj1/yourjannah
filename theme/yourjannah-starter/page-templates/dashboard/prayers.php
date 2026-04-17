@@ -224,7 +224,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
             'khutbah_time' => sanitize_text_field( $_POST['khutbah_time'] ?? '' ),
             'salah_time'   => sanitize_text_field( $_POST['salah_time'] ?? '' ),
             'language'     => sanitize_text_field( $_POST['language'] ?? '' ),
-            'status'       => 'active',
+            'enabled'      => 1,
         ] );
         $success = __( 'Jumu\'ah slot added!', 'yourjannah' );
     }

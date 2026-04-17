@@ -155,14 +155,11 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
 
 <!-- Admin Team -->
 <?php
-$at = YNJ_DB::table( 'accounts' );
-$admins = [];
-if ( $wpdb->get_var( "SHOW TABLES LIKE '$at'" ) === $at ) {
-    $admins = $wpdb->get_results( $wpdb->prepare(
-        "SELECT id, admin_name, admin_email, status, created_at FROM $at WHERE mosque_id=%d ORDER BY created_at ASC",
-        $mosque_id
-    ) ) ?: [];
-}
+$admin_users = get_users([
+    'meta_key' => 'ynj_mosque_id',
+    'meta_value' => $mosque_id,
+    'role__in' => ['ynj_mosque_admin', 'administrator'],
+]);
 
 // Handle invite
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonce'] ?? '', 'ynj_dash_settings' ) && ( $_POST['action'] ?? '' ) === 'invite_admin' ) {
@@ -179,15 +176,15 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
 ?>
 <div class="d-card">
     <h3>👥 <?php esc_html_e( 'Admin Team', 'yourjannah' ); ?></h3>
-    <?php if ( $admins ) : ?>
+    <?php if ( $admin_users ) : ?>
     <table class="d-table" style="margin-bottom:12px;">
         <thead><tr><th><?php esc_html_e( 'Name', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Email', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Status', 'yourjannah' ); ?></th></tr></thead>
         <tbody>
-        <?php foreach ( $admins as $a ) : ?>
+        <?php foreach ( $admin_users as $a ) : ?>
         <tr>
-            <td><strong><?php echo esc_html( $a->admin_name ); ?></strong></td>
-            <td style="font-size:12px;"><?php echo esc_html( $a->admin_email ); ?></td>
-            <td><span class="d-badge d-badge--<?php echo $a->status === 'active' ? 'green' : 'yellow'; ?>"><?php echo esc_html( ucfirst( $a->status ) ); ?></span></td>
+            <td><strong><?php echo esc_html( $a->display_name ); ?></strong></td>
+            <td style="font-size:12px;"><?php echo esc_html( $a->user_email ); ?></td>
+            <td><span class="d-badge d-badge--green"><?php esc_html_e( 'Active', 'yourjannah' ); ?></span></td>
         </tr>
         <?php endforeach; ?>
         </tbody>
