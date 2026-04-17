@@ -232,6 +232,29 @@ if (is_admin()) {
 // Frontend routing — now handled by yourjannah-starter theme templates
 // Old router archived to _archive/class-ynj-router.php
 
+// Email verification handler
+add_action('init', function() {
+    if ( isset( $_GET['token'] ) && isset( $_GET['email'] ) && strpos( $_SERVER['REQUEST_URI'], '/verify-email' ) !== false ) {
+        global $wpdb;
+        $ut    = YNJ_DB::table( 'users' );
+        $token = sanitize_text_field( $_GET['token'] );
+        $email = sanitize_email( $_GET['email'] );
+
+        $user = $wpdb->get_row( $wpdb->prepare(
+            "SELECT id FROM $ut WHERE email = %s AND email_verify_token = %s AND email_verified = 0",
+            $email, $token
+        ) );
+
+        if ( $user ) {
+            $wpdb->update( $ut, [ 'email_verified' => 1, 'email_verify_token' => '' ], [ 'id' => $user->id ] );
+            wp_redirect( home_url( '/?email_verified=1' ) );
+        } else {
+            wp_redirect( home_url( '/?email_verified=invalid' ) );
+        }
+        exit;
+    }
+}, 1);
+
 // Serve /sw.js — create the physical file if it doesn't exist
 add_action('init', function() {
     // Check if sw.js needs serving via PHP (Nginx might block non-existent .js files)
@@ -373,6 +396,57 @@ add_action('rest_api_init', function() {
             ) );
 
             return new WP_REST_Response( [ 'ok' => true, 'count' => $count ] );
+        },
+        'permission_callback' => [ 'YNJ_WP_Auth', 'congregation_check' ],
+    ]);
+
+    // POST /auth/resend-verify — Resend email verification link (rate limited: 1 per 5 min)
+    register_rest_route('ynj/v1', '/auth/resend-verify', [
+        'methods' => 'POST',
+        'callback' => function( $request ) {
+            global $wpdb;
+            $wp_user_id  = get_current_user_id();
+            $ynj_user_id = (int) get_user_meta( $wp_user_id, 'ynj_user_id', true );
+            if ( ! $ynj_user_id ) {
+                return new WP_REST_Response( [ 'ok' => false, 'message' => 'No linked account.' ], 403 );
+            }
+
+            $ut   = YNJ_DB::table( 'users' );
+            $user = $wpdb->get_row( $wpdb->prepare(
+                "SELECT id, email, name, email_verified FROM $ut WHERE id = %d", $ynj_user_id
+            ) );
+
+            if ( ! $user ) {
+                return new WP_REST_Response( [ 'ok' => false, 'message' => 'User not found.' ], 404 );
+            }
+
+            if ( (int) $user->email_verified ) {
+                return new WP_REST_Response( [ 'ok' => false, 'message' => 'Email already verified.' ] );
+            }
+
+            // Rate limit: 1 per 5 minutes
+            $rate_key = 'ynj_resend_verify_' . $ynj_user_id;
+            if ( get_transient( $rate_key ) ) {
+                return new WP_REST_Response( [ 'ok' => false, 'message' => 'Please wait 5 minutes before requesting another verification email.' ] );
+            }
+            set_transient( $rate_key, 1, 5 * MINUTE_IN_SECONDS );
+
+            // Generate new token
+            $verify_token = bin2hex( random_bytes( 32 ) );
+            $wpdb->update( $ut, [ 'email_verify_token' => $verify_token ], [ 'id' => $ynj_user_id ] );
+
+            // Send verification email
+            $verify_url = home_url( '/verify-email?token=' . $verify_token . '&email=' . urlencode( $user->email ) );
+            $name    = $user->name ?: 'there';
+            $message = "Assalamu Alaikum " . $name . ",\n\n";
+            $message .= "Please verify your email by clicking the link below:\n";
+            $message .= $verify_url . "\n\n";
+            $message .= "If you did not request this, you can ignore this email.\n\n";
+            $message .= "JazakAllah Khayr,\nYourJannah Team";
+            $headers = [ 'From: YourJannah <noreply@yourjannah.com>' ];
+            wp_mail( $user->email, 'Verify Your Email — YourJannah', $message, $headers );
+
+            return new WP_REST_Response( [ 'ok' => true, 'message' => 'Verification email sent.' ] );
         },
         'permission_callback' => [ 'YNJ_WP_Auth', 'congregation_check' ],
     ]);

@@ -471,6 +471,7 @@ add_action( 'init', function() {
     add_rewrite_rule( '^sponsor-yourjannah/?$', 'index.php?ynj_page_type=sponsor_yourjannah', 'top' );
     add_rewrite_rule( '^change-mosque/?$', 'index.php?ynj_page_type=change_mosque', 'top' );
     add_rewrite_rule( '^appeals/?$', 'index.php?ynj_page_type=appeals', 'top' );
+    add_rewrite_rule( '^verify-email/?$', 'index.php?ynj_page_type=verify_email', 'top' );
 
 } );
 

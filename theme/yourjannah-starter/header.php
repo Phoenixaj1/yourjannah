@@ -61,6 +61,24 @@ $_tier_labels = [ 'supporter' => 'Bronze', 'guardian' => 'Silver', 'champion' =>
 </div>
 <?php endif; ?>
 
+<?php
+// Email verification reminder banner
+if ( is_user_logged_in() ) {
+    $ynj_uid_verify = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+    if ( $ynj_uid_verify ) {
+        global $wpdb;
+        $verified = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT email_verified FROM " . YNJ_DB::table( 'users' ) . " WHERE id = %d", $ynj_uid_verify
+        ) );
+        if ( ! $verified ) : ?>
+        <div style="background:#fef3c7;color:#92400e;padding:6px 16px;font-size:12px;text-align:center;">
+            Please verify your email address. <a href="#" onclick="ynjResendVerify();return false;" style="color:#92400e;font-weight:700;text-decoration:underline;">Resend verification email</a>
+        </div>
+        <?php endif;
+    }
+}
+?>
+
 <header class="ynj-header">
     <div class="ynj-header__inner">
         <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="ynj-logo">
@@ -449,5 +467,24 @@ window.ynjNearbyMosques = <?php echo json_encode( array_map( function( $m ) {
     fetchCount();
     pollTimer = setInterval(fetchCount, 60000);
 })();
+
+/* Resend email verification */
+window.ynjResendVerify = function() {
+    var nonce = (typeof wpApiSettings !== 'undefined' && wpApiSettings.nonce) ? wpApiSettings.nonce : '<?php echo wp_create_nonce( "wp_rest" ); ?>';
+    fetch('<?php echo esc_url_raw( rest_url( "ynj/v1/auth/resend-verify" ) ); ?>', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'X-WP-Nonce': nonce, 'Content-Type': 'application/json' }
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if (d.ok) {
+            alert('Verification email sent! Please check your inbox.');
+        } else {
+            alert(d.message || 'Could not send verification email. Please try again later.');
+        }
+    })
+    .catch(function(){ alert('Could not send verification email. Please try again later.'); });
+};
 </script>
 <?php endif; ?>

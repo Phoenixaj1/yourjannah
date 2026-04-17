@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '3.1.0';
+    const SCHEMA_VERSION = '3.2.0';
 
     /**
      * Return the full table name for a given short name.
@@ -542,6 +542,8 @@ class YNJ_DB {
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             name varchar(255) NOT NULL DEFAULT '',
             email varchar(255) NOT NULL DEFAULT '',
+            email_verified tinyint(1) NOT NULL DEFAULT 0,
+            email_verify_token varchar(64) NOT NULL DEFAULT '',
             phone varchar(50) NOT NULL DEFAULT '',
             password_hash varchar(255) NOT NULL DEFAULT '',
             favourite_mosque_id bigint(20) unsigned DEFAULT NULL,

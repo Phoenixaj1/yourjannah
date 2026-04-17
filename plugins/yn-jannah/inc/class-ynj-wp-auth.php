@@ -371,6 +371,12 @@ class YNJ_WP_Auth {
         $ynj_user_id = (int) $wpdb->insert_id;
         update_user_meta( $wp_user_id, 'ynj_user_id', $ynj_user_id );
 
+        // Generate email verification token
+        $verify_token = bin2hex( random_bytes( 32 ) );
+        $wpdb->update( YNJ_DB::table( 'users' ), [
+            'email_verify_token' => $verify_token,
+        ], [ 'id' => $ynj_user_id ] );
+
         // Generate old-style user token for frontend backward compat
         $token = bin2hex( random_bytes( 32 ) );
         $token_hash = hash_hmac( 'sha256', $token, 'ynj_user_salt_2024' );
@@ -405,13 +411,17 @@ class YNJ_WP_Auth {
         // Set WP auth cookie so is_user_logged_in() works on next page load
         wp_set_auth_cookie( $wp_user_id, true );
 
-        // Send welcome email (without password for security)
+        // Send welcome email with verification link
         if ( $email ) {
-            $subject = 'Welcome to YourJannah — Your Account';
+            $subject = 'Welcome to YourJannah — Please Verify Your Email';
+            $verify_url = home_url( '/verify-email?token=' . $verify_token . '&email=' . urlencode( $email ) );
             $login_url = home_url( '/login' );
             $forgot_url = wp_lostpassword_url( $login_url );
             $message = "Assalamu Alaikum " . $name . ",\n\n";
-            $message .= "Your YourJannah account has been created. You can log in at " . $login_url . "\n\n";
+            $message .= "Your YourJannah account has been created.\n\n";
+            $message .= "Please verify your email by clicking the link below:\n";
+            $message .= $verify_url . "\n\n";
+            $message .= "You can log in at " . $login_url . "\n\n";
             $message .= "If you need to reset your password, visit " . $forgot_url . "\n\n";
             $message .= "If this email landed in spam, please mark it as 'Not Spam' so you receive future updates from your masjid.\n\n";
             $message .= "JazakAllah Khayr,\nYourJannah Team";
