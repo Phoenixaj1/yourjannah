@@ -391,6 +391,18 @@ h1, h2, h3 {
     border-radius: 10px !important;
 }
 
+/* ── Header nav: centred between logo and pill ── */
+@media (min-width: 901px) {
+    .ynj-header__nav {
+        flex: 1 !important;
+        justify-content: center !important;
+        margin-left: 0 !important;
+    }
+    .ynj-header__nav ul {
+        justify-content: center !important;
+    }
+}
+
 /* ── Mosque pill in header: cleaner ── */
 .ynj-mosque-pill {
     border-radius: 12px !important;
