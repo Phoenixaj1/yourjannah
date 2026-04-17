@@ -196,6 +196,51 @@ $progress_pct = round( $steps_done / $steps_total * 100 );
 </div>
 <?php endif; ?>
 
+<!-- Interested / Engagement -->
+<?php
+$interest_log = get_option( 'ynj_interest_log', [] );
+$mosque_interests = array_filter( $interest_log, function( $entry ) use ( $mosque_slug ) {
+    return ( $entry['mosque'] ?? '' ) === $mosque_slug;
+} );
+$mosque_interests = array_values( $mosque_interests );
+// Get last 30 days only
+$thirty_days_ago = date( 'Y-m-d H:i:s', strtotime( '-30 days' ) );
+$recent_interests = array_filter( $mosque_interests, function( $e ) use ( $thirty_days_ago ) {
+    return ( $e['at'] ?? '' ) >= $thirty_days_ago;
+} );
+$interest_count = count( $recent_interests );
+
+// Count per item for top interests
+$interest_items = [];
+foreach ( $recent_interests as $entry ) {
+    $key = ( $entry['type'] ?? '' ) . '_' . ( $entry['id'] ?? 0 );
+    if ( ! isset( $interest_items[ $key ] ) ) {
+        $interest_items[ $key ] = [ 'title' => $entry['title'] ?? '', 'type' => $entry['type'] ?? '', 'count' => 0 ];
+    }
+    $interest_items[ $key ]['count']++;
+}
+usort( $interest_items, function( $a, $b ) { return $b['count'] - $a['count']; } );
+$top_interests = array_slice( $interest_items, 0, 5 );
+?>
+<?php if ( $interest_count > 0 ) : ?>
+<div class="d-card" style="border-left:4px solid #ec4899;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 style="margin:0;">❤️ <?php esc_html_e( 'Congregation Interest', 'yourjannah' ); ?></h3>
+        <span style="font-size:13px;font-weight:700;color:#ec4899;"><?php echo $interest_count; ?> <?php echo $interest_count === 1 ? 'tap' : 'taps'; ?> <?php esc_html_e( 'this month', 'yourjannah' ); ?></span>
+    </div>
+    <p style="font-size:12px;color:#666;margin-bottom:12px;"><?php esc_html_e( 'People tapped "Interested" on these announcements and events:', 'yourjannah' ); ?></p>
+    <?php foreach ( $top_interests as $ti ) : ?>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#fdf2f8;border-radius:8px;margin-bottom:6px;">
+        <div>
+            <span class="d-badge d-badge--<?php echo $ti['type'] === 'event' ? 'blue' : 'gray'; ?>" style="font-size:10px;margin-right:6px;"><?php echo esc_html( ucfirst( $ti['type'] ) ); ?></span>
+            <strong style="font-size:13px;"><?php echo esc_html( $ti['title'] ); ?></strong>
+        </div>
+        <span style="font-size:14px;font-weight:800;color:#ec4899;"><?php echo $ti['count']; ?> ❤️</span>
+    </div>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
 <!-- Activity Summary -->
 <div class="d-card">
     <h3>📊 <?php esc_html_e( 'Activity', 'yourjannah' ); ?></h3>
