@@ -47,8 +47,19 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
     // Import from Aladhan
     if ( $action === 'import_aladhan' && $lat && $lng ) {
         $import_method = (int) ( $_POST['method'] ?? 2 );
-        $url = "https://api.aladhan.com/v1/calendar/{$year}/{$mon}?latitude={$lat}&longitude={$lng}&method={$import_method}";
-        $response = wp_remote_get( $url, [ 'timeout' => 10 ] );
+        // Use the month from the form, not the URL
+        $import_month = sanitize_text_field( $_POST['import_month'] ?? $month );
+        $im_parts = explode( '-', $import_month );
+        $im_year = (int) ( $im_parts[0] ?? $year );
+        $im_mon = (int) ( $im_parts[1] ?? $mon );
+        // Update the page month to match
+        $year = $im_year; $mon = $im_mon;
+        $month = sprintf( '%04d-%02d', $year, $mon );
+        $month_label = date( 'F Y', mktime( 0, 0, 0, $mon, 1, $year ) );
+        $days_in_month = cal_days_in_month( CAL_GREGORIAN, $mon, $year );
+
+        $url = "https://api.aladhan.com/v1/calendar/{$im_year}/{$im_mon}?latitude={$lat}&longitude={$lng}&method={$import_method}";
+        $response = wp_remote_get( $url, [ 'timeout' => 15, 'sslverify' => false ] );
 
         if ( ! is_wp_error( $response ) ) {
             $body = json_decode( wp_remote_retrieve_body( $response ), true );
@@ -86,7 +97,8 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
             }
             $success = sprintf( __( 'Imported %d days of prayer times from Aladhan (%s).', 'yourjannah' ), $imported, $methods[ $import_method ] ?? 'Method ' . $import_method );
         } else {
-            $error = __( 'Failed to fetch from Aladhan API. Check your mosque GPS coordinates in Settings.', 'yourjannah' );
+            $err_msg = is_wp_error( $response ) ? $response->get_error_message() : 'HTTP ' . wp_remote_retrieve_response_code( $response );
+            $error = sprintf( __( 'Failed to fetch from Aladhan API: %s. URL: %s', 'yourjannah' ), $err_msg, $url );
         }
     }
 
