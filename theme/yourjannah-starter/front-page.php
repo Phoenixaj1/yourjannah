@@ -343,8 +343,8 @@ $_hp_is_member = false;
 $_hp_is_primary = false;
 $_hp_member_count = $_ynj_mosque_for_prayer ? (int) ( $_ynj_mosque_for_prayer->member_count ?? 0 ) : 0;
 $_hp_mosque_id = $_ynj_mosque_for_prayer ? (int) $_ynj_mosque_for_prayer->id : 0;
-// Social proof: never show 0 — seed a deterministic number per mosque
-if ( $_hp_member_count === 0 && $_ynj_mosque_for_prayer ) {
+// Social proof: under 20 real members show a seeded number (5-20)
+if ( $_hp_member_count < 20 && $_ynj_mosque_for_prayer ) {
     $_hp_member_count = ( crc32( $_ynj_mosque_for_prayer->slug ?? '' ) % 16 ) + 5;
 }
 if ( $_hp_mosque_id && is_user_logged_in() ) {
