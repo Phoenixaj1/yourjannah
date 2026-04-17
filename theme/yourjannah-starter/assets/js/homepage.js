@@ -558,6 +558,7 @@
             function updateCountdown() {
                 if (!prayerTimes) return;
                 const now = new Date();
+                const isFriday = (now.getDay() === 5);
                 const prayers = ['fajr','dhuhr','asr','maghrib','isha'];
                 let next = null, nextName = null, nextTime = null, nextJamat = null;
 
@@ -568,6 +569,8 @@
                     if (t > now) {
                         next = t; nextName = p; nextTime = prayerTimes[p];
                         nextJamat = jamatTimes[p+'_jamat'] || null;
+                        // Friday: dhuhr becomes jumu'ah
+                        if (isFriday && p === 'dhuhr') nextName = 'jumuah';
                         break;
                     }
                 }
@@ -589,15 +592,24 @@
                 const mm = String(Math.floor((diff % 3600) / 60)).padStart(2,'0');
                 const ss = String(diff % 60).padStart(2,'0');
 
-                const label = nextName.charAt(0).toUpperCase() + nextName.slice(1);
+                const isJumuah = (nextName === 'jumuah');
+                const label = isJumuah ? "Jumu'ah Mubarak \uD83D\uDD4C" : nextName.charAt(0).toUpperCase() + nextName.slice(1);
                 document.getElementById('next-prayer-countdown').textContent = `${hh}:${mm}:${ss}`;
                 document.getElementById('next-prayer-name').textContent = label;
 
                 // Show adhan + jamat time
                 const timeDisplay = nextJamat ? `Adhan ${nextTime} · Jamat ${nextJamat}` : nextTime;
                 document.getElementById('next-prayer-time').textContent = timeDisplay;
-                var prayerLabel = mosqueData && mosqueData.name ? 'Next Prayer at ' + mosqueData.name : 'Next Prayer';
-                document.getElementById('next-prayer-label').textContent = prayerLabel;
+                var prayerLabelEl = document.getElementById('next-prayer-label');
+                if (isJumuah) {
+                    var mosqueName = mosqueData && mosqueData.name ? mosqueData.name : 'your masjid';
+                    prayerLabelEl.textContent = "\uD83D\uDD4C It's Friday! Jumu'ah at " + mosqueName;
+                    prayerLabelEl.style.color = '#fbbf24';
+                } else {
+                    var prayerLabel = mosqueData && mosqueData.name ? 'Next Prayer at ' + mosqueData.name : 'Next Prayer';
+                    prayerLabelEl.textContent = prayerLabel;
+                    prayerLabelEl.style.color = '';
+                }
 
                 // Urgency based on leave-by time (jamat - travel - buffer)
                 hero.classList.remove('ynj-hero--urgent','ynj-hero--critical');
@@ -1054,8 +1066,9 @@
             function renderPrayerOverview() {
                 if (!prayerTimes) return;
                 const now = new Date();
+                const isFridayOv = (now.getDay() === 5);
                 const prayers = ['fajr','dhuhr','asr','maghrib','isha'];
-                const labels = {fajr:'Fajr',dhuhr:'Dhuhr',asr:'Asr',maghrib:'Maghrib',isha:'Isha'};
+                const labels = {fajr:'Fajr',dhuhr: isFridayOv ? "Jumu'ah" : 'Dhuhr',asr:'Asr',maghrib:'Maghrib',isha:'Isha'};
                 let foundNext = false;
 
                 const html = prayers.map(p => {
