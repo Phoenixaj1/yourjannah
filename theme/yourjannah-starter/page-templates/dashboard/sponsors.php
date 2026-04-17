@@ -1,14 +1,53 @@
 <?php
 /**
  * Dashboard Section: Sponsors (Business listings for this mosque)
- * Read-only view + marketing tips on how to attract sponsors.
+ * Approve/reject pending, remove active, edit fees + marketing tips.
  */
 $bt = YNJ_DB::table( 'businesses' );
 $st = YNJ_DB::table( 'services' );
 
+// Handle POST actions
+$success = ''; $error = '';
+if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonce'] ?? '', 'ynj_dash_sponsors' ) ) {
+    $action = sanitize_text_field( $_POST['action'] ?? '' );
+
+    if ( $action === 'approve_sponsor' ) {
+        $bid = (int) ( $_POST['business_id'] ?? 0 );
+        $updated = $wpdb->update( $bt, [ 'status' => 'active' ], [ 'id' => $bid, 'mosque_id' => $mosque_id ] );
+        $success = $updated ? __( 'Sponsor approved!', 'yourjannah' ) : '';
+        $error   = ! $updated ? __( 'Sponsor not found.', 'yourjannah' ) : '';
+    }
+
+    if ( $action === 'reject_sponsor' ) {
+        $bid = (int) ( $_POST['business_id'] ?? 0 );
+        $updated = $wpdb->update( $bt, [ 'status' => 'rejected' ], [ 'id' => $bid, 'mosque_id' => $mosque_id ] );
+        $success = $updated ? __( 'Sponsor rejected.', 'yourjannah' ) : '';
+        $error   = ! $updated ? __( 'Sponsor not found.', 'yourjannah' ) : '';
+    }
+
+    if ( $action === 'remove_sponsor' ) {
+        $bid = (int) ( $_POST['business_id'] ?? 0 );
+        $updated = $wpdb->update( $bt, [ 'status' => 'removed' ], [ 'id' => $bid, 'mosque_id' => $mosque_id ] );
+        $success = $updated ? __( 'Sponsor removed.', 'yourjannah' ) : '';
+        $error   = ! $updated ? __( 'Sponsor not found.', 'yourjannah' ) : '';
+    }
+
+    if ( $action === 'update_sponsor_fee' ) {
+        $bid = (int) ( $_POST['business_id'] ?? 0 );
+        $fee = (int) ( $_POST['monthly_fee_pence'] ?? 0 );
+        if ( $fee > 0 ) {
+            $updated = $wpdb->update( $bt, [ 'monthly_fee_pence' => $fee ], [ 'id' => $bid, 'mosque_id' => $mosque_id ] );
+            $success = $updated ? __( 'Sponsor fee updated.', 'yourjannah' ) : '';
+            $error   = ! $updated ? __( 'Sponsor not found.', 'yourjannah' ) : '';
+        } else {
+            $error = __( 'Fee must be greater than zero.', 'yourjannah' );
+        }
+    }
+}
+
 $businesses = $wpdb->get_results( $wpdb->prepare(
     "SELECT id, business_name, owner_name, category, monthly_fee_pence, featured_position, status, verified, created_at
-     FROM $bt WHERE mosque_id=%d ORDER BY status ASC, monthly_fee_pence DESC LIMIT 50",
+     FROM $bt WHERE mosque_id=%d ORDER BY FIELD(status,'pending','active','rejected','removed'), monthly_fee_pence DESC LIMIT 50",
     $mosque_id
 ) ) ?: [];
 
@@ -18,18 +57,25 @@ $services_list = $wpdb->get_results( $wpdb->prepare(
     $mosque_id
 ) ) ?: [];
 
-$active_biz = array_filter( $businesses, function( $b ) { return $b->status === 'active'; } );
-$active_svc = array_filter( $services_list, function( $s ) { return $s->status === 'active'; } );
+$pending_biz = array_filter( $businesses, function( $b ) { return $b->status === 'pending'; } );
+$active_biz  = array_filter( $businesses, function( $b ) { return $b->status === 'active'; } );
+$other_biz   = array_filter( $businesses, function( $b ) { return ! in_array( $b->status, [ 'pending', 'active' ], true ); } );
+$active_svc  = array_filter( $services_list, function( $s ) { return $s->status === 'active'; } );
 $biz_revenue = array_sum( array_map( function( $b ) { return (int) $b->monthly_fee_pence; }, $active_biz ) );
 $svc_revenue = array_sum( array_map( function( $s ) { return (int) $s->monthly_fee_pence; }, $active_svc ) );
 $sponsor_url = home_url( '/mosque/' . $mosque_slug . '/sponsors/join' );
 $service_url = home_url( '/mosque/' . $mosque_slug . '/services/join' );
+
+$editing_fee = (int) ( $_GET['edit_fee'] ?? 0 );
 ?>
 
 <div class="d-header">
     <h1>⭐ <?php esc_html_e( 'Sponsors & Directory', 'yourjannah' ); ?></h1>
     <p><?php esc_html_e( 'Businesses and professionals who support your mosque. This is a key revenue stream.', 'yourjannah' ); ?></p>
 </div>
+
+<?php if ( $success ) : ?><div class="d-alert d-alert--success"><?php echo esc_html( $success ); ?></div><?php endif; ?>
+<?php if ( $error ) : ?><div class="d-alert d-alert--error"><?php echo esc_html( $error ); ?></div><?php endif; ?>
 
 <!-- Revenue Stats -->
 <div class="d-stats">
@@ -107,19 +153,97 @@ $service_url = home_url( '/mosque/' . $mosque_slug . '/services/join' );
     <p style="font-size:12px;color:var(--text-dim);margin-top:8px;"><?php esc_html_e( '95% of all revenue goes directly to your mosque. YourJannah takes just 5%.', 'yourjannah' ); ?></p>
 </div>
 
-<!-- Current Sponsors -->
-<?php if ( $businesses ) : ?>
-<div class="d-card">
-    <h3><?php esc_html_e( 'Business Sponsors', 'yourjannah' ); ?> (<?php echo count( $businesses ); ?>)</h3>
+<!-- Pending Sponsors (require approval) -->
+<?php if ( $pending_biz ) : ?>
+<div class="d-card" style="border-color:#f59e0b;border-width:2px;">
+    <h3 style="color:#92400e;"><?php esc_html_e( 'Pending Approval', 'yourjannah' ); ?> (<?php echo count( $pending_biz ); ?>)</h3>
     <table class="d-table">
-        <thead><tr><th><?php esc_html_e( 'Business', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Category', 'yourjannah' ); ?></th><th style="text-align:right;"><?php esc_html_e( 'Monthly', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Status', 'yourjannah' ); ?></th></tr></thead>
+        <thead><tr><th><?php esc_html_e( 'Business', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Category', 'yourjannah' ); ?></th><th style="text-align:right;"><?php esc_html_e( 'Monthly', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Applied', 'yourjannah' ); ?></th><th></th></tr></thead>
         <tbody>
-        <?php foreach ( $businesses as $b ) : ?>
+        <?php foreach ( $pending_biz as $b ) : ?>
+        <tr>
+            <td><strong><?php echo esc_html( $b->business_name ); ?></strong><?php if ( $b->owner_name ) echo '<br><span style="font-size:11px;color:var(--text-dim);">by ' . esc_html( $b->owner_name ) . '</span>'; ?></td>
+            <td><span class="d-badge d-badge--gray"><?php echo esc_html( $b->category ); ?></span></td>
+            <td style="text-align:right;font-weight:700;">£<?php echo number_format( $b->monthly_fee_pence / 100, 0 ); ?></td>
+            <td style="font-size:12px;"><?php echo esc_html( substr( $b->created_at, 0, 10 ) ); ?></td>
+            <td style="white-space:nowrap;">
+                <form method="post" style="display:inline;">
+                    <?php wp_nonce_field( 'ynj_dash_sponsors', '_ynj_nonce' ); ?>
+                    <input type="hidden" name="action" value="approve_sponsor">
+                    <input type="hidden" name="business_id" value="<?php echo (int) $b->id; ?>">
+                    <button class="d-btn d-btn--sm d-btn--primary"><?php esc_html_e( 'Approve', 'yourjannah' ); ?></button>
+                </form>
+                <form method="post" style="display:inline;" onsubmit="return confirm('Reject this sponsor application?')">
+                    <?php wp_nonce_field( 'ynj_dash_sponsors', '_ynj_nonce' ); ?>
+                    <input type="hidden" name="action" value="reject_sponsor">
+                    <input type="hidden" name="business_id" value="<?php echo (int) $b->id; ?>">
+                    <button class="d-btn d-btn--sm d-btn--danger"><?php esc_html_e( 'Reject', 'yourjannah' ); ?></button>
+                </form>
+            </td>
+        </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
+<?php endif; ?>
+
+<!-- Active Sponsors -->
+<?php if ( $active_biz ) : ?>
+<div class="d-card">
+    <h3><?php esc_html_e( 'Active Sponsors', 'yourjannah' ); ?> (<?php echo count( $active_biz ); ?>)</h3>
+    <table class="d-table">
+        <thead><tr><th><?php esc_html_e( 'Business', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Category', 'yourjannah' ); ?></th><th style="text-align:right;"><?php esc_html_e( 'Monthly', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Status', 'yourjannah' ); ?></th><th></th></tr></thead>
+        <tbody>
+        <?php foreach ( $active_biz as $b ) : ?>
         <tr>
             <td><strong><?php echo esc_html( $b->business_name ); ?></strong><?php if ( $b->verified ) echo ' <span style="color:#16a34a;">✓</span>'; ?><?php if ( $b->owner_name ) echo '<br><span style="font-size:11px;color:var(--text-dim);">by ' . esc_html( $b->owner_name ) . '</span>'; ?></td>
             <td><span class="d-badge d-badge--gray"><?php echo esc_html( $b->category ); ?></span></td>
-            <td style="text-align:right;font-weight:700;">£<?php echo number_format( $b->monthly_fee_pence / 100, 0 ); ?></td>
-            <td><span class="d-badge d-badge--<?php echo $b->status === 'active' ? 'green' : 'yellow'; ?>"><?php echo esc_html( ucfirst( $b->status ) ); ?></span></td>
+            <td style="text-align:right;">
+                <?php if ( $editing_fee === (int) $b->id ) : ?>
+                <form method="post" style="display:inline-flex;gap:4px;align-items:center;">
+                    <?php wp_nonce_field( 'ynj_dash_sponsors', '_ynj_nonce' ); ?>
+                    <input type="hidden" name="action" value="update_sponsor_fee">
+                    <input type="hidden" name="business_id" value="<?php echo (int) $b->id; ?>">
+                    <span style="font-size:12px;">£</span>
+                    <input type="number" name="monthly_fee_pence" value="<?php echo (int) $b->monthly_fee_pence; ?>" min="100" step="100" style="width:80px;padding:4px 6px;font-size:12px;border:1px solid var(--border);border-radius:4px;">
+                    <span style="font-size:10px;color:var(--text-dim);">pence</span>
+                    <button type="submit" class="d-btn d-btn--sm d-btn--primary">Save</button>
+                    <a href="?section=sponsors" class="d-btn d-btn--sm d-btn--outline">Cancel</a>
+                </form>
+                <?php else : ?>
+                <span style="font-weight:700;">£<?php echo number_format( $b->monthly_fee_pence / 100, 0 ); ?></span>
+                <a href="?section=sponsors&edit_fee=<?php echo (int) $b->id; ?>" style="font-size:11px;margin-left:4px;" title="Edit fee">✏️</a>
+                <?php endif; ?>
+            </td>
+            <td><span class="d-badge d-badge--green"><?php echo esc_html( ucfirst( $b->status ) ); ?></span></td>
+            <td>
+                <form method="post" style="display:inline;" onsubmit="return confirm('Remove this active sponsor?')">
+                    <?php wp_nonce_field( 'ynj_dash_sponsors', '_ynj_nonce' ); ?>
+                    <input type="hidden" name="action" value="remove_sponsor">
+                    <input type="hidden" name="business_id" value="<?php echo (int) $b->id; ?>">
+                    <button class="d-btn d-btn--sm d-btn--danger"><?php esc_html_e( 'Remove', 'yourjannah' ); ?></button>
+                </form>
+            </td>
+        </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
+<?php endif; ?>
+
+<!-- Rejected / Removed Sponsors -->
+<?php if ( $other_biz ) : ?>
+<div class="d-card">
+    <h3 style="color:var(--text-dim);"><?php esc_html_e( 'Rejected / Removed', 'yourjannah' ); ?> (<?php echo count( $other_biz ); ?>)</h3>
+    <table class="d-table">
+        <thead><tr><th><?php esc_html_e( 'Business', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Category', 'yourjannah' ); ?></th><th style="text-align:right;"><?php esc_html_e( 'Monthly', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Status', 'yourjannah' ); ?></th></tr></thead>
+        <tbody>
+        <?php foreach ( $other_biz as $b ) : ?>
+        <tr style="opacity:0.6;">
+            <td><strong><?php echo esc_html( $b->business_name ); ?></strong></td>
+            <td><span class="d-badge d-badge--gray"><?php echo esc_html( $b->category ); ?></span></td>
+            <td style="text-align:right;">£<?php echo number_format( $b->monthly_fee_pence / 100, 0 ); ?></td>
+            <td><span class="d-badge d-badge--red"><?php echo esc_html( ucfirst( $b->status ) ); ?></span></td>
         </tr>
         <?php endforeach; ?>
         </tbody>

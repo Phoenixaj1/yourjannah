@@ -168,6 +168,67 @@ if ( $ynj_uid && class_exists( 'YNJ_DB' ) ) {
     }
 }
 
+// ── GDPR: Handle account deletion ──
+if ( $_SERVER['REQUEST_METHOD'] === 'POST'
+     && ( $_POST['action'] ?? '' ) === 'delete_account'
+     && wp_verify_nonce( $_POST['_ynj_delete_nonce'] ?? '', 'ynj_delete_account' )
+) {
+    global $wpdb;
+
+    // 1. Delete from ynj_users
+    if ( $ynj_uid && class_exists( 'YNJ_DB' ) ) {
+        $wpdb->delete( YNJ_DB::table( 'users' ), [ 'id' => $ynj_uid ] );
+    }
+    // 2. Delete from ynj_user_subscriptions
+    if ( $ynj_uid && class_exists( 'YNJ_DB' ) ) {
+        $wpdb->delete( YNJ_DB::table( 'user_subscriptions' ), [ 'user_id' => $ynj_uid ] );
+    }
+    // 3. Delete from ynj_points
+    if ( $ynj_uid && class_exists( 'YNJ_DB' ) ) {
+        $wpdb->delete( YNJ_DB::table( 'points' ), [ 'user_id' => $ynj_uid ] );
+    }
+    // 4. Delete from ynj_notifications
+    if ( $ynj_uid && class_exists( 'YNJ_DB' ) ) {
+        $wpdb->delete( YNJ_DB::table( 'notifications' ), [ 'user_id' => $ynj_uid ] );
+    }
+    // 5. Cancel Stripe subscription and delete from ynj_patrons
+    if ( class_exists( 'YNJ_DB' ) ) {
+        $patrons_table = YNJ_DB::table( 'patrons' );
+        $active_patrons = $wpdb->get_results( $wpdb->prepare(
+            "SELECT id, stripe_subscription_id FROM $patrons_table WHERE user_id = %d AND status = 'active'",
+            $wp_uid
+        ) );
+        if ( $active_patrons ) {
+            foreach ( $active_patrons as $ap ) {
+                if ( ! empty( $ap->stripe_subscription_id ) ) {
+                    // Attempt Stripe cancellation (best-effort)
+                    try {
+                        $stripe_secret = get_option( 'ynj_stripe_secret_key', '' );
+                        if ( $stripe_secret ) {
+                            wp_remote_request( 'https://api.stripe.com/v1/subscriptions/' . $ap->stripe_subscription_id, [
+                                'method'  => 'DELETE',
+                                'headers' => [ 'Authorization' => 'Bearer ' . $stripe_secret ],
+                            ] );
+                        }
+                    } catch ( \Exception $e ) {
+                        // Best-effort — continue with deletion
+                    }
+                }
+            }
+        }
+        $wpdb->delete( $patrons_table, [ 'user_id' => $wp_uid ] );
+    }
+
+    // 6. Delete WP user account
+    require_once ABSPATH . 'wp-admin/includes/user.php';
+    wp_delete_user( $wp_uid );
+
+    // 7. Logout and redirect
+    wp_logout();
+    wp_redirect( home_url( '/?account_deleted=1' ) );
+    exit;
+}
+
 // Derived values
 $user_initial  = strtoupper( mb_substr( $wp_user->display_name ?: 'U', 0, 1 ) );
 $travel_mode   = $ynj_user ? $ynj_user->travel_mode : 'walk';
@@ -639,7 +700,22 @@ $action_pts = [
         <button class="ynj-btn-save" id="save-interests" type="button"><?php esc_html_e( 'Save Interests', 'yourjannah' ); ?></button>
     </div>
 
-    <!-- 11. Logout -->
+    <!-- 11. Delete Account (GDPR) -->
+    <div class="ynj-dash-card" style="border:2px solid #dc2626;background:#fef2f2;">
+        <h3 style="color:#991b1b;">&#x26A0;&#xFE0F; <?php esc_html_e( 'Delete My Account', 'yourjannah' ); ?></h3>
+        <p style="font-size:13px;color:#991b1b;margin-bottom:14px;line-height:1.5;">
+            <?php esc_html_e( 'Permanently delete your account and all associated data. This cannot be undone.', 'yourjannah' ); ?>
+        </p>
+        <form method="post" id="delete-account-form">
+            <?php wp_nonce_field( 'ynj_delete_account', '_ynj_delete_nonce' ); ?>
+            <input type="hidden" name="action" value="delete_account">
+            <button type="button" class="ynj-btn-logout" id="btn-delete-account" style="background:#dc2626;color:#fff;border-color:#dc2626;margin-top:0;">
+                <?php esc_html_e( 'Delete My Account', 'yourjannah' ); ?>
+            </button>
+        </form>
+    </div>
+
+    <!-- 12. Logout -->
     <button class="ynj-btn-logout" id="btn-logout" type="button"><?php esc_html_e( 'Logout', 'yourjannah' ); ?></button>
 
 </div>
@@ -769,6 +845,18 @@ $action_pts = [
             btn.disabled = false;
             btn.textContent = <?php echo wp_json_encode( __( 'Save Interests', 'yourjannah' ) ); ?>;
         });
+    });
+
+    /* ── Delete Account (GDPR) ── */
+    document.getElementById('btn-delete-account').addEventListener('click', function() {
+        var msg = <?php echo wp_json_encode( __( 'Are you sure you want to permanently delete your account? All your data, subscriptions, points, and patron memberships will be removed. This action CANNOT be undone.', 'yourjannah' ) ); ?>;
+        if (confirm(msg)) {
+            var msg2 = <?php echo wp_json_encode( __( 'This is your final confirmation. Type DELETE to proceed.', 'yourjannah' ) ); ?>;
+            var typed = prompt(msg2);
+            if (typed && typed.toUpperCase() === 'DELETE') {
+                document.getElementById('delete-account-form').submit();
+            }
+        }
     });
 
     /* ── Logout ── */

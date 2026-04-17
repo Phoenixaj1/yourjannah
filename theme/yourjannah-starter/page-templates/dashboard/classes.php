@@ -37,6 +37,80 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
     }
 }
 
+// ── Enrolment View ──
+$enrolments_class_id = (int) ( $_GET['enrolments'] ?? 0 );
+if ( $enrolments_class_id ) {
+    $view_class = $wpdb->get_row( $wpdb->prepare(
+        "SELECT * FROM $ct WHERE id = %d AND mosque_id = %d",
+        $enrolments_class_id, $mosque_id
+    ) );
+    if ( $view_class ) {
+        $et = YNJ_DB::table( 'enrolments' );
+        $enrolments = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM $et WHERE class_id = %d AND mosque_id = %d ORDER BY enrolled_at DESC",
+            $enrolments_class_id, $mosque_id
+        ) ) ?: [];
+        ?>
+        <div class="d-header">
+            <h1>👥 <?php echo esc_html( $view_class->title ); ?> — <?php esc_html_e( 'Enrolments', 'yourjannah' ); ?></h1>
+            <p><?php
+                printf(
+                    esc_html__( '%d student(s) enrolled', 'yourjannah' ),
+                    count( $enrolments )
+                );
+                if ( $view_class->max_capacity ) {
+                    echo ' / ' . (int) $view_class->max_capacity . ' ' . esc_html__( 'capacity', 'yourjannah' );
+                }
+            ?></p>
+        </div>
+        <div style="margin-bottom:12px;">
+            <a href="?section=classes" class="d-btn d-btn--outline">&larr; <?php esc_html_e( 'Back to Classes', 'yourjannah' ); ?></a>
+        </div>
+        <?php if ( empty( $enrolments ) ) : ?>
+            <div class="d-card">
+                <div class="d-empty">
+                    <div class="d-empty__icon">📭</div>
+                    <p><?php esc_html_e( 'No students enrolled in this class yet.', 'yourjannah' ); ?></p>
+                </div>
+            </div>
+        <?php else : ?>
+            <div class="d-card">
+                <table class="d-table">
+                    <thead>
+                        <tr>
+                            <th><?php esc_html_e( 'Name', 'yourjannah' ); ?></th>
+                            <th><?php esc_html_e( 'Email', 'yourjannah' ); ?></th>
+                            <th><?php esc_html_e( 'Phone', 'yourjannah' ); ?></th>
+                            <th><?php esc_html_e( 'Status', 'yourjannah' ); ?></th>
+                            <th><?php esc_html_e( 'Enrolled', 'yourjannah' ); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ( $enrolments as $en ) : ?>
+                        <tr>
+                            <td><strong><?php echo esc_html( $en->user_name ?: '—' ); ?></strong></td>
+                            <td><?php echo esc_html( $en->user_email ?: '—' ); ?></td>
+                            <td><?php echo esc_html( $en->user_phone ?: '—' ); ?></td>
+                            <td>
+                                <span class="d-badge d-badge--<?php
+                                    echo $en->status === 'confirmed' || $en->status === 'active' ? 'green' :
+                                         ( $en->status === 'pending' ? 'yellow' :
+                                         ( $en->status === 'cancelled' ? 'red' : 'gray' ) );
+                                ?>">
+                                    <?php echo esc_html( ucfirst( $en->status ) ); ?>
+                                </span>
+                            </td>
+                            <td style="font-size:12px;"><?php echo esc_html( $en->enrolled_at ? date_i18n( 'j M Y, H:i', strtotime( $en->enrolled_at ) ) : '—' ); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif;
+        return; // Stop — don't render the normal classes view
+    }
+}
+
 $classes = $wpdb->get_results( $wpdb->prepare(
     "SELECT * FROM $ct WHERE mosque_id=%d ORDER BY status ASC, day_of_week ASC, start_time ASC",
     $mosque_id
@@ -179,6 +253,7 @@ $days = [ 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'S
             </td>
             <td><span class="d-badge d-badge--<?php echo $c->status === 'active' ? 'green' : ( $c->status === 'completed' ? 'blue' : 'yellow' ); ?>"><?php echo esc_html( ucfirst( $c->status ) ); ?></span></td>
             <td>
+                <a href="?section=classes&enrolments=<?php echo (int) $c->id; ?>" class="d-btn d-btn--sm d-btn--outline" title="<?php esc_attr_e( 'View Enrolments', 'yourjannah' ); ?>">👥</a>
                 <a href="?section=classes&edit=<?php echo (int) $c->id; ?>" class="d-btn d-btn--sm d-btn--outline">✏️</a>
                 <form method="post" style="display:inline;" onsubmit="return confirm('<?php esc_attr_e( 'Delete this class?', 'yourjannah' ); ?>')">
                     <?php wp_nonce_field( 'ynj_dash_classes', '_ynj_nonce' ); ?>

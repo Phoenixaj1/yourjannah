@@ -74,6 +74,35 @@ $mosque_slug = $mosque ? $mosque->slug : '';
 $section = sanitize_text_field( $_GET['section'] ?? 'overview' );
 $dash_dir = get_template_directory() . '/page-templates/dashboard/';
 
+// ── PRG: Handle POST → flash → redirect ──
+if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
+    $success = '';
+    $error   = '';
+    $section_file = $dash_dir . $section . '.php';
+    if ( file_exists( $section_file ) ) {
+        include $section_file;
+    }
+    if ( $success || $error ) {
+        set_transient( 'ynj_flash_' . $wp_uid, [
+            'success' => $success,
+            'error'   => $error,
+        ], 30 );
+        // Redirect back preserving all GET params
+        $redirect_url = remove_query_arg( '' ); // current URL without modifications
+        $redirect_url = add_query_arg( $_GET, home_url( '/dashboard' ) );
+        wp_redirect( $redirect_url );
+        exit;
+    }
+}
+
+// ── PRG: Read flash message on GET ──
+$flash = get_transient( 'ynj_flash_' . $wp_uid );
+if ( $flash ) {
+    delete_transient( 'ynj_flash_' . $wp_uid );
+    if ( ! empty( $flash['success'] ) ) { $success = $flash['success']; }
+    if ( ! empty( $flash['error'] ) )   { $error   = $flash['error']; }
+}
+
 // ── Sidebar navigation (grouped by purpose) ──
 $nav_groups = [
     'main' => [
@@ -301,8 +330,12 @@ a{color:var(--primary);text-decoration:none;}
     </div>
     <?php endif; ?>
 
+    <?php // PRG flash alerts (displayed after redirect) ?>
+    <?php if ( ! empty( $success ) ) : ?><div class="d-alert d-alert--success"><?php echo esc_html( $success ); ?></div><?php endif; ?>
+    <?php if ( ! empty( $error ) ) : ?><div class="d-alert d-alert--error"><?php echo esc_html( $error ); ?></div><?php endif; ?>
+
     <?php
-    // Include section template
+    // Include section template (GET requests only — POST already handled above)
     $section_file = $dash_dir . $section . '.php';
     if ( file_exists( $section_file ) ) {
         include $section_file;

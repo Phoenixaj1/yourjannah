@@ -216,6 +216,25 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
         }
     }
 
+    // Eid actions
+    if ( $action === 'add_eid' ) {
+        $et = YNJ_DB::table( 'eid_times' );
+        $wpdb->insert( $et, [
+            'mosque_id'      => $mosque_id,
+            'eid_type'       => sanitize_text_field( $_POST['eid_type'] ?? 'eid_ul_fitr' ),
+            'year'           => (int) ( $_POST['eid_year'] ?? date( 'Y' ) ),
+            'slot_name'      => sanitize_text_field( $_POST['slot_name'] ?? 'Eid Salah' ),
+            'salah_time'     => sanitize_text_field( $_POST['salah_time'] ?? '' ),
+            'location_notes' => sanitize_textarea_field( $_POST['location_notes'] ?? '' ),
+        ] );
+        $success = __( 'Eid prayer slot added!', 'yourjannah' );
+    }
+    if ( $action === 'delete_eid' ) {
+        $et = YNJ_DB::table( 'eid_times' );
+        $wpdb->delete( $et, [ 'id' => (int) $_POST['eid_slot_id'], 'mosque_id' => $mosque_id ] );
+        $success = __( 'Eid slot removed.', 'yourjannah' );
+    }
+
     // Jumu'ah actions
     if ( $action === 'add_jumuah' ) {
         $wpdb->insert( $jt, [
@@ -529,6 +548,104 @@ $last_import = $wpdb->get_var( $wpdb->prepare(
         <div class="d-field" style="margin:0;"><label><?php esc_html_e( 'Khutbah', 'yourjannah' ); ?></label><input type="time" name="khutbah_time" required style="padding:8px 12px;"></div>
         <div class="d-field" style="margin:0;"><label><?php esc_html_e( 'Salah', 'yourjannah' ); ?></label><input type="time" name="salah_time" required style="padding:8px 12px;"></div>
         <div class="d-field" style="margin:0;"><label><?php esc_html_e( 'Language', 'yourjannah' ); ?></label><input type="text" name="language" placeholder="English" style="padding:8px 12px;width:120px;"></div>
+        <button type="submit" class="d-btn d-btn--primary"><?php esc_html_e( 'Add', 'yourjannah' ); ?></button>
+    </form>
+</div>
+
+<!-- Eid Prayer Times -->
+<?php
+$et = YNJ_DB::table( 'eid_times' );
+$eid_slots = $wpdb->get_results( $wpdb->prepare(
+    "SELECT * FROM $et WHERE mosque_id=%d ORDER BY eid_type ASC, year DESC, salah_time ASC",
+    $mosque_id
+) ) ?: [];
+$eid_fitr = array_filter( $eid_slots, function( $e ) { return $e->eid_type === 'eid_ul_fitr'; } );
+$eid_adha = array_filter( $eid_slots, function( $e ) { return $e->eid_type === 'eid_ul_adha'; } );
+?>
+<div class="d-card">
+    <h3>🌙 <?php esc_html_e( 'Eid Prayer Times', 'yourjannah' ); ?></h3>
+
+    <?php if ( $eid_fitr ) : ?>
+    <h4 style="margin-bottom:8px;font-size:13px;">☪️ <?php esc_html_e( 'Eid ul-Fitr', 'yourjannah' ); ?></h4>
+    <table class="d-table" style="margin-bottom:16px;">
+        <thead><tr><th><?php esc_html_e( 'Slot', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Year', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Salah Time', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Location / Notes', 'yourjannah' ); ?></th><th></th></tr></thead>
+        <tbody>
+        <?php foreach ( $eid_fitr as $es ) : ?>
+        <tr>
+            <td><strong><?php echo esc_html( $es->slot_name ); ?></strong></td>
+            <td><?php echo esc_html( $es->year ); ?></td>
+            <td><?php echo esc_html( substr( $es->salah_time, 0, 5 ) ); ?></td>
+            <td style="font-size:12px;color:var(--text-dim);"><?php echo esc_html( $es->location_notes ?: '—' ); ?></td>
+            <td>
+                <form method="post" style="display:inline;" onsubmit="return confirm('Remove this Eid slot?')">
+                    <?php wp_nonce_field( 'ynj_dash_prayers', '_ynj_nonce' ); ?>
+                    <input type="hidden" name="action" value="delete_eid">
+                    <input type="hidden" name="eid_slot_id" value="<?php echo (int) $es->id; ?>">
+                    <button class="d-btn d-btn--sm d-btn--danger">🗑️</button>
+                </form>
+            </td>
+        </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    <?php endif; ?>
+
+    <?php if ( $eid_adha ) : ?>
+    <h4 style="margin-bottom:8px;font-size:13px;">🐑 <?php esc_html_e( 'Eid ul-Adha', 'yourjannah' ); ?></h4>
+    <table class="d-table" style="margin-bottom:16px;">
+        <thead><tr><th><?php esc_html_e( 'Slot', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Year', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Salah Time', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Location / Notes', 'yourjannah' ); ?></th><th></th></tr></thead>
+        <tbody>
+        <?php foreach ( $eid_adha as $es ) : ?>
+        <tr>
+            <td><strong><?php echo esc_html( $es->slot_name ); ?></strong></td>
+            <td><?php echo esc_html( $es->year ); ?></td>
+            <td><?php echo esc_html( substr( $es->salah_time, 0, 5 ) ); ?></td>
+            <td style="font-size:12px;color:var(--text-dim);"><?php echo esc_html( $es->location_notes ?: '—' ); ?></td>
+            <td>
+                <form method="post" style="display:inline;" onsubmit="return confirm('Remove this Eid slot?')">
+                    <?php wp_nonce_field( 'ynj_dash_prayers', '_ynj_nonce' ); ?>
+                    <input type="hidden" name="action" value="delete_eid">
+                    <input type="hidden" name="eid_slot_id" value="<?php echo (int) $es->id; ?>">
+                    <button class="d-btn d-btn--sm d-btn--danger">🗑️</button>
+                </form>
+            </td>
+        </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    <?php endif; ?>
+
+    <?php if ( empty( $eid_slots ) ) : ?>
+    <p style="color:var(--text-dim);margin-bottom:12px;"><?php esc_html_e( 'No Eid prayer slots yet. Add your first one below.', 'yourjannah' ); ?></p>
+    <?php endif; ?>
+
+    <h4 style="margin-bottom:8px;font-size:13px;"><?php esc_html_e( 'Add Eid Prayer Slot', 'yourjannah' ); ?></h4>
+    <form method="post" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
+        <?php wp_nonce_field( 'ynj_dash_prayers', '_ynj_nonce' ); ?>
+        <input type="hidden" name="action" value="add_eid">
+        <div class="d-field" style="margin:0;">
+            <label><?php esc_html_e( 'Eid Type', 'yourjannah' ); ?></label>
+            <select name="eid_type" style="padding:8px 12px;">
+                <option value="eid_ul_fitr"><?php esc_html_e( 'Eid ul-Fitr', 'yourjannah' ); ?></option>
+                <option value="eid_ul_adha"><?php esc_html_e( 'Eid ul-Adha', 'yourjannah' ); ?></option>
+            </select>
+        </div>
+        <div class="d-field" style="margin:0;">
+            <label><?php esc_html_e( 'Year', 'yourjannah' ); ?></label>
+            <input type="number" name="eid_year" value="<?php echo esc_attr( date( 'Y' ) ); ?>" min="2024" max="2040" style="padding:8px 12px;width:90px;">
+        </div>
+        <div class="d-field" style="margin:0;">
+            <label><?php esc_html_e( 'Slot Name', 'yourjannah' ); ?></label>
+            <input type="text" name="slot_name" value="Eid Salah" placeholder="e.g. 1st Jamaat" style="padding:8px 12px;width:140px;">
+        </div>
+        <div class="d-field" style="margin:0;">
+            <label><?php esc_html_e( 'Salah Time', 'yourjannah' ); ?></label>
+            <input type="time" name="salah_time" required style="padding:8px 12px;">
+        </div>
+        <div class="d-field" style="margin:0;flex:1;min-width:180px;">
+            <label><?php esc_html_e( 'Location / Notes', 'yourjannah' ); ?></label>
+            <textarea name="location_notes" rows="1" placeholder="e.g. Main hall, overflow in car park" style="padding:8px 12px;width:100%;resize:vertical;"></textarea>
+        </div>
         <button type="submit" class="d-btn d-btn--primary"><?php esc_html_e( 'Add', 'yourjannah' ); ?></button>
     </form>
 </div>
