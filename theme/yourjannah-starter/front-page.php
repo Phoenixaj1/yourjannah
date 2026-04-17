@@ -248,7 +248,20 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
         <h1 style="font-size:20px;font-weight:800;margin-bottom:4px;">Join Your Masjid Community</h1>
         <p style="font-size:13px;opacity:.6;margin-bottom:20px;">Prayer times, events & community — all in one place</p>
 
-        <!-- Single screen: Email + Mosque list (auto-loaded via GPS) -->
+        <!-- Mosque list first: auto-loads from GPS with spinner -->
+        <div style="margin-bottom:12px;">
+            <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:6px;">Select Your Masjid</label>
+            <div id="ob-mosque-list" style="text-align:left;max-height:200px;overflow-y:auto;margin-bottom:8px;">
+                <div style="padding:16px;text-align:center;">
+                    <div style="display:inline-block;width:20px;height:20px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:ob-spin 0.6s linear infinite;"></div>
+                    <div style="font-size:13px;opacity:.6;margin-top:8px;">Finding mosques near you...</div>
+                </div>
+            </div>
+            <input type="text" id="ob-search-input" placeholder="🔍 Search mosque by name..." oninput="obSearchMosques(this.value)" style="width:100%;padding:10px 14px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.15);color:#fff;font-size:13px;font-family:inherit;outline:none;" class="ob-search-ph">
+        </div>
+        <style>@keyframes ob-spin{to{transform:rotate(360deg);}}</style>
+
+        <!-- Email + password just above CTA -->
         <div style="text-align:left;margin-bottom:12px;">
             <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;">Your Email</label>
             <input type="email" id="ob-email" placeholder="your@email.com" autocomplete="email" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-family:inherit;outline:none;">
@@ -257,15 +270,6 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
             <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;">Welcome back! Enter your password</label>
             <input type="password" id="ob-pass" placeholder="Your password" autocomplete="current-password" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-family:inherit;outline:none;">
             <a href="<?php echo esc_url( home_url( '/forgot-password' ) ); ?>" style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px;display:block;">Forgot password?</a>
-        </div>
-
-        <!-- Mosque list: auto-loads from GPS, or search -->
-        <div style="margin-bottom:12px;">
-            <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:6px;">Select Your Masjid</label>
-            <div id="ob-mosque-list" style="text-align:left;max-height:200px;overflow-y:auto;margin-bottom:8px;">
-                <div style="padding:12px;opacity:.5;font-size:13px;text-align:center;">📍 Detecting your location...</div>
-            </div>
-            <input type="text" id="ob-search-input" placeholder="🔍 Search mosque by name..." oninput="obSearchMosques(this.value)" style="width:100%;padding:10px 14px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.15);color:#fff;font-size:13px;font-family:inherit;outline:none;" class="ob-search-ph">
         </div>
 
         <button id="ob-submit" onclick="obSubmitEmail()" style="width:100%;padding:14px;border:none;border-radius:12px;background:#fff;color:#0a1628;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">
