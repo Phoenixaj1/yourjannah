@@ -181,9 +181,60 @@ localStorage.setItem('ynj_mosque_slug', <?php echo wp_json_encode( $slug ); ?>);
 localStorage.setItem('ynj_mosque_name', <?php echo wp_json_encode( $mosque_name ); ?>);
 </script>
 
+<?php
+// ── Membership status check ──
+$_ynj_is_member = false;
+$_ynj_is_primary = false;
+$_ynj_member_count = $mosque ? (int) ( $mosque->member_count ?? 0 ) : 0;
+if ( $mosque && is_user_logged_in() ) {
+    $ynj_uid_check = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+    if ( $ynj_uid_check ) {
+        global $wpdb;
+        $sub_table = YNJ_DB::table( 'user_subscriptions' );
+        $membership = $wpdb->get_row( $wpdb->prepare(
+            "SELECT is_member, is_primary FROM $sub_table WHERE user_id = %d AND mosque_id = %d AND status = 'active'",
+            $ynj_uid_check, (int) $mosque->id
+        ) );
+        if ( $membership ) {
+            $_ynj_is_member = (bool) $membership->is_member;
+            $_ynj_is_primary = (bool) $membership->is_primary;
+        }
+    }
+}
+?>
+
 <main class="ynj-main">
   <div class="ynj-desktop-grid">
     <div class="ynj-desktop-grid__left">
+
+    <!-- Join This Masjid + Member Count -->
+    <div class="ynj-join-bar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border-radius:14px;padding:12px 16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:18px;">🕌</span>
+            <span style="font-size:14px;font-weight:600;color:#333;">
+                <?php echo number_format( $_ynj_member_count ); ?> <?php echo $_ynj_member_count === 1 ? 'member' : 'members'; ?>
+            </span>
+        </div>
+        <?php if ( $_ynj_is_member ) : ?>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <?php if ( $_ynj_is_primary ) : ?>
+                    <span style="font-size:11px;color:#666;background:#f0f0f0;padding:2px 8px;border-radius:12px;">Primary</span>
+                <?php else : ?>
+                    <button onclick="ynjSetPrimary(<?php echo (int) $mosque->id; ?>)" style="font-size:11px;color:#00ADEF;background:none;border:1px solid #00ADEF;padding:2px 8px;border-radius:12px;cursor:pointer;">Set as Primary</button>
+                <?php endif; ?>
+                <span style="color:#27ae60;font-weight:600;font-size:13px;">✓ Joined</span>
+                <button onclick="ynjLeaveMosque(<?php echo (int) $mosque->id; ?>)" style="font-size:11px;color:#999;background:none;border:none;cursor:pointer;text-decoration:underline;">Leave</button>
+            </div>
+        <?php elseif ( is_user_logged_in() ) : ?>
+            <button onclick="ynjJoinMosque(<?php echo (int) $mosque->id; ?>)" class="ynj-btn" style="background:#27ae60;color:#fff;padding:8px 20px;border-radius:24px;font-size:13px;font-weight:700;border:none;cursor:pointer;">
+                Join This Masjid
+            </button>
+        <?php else : ?>
+            <button onclick="ynjShowJoinLogin()" class="ynj-btn" style="background:#27ae60;color:#fff;padding:8px 20px;border-radius:24px;font-size:13px;font-weight:700;border:none;cursor:pointer;">
+                Join This Masjid
+            </button>
+        <?php endif; ?>
+    </div>
 
     <!-- Ramadan banner (shown automatically during Ramadan) -->
     <div id="ramadan-banner" style="display:none;background:linear-gradient(135deg,#1a1628,#2d1b69);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:10px;"></div>
@@ -433,7 +484,102 @@ window.ynjPreloaded = {
     points: <?php echo wp_json_encode( $_mp_points ); ?>,
     mosqueId: <?php echo (int) $_mp_id; ?>
 };
+
+// ── Membership functions ──
+async function ynjJoinMosque(mosqueId) {
+    try {
+        const res = await fetch('/wp-json/ynj/v1/auth/join-mosque', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': '<?php echo wp_create_nonce("wp_rest"); ?>' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ mosque_id: mosqueId })
+        });
+        const data = await res.json();
+        if (data.ok) {
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to join. Please try again.');
+        }
+    } catch(e) { alert('Network error. Please try again.'); }
+}
+
+async function ynjLeaveMosque(mosqueId) {
+    if (!confirm('Are you sure you want to leave this masjid?')) return;
+    try {
+        const res = await fetch('/wp-json/ynj/v1/auth/leave-mosque', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': '<?php echo wp_create_nonce("wp_rest"); ?>' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ mosque_id: mosqueId })
+        });
+        const data = await res.json();
+        if (data.ok) location.reload();
+    } catch(e) { alert('Network error.'); }
+}
+
+async function ynjSetPrimary(mosqueId) {
+    try {
+        const res = await fetch('/wp-json/ynj/v1/auth/primary-mosque', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': '<?php echo wp_create_nonce("wp_rest"); ?>' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ mosque_id: mosqueId })
+        });
+        const data = await res.json();
+        if (data.ok) location.reload();
+    } catch(e) { alert('Network error.'); }
+}
+
+function ynjShowJoinLogin() {
+    document.getElementById('ynj-join-modal').style.display = 'flex';
+}
+function ynjCloseJoinModal() {
+    document.getElementById('ynj-join-modal').style.display = 'none';
+}
 </script>
+
+<!-- Social Login Modal (for non-logged-in users) -->
+<?php if ( ! is_user_logged_in() && $mosque ) :
+    $return_to = '/mosque/' . $slug;
+    $google_url = class_exists('YNJ_Social_Auth') && YNJ_Social_Auth::is_google_configured() ? YNJ_Social_Auth::get_login_url( 'google', $return_to, $slug, $slug ) : '';
+    $facebook_url = class_exists('YNJ_Social_Auth') && YNJ_Social_Auth::is_facebook_configured() ? YNJ_Social_Auth::get_login_url( 'facebook', $return_to, $slug, $slug ) : '';
+?>
+<div id="ynj-join-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:20px;padding:28px 24px;max-width:380px;width:100%;text-align:center;position:relative;">
+        <button onclick="ynjCloseJoinModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#999;">&times;</button>
+        <h2 style="font-size:20px;font-weight:800;margin-bottom:4px;">Join <?php echo esc_html( $mosque_name ); ?></h2>
+        <p style="font-size:13px;color:#666;margin-bottom:20px;">Sign in to become a member of this masjid</p>
+
+        <?php if ( $google_url ) : ?>
+        <a href="<?php echo esc_url( $google_url ); ?>" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;font-size:14px;font-weight:600;color:#333;text-decoration:none;margin-bottom:10px;background:#fff;">
+            <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+            Continue with Google
+        </a>
+        <?php endif; ?>
+
+        <?php if ( $facebook_url ) : ?>
+        <a href="<?php echo esc_url( $facebook_url ); ?>" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;font-size:14px;font-weight:600;color:#333;text-decoration:none;margin-bottom:10px;background:#fff;">
+            <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#1877F2" d="M48 24C48 10.745 37.255 0 24 0S0 10.745 0 24c0 11.979 8.776 21.908 20.25 23.708v-16.77h-6.094V24h6.094v-5.288c0-6.014 3.583-9.337 9.065-9.337 2.625 0 5.372.469 5.372.469v5.906h-3.026c-2.981 0-3.911 1.85-3.911 3.75V24h6.656l-1.064 6.938H27.75v16.77C39.224 45.908 48 35.979 48 24z"/></svg>
+            Continue with Facebook
+        </a>
+        <?php endif; ?>
+
+        <div style="display:flex;align-items:center;gap:12px;margin:16px 0;">
+            <div style="flex:1;height:1px;background:#e0e0e0;"></div>
+            <span style="font-size:12px;color:#999;">or</span>
+            <div style="flex:1;height:1px;background:#e0e0e0;"></div>
+        </div>
+
+        <a href="<?php echo esc_url( home_url( '/register/?redirect=' . urlencode( '/mosque/' . $slug ) . '&join_mosque=' . $slug ) ); ?>" style="display:block;width:100%;padding:12px;background:#00ADEF;color:#fff;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
+            Sign up with Email
+        </a>
+
+        <p style="font-size:12px;color:#999;margin-top:16px;">
+            Already have an account? <a href="<?php echo esc_url( home_url( '/login/?redirect=' . urlencode( '/mosque/' . $slug ) ) ); ?>" style="color:#00ADEF;font-weight:600;">Sign in</a>
+        </p>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php
 get_footer();

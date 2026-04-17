@@ -16,6 +16,8 @@ $dt = YNJ_DB::table( 'donations' );
 $ft = YNJ_DB::table( 'mosque_funds' );
 $it = YNJ_DB::table( 'email_imports' );
 $jt = YNJ_DB::table( 'jumuah_slots' );
+$arpt = YNJ_DB::table( 'appeal_responses' );
+$mosq = YNJ_DB::table( 'mosques' );
 
 $s = [
     'patrons'       => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $pt WHERE mosque_id=%d AND status='active'", $mosque_id ) ),
@@ -35,6 +37,9 @@ $s = [
     'jumuah'        => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $jt WHERE mosque_id=%d AND status='active'", $mosque_id ) ),
     'has_desc'      => ! empty( $mosque->description ),
     'has_phone'     => ! empty( $mosque->phone ),
+    'appeal_rev'    => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(mosque_fee_pence),0) FROM $arpt WHERE mosque_id=%d AND response='accepted'", $mosque_id ) ),
+    'accept_appeals'=> (int) ( $mosque->accept_appeals ?? 0 ),
+    'has_imam'      => (int) ( $mosque->imam_user_id ?? 0 ) > 0,
 ];
 
 $total_mrr = $s['patron_mrr'] + $s['sponsor_mrr'];
@@ -148,6 +153,26 @@ $progress_pct = round( $steps_done / $steps_total * 100 );
                 <p style="font-size:12px;margin:2px 0 0;opacity:.8;"><?php esc_html_e( 'Create specific funds (New Roof, Heating, Welfare). People donate more when they see where money goes. The niyyah bar shows these on every page.', 'yourjannah' ); ?></p>
             </div>
         </a>
+
+        <?php if ( ! $s['accept_appeals'] ) : ?>
+        <a href="?section=settings" style="display:flex;gap:12px;padding:12px;background:#fffbeb;border-radius:10px;text-decoration:none;color:#92400e;border:1px solid #fde68a;">
+            <span style="font-size:24px;">&#128227;</span>
+            <div>
+                <strong><?php esc_html_e( 'Enable Charity Appeals', 'yourjannah' ); ?></strong>
+                <p style="font-size:12px;margin:2px 0 0;opacity:.8;"><?php esc_html_e( 'Earn revenue by hosting charity appeals. Enable in Settings and set your fees for in-person and recorded appeals.', 'yourjannah' ); ?></p>
+            </div>
+        </a>
+        <?php endif; ?>
+
+        <?php if ( ! $s['has_imam'] ) : ?>
+        <a href="?section=settings" style="display:flex;gap:12px;padding:12px;background:#fffbeb;border-radius:10px;text-decoration:none;color:#92400e;border:1px solid #fde68a;">
+            <span style="font-size:24px;">&#128104;&#8205;&#127891;</span>
+            <div>
+                <strong><?php esc_html_e( 'Invite your Imam', 'yourjannah' ); ?></strong>
+                <p style="font-size:12px;margin:2px 0 0;opacity:.8;"><?php esc_html_e( 'Let your imam send religious messages to the congregation. Set up in Settings to link their account.', 'yourjannah' ); ?></p>
+            </div>
+        </a>
+        <?php endif; ?>
     </div>
 </div>
 <?php endif; ?>
@@ -175,7 +200,7 @@ $progress_pct = round( $steps_done / $steps_total * 100 );
 <div class="d-card">
     <h3>📊 <?php esc_html_e( 'Activity', 'yourjannah' ); ?></h3>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;">
-        <div style="text-align:center;padding:12px;background:#f9fafb;border-radius:8px;"><div style="font-size:20px;font-weight:800;"><?php echo $s['subscribers']; ?></div><div style="font-size:11px;color:var(--text-dim);"><?php esc_html_e( 'Subscribers', 'yourjannah' ); ?></div></div>
+        <div style="text-align:center;padding:12px;background:#f9fafb;border-radius:8px;"><div style="font-size:20px;font-weight:800;"><?php echo $s['subscribers']; ?></div><div style="font-size:11px;color:var(--text-dim);"><?php esc_html_e( 'Members', 'yourjannah' ); ?></div></div>
         <div style="text-align:center;padding:12px;background:#f9fafb;border-radius:8px;"><div style="font-size:20px;font-weight:800;"><?php echo $s['events']; ?></div><div style="font-size:11px;color:var(--text-dim);"><?php esc_html_e( 'Events', 'yourjannah' ); ?></div></div>
         <div style="text-align:center;padding:12px;background:#f9fafb;border-radius:8px;"><div style="font-size:20px;font-weight:800;"><?php echo $s['announcements']; ?></div><div style="font-size:11px;color:var(--text-dim);"><?php esc_html_e( 'Announcements', 'yourjannah' ); ?></div></div>
         <div style="text-align:center;padding:12px;background:#f9fafb;border-radius:8px;"><div style="font-size:20px;font-weight:800;"><?php echo $s['sponsors']; ?></div><div style="font-size:11px;color:var(--text-dim);"><?php esc_html_e( 'Sponsors', 'yourjannah' ); ?></div></div>

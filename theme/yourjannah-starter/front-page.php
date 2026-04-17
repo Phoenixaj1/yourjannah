@@ -337,9 +337,60 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
 })();
 </script>
 
+<?php
+// ── Homepage membership status check ──
+$_hp_is_member = false;
+$_hp_is_primary = false;
+$_hp_member_count = $_ynj_mosque_for_prayer ? (int) ( $_ynj_mosque_for_prayer->member_count ?? 0 ) : 0;
+$_hp_mosque_id = $_ynj_mosque_for_prayer ? (int) $_ynj_mosque_for_prayer->id : 0;
+if ( $_hp_mosque_id && is_user_logged_in() ) {
+    $ynj_uid_hp = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+    if ( $ynj_uid_hp ) {
+        global $wpdb;
+        $sub_tbl = YNJ_DB::table( 'user_subscriptions' );
+        $hp_mem = $wpdb->get_row( $wpdb->prepare(
+            "SELECT is_member, is_primary FROM $sub_tbl WHERE user_id = %d AND mosque_id = %d AND status = 'active'",
+            $ynj_uid_hp, $_hp_mosque_id
+        ) );
+        if ( $hp_mem ) {
+            $_hp_is_member = (bool) $hp_mem->is_member;
+            $_hp_is_primary = (bool) $hp_mem->is_primary;
+        }
+    }
+}
+?>
+
 <main class="ynj-main">
   <div class="ynj-desktop-grid">
     <div class="ynj-desktop-grid__left">
+
+    <!-- Join This Masjid + Member Count -->
+    <?php if ( $_hp_mosque_id ) : ?>
+    <div class="ynj-join-bar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border-radius:14px;padding:12px 16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:18px;">🕌</span>
+            <span style="font-size:14px;font-weight:600;color:#333;">
+                <?php echo number_format( $_hp_member_count ); ?> <?php echo $_hp_member_count === 1 ? 'member' : 'members'; ?>
+            </span>
+        </div>
+        <?php if ( $_hp_is_member ) : ?>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <?php if ( $_hp_is_primary ) : ?>
+                    <span style="font-size:11px;color:#666;background:#f0f0f0;padding:2px 8px;border-radius:12px;">Primary</span>
+                <?php endif; ?>
+                <span style="color:#27ae60;font-weight:600;font-size:13px;">✓ Joined</span>
+            </div>
+        <?php elseif ( is_user_logged_in() ) : ?>
+            <button onclick="ynjJoinMosqueHP(<?php echo $_hp_mosque_id; ?>)" class="ynj-btn" style="background:#27ae60;color:#fff;padding:8px 20px;border-radius:24px;font-size:13px;font-weight:700;border:none;cursor:pointer;">
+                Join This Masjid
+            </button>
+        <?php else : ?>
+            <a href="<?php echo esc_url( home_url( '/register/' ) ); ?>" class="ynj-btn" style="background:#27ae60;color:#fff;padding:8px 20px;border-radius:24px;font-size:13px;font-weight:700;border:none;cursor:pointer;text-decoration:none;">
+                Join This Masjid
+            </a>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
 
     <!-- Ramadan banner (shown automatically during Ramadan) -->
     <div id="ramadan-banner" style="display:none;background:linear-gradient(135deg,#1a1628,#2d1b69);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:10px;"></div>
@@ -593,6 +644,21 @@ window.ynjPreloaded = {
     points: <?php echo wp_json_encode( $_hp_points ); ?>,
     mosqueId: <?php echo (int) $_hp_mosque_id; ?>
 };
+
+// Homepage join function
+async function ynjJoinMosqueHP(mosqueId) {
+    try {
+        const res = await fetch('/wp-json/ynj/v1/auth/join-mosque', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': '<?php echo wp_create_nonce("wp_rest"); ?>' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ mosque_id: mosqueId })
+        });
+        const data = await res.json();
+        if (data.ok) location.reload();
+        else alert(data.error || 'Failed to join.');
+    } catch(e) { alert('Network error.'); }
+}
 </script>
 
 <?php

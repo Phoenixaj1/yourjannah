@@ -60,6 +60,7 @@ spl_autoload_register(function($class) {
         'YNJ_API_Sponsor_YJ'       => 'api/class-ynj-api-sponsor-yj.php',
         'YNJ_Pool_Ledger'          => 'inc/class-ynj-pool-ledger.php',
         'YNJ_API_Donations'        => 'api/class-ynj-api-donations.php',
+        'YNJ_Social_Auth'          => 'inc/class-ynj-social-auth.php',
     ];
     if (isset($map[$class])) {
         require_once YNJ_DIR . $map[$class];
@@ -73,9 +74,11 @@ register_deactivation_hook(__FILE__, ['YNJ_WP_Auth', 'remove_roles']);
 
 // Ensure roles exist (in case plugin was updated without deactivation/reactivation)
 add_action('init', function() {
-    if ( ! get_role( 'ynj_mosque_admin' ) ) {
+    if ( ! get_role( 'ynj_mosque_admin' ) || ! get_role( 'ynj_imam' ) ) {
         YNJ_WP_Auth::install_roles();
     }
+    // Initialize social login OAuth routes
+    YNJ_Social_Auth::init();
     // Auto-configure Stripe keys on first load
     YNJ_Stripe::auto_configure();
     // Run DB migrations if schema version changed (once only, not every page load)
@@ -132,9 +135,9 @@ add_action('init', function() {
 // Auto-upgrade DB on version change
 add_action('admin_init', function() {
     $installed = get_option('ynj_db_version', '');
-    if ($installed !== YNJ_VERSION || isset($_GET['ynj_force_db'])) {
+    if ($installed !== YNJ_DB::SCHEMA_VERSION || isset($_GET['ynj_force_db'])) {
         YNJ_DB::install();
-        update_option('ynj_db_version', YNJ_VERSION);
+        update_option('ynj_db_version', YNJ_DB::SCHEMA_VERSION);
         if (isset($_GET['ynj_force_db'])) {
             wp_die('DB upgrade complete. Tables created/updated. <a href="' . admin_url() . '">Back to admin</a>');
         }

@@ -35,6 +35,13 @@ class YNJ_WP_Auth {
             'ynj_manage_madrassah'  => true,
         ] );
 
+        // Imam role (limited mosque management)
+        add_role( 'ynj_imam', 'Mosque Imam', [
+            'read'                      => true,
+            'ynj_create_announcements'  => true,
+            'ynj_send_broadcasts'       => true,
+        ] );
+
         // Congregation member role
         add_role( 'ynj_congregation', 'Congregation Member', [
             'read'                => true,
@@ -65,6 +72,7 @@ class YNJ_WP_Auth {
      */
     public static function remove_roles() {
         remove_role( 'ynj_mosque_admin' );
+        remove_role( 'ynj_imam' );
         remove_role( 'ynj_congregation' );
     }
 

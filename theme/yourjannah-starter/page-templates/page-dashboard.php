@@ -18,8 +18,22 @@ $wp_uid = get_current_user_id();
 $mosque_id = (int) get_user_meta( $wp_uid, 'ynj_mosque_id', true );
 $mosque_ids = get_user_meta( $wp_uid, 'ynj_mosque_ids', true ) ?: [];
 
-// Also check ynj_mosque_admin role
+// Check roles: admin, mosque admin, or imam
 $is_admin = current_user_can( 'manage_options' ) || in_array( 'ynj_mosque_admin', (array) wp_get_current_user()->roles );
+$is_imam_user = in_array( 'ynj_imam', (array) wp_get_current_user()->roles, true );
+
+// Imam: get mosque_id from ynj_mosques.imam_user_id
+if ( $is_imam_user && ! $mosque_id && class_exists( 'YNJ_DB' ) ) {
+    global $wpdb;
+    $imam_mosque = $wpdb->get_var( $wpdb->prepare(
+        "SELECT id FROM " . YNJ_DB::table( 'mosques' ) . " WHERE imam_user_id = %d LIMIT 1",
+        $wp_uid
+    ) );
+    if ( $imam_mosque ) {
+        $mosque_id = (int) $imam_mosque;
+        update_user_meta( $wp_uid, 'ynj_mosque_id', $mosque_id );
+    }
+}
 
 // WP admins (manage_options) without a mosque_id: auto-assign first mosque
 if ( $is_admin && ! $mosque_id && class_exists( 'YNJ_DB' ) ) {
@@ -32,7 +46,7 @@ if ( $is_admin && ! $mosque_id && class_exists( 'YNJ_DB' ) ) {
     }
 }
 
-if ( ! $is_admin || ! $mosque_id ) {
+if ( ( ! $is_admin && ! $is_imam_user ) || ! $mosque_id ) {
     get_header(); ?>
     <main class="ynj-main">
         <section class="ynj-card" style="text-align:center;padding:40px 20px;">
@@ -84,6 +98,7 @@ $nav_groups = [
             [ 'key' => 'funds',     'icon' => '💰', 'label' => 'Donation Funds' ],
             [ 'key' => 'campaigns', 'icon' => '💝', 'label' => 'Fundraising' ],
             [ 'key' => 'sponsors',  'icon' => '⭐', 'label' => 'Sponsors' ],
+            [ 'key' => 'appeals',   'icon' => '📨', 'label' => 'Charity Appeals' ],
         ],
     ],
     'manage' => [
@@ -106,6 +121,24 @@ $nav_groups = [
     ],
 ];
 
+// Imam sees limited sidebar
+if ( $is_imam_user && ! $is_admin ) {
+    $nav_groups = [
+        'main' => [
+            'label' => '',
+            'items' => [
+                [ 'key' => 'announcements', 'icon' => '📢', 'label' => 'Announcements' ],
+            ],
+        ],
+        'engage' => [
+            'label' => 'ENGAGE',
+            'items' => [
+                [ 'key' => 'broadcast', 'icon' => '📤', 'label' => 'Broadcast' ],
+            ],
+        ],
+    ];
+}
+
 // Flatten for section_help lookup
 $nav_items = [];
 foreach ( $nav_groups as $g ) { foreach ( $g['items'] as $item ) { $nav_items[] = $item; } }
@@ -127,6 +160,7 @@ $section_help = [
     'patrons'       => 'View your monthly patrons (recurring supporters). See total revenue and patron breakdown by tier.',
     'funds'         => 'Manage the donation funds available on your niyyah bar. Add custom funds like "New Roof" or "Kitchen Renovation".',
     'madrassah'     => 'Manage your Islamic school — students, attendance, terms, fees, and progress reports.',
+    'appeals'       => 'Review incoming charity appeal requests. Accept to schedule a date and fee, or decline. Enable appeals in Settings to appear in the marketplace.',
     'settings'      => 'Update your mosque profile (name, address, phone, website, description) and manage your admin team.',
 ];
 ?>

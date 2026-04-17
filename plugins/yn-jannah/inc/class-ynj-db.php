@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '2.9.0';
+    const SCHEMA_VERSION = '3.0.0';
 
     /**
      * Return the full table name for a given short name.
@@ -75,6 +75,9 @@ class YNJ_DB {
             [ self::table( 'user_subscriptions' ),    'idx_usub_mosque',                'mosque_id' ],
             [ self::table( 'patrons' ),               'idx_patrons_mosque_status',      'mosque_id, status' ],
             [ self::table( 'pool_ledger' ),           'idx_pool_mosque_payout',         'mosque_id, payout_id' ],
+            [ self::table( 'user_subscriptions' ),    'idx_usub_member',                'mosque_id, is_member, status' ],
+            [ self::table( 'appeal_requests' ),       'idx_appeal_status',              'status, created_at' ],
+            [ self::table( 'appeal_responses' ),      'idx_apresp_mosque_status',       'mosque_id, status' ],
         ];
 
         foreach ( $indexes as $idx ) {
@@ -173,6 +176,12 @@ class YNJ_DB {
             admin_password_hash varchar(255) NOT NULL DEFAULT '',
             admin_token_hash varchar(64) NOT NULL DEFAULT '',
             admin_token_last_used datetime DEFAULT NULL,
+            member_count int(11) NOT NULL DEFAULT 0,
+            imam_user_id bigint(20) unsigned DEFAULT NULL,
+            imam_auto_publish tinyint(1) NOT NULL DEFAULT 0,
+            accept_appeals tinyint(1) NOT NULL DEFAULT 0,
+            appeal_fee_inperson_pence int(11) NOT NULL DEFAULT 0,
+            appeal_fee_recorded_pence int(11) NOT NULL DEFAULT 0,
             theme varchar(20) NOT NULL DEFAULT 'minimal',
             dfm_slug varchar(100) NOT NULL DEFAULT '',
             dfm_mosque_id bigint(20) unsigned DEFAULT NULL,
@@ -258,13 +267,20 @@ class YNJ_DB {
             push_sent_at datetime DEFAULT NULL,
             pinned tinyint(1) NOT NULL DEFAULT 0,
             expires_at datetime DEFAULT NULL,
+            author_user_id bigint(20) unsigned DEFAULT NULL,
+            author_role varchar(20) NOT NULL DEFAULT 'admin',
+            approval_status varchar(20) NOT NULL DEFAULT 'approved',
+            approved_by bigint(20) unsigned DEFAULT NULL,
+            approved_at datetime DEFAULT NULL,
             status varchar(20) NOT NULL DEFAULT 'draft',
             published_at datetime DEFAULT NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             KEY mosque_id (mosque_id),
             KEY status (status),
-            KEY type (type)
+            KEY type (type),
+            KEY author_role (author_role),
+            KEY approval_status (approval_status)
         ) $charset_collate;";
 
         // 6. Events
@@ -538,6 +554,9 @@ class YNJ_DB {
             push_p256dh text NOT NULL,
             push_auth varchar(100) NOT NULL DEFAULT '',
             alert_before_minutes int(11) NOT NULL DEFAULT 20,
+            auth_provider varchar(20) NOT NULL DEFAULT 'email',
+            auth_provider_id varchar(100) NOT NULL DEFAULT '',
+            avatar_url varchar(500) NOT NULL DEFAULT '',
             total_points int(11) NOT NULL DEFAULT 0,
             token_hash varchar(64) NOT NULL DEFAULT '',
             token_last_used datetime DEFAULT NULL,
@@ -758,13 +777,16 @@ class YNJ_DB {
             notify_announcements tinyint(1) NOT NULL DEFAULT 1,
             notify_fundraising tinyint(1) NOT NULL DEFAULT 0,
             notify_live tinyint(1) NOT NULL DEFAULT 1,
+            is_member tinyint(1) NOT NULL DEFAULT 0,
+            is_primary tinyint(1) NOT NULL DEFAULT 0,
             status varchar(20) NOT NULL DEFAULT 'active',
             subscribed_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             UNIQUE KEY user_mosque (user_id, mosque_id),
             KEY user_id (user_id),
             KEY mosque_id (mosque_id),
-            KEY status (status)
+            KEY status (status),
+            KEY is_member (is_member)
         ) $charset_collate;";
 
         // 15b. Subscribers (anonymous push — legacy)
@@ -946,6 +968,86 @@ class YNJ_DB {
             KEY status (status)
         ) $charset_collate;";
 
+        // --- Charity Appeals ---
+
+        // Appeal Requests (from charities)
+        $tables[] = "CREATE TABLE {$t('appeal_requests')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            charity_name varchar(255) NOT NULL DEFAULT '',
+            charity_email varchar(255) NOT NULL DEFAULT '',
+            charity_phone varchar(50) NOT NULL DEFAULT '',
+            charity_website varchar(500) NOT NULL DEFAULT '',
+            charity_logo_url varchar(500) NOT NULL DEFAULT '',
+            charity_reg_number varchar(50) NOT NULL DEFAULT '',
+            cause_title varchar(255) NOT NULL DEFAULT '',
+            cause_description text NOT NULL,
+            cause_category varchar(50) NOT NULL DEFAULT 'general',
+            appeal_type varchar(30) NOT NULL DEFAULT 'in_person',
+            preferred_dates text NOT NULL,
+            budget_note varchar(500) NOT NULL DEFAULT '',
+            stripe_payment_id varchar(100) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'pending_payment',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY charity_email (charity_email),
+            KEY status (status),
+            KEY appeal_type (appeal_type)
+        ) $charset_collate;";
+
+        // Appeal Responses (mosque responses to appeals)
+        $tables[] = "CREATE TABLE {$t('appeal_responses')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            appeal_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            response varchar(20) NOT NULL DEFAULT 'pending',
+            mosque_fee_pence int(11) NOT NULL DEFAULT 0,
+            message text NOT NULL,
+            scheduled_date date DEFAULT NULL,
+            appeal_format varchar(30) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY appeal_mosque (appeal_id, mosque_id),
+            KEY appeal_id (appeal_id),
+            KEY mosque_id (mosque_id),
+            KEY response (response),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // Appeal Donations (donations made via appeals)
+        $tables[] = "CREATE TABLE {$t('appeal_donations')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            appeal_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            donor_name varchar(255) NOT NULL DEFAULT '',
+            donor_email varchar(255) NOT NULL DEFAULT '',
+            amount_pence int(11) NOT NULL DEFAULT 0,
+            currency varchar(5) NOT NULL DEFAULT 'gbp',
+            stripe_payment_intent varchar(100) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY appeal_id (appeal_id),
+            KEY mosque_id (mosque_id),
+            KEY donor_email (donor_email),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // Appeal Messages (messaging between charity and mosque)
+        $tables[] = "CREATE TABLE {$t('appeal_messages')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            appeal_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            response_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            sender_type varchar(20) NOT NULL DEFAULT 'charity',
+            sender_name varchar(255) NOT NULL DEFAULT '',
+            sender_email varchar(255) NOT NULL DEFAULT '',
+            message text NOT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY appeal_id (appeal_id),
+            KEY response_id (response_id)
+        ) $charset_collate;";
+
         return $tables;
     }
 
@@ -1000,6 +1102,10 @@ class YNJ_DB {
             'user_subscriptions',
             'users',
             'subscribers',
+            'appeal_requests',
+            'appeal_responses',
+            'appeal_donations',
+            'appeal_messages',
         ];
 
         foreach ( $table_names as $name ) {

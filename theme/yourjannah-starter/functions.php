@@ -11,7 +11,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YNJ_THEME_VERSION', '3.8.0' );
+define( 'YNJ_THEME_VERSION', '3.9.0' );
 define( 'YNJ_THEME_DIR', get_stylesheet_directory() );
 define( 'YNJ_THEME_URI', get_stylesheet_directory_uri() );
 
@@ -334,6 +334,7 @@ add_action( 'init', function() {
     add_rewrite_rule( '^classes/?$', 'index.php?ynj_page_type=classes_browse', 'top' );
     add_rewrite_rule( '^sponsor-yourjannah/?$', 'index.php?ynj_page_type=sponsor_yourjannah', 'top' );
     add_rewrite_rule( '^change-mosque/?$', 'index.php?ynj_page_type=change_mosque', 'top' );
+    add_rewrite_rule( '^appeals/?$', 'index.php?ynj_page_type=appeals', 'top' );
 
 } );
 
@@ -387,6 +388,7 @@ add_filter( 'template_include', function( $template ) {
         'classes_browse'       => 'page-templates/page-classes-browse.php',
         'sponsor_yourjannah'   => 'page-templates/page-sponsor-yourjannah.php',
         'change_mosque'        => 'page-templates/page-change-mosque.php',
+        'appeals'              => 'page-templates/page-appeals.php',
     ];
 
     if ( isset( $template_map[ $page_type ] ) ) {
