@@ -119,21 +119,24 @@ if ( $_ynj_mosque_for_prayer && $_ynj_mosque_for_prayer->latitude ) {
             $display_time = isset( $_ynj_jamat[ $pk ] ) ? $_ynj_jamat[ $pk ] : $time;
             $jamat_display = isset( $_ynj_jamat[ $pk ] ) ? $_ynj_jamat[ $pk ] : '';
 
-            // On Friday, replace Dhuhr with Jumu'ah in overview
-            if ( $_ynj_is_friday && $p === 'Dhuhr' && ! empty( $_ynj_jumuah_slots ) ) {
-                $first_jumuah = $_ynj_jumuah_slots[0];
-                $jumuah_time = substr( $first_jumuah->salah_time, 0, 5 );
+            // On Friday, ALWAYS replace Dhuhr with Jumu'ah
+            if ( $_ynj_is_friday && $p === 'Dhuhr' ) {
+                // Use DB slot time if available, otherwise use Dhuhr time
+                if ( ! empty( $_ynj_jumuah_slots ) ) {
+                    $jumuah_time = substr( $_ynj_jumuah_slots[0]->salah_time, 0, 5 );
+                } else {
+                    $jumuah_time = $display_time;
+                }
                 $_ynj_prayer_overview[] = [
                     'name'  => "Jumu'ah",
                     'time'  => $jumuah_time,
                     'jamat' => $jumuah_time,
                     'is_jumuah' => true,
                 ];
-                // Use Jumu'ah time for next prayer calc
                 if ( ! $_ynj_next_prayer && $jumuah_time > $now ) {
                     $_ynj_next_prayer = "Jumu'ah";
                     $_ynj_next_time = $jumuah_time;
-                    $_ynj_next_name = "Jumu'ah";
+                    $_ynj_next_name = "Jumu'ah Mubarak 🕌";
                     $prayer_ts = strtotime( 'today ' . $jumuah_time );
                     $_ynj_walk_leave = date( 'H:i', $prayer_ts - ( $walk_buffer * 60 ) );
                     $_ynj_drive_leave = date( 'H:i', $prayer_ts - ( $drive_buffer * 60 ) );
@@ -438,7 +441,11 @@ if ( $_hp_mosque_id && is_user_logged_in() ) {
 
     <!-- Next Prayer Hero (PHP-rendered from Aladhan) -->
     <section class="ynj-card ynj-card--hero" id="next-prayer-card">
+        <?php if ( $_ynj_is_friday && strpos( $_ynj_next_name, "Jumu'ah" ) !== false ) : ?>
+        <p class="ynj-label" id="next-prayer-label" style="color:#fbbf24;">🕌 <?php echo esc_html( 'It\'s Friday! Jumu\'ah at ' . ( $_hp_mosque_name ?: 'your masjid' ) ); ?></p>
+        <?php else : ?>
         <p class="ynj-label" id="next-prayer-label"><?php echo $_hp_mosque_name ? esc_html( 'Next Prayer at ' . $_hp_mosque_name ) : esc_html__( 'Next Prayer', 'yourjannah' ); ?></p>
+        <?php endif; ?>
         <h2 class="ynj-hero-prayer" id="next-prayer-name"><?php echo esc_html( $_ynj_next_name ?: '—' ); ?></h2>
         <p class="ynj-hero-time" id="next-prayer-time"><?php echo esc_html( $_ynj_next_time ?: '—' ); ?></p>
         <div class="ynj-countdown" id="next-prayer-countdown">--:--:--</div>
