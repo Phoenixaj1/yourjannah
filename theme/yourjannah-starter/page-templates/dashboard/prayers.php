@@ -60,28 +60,34 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
 
         $asr_school = (int) ( $_POST['school'] ?? 0 ); // 0=Shafi, 1=Hanafi
         $clean = function( $t ) { return substr( preg_replace( '/\s*\(.*\)/', '', $t ), 0, 5 ); };
-        $imported = 0;
-        $last_error = '';
 
-        // Fetch day-by-day (more reliable than /calendar which times out on some servers)
-        for ( $day = 1; $day <= $days_in_month; $day++ ) {
-            $dd = sprintf( '%02d', $day );
-            $sql_date = sprintf( '%04d-%02d-%02d', $im_year, $im_mon, $day );
-            $timestamp = mktime( 12, 0, 0, $im_mon, $day, $im_year );
-            $url = "https://api.aladhan.com/v1/timings/{$timestamp}?latitude={$lat}&longitude={$lng}&method={$import_method}&school={$asr_school}";
+        // Single API call for the whole month (use HTTP to avoid SSL timeout on Cloudways)
+        $url = "http://api.aladhan.com/v1/calendar/{$im_year}/{$im_mon}?latitude={$lat}&longitude={$lng}&method={$import_method}&school={$asr_school}";
+        $cache_key = 'ynj_aladhan_cal_' . md5( $url );
+        $cached = get_transient( $cache_key );
 
-            $cache_key = 'ynj_aladhan_day_' . md5( $url );
-            $timings = get_transient( $cache_key );
-
-            if ( ! $timings ) {
-                $response = wp_remote_get( $url, [ 'timeout' => 8, 'sslverify' => false ] );
-                if ( is_wp_error( $response ) ) { $last_error = $response->get_error_message(); continue; }
+        if ( $cached ) {
+            $data = $cached;
+        } else {
+            $response = wp_remote_get( $url, [ 'timeout' => 15, 'sslverify' => false ] );
+            if ( is_wp_error( $response ) ) {
+                $error = sprintf( __( 'Aladhan API error: %s', 'yourjannah' ), $response->get_error_message() );
+                $data = [];
+            } else {
                 $body = json_decode( wp_remote_retrieve_body( $response ), true );
-                $timings = $body['data']['timings'] ?? null;
-                if ( $timings ) set_transient( $cache_key, $timings, 6 * HOUR_IN_SECONDS );
+                $data = $body['data'] ?? [];
+                if ( $data ) set_transient( $cache_key, $data, 12 * HOUR_IN_SECONDS );
             }
+        }
 
-            if ( ! $timings ) continue;
+        $imported = 0;
+        foreach ( $data as $day ) {
+            $timings = $day['timings'] ?? [];
+            $date_str = $day['date']['gregorian']['date'] ?? '';
+            if ( ! $date_str ) continue;
+            $parts = explode( '-', $date_str );
+            if ( count( $parts ) !== 3 ) continue;
+            $sql_date = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
 
             $row = [
                 'mosque_id' => $mosque_id,
@@ -102,8 +108,8 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
 
         if ( $imported > 0 ) {
             $success = sprintf( __( 'Imported %d days of prayer times from Aladhan (%s, %s).', 'yourjannah' ), $imported, $methods[ $import_method ] ?? 'Method ' . $import_method, $asr_school ? 'Hanafi' : 'Shafi' );
-        } else {
-            $error = sprintf( __( 'Failed to fetch from Aladhan API: %s', 'yourjannah' ), $last_error ?: 'No data returned' );
+        } elseif ( ! $error ) {
+            $error = __( 'No data returned from Aladhan. Try a different calculation method.', 'yourjannah' );
         }
     }
 
