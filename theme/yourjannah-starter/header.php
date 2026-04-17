@@ -5,86 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <?php wp_head(); ?>
 
-<?php
-// ── Theme System: output mosque-specific theme CSS ──
-$_ynj_theme = 'minimal';
-$_ynj_theme_slug = ynj_mosque_slug();
-if ( ! $_ynj_theme_slug && isset( $_COOKIE['ynj_mosque_slug'] ) ) $_ynj_theme_slug = sanitize_title( $_COOKIE['ynj_mosque_slug'] );
-if ( $_ynj_theme_slug ) {
-    $_ynj_theme_mosque = ynj_get_mosque( $_ynj_theme_slug );
-    if ( $_ynj_theme_mosque && ! empty( $_ynj_theme_mosque->theme ) ) $_ynj_theme = $_ynj_theme_mosque->theme;
-}
-?>
-<style id="ynj-theme-vars">
-<?php if ( $_ynj_theme === 'minimal' ) : ?>
-/* Minimal & Clean — Notion/Stripe inspired */
-:root {
-    --ynj-bg: #FAFAFA; --ynj-card: #FFFFFF; --ynj-card-border: #E5E7EB; --ynj-card-shadow: 0 1px 3px rgba(0,0,0,.06);
-    --ynj-card-radius: 16px; --ynj-text: #1A1A2E; --ynj-text-dim: #6B7280; --ynj-accent: #00ADEF; --ynj-accent-light: #E0F2FE;
-    --ynj-header-bg: linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#00ADEF 100%); --ynj-header-text: #fff;
-}
-body { background: var(--ynj-bg) !important; }
-.ynj-card, .ynj-biz-card, .ynj-feed-card { background: var(--ynj-card); border: 1px solid var(--ynj-card-border); border-radius: var(--ynj-card-radius); box-shadow: var(--ynj-card-shadow); }
-.ynj-main { color: var(--ynj-text); }
-
-<?php elseif ( $_ynj_theme === 'dark' ) : ?>
-/* Dark & Premium — Vercel/Discord inspired */
-:root {
-    --ynj-bg: #0A0F1E; --ynj-card: rgba(255,255,255,.05); --ynj-card-border: rgba(255,255,255,.08); --ynj-card-shadow: 0 4px 20px rgba(0,0,0,.3);
-    --ynj-card-radius: 16px; --ynj-text: #E5E7EB; --ynj-text-dim: #9CA3AF; --ynj-accent: #00ADEF; --ynj-accent-light: rgba(0,173,239,.15);
-    --ynj-header-bg: linear-gradient(135deg,#060a15,#0d1a2e); --ynj-header-text: #fff;
-}
-body { background: var(--ynj-bg) !important; color: var(--ynj-text) !important; }
-.ynj-main { color: var(--ynj-text); }
-.ynj-card, .ynj-biz-card { background: var(--ynj-card) !important; border: 1px solid var(--ynj-card-border) !important; border-radius: var(--ynj-card-radius); box-shadow: var(--ynj-card-shadow); backdrop-filter: blur(12px); color: var(--ynj-text) !important; }
-.ynj-feed-card { background: rgba(255,255,255,.04) !important; border-color: rgba(255,255,255,.06) !important; }
-.ynj-text-muted { color: var(--ynj-text-dim) !important; }
-.ynj-biz-name, .ynj-biz-desc, h1, h2, h3, h4, strong { color: var(--ynj-text) !important; }
-.ynj-header { background: var(--ynj-header-bg) !important; }
-.ynj-feed-tab { color: rgba(255,255,255,.5) !important; }
-.ynj-feed-tab--active { color: #fff !important; }
-.ynj-patron-bar, .ynj-ticker { background: rgba(255,255,255,.04) !important; border-color: rgba(255,255,255,.08) !important; }
-a { color: var(--ynj-accent); }
-input, select, textarea { background: rgba(255,255,255,.06) !important; color: var(--ynj-text) !important; border-color: rgba(255,255,255,.12) !important; }
-
-<?php elseif ( $_ynj_theme === 'warm' ) : ?>
-/* Warm & Organic — Airbnb/Headspace inspired */
-:root {
-    --ynj-bg: #F5F0E8; --ynj-card: #FFFEF9; --ynj-card-border: #E8DFD0; --ynj-card-shadow: 0 2px 8px rgba(139,119,86,.08);
-    --ynj-card-radius: 20px; --ynj-text: #2D2D2D; --ynj-text-dim: #8B7756; --ynj-accent: #166534; --ynj-accent-light: #DCFCE7;
-    --ynj-header-bg: linear-gradient(135deg,#1a3a2e 0%,#166534 50%,#22863a 100%); --ynj-header-text: #fff;
-}
-body { background: var(--ynj-bg) !important; }
-.ynj-main { color: var(--ynj-text); }
-.ynj-card, .ynj-biz-card, .ynj-feed-card { background: var(--ynj-card); border: 1px solid var(--ynj-card-border); border-radius: var(--ynj-card-radius); box-shadow: var(--ynj-card-shadow); }
-.ynj-header { background: var(--ynj-header-bg) !important; }
-.ynj-btn, .ynj-feed-tab--active { background: var(--ynj-accent) !important; }
-.ynj-card--hero { background: linear-gradient(135deg,#1a3a2e,#166534,#22863a) !important; }
-.ynj-mosque-pill { background: rgba(255,255,255,.15) !important; }
-a { color: var(--ynj-accent); }
-
-<?php elseif ( $_ynj_theme === 'bold' ) : ?>
-/* Bold & Energetic — Duolingo/Cash App inspired */
-:root {
-    --ynj-bg: #FFFFFF; --ynj-card: #FFFFFF; --ynj-card-border: #E5E7EB; --ynj-card-shadow: 0 4px 16px rgba(0,0,0,.08);
-    --ynj-card-radius: 20px; --ynj-text: #111111; --ynj-text-dim: #6B7280; --ynj-accent: #7C3AED; --ynj-accent-light: #EDE9FE;
-    --ynj-header-bg: linear-gradient(135deg,#7C3AED 0%,#4F46E5 50%,#2563EB 100%); --ynj-header-text: #fff;
-}
-body { background: var(--ynj-bg) !important; }
-.ynj-main { color: var(--ynj-text); }
-.ynj-card, .ynj-biz-card, .ynj-feed-card { background: var(--ynj-card); border: 2px solid var(--ynj-card-border); border-radius: var(--ynj-card-radius); box-shadow: var(--ynj-card-shadow); }
-.ynj-header { background: var(--ynj-header-bg) !important; }
-.ynj-card--hero { background: linear-gradient(135deg,#7C3AED,#4F46E5,#2563EB) !important; }
-.ynj-btn { background: var(--ynj-accent) !important; border-radius: 14px !important; font-weight: 800 !important; }
-.ynj-feed-tab--active { background: var(--ynj-accent) !important; }
-h1, h2, h3 { font-weight: 900 !important; }
-.ynj-biz-card:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0,0,0,.12); }
-
-<?php endif; ?>
-</style>
-
+<!-- Theme system: disabled for now — needs proper per-component redesign -->
 </head>
-<body <?php body_class( 'ynj-theme-' . $_ynj_theme ); ?>>
+<body <?php body_class(); ?>>
 <?php wp_body_open(); ?>
 
 <?php
