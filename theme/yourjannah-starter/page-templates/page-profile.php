@@ -358,7 +358,9 @@ $action_pts = [
                 <?php if ( $patron->mosque_slug ) : ?>
                     <a href="<?php echo esc_url( home_url( '/mosque/' . $patron->mosque_slug . '/patron' ) ); ?>"><?php esc_html_e( 'Manage', 'yourjannah' ); ?></a>
                 <?php endif; ?>
-                <a href="<?php echo esc_url( home_url( '/patron/cancel' ) ); ?>"><?php esc_html_e( 'Cancel', 'yourjannah' ); ?></a>
+                <?php if ( $patron->mosque_slug ) : ?>
+                    <a href="<?php echo esc_url( home_url( '/mosque/' . $patron->mosque_slug . '/patron' ) ); ?>"><?php esc_html_e( 'Cancel', 'yourjannah' ); ?></a>
+                <?php endif; ?>
             </div>
         </div>
     <?php else : ?>
@@ -368,7 +370,7 @@ $action_pts = [
                     <h3 style="color:#92400e;margin-bottom:4px;">&#x2B50; <?php esc_html_e( 'Free Member', 'yourjannah' ); ?></h3>
                     <p style="font-size:13px;color:#92400e;opacity:.8;margin:0;"><?php esc_html_e( 'Upgrade to support your masjid with a monthly patronage.', 'yourjannah' ); ?></p>
                 </div>
-                <a href="<?php echo esc_url( home_url( '/patron' ) ); ?>" style="display:inline-flex;align-items:center;gap:4px;padding:8px 16px;border-radius:10px;background:#92400e;color:#fff;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;">
+                <a href="<?php echo esc_url( home_url( $fav_mosque ? '/mosque/' . $fav_mosque->slug . '/patron' : '/' ) ); ?>" style="display:inline-flex;align-items:center;gap:4px;padding:8px 16px;border-radius:10px;background:#92400e;color:#fff;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;">
                     <?php esc_html_e( 'Upgrade', 'yourjannah' ); ?> &rarr;
                 </a>
             </div>

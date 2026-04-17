@@ -20,10 +20,9 @@ foreach ( $subscribers as $s ) {
     if ( isset( $seen[$key] ) ) continue;
     $seen[$key] = true; $unique[] = $s;
 }
-?>
-<?php
-// Handle CSV export
-if ( isset( $_GET['export'] ) && $_GET['export'] === 'csv' ) {
+
+// Handle CSV export — must run before any HTML output
+if ( isset( $_GET['export'] ) && $_GET['export'] === 'csv' && wp_verify_nonce( $_GET['_wpnonce'] ?? '', 'ynj_export_csv' ) ) {
     header( 'Content-Type: text/csv; charset=utf-8' );
     header( 'Content-Disposition: attachment; filename=subscribers-' . $mosque_slug . '-' . date( 'Y-m-d' ) . '.csv' );
     $out = fopen( 'php://output', 'w' );
@@ -39,7 +38,7 @@ if ( isset( $_GET['export'] ) && $_GET['export'] === 'csv' ) {
     <div style="display:flex;justify-content:space-between;align-items:center;">
         <h1>👥 <?php esc_html_e( 'Subscribers', 'yourjannah' ); ?> (<?php echo count( $unique ); ?>)</h1>
         <?php if ( ! empty( $unique ) ) : ?>
-        <a href="?section=subscribers&export=csv" class="d-btn d-btn--outline d-btn--sm">📥 <?php esc_html_e( 'Export CSV', 'yourjannah' ); ?></a>
+        <a href="<?php echo esc_url( wp_nonce_url( '?section=subscribers&export=csv', 'ynj_export_csv' ) ); ?>" class="d-btn d-btn--outline d-btn--sm">📥 <?php esc_html_e( 'Export CSV', 'yourjannah' ); ?></a>
         <?php endif; ?>
     </div>
 </div>

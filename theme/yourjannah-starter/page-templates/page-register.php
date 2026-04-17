@@ -102,7 +102,7 @@ if ( is_user_logged_in() ) {
             <p class="ynj-subtitle"><?php esc_html_e( 'We\'ll email you your password. No hassle.', 'yourjannah' ); ?></p>
 
             <?php
-            $return_to    = isset( $_GET['redirect'] ) ? sanitize_text_field( $_GET['redirect'] ) : '/';
+            $return_to    = isset( $_GET['redirect'] ) ? wp_validate_redirect( sanitize_text_field( $_GET['redirect'] ), '/' ) : '/';
             $join_mosque  = isset( $_GET['join_mosque'] ) ? sanitize_text_field( $_GET['join_mosque'] ) : '';
             $mosque_slug  = '';
             $show_google  = class_exists( 'YNJ_Social_Auth' ) && YNJ_Social_Auth::is_google_configured();

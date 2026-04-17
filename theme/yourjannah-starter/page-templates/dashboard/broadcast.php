@@ -11,6 +11,12 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
     $action = sanitize_text_field( $_POST['action'] ?? '' );
 
     if ( $action === 'broadcast' ) {
+        // Rate limit: max 3 broadcasts per week per mosque
+        $rl_key = 'ynj_broadcast_count_' . $mosque_id;
+        $count = (int) get_transient( $rl_key );
+        if ( $count >= 3 ) {
+            $error = __( 'You have reached your broadcast limit (3 per week).', 'yourjannah' );
+        } else {
         $subject = sanitize_text_field( $_POST['subject'] ?? '' );
         $body = sanitize_textarea_field( $_POST['body'] ?? '' );
         if ( $subject && $body ) {
@@ -22,7 +28,10 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
                 $sent++;
             }
             $success = sprintf( __( 'Broadcast sent to %d subscribers!', 'yourjannah' ), $sent );
+            // Increment broadcast rate limit counter
+            set_transient( $rl_key, $count + 1, 7 * DAY_IN_SECONDS );
         } else { $error = __( 'Subject and message required.', 'yourjannah' ); }
+        } // end rate limit else
     }
 
     if ( $action === 'import' && ! empty( $_FILES['csv_file']['tmp_name'] ) ) {

@@ -8,16 +8,17 @@
  * @package YourJannah
  */
 
-get_header();
 $slug = ynj_mosque_slug();
 $mosque = ynj_get_mosque( $slug );
 $mosque_name = $mosque ? $mosque->name : '';
 $mosque_address = $mosque ? ( $mosque->address ?? '' ) : '';
 
-// Set cookie so mosque pill and other pages remember this mosque
+// Set cookie BEFORE any output so headers can be sent
 if ( $slug && $mosque ) {
     setcookie( 'ynj_mosque_slug', $slug, time() + 365 * DAY_IN_SECONDS, '/' );
 }
+
+get_header();
 
 // ── Fetch prayer times from Aladhan in PHP (server-side, always works) ──
 $_ynj_prayer = [];

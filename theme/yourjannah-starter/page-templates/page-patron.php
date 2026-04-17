@@ -294,13 +294,16 @@ $mosque_status = $mosque ? $mosque->status : '';
     })();
     <?php endif; ?>
     <?php if ( $mosque_status === 'unclaimed' ) : ?>
-    document.getElementById('intention-section').style.display = '';
+    var intentionEl = document.getElementById('intention-section');
+    if (intentionEl) intentionEl.style.display = '';
     <?php endif; ?>
     if (!token) {
-        document.getElementById('intention-section').style.display = '';
+        var intentionEl = document.getElementById('intention-section');
+        if (intentionEl) intentionEl.style.display = '';
     }
     // Load intention count (lightweight, dynamic data)
-    if (document.getElementById('intention-section').style.display !== 'none' && mosqueId) {
+    var _intEl = document.getElementById('intention-section');
+    if (_intEl && _intEl.style.display !== 'none' && mosqueId) {
         fetch(API + 'mosques/' + mosqueId + '/intentions')
             .then(function(r){ return r.json(); })
             .then(function(iData) {

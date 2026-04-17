@@ -58,6 +58,7 @@ if ( $_ynj_mosque_for_prayer && $_ynj_mosque_for_prayer->latitude ) {
         }
         // Fallback: use prayer_times table if imported via dashboard
         if ( ! $aladhan ) {
+            global $wpdb;
             $pt_table = YNJ_DB::table( 'prayer_times' );
             $db_times = $wpdb->get_row( $wpdb->prepare(
                 "SELECT fajr, sunrise, dhuhr, asr, maghrib, isha FROM $pt_table WHERE mosque_id = %d AND date = %s",
@@ -81,6 +82,7 @@ if ( $_ynj_mosque_for_prayer && $_ynj_mosque_for_prayer->latitude ) {
     $_ynj_jumuah_slots = [];
     $_ynj_is_friday = ( date( 'N' ) == 5 );
     if ( $_ynj_mosque_for_prayer && class_exists( 'YNJ_DB' ) ) {
+        global $wpdb;
         $pt_table = YNJ_DB::table( 'prayer_times' );
         $db_row = $wpdb->get_row( $wpdb->prepare(
             "SELECT * FROM $pt_table WHERE mosque_id = %d AND date = %s",

@@ -61,9 +61,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['ynj_appeal_nonce'] 
             require_once ABSPATH . 'wp-admin/includes/image.php';
             require_once ABSPATH . 'wp-admin/includes/media.php';
 
-            $allowed = [ 'image/jpeg', 'image/png', 'image/webp', 'image/svg+xml' ];
+            $allowed = [ 'image/jpeg', 'image/png', 'image/webp' ];
             if ( ! in_array( $_FILES['charity_logo']['type'], $allowed, true ) ) {
-                $form_errors[] = 'Logo must be a JPG, PNG, WebP, or SVG file.';
+                $form_errors[] = 'Logo must be a JPG, PNG, or WebP file.';
             } elseif ( $_FILES['charity_logo']['size'] > 2 * 1024 * 1024 ) {
                 $form_errors[] = 'Logo file must be under 2MB.';
             } else {
@@ -436,9 +436,9 @@ get_header();
 
             <div class="ynj-field" style="margin-top:14px;">
                 <label>Charity Logo</label>
-                <input type="file" name="charity_logo" accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                <input type="file" name="charity_logo" accept="image/jpeg,image/png,image/webp"
                        style="padding:8px;border:1px dashed #d1d5db;border-radius:10px;background:#f9fafb;cursor:pointer;">
-                <div class="appeals-logo-hint">JPG, PNG, WebP or SVG. Max 2MB.</div>
+                <div class="appeals-logo-hint">JPG, PNG, or WebP. Max 2MB.</div>
             </div>
         </section>
 
