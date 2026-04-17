@@ -28,7 +28,16 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
 
 $filter = sanitize_text_field( $_GET['status'] ?? '' );
 $where = $filter ? $wpdb->prepare( "AND status=%s", $filter ) : '';
-$enquiries = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $eq WHERE mosque_id=%d $where ORDER BY created_at DESC LIMIT 50", $mosque_id ) ) ?: [];
+
+// Pagination
+$per_page = 20;
+$current_page = max( 1, (int) ( $_GET['pg'] ?? 1 ) );
+$offset = ( $current_page - 1 ) * $per_page;
+
+$total_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $eq WHERE mosque_id=%d $where", $mosque_id ) );
+$enquiries = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $eq WHERE mosque_id=%d $where ORDER BY created_at DESC LIMIT %d OFFSET %d", $mosque_id, $per_page, $offset ) ) ?: [];
+$total_pages = max( 1, (int) ceil( $total_count / $per_page ) );
+$filter_param = $filter ? '&status=' . urlencode( $filter ) : '';
 ?>
 <div class="d-header"><h1>✉️ <?php esc_html_e( 'Enquiries', 'yourjannah' ); ?></h1></div>
 <?php if ( ! empty( $success ) ) : ?><div class="d-alert d-alert--success">✅ <?php echo esc_html( $success ); ?></div><?php endif; ?>
@@ -64,4 +73,16 @@ $enquiries = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $eq WHERE mosque
         <button type="submit" class="d-btn d-btn--sm d-btn--primary">Send</button>
     </form>
 </div>
-<?php endforeach; endif; ?>
+<?php endforeach; ?>
+<?php if ( $total_pages > 1 ) : ?>
+<div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
+    <?php if ( $current_page > 1 ) : ?>
+    <a href="?section=enquiries<?php echo $filter_param; ?>&pg=<?php echo $current_page - 1; ?>" class="d-btn d-btn--outline d-btn--sm">&larr; Prev</a>
+    <?php endif; ?>
+    <span style="padding:6px 12px;font-size:13px;color:var(--text-dim);">Page <?php echo $current_page; ?> of <?php echo $total_pages; ?></span>
+    <?php if ( $current_page < $total_pages ) : ?>
+    <a href="?section=enquiries<?php echo $filter_param; ?>&pg=<?php echo $current_page + 1; ?>" class="d-btn d-btn--outline d-btn--sm">Next &rarr;</a>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
+<?php endif; ?>

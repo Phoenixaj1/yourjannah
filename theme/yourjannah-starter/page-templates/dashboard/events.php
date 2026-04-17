@@ -65,7 +65,14 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
     if ( $action === 'delete' ) { $wpdb->delete( $et, [ 'id' => (int) $_POST['event_id'], 'mosque_id' => $mosque_id ] ); $success = __( 'Event deleted.', 'yourjannah' ); }
 }
 
-$events = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $et WHERE mosque_id=%d ORDER BY event_date DESC LIMIT 50", $mosque_id ) ) ?: [];
+// Pagination
+$per_page = 20;
+$current_page = max( 1, (int) ( $_GET['pg'] ?? 1 ) );
+$offset = ( $current_page - 1 ) * $per_page;
+
+$total_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $et WHERE mosque_id=%d", $mosque_id ) );
+$events = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $et WHERE mosque_id=%d ORDER BY event_date DESC LIMIT %d OFFSET %d", $mosque_id, $per_page, $offset ) ) ?: [];
+$total_pages = max( 1, (int) ceil( $total_count / $per_page ) );
 $editing = null; $edit_id = (int) ( $_GET['edit'] ?? 0 );
 if ( $edit_id ) $editing = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $et WHERE id=%d AND mosque_id=%d", $edit_id, $mosque_id ) );
 $cats = ['talk','class','course','workshop','community','sports','competition','youth','sisters','fundraiser','eid','quran','nikah','janazah','other'];
@@ -215,6 +222,17 @@ $rsvp_event_id = (int) ( $_GET['rsvps'] ?? 0 );
         </tbody>
     </table>
 </div>
+<?php if ( $total_pages > 1 ) : ?>
+<div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
+    <?php if ( $current_page > 1 ) : ?>
+    <a href="?section=events&pg=<?php echo $current_page - 1; ?>" class="d-btn d-btn--outline d-btn--sm">&larr; Prev</a>
+    <?php endif; ?>
+    <span style="padding:6px 12px;font-size:13px;color:var(--text-dim);">Page <?php echo $current_page; ?> of <?php echo $total_pages; ?></span>
+    <?php if ( $current_page < $total_pages ) : ?>
+    <a href="?section=events&pg=<?php echo $current_page + 1; ?>" class="d-btn d-btn--outline d-btn--sm">Next &rarr;</a>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
 <?php endif; ?>
 
 <?php endif; /* end RSVP view check */ ?>

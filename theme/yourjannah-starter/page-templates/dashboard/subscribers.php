@@ -21,6 +21,14 @@ foreach ( $subscribers as $s ) {
     $seen[$key] = true; $unique[] = $s;
 }
 
+// Pagination (applied after dedup)
+$per_page = 20;
+$current_page = max( 1, (int) ( $_GET['pg'] ?? 1 ) );
+$total_count = count( $unique );
+$total_pages = max( 1, (int) ceil( $total_count / $per_page ) );
+$offset = ( $current_page - 1 ) * $per_page;
+$paged_subscribers = array_slice( $unique, $offset, $per_page );
+
 // Handle CSV export — must run before any HTML output
 if ( isset( $_GET['export'] ) && $_GET['export'] === 'csv' && wp_verify_nonce( $_GET['_wpnonce'] ?? '', 'ynj_export_csv' ) ) {
     header( 'Content-Type: text/csv; charset=utf-8' );
@@ -50,7 +58,7 @@ if ( isset( $_GET['export'] ) && $_GET['export'] === 'csv' && wp_verify_nonce( $
     <table class="d-table">
         <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Type</th><th>Joined</th></tr></thead>
         <tbody>
-        <?php foreach ( $unique as $s ) : ?>
+        <?php foreach ( $paged_subscribers as $s ) : ?>
         <tr>
             <td><?php echo esc_html( $s->name ?: '—' ); ?></td>
             <td style="font-size:12px;"><?php echo esc_html( $s->email ); ?></td>
@@ -62,4 +70,15 @@ if ( isset( $_GET['export'] ) && $_GET['export'] === 'csv' && wp_verify_nonce( $
         </tbody>
     </table>
 </div>
+<?php if ( $total_pages > 1 ) : ?>
+<div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
+    <?php if ( $current_page > 1 ) : ?>
+    <a href="?section=subscribers&pg=<?php echo $current_page - 1; ?>" class="d-btn d-btn--outline d-btn--sm">&larr; Prev</a>
+    <?php endif; ?>
+    <span style="padding:6px 12px;font-size:13px;color:var(--text-dim);">Page <?php echo $current_page; ?> of <?php echo $total_pages; ?></span>
+    <?php if ( $current_page < $total_pages ) : ?>
+    <a href="?section=subscribers&pg=<?php echo $current_page + 1; ?>" class="d-btn d-btn--outline d-btn--sm">Next &rarr;</a>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
 <?php endif; ?>

@@ -115,18 +115,32 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
     }
 }
 
+// Pagination
+$per_page = 20;
+$current_page = max( 1, (int) ( $_GET['pg'] ?? 1 ) );
+$offset = ( $current_page - 1 ) * $per_page;
+
 // Load announcements (imam only sees their own)
 if ( $is_imam && ! $is_admin ) {
-    $announcements = $wpdb->get_results( $wpdb->prepare(
-        "SELECT * FROM $at WHERE mosque_id = %d AND author_user_id = %d ORDER BY pinned DESC, published_at DESC LIMIT 50",
+    $total_count = (int) $wpdb->get_var( $wpdb->prepare(
+        "SELECT COUNT(*) FROM $at WHERE mosque_id = %d AND author_user_id = %d",
         $mosque_id, get_current_user_id()
+    ) );
+    $announcements = $wpdb->get_results( $wpdb->prepare(
+        "SELECT * FROM $at WHERE mosque_id = %d AND author_user_id = %d ORDER BY pinned DESC, published_at DESC LIMIT %d OFFSET %d",
+        $mosque_id, get_current_user_id(), $per_page, $offset
     ) ) ?: [];
 } else {
-    $announcements = $wpdb->get_results( $wpdb->prepare(
-        "SELECT * FROM $at WHERE mosque_id = %d ORDER BY pinned DESC, published_at DESC LIMIT 50",
+    $total_count = (int) $wpdb->get_var( $wpdb->prepare(
+        "SELECT COUNT(*) FROM $at WHERE mosque_id = %d",
         $mosque_id
+    ) );
+    $announcements = $wpdb->get_results( $wpdb->prepare(
+        "SELECT * FROM $at WHERE mosque_id = %d ORDER BY pinned DESC, published_at DESC LIMIT %d OFFSET %d",
+        $mosque_id, $per_page, $offset
     ) ) ?: [];
 }
+$total_pages = max( 1, (int) ceil( $total_count / $per_page ) );
 
 // Count pending approvals (admin only)
 $pending_count = 0;
@@ -348,6 +362,19 @@ $pending_items = $wpdb->get_results( $wpdb->prepare(
         </tbody>
     </table>
 </div>
+<?php if ( $total_pages > 1 ) :
+    $tab_param = $tab && $tab !== 'all' ? '&tab=' . urlencode( $tab ) : '';
+?>
+<div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
+    <?php if ( $current_page > 1 ) : ?>
+    <a href="?section=announcements<?php echo $tab_param; ?>&pg=<?php echo $current_page - 1; ?>" class="d-btn d-btn--outline d-btn--sm">&larr; Prev</a>
+    <?php endif; ?>
+    <span style="padding:6px 12px;font-size:13px;color:var(--text-dim);">Page <?php echo $current_page; ?> of <?php echo $total_pages; ?></span>
+    <?php if ( $current_page < $total_pages ) : ?>
+    <a href="?section=announcements<?php echo $tab_param; ?>&pg=<?php echo $current_page + 1; ?>" class="d-btn d-btn--outline d-btn--sm">Next &rarr;</a>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
 <?php endif; ?>
 
 <?php endif; /* end tab check */ ?>
