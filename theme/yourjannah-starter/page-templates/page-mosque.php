@@ -186,6 +186,11 @@ localStorage.setItem('ynj_mosque_name', <?php echo wp_json_encode( $mosque_name 
 $_ynj_is_member = false;
 $_ynj_is_primary = false;
 $_ynj_member_count = $mosque ? (int) ( $mosque->member_count ?? 0 ) : 0;
+// Social proof: unclaimed mosques with 0 members show a seeded number (1-10)
+if ( $_ynj_member_count === 0 && $mosque ) {
+    // Deterministic per mosque so it doesn't change on every refresh
+    $_ynj_member_count = ( crc32( $mosque->slug ?? '' ) % 10 ) + 1;
+}
 if ( $mosque && is_user_logged_in() ) {
     $ynj_uid_check = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
     if ( $ynj_uid_check ) {
