@@ -389,13 +389,17 @@
                         function renderJumuah(slots) {
                             if (!slots || !slots.length) return;
                             var el = document.getElementById('jumuah-slots');
+                            // If PHP already rendered the slots (has children with onclick), don't overwrite
+                            if (el && el.querySelector('.ynj-jumuah-slot[onclick]')) return;
+                            if (!el) return;
                             el.innerHTML = slots.map(function(s) {
                                 var khutbah = s.khutbah_time ? String(s.khutbah_time).substring(0,5) : '';
                                 var salah = s.salah_time ? String(s.salah_time).substring(0,5) : '';
                                 var lang = s.language ? '<div class="ynj-jumuah-slot__lang">' + s.language + '</div>' : '';
                                 return '<div class="ynj-jumuah-slot"><div><div class="ynj-jumuah-slot__name">' + (s.slot_name || 'Jumu\'ah') + '</div>' + lang + '</div><div class="ynj-jumuah-slot__times">' + (khutbah ? 'Khutbah ' + khutbah + ' · ' : '') + 'Salah ' + salah + '</div></div>';
                             }).join('');
-                            document.getElementById('jumuah-card').style.display = '';
+                            var jCard = document.getElementById('jumuah-card');
+                            if (jCard) jCard.style.display = '';
                         }
 
                         // Sponsor ticker — use PHP pre-loaded data if available
