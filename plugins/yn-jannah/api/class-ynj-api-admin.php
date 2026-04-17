@@ -687,9 +687,10 @@ class YNJ_API_Admin {
                     . '<p style="font-size:13px;color:#666;">JazakAllahu Khairan,<br>' . esc_html( $mosque_name ) . '</p>'
                     . '</div></body></html>';
 
-                add_filter( 'wp_mail_content_type', function() { return 'text/html'; } );
+                $html_filter = function() { return 'text/html'; };
+                add_filter( 'wp_mail_content_type', $html_filter );
                 wp_mail( $enquiry->email, 'Re: ' . $enquiry->subject . ' — ' . $mosque_name, $html );
-                remove_filter( 'wp_mail_content_type', function() { return 'text/html'; } );
+                remove_filter( 'wp_mail_content_type', $html_filter );
 
                 // Mark as replied
                 $wpdb->update( $table, [ 'status' => 'replied', 'replied_at' => current_time( 'mysql' ) ], [ 'id' => $id ] );
@@ -1152,9 +1153,12 @@ class YNJ_API_Admin {
                 . '<div style="background:#fff;border:1px solid #e5e5e5;border-top:none;padding:24px;border-radius:0 0 12px 12px;">'
                 . '<h3>' . esc_html( $subject ) . '</h3>' . $body
                 . '<p style="margin-top:16px;font-size:12px;color:#999;">Sent via YourJannah</p>'
+                . '<p style="font-size:11px;color:#999;margin-top:20px;text-align:center;">'
+                . '<a href="{{unsubscribe_url}}" style="color:#999;">Unsubscribe</a></p>'
                 . '</div></div>';
 
-            add_filter( 'wp_mail_content_type', function() { return 'text/html'; } );
+            $html_filter = function() { return 'text/html'; };
+            add_filter( 'wp_mail_content_type', $html_filter );
 
             // Legacy subscribers (email field)
             $offset = 0;
@@ -1165,7 +1169,9 @@ class YNJ_API_Admin {
                 ) );
                 foreach ( $batch as $r ) {
                     if ( is_email( $r->email ) && ! isset( $emails_sent[ $r->email ] ) ) {
-                        wp_mail( $r->email, $subject . ' — ' . $mosque->name, $html );
+                        $unsub_url = home_url( '/unsubscribe?email=' . urlencode( $r->email ) . '&mosque=' . $mosque_id );
+                        $email_html = str_replace( '{{unsubscribe_url}}', esc_url( $unsub_url ), $html );
+                        wp_mail( $r->email, $subject . ' — ' . $mosque->name, $email_html );
                         $emails_sent[ $r->email ] = true;
                         $sent_email++;
                     }
@@ -1182,7 +1188,9 @@ class YNJ_API_Admin {
                 ) );
                 foreach ( $batch as $r ) {
                     if ( is_email( $r->email ) && ! isset( $emails_sent[ $r->email ] ) ) {
-                        wp_mail( $r->email, $subject . ' — ' . $mosque->name, $html );
+                        $unsub_url = home_url( '/unsubscribe?email=' . urlencode( $r->email ) . '&mosque=' . $mosque_id );
+                        $email_html = str_replace( '{{unsubscribe_url}}', esc_url( $unsub_url ), $html );
+                        wp_mail( $r->email, $subject . ' — ' . $mosque->name, $email_html );
                         $emails_sent[ $r->email ] = true;
                         $sent_email++;
                     }
@@ -1190,7 +1198,7 @@ class YNJ_API_Admin {
                 $offset += $batch_size;
             } while ( count( $batch ) === $batch_size );
 
-            remove_filter( 'wp_mail_content_type', function() { return 'text/html'; } );
+            remove_filter( 'wp_mail_content_type', $html_filter );
         }
 
         return new \WP_REST_Response( [

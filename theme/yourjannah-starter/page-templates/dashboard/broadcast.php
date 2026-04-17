@@ -24,7 +24,11 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
             $emails = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT email FROM $sub_t WHERE mosque_id=%d AND status='active' AND email != ''", $mosque_id ) );
             $sent = 0;
             foreach ( $emails as $email ) {
-                wp_mail( $email, $subject, nl2br( $body ), [ 'Content-Type: text/html; charset=UTF-8', 'From: ' . $mosque_name . ' <noreply@yourjannah.com>' ] );
+                $unsub_url = home_url( '/unsubscribe?email=' . urlencode( $email ) . '&mosque=' . $mosque_id );
+                $email_body = nl2br( $body )
+                    . '<p style="font-size:11px;color:#999;margin-top:20px;text-align:center;">'
+                    . '<a href="' . esc_url( $unsub_url ) . '" style="color:#999;">Unsubscribe</a></p>';
+                wp_mail( $email, $subject, $email_body, [ 'Content-Type: text/html; charset=UTF-8', 'From: ' . $mosque_name . ' <noreply@yourjannah.com>' ] );
                 $sent++;
             }
             $success = sprintf( __( 'Broadcast sent to %d subscribers!', 'yourjannah' ), $sent );

@@ -198,11 +198,7 @@ $progress_pct = round( $steps_done / $steps_total * 100 );
 
 <!-- Interested / Engagement -->
 <?php
-$interest_log = get_option( 'ynj_interest_log', [] );
-$mosque_interests = array_filter( $interest_log, function( $entry ) use ( $mosque_slug ) {
-    return ( $entry['mosque'] ?? '' ) === $mosque_slug;
-} );
-$mosque_interests = array_values( $mosque_interests );
+$mosque_interests = get_transient( 'ynj_interest_' . $mosque_slug ) ?: [];
 // Get last 30 days only
 $thirty_days_ago = date( 'Y-m-d H:i:s', strtotime( '-30 days' ) );
 $recent_interests = array_filter( $mosque_interests, function( $e ) use ( $thirty_days_ago ) {

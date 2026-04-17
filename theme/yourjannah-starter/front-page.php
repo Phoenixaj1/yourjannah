@@ -43,7 +43,7 @@ if ( $_ynj_mosque_for_prayer && $_ynj_mosque_for_prayer->latitude ) {
         $fail_key = $cache_key . '_fail';
         if ( ! get_transient( $fail_key ) ) {
             $url = "https://api.aladhan.com/v1/timings/{$today}?latitude={$lat}&longitude={$lng}&method=2&school=0";
-            $response = wp_remote_get( $url, [ 'timeout' => 3, 'sslverify' => false ] );
+            $response = wp_remote_get( $url, [ 'timeout' => 3, 'sslverify' => true ] );
             if ( ! is_wp_error( $response ) ) {
                 $body = json_decode( wp_remote_retrieve_body( $response ), true );
                 if ( ! empty( $body['data']['timings'] ) ) {

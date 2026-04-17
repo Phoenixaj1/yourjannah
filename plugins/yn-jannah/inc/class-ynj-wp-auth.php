@@ -405,15 +405,14 @@ class YNJ_WP_Auth {
         // Set WP auth cookie so is_user_logged_in() works on next page load
         wp_set_auth_cookie( $wp_user_id, true );
 
-        // Send welcome email with password
-        $password = $data['password'] ?? '';
-        if ( $password && $email ) {
-            $subject = 'Welcome to YourJannah — Your Account Details';
+        // Send welcome email (without password for security)
+        if ( $email ) {
+            $subject = 'Welcome to YourJannah — Your Account';
+            $login_url = home_url( '/login' );
+            $forgot_url = wp_lostpassword_url( $login_url );
             $message = "Assalamu Alaikum " . $name . ",\n\n";
-            $message .= "Welcome to YourJannah! Your account has been created.\n\n";
-            $message .= "Email: " . $email . "\n";
-            $message .= "Password: " . $password . "\n\n";
-            $message .= "Sign in: " . home_url( '/login' ) . "\n\n";
+            $message .= "Your YourJannah account has been created. You can log in at " . $login_url . "\n\n";
+            $message .= "If you need to reset your password, visit " . $forgot_url . "\n\n";
             $message .= "If this email landed in spam, please mark it as 'Not Spam' so you receive future updates from your masjid.\n\n";
             $message .= "JazakAllah Khayr,\nYourJannah Team";
             $headers = [ 'From: YourJannah <noreply@yourjannah.com>' ];

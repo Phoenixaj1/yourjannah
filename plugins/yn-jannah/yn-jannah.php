@@ -272,11 +272,12 @@ add_action('rest_api_init', function() {
             $count = (int) get_transient( $key );
             set_transient( $key, $count + 1, 30 * DAY_IN_SECONDS );
 
-            // Also store in options for the dashboard to read
-            $all = get_option( 'ynj_interest_log', [] );
-            $all[] = [ 'type' => $type, 'id' => $item_id, 'title' => $title, 'mosque' => $mosque_slug, 'at' => current_time( 'mysql' ) ];
-            if ( count( $all ) > 500 ) $all = array_slice( $all, -500 );
-            update_option( 'ynj_interest_log', $all );
+            // Store in per-mosque transient (bounded to last 100 entries)
+            $log_key = 'ynj_interest_' . $mosque_slug;
+            $log = get_transient( $log_key ) ?: [];
+            $log[] = [ 'type' => $type, 'id' => $item_id, 'title' => $title, 'at' => current_time( 'mysql' ) ];
+            if ( count( $log ) > 100 ) $log = array_slice( $log, -100 );
+            set_transient( $log_key, $log, 30 * DAY_IN_SECONDS );
 
             return new WP_REST_Response( [ 'ok' => true, 'count' => $count + 1 ] );
         },

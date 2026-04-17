@@ -19,27 +19,9 @@ if ( ! function_exists( 'ynj_mosque_slug' ) ) {
 
 /**
  * Get mosque data by slug.
- * Uses object cache for performance.
+ * Defined in functions.php (includes 'unclaimed' status).
+ * Removed duplicate here to avoid shadowing the correct version.
  */
-if ( ! function_exists( 'ynj_get_mosque' ) ) {
-    function ynj_get_mosque( $slug = null ) {
-        if ( ! $slug ) $slug = ynj_mosque_slug();
-        if ( ! $slug || ! class_exists( 'YNJ_DB' ) ) return null;
-
-        $cache_key = 'ynj_mosque_' . $slug;
-        $mosque = wp_cache_get( $cache_key, 'ynj' );
-        if ( $mosque ) return $mosque;
-
-        global $wpdb;
-        $mosque = $wpdb->get_row( $wpdb->prepare(
-            "SELECT * FROM " . YNJ_DB::table( 'mosques' ) . " WHERE slug = %s AND status = 'active'",
-            $slug
-        ) );
-
-        if ( $mosque ) wp_cache_set( $cache_key, $mosque, 'ynj', 300 );
-        return $mosque;
-    }
-}
 
 /**
  * Check if YourJannah plugin is active.
