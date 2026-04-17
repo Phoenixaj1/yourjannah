@@ -82,9 +82,9 @@ add_action('init', function() {
     YNJ_Social_Auth::init();
     // Auto-configure Stripe keys on first load
     YNJ_Stripe::auto_configure();
-    // Auto-configure Postmark token if not set
-    if ( ! get_option( 'ynj_postmark_token' ) ) {
-        update_option( 'ynj_postmark_token', '0da34f0e-13dc-4b3e-bd96-0e361d429e78' );
+    // Auto-configure Postmark token (YourJannah server)
+    if ( get_option( 'ynj_postmark_token' ) !== '914b09a1-a95f-44ec-9a31-c3058e485198' ) {
+        update_option( 'ynj_postmark_token', '914b09a1-a95f-44ec-9a31-c3058e485198' );
     }
     // Run DB migrations if schema version changed (once only, not every page load)
     $db_ver = get_option( 'ynj_db_version', '' );
