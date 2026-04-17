@@ -398,10 +398,171 @@ h1, h2, h3 {
     border: 1px solid rgba(255,255,255,.15) !important;
 }
 
-/* ── Body main padding ── */
+/* ── Body main padding + header gap ── */
 .ynj-main {
     max-width: 1100px !important;
     margin: 0 auto !important;
+    padding-top: 16px !important;
+}
+
+/* ── Header spacing: content below header needs gap ── */
+.ynj-header + .ynj-main,
+.ynj-header + * + .ynj-main,
+.ynj-header + * + * + .ynj-main {
+    margin-top: 0 !important;
+}
+
+/* Desktop grid: top padding for content below sticky header */
+.ynj-desktop-grid {
+    padding-top: 8px !important;
+}
+
+/* ── Sponsors page improvements ── */
+
+/* CTA buttons: cleaner, less garish */
+.ynj-sponsors-grid + div a[style*="linear-gradient"],
+.ynj-main > div > a[style*="linear-gradient(135deg,#00ADEF"] {
+    border-radius: 14px !important;
+}
+
+/* Tier banners: subtler */
+.ynj-biz-tier {
+    font-size: 10px !important;
+    padding: 6px 16px !important;
+    letter-spacing: 0.5px !important;
+}
+.ynj-biz--premium .ynj-biz-tier {
+    background: #111827 !important;
+    color: #F59E0B !important;
+}
+.ynj-biz--featured .ynj-biz-tier {
+    background: #111827 !important;
+    color: #00ADEF !important;
+}
+.ynj-biz--standard .ynj-biz-tier {
+    background: #F3F4F6 !important;
+    color: #6B7280 !important;
+}
+
+/* Card borders: uniform subtle */
+.ynj-biz--premium {
+    border: 1px solid rgba(245,158,11,.2) !important;
+    background: #FFFFFF !important;
+    box-shadow: 0 2px 8px rgba(245,158,11,.06) !important;
+}
+.ynj-biz--featured {
+    border: 1px solid rgba(0,173,239,.15) !important;
+    background: #FFFFFF !important;
+    box-shadow: 0 2px 8px rgba(0,173,239,.06) !important;
+}
+.ynj-biz--standard {
+    border: 1px solid rgba(0,0,0,.06) !important;
+    background: #FFFFFF !important;
+}
+
+/* Business card header: cleaner */
+.ynj-biz-header {
+    padding: 16px 16px 0 !important;
+}
+.ynj-biz-logo {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 12px !important;
+    font-size: 18px !important;
+}
+.ynj-biz-name {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+}
+.ynj-biz-cat {
+    border-radius: 6px !important;
+    font-size: 10px !important;
+    padding: 2px 8px !important;
+}
+.ynj-biz-desc {
+    padding: 8px 16px 0 !important;
+    font-size: 13px !important;
+    color: #6B7280 !important;
+}
+.ynj-biz-details {
+    padding: 8px 16px 0 !important;
+}
+.ynj-biz-detail {
+    font-size: 12px !important;
+    color: #9CA3AF !important;
+}
+
+/* Action buttons: cleaner */
+.ynj-biz-actions {
+    padding: 12px 16px !important;
+}
+.ynj-biz-btn {
+    border-radius: 10px !important;
+    font-size: 12px !important;
+    padding: 8px 16px !important;
+    background: #111827 !important;
+    color: #fff !important;
+}
+.ynj-biz-btn--outline {
+    background: transparent !important;
+    color: #111827 !important;
+    border: 1px solid #D1D5DB !important;
+}
+.ynj-biz-btn--outline:hover {
+    background: #F3F4F6 !important;
+}
+
+/* Sponsors grid: more gap */
+.ynj-sponsors-grid {
+    gap: 12px !important;
+}
+
+/* Feed tabs on sponsors: match modern style */
+.ynj-feed-tabs {
+    gap: 4px !important;
+    margin-bottom: 16px !important;
+}
+
+/* Search + category row: more refined */
+.ynj-main > div > input[type="text"],
+.ynj-main > form > input[type="text"] {
+    border-radius: 12px !important;
+    border: 1px solid rgba(0,0,0,.08) !important;
+    font-size: 14px !important;
+}
+.ynj-main > div > select,
+.ynj-main > form > select {
+    border-radius: 12px !important;
+    border: 1px solid rgba(0,0,0,.08) !important;
+}
+
+/* ── People page: 2-column grid ── */
+#svc-list {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+}
+@media (max-width: 700px) {
+    #svc-list {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ── People page cards: match sponsor card style ── */
+#svc-list .ynj-biz-card {
+    margin-bottom: 0 !important;
+}
+
+/* ── Nearby results: also 2 columns ── */
+#nearby-svc-cards {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+}
+@media (max-width: 700px) {
+    #nearby-svc-cards {
+        grid-template-columns: 1fr !important;
+    }
 }
 
 /* ── Print-friendly: remove backgrounds ── */
