@@ -294,9 +294,9 @@ if ( $mosque && is_user_logged_in() ) {
         <h2 class="ynj-hero-prayer" id="next-prayer-name"><?php echo esc_html( $_ynj_next_name ?: '—' ); ?></h2>
         <p class="ynj-hero-time" id="next-prayer-time"><?php echo esc_html( $_ynj_next_time ?: '—' ); ?></p>
         <?php if ( $_ynj_is_friday && ! empty( $_ynj_jumuah_slots ) && count( $_ynj_jumuah_slots ) > 0 ) : ?>
-        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:8px 0;">
-            <?php foreach ( $_ynj_jumuah_slots as $js ) : ?>
-            <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:6px 12px;text-align:center;">
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:8px 0;" id="jumuah-slots">
+            <?php foreach ( $_ynj_jumuah_slots as $idx => $js ) : ?>
+            <div class="ynj-jumuah-slot<?php echo $idx === 0 ? ' active' : ''; ?>" onclick="selectJumuahSlot(this, '<?php echo esc_attr( substr( $js->salah_time, 0, 5 ) ); ?>')" data-salah="<?php echo esc_attr( substr( $js->salah_time, 0, 5 ) ); ?>" style="background:rgba(255,255,255,<?php echo $idx === 0 ? '.25' : '.12'; ?>);border-radius:10px;padding:6px 12px;text-align:center;cursor:pointer;border:2px solid <?php echo $idx === 0 ? 'rgba(255,255,255,.5)' : 'transparent'; ?>;transition:all .15s;">
                 <div style="font-size:11px;opacity:.7;"><?php echo esc_html( $js->slot_name ?: 'Jumu\'ah' ); ?></div>
                 <?php if ( $js->khutbah_time ) : ?><div style="font-size:11px;opacity:.6;">Khutbah <?php echo esc_html( substr( $js->khutbah_time, 0, 5 ) ); ?></div><?php endif; ?>
                 <div style="font-size:15px;font-weight:700;">Salah <?php echo esc_html( substr( $js->salah_time, 0, 5 ) ); ?></div>

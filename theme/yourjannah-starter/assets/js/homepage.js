@@ -555,6 +555,23 @@
                 renderPrayerOverview();
             }
 
+            // Jumu'ah slot selection — defaults to first slot, user can pick
+            var selectedJumuahTime = null; // null = use default dhuhr/first slot
+            window.selectJumuahSlot = function(el, salahTime) {
+                selectedJumuahTime = salahTime;
+                // Update visual selection
+                document.querySelectorAll('.ynj-jumuah-slot').forEach(function(s) {
+                    s.classList.remove('active');
+                    s.style.background = 'rgba(255,255,255,.12)';
+                    s.style.borderColor = 'transparent';
+                });
+                el.classList.add('active');
+                el.style.background = 'rgba(255,255,255,.25)';
+                el.style.borderColor = 'rgba(255,255,255,.5)';
+                // Force immediate recalc
+                updateCountdown();
+            };
+
             function updateCountdown() {
                 if (!prayerTimes) return;
                 const now = new Date();
@@ -564,12 +581,16 @@
 
                 for (const p of prayers) {
                     if (!prayerTimes[p]) continue;
-                    const [h,m] = prayerTimes[p].split(':').map(Number);
+                    let useTime = prayerTimes[p];
+                    // Friday + dhuhr: use selected Jumu'ah slot time if set
+                    if (isFriday && p === 'dhuhr' && selectedJumuahTime) {
+                        useTime = selectedJumuahTime;
+                    }
+                    const [h,m] = useTime.split(':').map(Number);
                     const t = new Date(now); t.setHours(h,m,0,0);
                     if (t > now) {
-                        next = t; nextName = p; nextTime = prayerTimes[p];
-                        nextJamat = jamatTimes[p+'_jamat'] || null;
-                        // Friday: dhuhr becomes jumu'ah
+                        next = t; nextName = p; nextTime = useTime;
+                        nextJamat = null; // Jumu'ah doesn't use separate jamat
                         if (isFriday && p === 'dhuhr') nextName = 'jumuah';
                         break;
                     }
