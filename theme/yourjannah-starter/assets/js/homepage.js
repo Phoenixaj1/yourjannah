@@ -876,7 +876,31 @@
                         : '<p class="ynj-text-muted" style="padding:12px;text-align:center;">Nothing matching this filter.</p>';
                     return;
                 }
-                el.innerHTML = '<div class="ynj-feed">' + items.map(renderFeedCard).join('') + '</div>';
+                // Interleave sponsor ads every 2 feed items (rotating on load)
+                var sponsors = (window.ynjPreloaded && window.ynjPreloaded.sponsors) || [];
+                var sponsorSlug = mosqueSlug || localStorage.getItem('ynj_mosque_slug') || '';
+                var html = '';
+                var adIdx = Math.floor(Math.random() * Math.max(1, sponsors.length)); // Random start for rotation
+                for (var fi = 0; fi < items.length; fi++) {
+                    html += renderFeedCard(items[fi]);
+                    // Insert sponsor ad after every 2nd item
+                    if (sponsors.length > 0 && (fi + 1) % 2 === 0) {
+                        var sp = sponsors[adIdx % sponsors.length];
+                        adIdx++;
+                        html += '<div class="ynj-fc" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;border-radius:14px;padding:14px;margin-bottom:10px;">' +
+                            '<div style="display:flex;align-items:center;gap:10px;">' +
+                                '<div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">⭐</div>' +
+                                '<div style="flex:1;min-width:0;">' +
+                                    '<div style="font-size:13px;font-weight:700;color:#92400e;">' + (sp.business_name || 'Sponsor') + '</div>' +
+                                    '<div style="font-size:11px;color:#a16207;">' + (sp.category || 'Business') + '</div>' +
+                                '</div>' +
+                                '<a href="/mosque/' + sponsorSlug + '/sponsors" style="font-size:11px;font-weight:700;color:#92400e;text-decoration:none;white-space:nowrap;">View →</a>' +
+                            '</div>' +
+                            '<a href="/mosque/' + sponsorSlug + '/sponsors/join" style="display:block;text-align:center;margin-top:8px;padding:6px;border-radius:6px;background:rgba(245,158,11,.15);font-size:11px;font-weight:600;color:#92400e;text-decoration:none;">⭐ Advertise your business here — from £30/mo</a>' +
+                        '</div>';
+                    }
+                }
+                el.innerHTML = '<div class="ynj-feed">' + html + '</div>';
             }
 
             window.filterFeed = function(filter) {
