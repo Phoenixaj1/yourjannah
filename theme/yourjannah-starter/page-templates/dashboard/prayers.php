@@ -418,13 +418,14 @@ $last_import = $wpdb->get_var( $wpdb->prepare(
         <table class="d-table" style="font-size:12px;min-width:700px;">
             <thead>
                 <tr>
-                    <th style="min-width:80px;"><?php esc_html_e( 'Date', 'yourjannah' ); ?></th>
+                    <th style="min-width:70px;"><?php esc_html_e( 'Date', 'yourjannah' ); ?></th>
                     <th><?php esc_html_e( 'Day', 'yourjannah' ); ?></th>
-                    <th style="text-align:center;"><?php esc_html_e( 'Fajr', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:10px;color:var(--text-dim);">Adhan / Jamat</span></th>
-                    <th style="text-align:center;"><?php esc_html_e( 'Dhuhr', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:10px;color:var(--text-dim);">Adhan / Jamat</span></th>
-                    <th style="text-align:center;"><?php esc_html_e( 'Asr', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:10px;color:var(--text-dim);">Adhan / Jamat</span></th>
-                    <th style="text-align:center;"><?php esc_html_e( 'Maghrib', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:10px;color:var(--text-dim);">Adhan / Jamat</span></th>
-                    <th style="text-align:center;"><?php esc_html_e( 'Isha', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:10px;color:var(--text-dim);">Adhan / Jamat</span></th>
+                    <th style="text-align:center;"><?php esc_html_e( 'Fajr', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:9px;color:var(--text-dim);">Start / Iqamah</span></th>
+                    <th style="text-align:center;"><?php esc_html_e( 'Sunrise', 'yourjannah' ); ?></th>
+                    <th style="text-align:center;"><?php esc_html_e( 'Dhuhr', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:9px;color:var(--text-dim);">Start / Iqamah</span></th>
+                    <th style="text-align:center;"><?php esc_html_e( 'Asr', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:9px;color:var(--text-dim);">Start / Iqamah</span></th>
+                    <th style="text-align:center;"><?php esc_html_e( 'Maghrib', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:9px;color:var(--text-dim);">Start / Iqamah</span></th>
+                    <th style="text-align:center;"><?php esc_html_e( 'Isha', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:9px;color:var(--text-dim);">Start / Iqamah</span></th>
                     <th></th>
                 </tr>
             </thead>
@@ -439,20 +440,36 @@ $last_import = $wpdb->get_var( $wpdb->prepare(
                 $editing_day = ( ( $_GET['edit_day'] ?? '' ) === $date );
             ?>
             <tr style="<?php echo $is_today ? 'background:#f0fdf4;font-weight:600;' : ''; ?><?php echo $is_friday ? 'background:#eff6ff;' : ''; ?>">
-                <td><?php echo esc_html( $date ); ?></td>
+                <td style="font-size:11px;"><?php echo esc_html( substr( $date, 5 ) ); ?></td>
                 <td><?php echo esc_html( $dow ); ?><?php if ( $is_friday ) echo ' 🕌'; ?><?php if ( $is_today ) echo ' <span class="d-badge d-badge--green" style="font-size:9px;">TODAY</span>'; ?></td>
-                <?php foreach ( [ 'fajr', 'dhuhr', 'asr', 'maghrib', 'isha' ] as $p ) :
-                    $adhan = $row->$p ?? '—';
-                    $jamat_col = $p . '_jamat';
-                    $jamat = $row->$jamat_col ?? '';
+                <?php
+                // Fajr (with iqamah)
+                $fajr_start = substr( $row->fajr ?? '—', 0, 5 );
+                $fajr_iq = $row->fajr_jamat ?? '';
                 ?>
                 <td style="text-align:center;">
+                    <span style="font-size:11px;color:var(--text-dim);"><?php echo esc_html( $fajr_start ); ?></span>
                     <?php if ( $editing_day ) : ?>
-                    <span style="font-size:11px;color:var(--text-dim);"><?php echo esc_html( $adhan ); ?></span><br>
-                    <input type="time" form="edit-day-form" name="<?php echo $p; ?>_jamat" value="<?php echo esc_attr( $jamat ); ?>" style="width:80px;padding:2px 4px;font-size:11px;border:1px solid var(--border);border-radius:4px;">
-                    <?php else : ?>
-                    <?php echo esc_html( $adhan ); ?>
-                    <?php if ( $jamat ) : ?><br><strong style="color:var(--primary);"><?php echo esc_html( $jamat ); ?></strong><?php endif; ?>
+                    <br><input type="time" form="edit-day-form" name="fajr_jamat" value="<?php echo esc_attr( $fajr_iq ); ?>" style="width:76px;padding:2px;font-size:11px;border:1px solid var(--border);border-radius:4px;">
+                    <?php elseif ( $fajr_iq ) : ?>
+                    <br><strong style="color:var(--primary);font-size:12px;"><?php echo esc_html( substr( $fajr_iq, 0, 5 ) ); ?></strong>
+                    <?php endif; ?>
+                </td>
+
+                <!-- Sunrise (no iqamah) -->
+                <td style="text-align:center;font-size:11px;color:#f59e0b;font-weight:600;"><?php echo esc_html( substr( $row->sunrise ?? '—', 0, 5 ) ); ?></td>
+
+                <?php foreach ( [ 'dhuhr', 'asr', 'maghrib', 'isha' ] as $p ) :
+                    $start = substr( $row->$p ?? '—', 0, 5 );
+                    $iq_col = $p . '_jamat';
+                    $iq = $row->$iq_col ?? '';
+                ?>
+                <td style="text-align:center;">
+                    <span style="font-size:11px;color:var(--text-dim);"><?php echo esc_html( $start ); ?></span>
+                    <?php if ( $editing_day ) : ?>
+                    <br><input type="time" form="edit-day-form" name="<?php echo $p; ?>_jamat" value="<?php echo esc_attr( $iq ); ?>" style="width:76px;padding:2px;font-size:11px;border:1px solid var(--border);border-radius:4px;">
+                    <?php elseif ( $iq ) : ?>
+                    <br><strong style="color:var(--primary);font-size:12px;"><?php echo esc_html( substr( $iq, 0, 5 ) ); ?></strong>
                     <?php endif; ?>
                 </td>
                 <?php endforeach; ?>
