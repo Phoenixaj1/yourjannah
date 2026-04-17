@@ -309,54 +309,53 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
     var obEmailExists = false;
     var API = '<?php echo esc_url_raw( rest_url( 'ynj/v1/' ) ); ?>';
 
-    // Auto-detect location via IP (no permission needed) then refine with GPS
-    var obLocationResolved = false;
+    // GPS listener: watchPosition waits for user to click Allow, then fires on first fix
+    var obGpsWatchId = null;
+    var obGotFix = false;
     window.obAutoGps = function() {
         var listEl = document.getElementById('ob-mosque-list');
-        listEl.innerHTML = '<div style="padding:12px;opacity:.5;font-size:13px;text-align:center;">📍 Finding mosques near you...</div>';
+        listEl.innerHTML = '<div style="padding:12px;opacity:.5;font-size:13px;text-align:center;">📍 Waiting for location... click Allow above</div>';
 
-        // 1. Instant: IP geolocation (no prompt, works immediately)
-        fetch('https://ip-api.com/json/?fields=lat,lon,status')
-            .then(function(r){ return r.json(); })
-            .then(function(geo){
-                if (geo.status === 'success' && geo.lat && geo.lon && !obLocationResolved) {
-                    obLocationResolved = true;
-                    obLoadNearby(geo.lat, geo.lon);
-                }
-            })
-            .catch(function(){});
-
-        // 2. Background: try browser GPS for better accuracy (if already permitted)
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                function(pos) {
-                    // GPS is more accurate — override IP result
-                    obLocationResolved = true;
-                    obLoadNearby(pos.coords.latitude, pos.coords.longitude);
-                },
-                function(){
-                    // GPS denied/unavailable — IP result (if any) stands
-                    if (!obLocationResolved) {
-                        listEl.innerHTML = '<div style="padding:12px;opacity:.5;font-size:13px;text-align:center;">Search your mosque below</div>';
-                        document.getElementById('ob-search-input').focus();
-                    }
-                },
-                { timeout: 5000, maximumAge: 300000 }
-            );
+        if (!navigator.geolocation) {
+            listEl.innerHTML = '<div style="padding:12px;opacity:.5;font-size:13px;text-align:center;">Location not supported. Search below.</div>';
+            return;
         }
-    };
 
-    function obLoadNearby(lat, lng) {
-        fetch(API + 'mosques/nearest?lat=' + lat + '&lng=' + lng + '&limit=6')
-            .then(function(r){ return r.json(); })
-            .then(function(d){
-                if (d.ok && d.mosques && d.mosques.length) {
-                    obRenderMosques(d.mosques);
-                } else {
-                    document.getElementById('ob-mosque-list').innerHTML = '<div style="padding:12px;opacity:.5;font-size:13px;text-align:center;">No mosques found nearby. Search below.</div>';
+        // watchPosition keeps listening — no timeout, waits for permission + first fix
+        obGpsWatchId = navigator.geolocation.watchPosition(
+            function(pos) {
+                if (obGotFix) return;
+                obGotFix = true;
+                navigator.geolocation.clearWatch(obGpsWatchId);
+                // Got location — fetch nearby mosques via AJAX
+                listEl.innerHTML = '<div style="padding:12px;opacity:.5;font-size:13px;text-align:center;">📍 Loading nearby mosques...</div>';
+                fetch(API + 'mosques/nearest?lat=' + pos.coords.latitude + '&lng=' + pos.coords.longitude + '&limit=5')
+                    .then(function(r){ return r.json(); })
+                    .then(function(d){
+                        if (d.ok && d.mosques && d.mosques.length) {
+                            obRenderMosques(d.mosques);
+                        } else {
+                            listEl.innerHTML = '<div style="padding:12px;opacity:.5;font-size:13px;text-align:center;">No mosques found nearby. Search below.</div>';
+                        }
+                    })
+                    .catch(function(){
+                        listEl.innerHTML = '<div style="padding:12px;opacity:.5;font-size:13px;text-align:center;">Could not load mosques. Search below.</div>';
+                    });
+            },
+            function(err) {
+                if (obGotFix) return;
+                // Only treat as final denial if it's PERMISSION_DENIED (code 1)
+                if (err.code === 1) {
+                    obGotFix = true;
+                    navigator.geolocation.clearWatch(obGpsWatchId);
+                    listEl.innerHTML = '<div style="padding:12px;opacity:.5;font-size:13px;text-align:center;">Location denied. Search your mosque below.</div>';
+                    document.getElementById('ob-search-input').focus();
                 }
-            });
-    }
+                // For POSITION_UNAVAILABLE (2) or TIMEOUT (3), keep listening
+            },
+            { enableHighAccuracy: false, maximumAge: 300000 }
+        );
+    };
 
     var searchTimer;
     window.obSearchMosques = function(q) {
