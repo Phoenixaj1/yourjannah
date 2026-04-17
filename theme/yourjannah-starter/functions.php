@@ -94,6 +94,20 @@ add_action( 'wp_enqueue_scripts', function() {
         YNJ_THEME_VERSION
     );
 
+    // Modern theme overlay (loads AFTER theme.css, only when mosque has theme='modern')
+    $_ynj_theme_slug = get_query_var( 'ynj_mosque_slug', '' );
+    if ( ! $_ynj_theme_slug && isset( $_COOKIE['ynj_mosque_slug'] ) ) $_ynj_theme_slug = sanitize_title( $_COOKIE['ynj_mosque_slug'] );
+    if ( ! $_ynj_theme_slug ) $_ynj_theme_slug = 'yourniyyah-masjid';
+    $_ynj_theme_m = $_ynj_theme_slug ? ynj_get_mosque( $_ynj_theme_slug ) : null;
+    if ( $_ynj_theme_m && ! empty( $_ynj_theme_m->theme ) && $_ynj_theme_m->theme === 'modern' ) {
+        wp_enqueue_style(
+            'ynj-theme-modern',
+            YNJ_THEME_URI . '/assets/css/theme-modern.css',
+            [ 'ynj-theme' ],
+            YNJ_THEME_VERSION
+        );
+    }
+
     // Main theme script
     wp_enqueue_script(
         'ynj-theme',

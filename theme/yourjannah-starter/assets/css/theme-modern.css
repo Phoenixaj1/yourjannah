@@ -1,0 +1,279 @@
+/**
+ * YourJannah — Modern Theme (Apple/X.com inspired)
+ *
+ * Clean white backgrounds, subtle shadows, generous spacing,
+ * minimal borders, one accent colour. Loads AFTER theme.css
+ * to override only the visual presentation.
+ */
+
+/* ── Page Background ── */
+body {
+    background: #F8F9FA !important;
+    background-attachment: initial !important;
+}
+
+/* ── Cards: white, subtle shadow, no tinted backgrounds ── */
+.ynj-card,
+.ynj-biz-card,
+.ynj-feed-card {
+    background: #FFFFFF !important;
+    border: 1px solid rgba(0,0,0,.06) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 1px 4px rgba(0,0,0,.02) !important;
+    backdrop-filter: none !important;
+}
+.ynj-biz-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,.08) !important;
+    transform: translateY(-1px);
+}
+
+/* ── Feed cards: remove coloured tints, pure white ── */
+.ynj-fc--live,
+.ynj-fc--class,
+.ynj-fc--talk,
+.ynj-fc--community,
+.ynj-fc--sports,
+.ynj-fc--youth,
+.ynj-fc--sisters,
+.ynj-fc--fundraiser,
+.ynj-fc--eid,
+.ynj-fc--quran,
+.ynj-fc--other {
+    background: #FFFFFF !important;
+    border: 1px solid rgba(0,0,0,.06) !important;
+    border-radius: 14px !important;
+}
+
+/* Feed card date strip: keep category colours but softer */
+.ynj-feed-card__date {
+    border-radius: 12px !important;
+}
+
+/* ── Header: darker, more contrast, sleeker ── */
+.ynj-header {
+    background: #0a0f1e !important;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    backdrop-filter: blur(20px);
+}
+.ynj-header__inner {
+    min-height: 64px !important;
+}
+
+/* ── Top bar: slimmer ── */
+.ynj-topbar {
+    font-size: 12px !important;
+    padding: 4px 16px !important;
+}
+
+/* ── Prayer Hero Card: cleaner gradient ── */
+.ynj-card--hero {
+    background: linear-gradient(160deg, #0a0f1e 0%, #111827 40%, #1e3a5f 100%) !important;
+    border: none !important;
+    border-radius: 20px !important;
+    box-shadow: 0 8px 32px rgba(10,15,30,.25) !important;
+}
+
+/* ── Prayer overview bar ── */
+.ynj-card--compact {
+    background: #FFFFFF !important;
+    border: 1px solid rgba(0,0,0,.06) !important;
+    border-radius: 14px !important;
+}
+
+/* ── Patron bar: cleaner ── */
+.ynj-patron-bar {
+    background: #111827 !important;
+    border: 1px solid rgba(255,255,255,.06) !important;
+    border-radius: 16px !important;
+}
+.ynj-patron-chip {
+    background: rgba(255,255,255,.08) !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+    border-radius: 10px !important;
+    transition: all .15s !important;
+}
+.ynj-patron-chip:hover {
+    background: rgba(255,255,255,.15) !important;
+}
+.ynj-patron-chip--popular {
+    background: rgba(0,173,239,.15) !important;
+    border-color: rgba(0,173,239,.3) !important;
+}
+
+/* ── Sponsor ticker: cleaner ── */
+.ynj-ticker {
+    background: #FFFFFF !important;
+    border: 1px solid rgba(0,0,0,.06) !important;
+    border-radius: 12px !important;
+}
+
+/* ── Filter chips: modern pill style ── */
+.ynj-chip,
+.ynj-feed-tab {
+    border-radius: 20px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    padding: 6px 14px !important;
+    border: 1px solid rgba(0,0,0,.08) !important;
+    background: #FFFFFF !important;
+    color: #6B7280 !important;
+    transition: all .15s !important;
+}
+.ynj-chip:hover,
+.ynj-feed-tab:hover {
+    background: #F3F4F6 !important;
+    color: #111827 !important;
+}
+.ynj-chip--active,
+.ynj-chip--active:hover,
+.ynj-feed-tab--active,
+.ynj-feed-tab--active:hover {
+    background: #111827 !important;
+    color: #FFFFFF !important;
+    border-color: #111827 !important;
+}
+
+/* ── Buttons: cleaner, less gradient ── */
+.ynj-btn {
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    transition: all .15s !important;
+}
+.ynj-btn:hover {
+    transform: translateY(-1px);
+}
+
+/* ── Donate button: solid, not gradient ── */
+.ynj-donate-btn {
+    background: #111827 !important;
+    border-radius: 14px !important;
+    font-weight: 700 !important;
+}
+.ynj-donate-btn:hover {
+    background: #1F2937 !important;
+}
+
+/* ── Leave-by pills: cleaner ── */
+.ynj-leave-by {
+    background: rgba(255,255,255,.1) !important;
+    border-radius: 10px !important;
+}
+
+/* ── Walk/Drive nav buttons ── */
+.ynj-hero-nav {
+    background: rgba(255,255,255,.1) !important;
+    border-radius: 12px !important;
+}
+.ynj-hero-nav:hover {
+    background: rgba(255,255,255,.18) !important;
+}
+
+/* ── Jumu'ah card: cleaner ── */
+.ynj-jumuah-card {
+    background: #FFFFFF !important;
+    border: 1px solid rgba(0,0,0,.06) !important;
+    border-radius: 16px !important;
+}
+
+/* ── Support cards: keep gradients but add subtle shadows ── */
+.ynj-support-card {
+    border-radius: 16px !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,.08) !important;
+}
+
+/* ── Typography: better hierarchy ── */
+body {
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+    letter-spacing: -0.01em;
+}
+h1, h2, h3 {
+    letter-spacing: -0.025em;
+}
+
+/* ── Main content area: more padding ── */
+.ynj-main {
+    padding: 0 16px !important;
+}
+
+/* ── Hadith: subtler ── */
+.ynj-hadith {
+    color: #9CA3AF !important;
+    font-size: 12px !important;
+}
+
+/* ── Travel settings: cleaner selects ── */
+.ynj-ts-select {
+    background: #FFFFFF !important;
+    border: 1px solid rgba(0,0,0,.08) !important;
+    border-radius: 10px !important;
+}
+
+/* ── Badge styling: softer ── */
+.ynj-badge {
+    border-radius: 8px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.02em !important;
+}
+
+/* ── Feed heading: larger ── */
+#feed-heading {
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em;
+}
+
+/* ── Mosque modal: cleaner ── */
+.ynj-mosque-modal__box {
+    border-radius: 20px !important;
+    box-shadow: 0 24px 64px rgba(0,0,0,.2) !important;
+}
+.ynj-mosque-modal__item {
+    border-radius: 12px !important;
+}
+
+/* ── Points card: cleaner ── */
+#ynj-points-card button {
+    border-radius: 14px !important;
+}
+
+/* ── Timetable link ── */
+.ynj-timetable-link {
+    background: #FFFFFF !important;
+    border: 1px solid rgba(0,0,0,.06) !important;
+    border-radius: 14px !important;
+}
+
+/* ── Mobile nav: cleaner ── */
+.ynj-nav {
+    background: #FFFFFF !important;
+    border-top: 1px solid rgba(0,0,0,.06) !important;
+    box-shadow: 0 -2px 8px rgba(0,0,0,.04) !important;
+}
+
+/* ── More drawer: modern ── */
+.ynj-more-drawer__sheet {
+    border-radius: 20px 20px 0 0 !important;
+}
+
+/* ── Niyyah bar: darker, sleeker ── */
+.ynj-niyyah__bar {
+    background: #111827 !important;
+    border-radius: 16px 16px 0 0 !important;
+}
+.ynj-niyyah__body {
+    background: #111827 !important;
+}
+
+/* ── Scrollbar styling (webkit) ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.25); }
+
+/* ── Print-friendly: remove backgrounds ── */
+@media print {
+    body { background: white !important; }
+    .ynj-header, .ynj-nav, .ynj-niyyah { display: none !important; }
+}

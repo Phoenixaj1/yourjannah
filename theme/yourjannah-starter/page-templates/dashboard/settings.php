@@ -80,11 +80,10 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
         <div class="d-field">
             <label><?php esc_html_e( 'Page Theme', 'yourjannah' ); ?></label>
             <select name="theme">
-                <option value="minimal" <?php selected( $mosque->theme ?? 'minimal', 'minimal' ); ?>>✨ Minimal & Clean — white, subtle shadows, modern</option>
-                <option value="dark" <?php selected( $mosque->theme ?? '', 'dark' ); ?>>🌙 Dark & Premium — dark navy, glass effect</option>
-                <option value="warm" <?php selected( $mosque->theme ?? '', 'warm' ); ?>>🌿 Warm & Organic — cream, earthy tones, calming</option>
-                <option value="bold" <?php selected( $mosque->theme ?? '', 'bold' ); ?>>🎨 Bold & Energetic — vibrant colours, playful</option>
+                <option value="classic" <?php selected( $mosque->theme ?? '', 'classic' ); ?>>🕌 Classic — current teal gradient design</option>
+                <option value="modern" <?php selected( $mosque->theme ?? '', 'modern' ); ?>>✨ Modern — clean white, Apple-inspired, sophisticated</option>
             </select>
+            <p style="font-size:11px;color:var(--text-dim);margin-top:4px;"><?php esc_html_e( 'Changes how your mosque page looks to visitors. Classic is the original design. Modern is cleaner with white backgrounds and subtle shadows.', 'yourjannah' ); ?></p>
         </div>
 
         <button type="submit" class="d-btn d-btn--primary"><?php esc_html_e( 'Save Profile', 'yourjannah' ); ?></button>
