@@ -622,9 +622,9 @@
                 document.getElementById('next-prayer-countdown').textContent = `${hh}:${mm}:${ss}`;
                 document.getElementById('next-prayer-name').textContent = label;
 
-                // Show/hide Jumu'ah slot cards based on whether Jumu'ah is next
+                // On Fridays, ALWAYS show Jumu'ah slot cards (people check times all day)
                 var jumuahSlotsEl = document.getElementById('jumuah-slots');
-                if (jumuahSlotsEl) jumuahSlotsEl.style.display = isJumuah ? '' : 'none';
+                if (jumuahSlotsEl) jumuahSlotsEl.style.display = isFriday ? '' : 'none';
 
                 // Show time — for Jumu'ah just show the salah time cleanly
                 var timeDisplay;
