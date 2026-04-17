@@ -306,12 +306,27 @@ h1, h2, h3 {
     line-height: 1.5 !important;
 }
 
-/* ── Sponsor ad cards in feed: subtle, not screaming ── */
-.ynj-feed div[style*="fef3c7"],
-.ynj-feed div[style*="fffbeb"] {
-    background: #FAFAFA !important;
+/* ── Sponsor ad cards in feed: subtle, elegant ── */
+.ynj-sponsor-ad {
+    background: #F9FAFB !important;
     border: 1px solid rgba(0,0,0,.06) !important;
-    border-radius: 14px !important;
+}
+.ynj-sponsor-ad__icon {
+    background: #111827 !important;
+    color: #fff !important;
+}
+.ynj-sponsor-ad__name {
+    color: #111827 !important;
+}
+.ynj-sponsor-ad__cat {
+    color: #6B7280 !important;
+}
+.ynj-sponsor-ad__link {
+    color: #00ADEF !important;
+}
+.ynj-sponsor-ad__cta {
+    background: rgba(0,0,0,.04) !important;
+    color: #6B7280 !important;
 }
 
 /* ── Donate button: dark, elegant ── */

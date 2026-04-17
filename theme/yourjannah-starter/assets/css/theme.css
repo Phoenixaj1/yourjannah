@@ -447,6 +447,14 @@ img,svg{display:block;max-width:100%;}
 .ynj-fc--quran .ynj-feed-card__date{background:#a5f3fc;} .ynj-fc--quran .ynj-feed-card__date-num{color:#0369a1;}
 .ynj-fc--other{background:#f9fafb;}
 .ynj-fc--other .ynj-feed-card__date{background:#e5e7eb;}
+
+/* Sponsor ad in feed (classic style) */
+.ynj-sponsor-ad{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;}
+.ynj-sponsor-ad__icon{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;}
+.ynj-sponsor-ad__name{color:#92400e;}
+.ynj-sponsor-ad__cat{color:#a16207;}
+.ynj-sponsor-ad__link{color:#92400e;}
+.ynj-sponsor-ad__cta{background:rgba(245,158,11,.15);color:#92400e;}
 .ynj-fc--pinned{background:#f0fdf4;}
 .ynj-fc--pinned .ynj-feed-card__date{background:#bbf7d0;}
 .ynj-fc--announcement{background:#eff6ff;}
