@@ -293,6 +293,17 @@ if ( $mosque && is_user_logged_in() ) {
         <?php endif; ?>
         <h2 class="ynj-hero-prayer" id="next-prayer-name"><?php echo esc_html( $_ynj_next_name ?: '—' ); ?></h2>
         <p class="ynj-hero-time" id="next-prayer-time"><?php echo esc_html( $_ynj_next_time ?: '—' ); ?></p>
+        <?php if ( $_ynj_is_friday && ! empty( $_ynj_jumuah_slots ) && count( $_ynj_jumuah_slots ) > 0 ) : ?>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:8px 0;">
+            <?php foreach ( $_ynj_jumuah_slots as $js ) : ?>
+            <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:6px 12px;text-align:center;">
+                <div style="font-size:11px;opacity:.7;"><?php echo esc_html( $js->slot_name ?: 'Jumu\'ah' ); ?></div>
+                <div style="font-size:15px;font-weight:700;"><?php echo esc_html( substr( $js->salah_time, 0, 5 ) ); ?></div>
+                <?php if ( $js->language ) : ?><div style="font-size:10px;opacity:.5;"><?php echo esc_html( $js->language ); ?></div><?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
         <div class="ynj-countdown" id="next-prayer-countdown">--:--:--</div>
         <?php if ( $_ynj_walk_leave ) : ?>
         <div class="ynj-hero-travel" id="hero-travel">

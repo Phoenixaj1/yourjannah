@@ -445,7 +445,7 @@ if ( $_nb_id && $_nb_pk ) :
         <button class="ynj-love-close" onclick="document.getElementById('ynj-love-modal').classList.remove('open')">&times;</button>
         <div style="font-size:40px;margin-bottom:8px;">💜</div>
         <h2 style="font-size:20px;font-weight:800;margin-bottom:4px;">Support YourJannah</h2>
-        <p style="font-size:13px;color:#666;margin-bottom:16px;">Help us keep this platform free for every masjid.<br>100% of your donation goes to YourJannah.</p>
+        <p style="font-size:13px;color:#666;margin-bottom:16px;">Help us with our running costs.<br>100% of your donation goes to YourJannah.</p>
 
         <div class="ynj-love-amounts" id="ynj-love-amounts">
             <button onclick="ynjLoveSelect(500,this)">£5</button>

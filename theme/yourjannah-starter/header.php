@@ -63,8 +63,9 @@ $_tier_labels = [ 'supporter' => 'Bronze', 'guardian' => 'Silver', 'champion' =>
 
 <header class="ynj-header">
     <div class="ynj-header__inner">
-        <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="ynj-logo">
+        <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="ynj-logo" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
             <img src="<?php echo esc_url( YNJ_THEME_URI . '/assets/icons/logo2.png' ); ?>" alt="<?php bloginfo( 'name' ); ?>" style="height:36px;width:auto;">
+            <span class="ynj-tagline" style="font-size:11px;color:rgba(255,255,255,.6);font-weight:400;white-space:nowrap;">Fall in love with your Masjid &amp; Community</span>
         </a>
 
         <?php if ( has_nav_menu( 'primary' ) ) : ?>

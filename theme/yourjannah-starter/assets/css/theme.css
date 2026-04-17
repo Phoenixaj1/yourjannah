@@ -75,6 +75,8 @@ img,svg{display:block;max-width:100%;}
 .ynj-logo{display:flex;align-items:center;text-decoration:none;flex-shrink:0;}
 .ynj-logo img{height:36px;width:auto;display:block;}
 .ynj-header__nav{display:none;}
+.ynj-tagline{display:none;}
+@media(min-width:768px){.ynj-tagline{display:inline;}}
 .ynj-back{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;transition:background .15s;}
 .ynj-back:active{background:rgba(255,255,255,.15);}
 
