@@ -453,7 +453,8 @@ if ( $_hp_mosque_id && is_user_logged_in() ) {
             <?php foreach ( $_ynj_jumuah_slots as $js ) : ?>
             <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:6px 12px;text-align:center;">
                 <div style="font-size:11px;opacity:.7;"><?php echo esc_html( $js->slot_name ?: 'Jumu\'ah' ); ?></div>
-                <div style="font-size:15px;font-weight:700;"><?php echo esc_html( substr( $js->salah_time, 0, 5 ) ); ?></div>
+                <?php if ( $js->khutbah_time ) : ?><div style="font-size:11px;opacity:.6;">Khutbah <?php echo esc_html( substr( $js->khutbah_time, 0, 5 ) ); ?></div><?php endif; ?>
+                <div style="font-size:15px;font-weight:700;">Salah <?php echo esc_html( substr( $js->salah_time, 0, 5 ) ); ?></div>
                 <?php if ( $js->language ) : ?><div style="font-size:10px;opacity:.5;"><?php echo esc_html( $js->language ); ?></div><?php endif; ?>
             </div>
             <?php endforeach; ?>
