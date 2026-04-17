@@ -58,47 +58,86 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
         $month_label = date( 'F Y', mktime( 0, 0, 0, $mon, 1, $year ) );
         $days_in_month = cal_days_in_month( CAL_GREGORIAN, $mon, $year );
 
-        $url = "https://api.aladhan.com/v1/calendar/{$im_year}/{$im_mon}?latitude={$lat}&longitude={$lng}&method={$import_method}";
-        $response = wp_remote_get( $url, [ 'timeout' => 15, 'sslverify' => false ] );
+        $asr_school = (int) ( $_POST['school'] ?? 0 ); // 0=Shafi, 1=Hanafi
+        $clean = function( $t ) { return substr( preg_replace( '/\s*\(.*\)/', '', $t ), 0, 5 ); };
+        $imported = 0;
+        $last_error = '';
 
-        if ( ! is_wp_error( $response ) ) {
-            $body = json_decode( wp_remote_retrieve_body( $response ), true );
-            $data = $body['data'] ?? [];
-            $imported = 0;
+        // Fetch day-by-day (more reliable than /calendar which times out on some servers)
+        for ( $day = 1; $day <= $days_in_month; $day++ ) {
+            $dd = sprintf( '%02d', $day );
+            $sql_date = sprintf( '%04d-%02d-%02d', $im_year, $im_mon, $day );
+            $timestamp = mktime( 12, 0, 0, $im_mon, $day, $im_year );
+            $url = "https://api.aladhan.com/v1/timings/{$timestamp}?latitude={$lat}&longitude={$lng}&method={$import_method}&school={$asr_school}";
 
-            foreach ( $data as $day ) {
-                $timings = $day['timings'] ?? [];
-                $date_str = $day['date']['gregorian']['date'] ?? ''; // DD-MM-YYYY
-                if ( ! $date_str ) continue;
-                $parts = explode( '-', $date_str );
-                $sql_date = $parts[2] . '-' . $parts[1] . '-' . $parts[0]; // YYYY-MM-DD
+            $cache_key = 'ynj_aladhan_day_' . md5( $url );
+            $timings = get_transient( $cache_key );
 
-                $clean = function( $t ) { return substr( preg_replace( '/\s*\(.*\)/', '', $t ), 0, 5 ); };
-
-                $row = [
-                    'mosque_id' => $mosque_id,
-                    'date'      => $sql_date,
-                    'fajr'      => $clean( $timings['Fajr'] ?? '' ),
-                    'sunrise'   => $clean( $timings['Sunrise'] ?? '' ),
-                    'dhuhr'     => $clean( $timings['Dhuhr'] ?? '' ),
-                    'asr'       => $clean( $timings['Asr'] ?? '' ),
-                    'maghrib'   => $clean( $timings['Maghrib'] ?? '' ),
-                    'isha'      => $clean( $timings['Isha'] ?? '' ),
-                ];
-
-                // Upsert: insert or update
-                $exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $pt_table WHERE mosque_id=%d AND date=%s", $mosque_id, $sql_date ) );
-                if ( $exists ) {
-                    $wpdb->update( $pt_table, $row, [ 'id' => $exists ] );
-                } else {
-                    $wpdb->insert( $pt_table, $row );
-                }
-                $imported++;
+            if ( ! $timings ) {
+                $response = wp_remote_get( $url, [ 'timeout' => 8, 'sslverify' => false ] );
+                if ( is_wp_error( $response ) ) { $last_error = $response->get_error_message(); continue; }
+                $body = json_decode( wp_remote_retrieve_body( $response ), true );
+                $timings = $body['data']['timings'] ?? null;
+                if ( $timings ) set_transient( $cache_key, $timings, 6 * HOUR_IN_SECONDS );
             }
-            $success = sprintf( __( 'Imported %d days of prayer times from Aladhan (%s).', 'yourjannah' ), $imported, $methods[ $import_method ] ?? 'Method ' . $import_method );
+
+            if ( ! $timings ) continue;
+
+            $row = [
+                'mosque_id' => $mosque_id,
+                'date'      => $sql_date,
+                'fajr'      => $clean( $timings['Fajr'] ?? '' ),
+                'sunrise'   => $clean( $timings['Sunrise'] ?? '' ),
+                'dhuhr'     => $clean( $timings['Dhuhr'] ?? '' ),
+                'asr'       => $clean( $timings['Asr'] ?? '' ),
+                'maghrib'   => $clean( $timings['Maghrib'] ?? '' ),
+                'isha'      => $clean( $timings['Isha'] ?? '' ),
+            ];
+
+            $exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $pt_table WHERE mosque_id=%d AND date=%s", $mosque_id, $sql_date ) );
+            if ( $exists ) { $wpdb->update( $pt_table, $row, [ 'id' => $exists ] ); }
+            else { $wpdb->insert( $pt_table, $row ); }
+            $imported++;
+        }
+
+        if ( $imported > 0 ) {
+            $success = sprintf( __( 'Imported %d days of prayer times from Aladhan (%s, %s).', 'yourjannah' ), $imported, $methods[ $import_method ] ?? 'Method ' . $import_method, $asr_school ? 'Hanafi' : 'Shafi' );
         } else {
-            $err_msg = is_wp_error( $response ) ? $response->get_error_message() : 'HTTP ' . wp_remote_retrieve_response_code( $response );
-            $error = sprintf( __( 'Failed to fetch from Aladhan API: %s. URL: %s', 'yourjannah' ), $err_msg, $url );
+            $error = sprintf( __( 'Failed to fetch from Aladhan API: %s', 'yourjannah' ), $last_error ?: 'No data returned' );
+        }
+    }
+
+    // CSV timetable upload
+    if ( $action === 'upload_csv' && ! empty( $_FILES['csv_file']['tmp_name'] ) ) {
+        $handle = fopen( $_FILES['csv_file']['tmp_name'], 'r' );
+        if ( $handle ) {
+            $header = fgetcsv( $handle );
+            $header = array_map( 'strtolower', array_map( 'trim', $header ?: [] ) );
+            $date_col = array_search( 'date', $header );
+            if ( $date_col === false ) { $error = __( 'CSV must have a "date" column.', 'yourjannah' ); }
+            else {
+                $prayer_cols = [];
+                foreach ( [ 'fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha', 'fajr_jamat', 'dhuhr_jamat', 'asr_jamat', 'maghrib_jamat', 'isha_jamat' ] as $p ) {
+                    $idx = array_search( $p, $header );
+                    if ( $idx !== false ) $prayer_cols[ $p ] = $idx;
+                }
+                $csv_imported = 0;
+                while ( ( $row = fgetcsv( $handle ) ) !== false ) {
+                    $date = trim( $row[ $date_col ] ?? '' );
+                    if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) continue;
+                    $data = [ 'mosque_id' => $mosque_id, 'date' => $date ];
+                    foreach ( $prayer_cols as $col_name => $col_idx ) {
+                        $val = trim( $row[ $col_idx ] ?? '' );
+                        if ( $val ) $data[ $col_name ] = substr( $val, 0, 5 );
+                    }
+                    $exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $pt_table WHERE mosque_id=%d AND date=%s", $mosque_id, $date ) );
+                    if ( $exists ) { $wpdb->update( $pt_table, $data, [ 'id' => $exists ] ); }
+                    else { $wpdb->insert( $pt_table, $data ); }
+                    $csv_imported++;
+                }
+                fclose( $handle );
+                $success = sprintf( __( 'Uploaded %d days of prayer times from CSV.', 'yourjannah' ), $csv_imported );
+            }
         }
     }
 
@@ -106,9 +145,11 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
     if ( $action === 'bulk_jamat' ) {
         $prayer = sanitize_text_field( $_POST['prayer'] ?? '' );
         $jamat_time = sanitize_text_field( $_POST['jamat_time'] ?? '' );
+        $jamat_mode = sanitize_text_field( $_POST['jamat_mode'] ?? 'fixed' );
+        $offset_mins = (int) ( $_POST['offset_minutes'] ?? 0 );
         $apply_to = sanitize_text_field( $_POST['apply_to'] ?? 'all' );
 
-        if ( $prayer && $jamat_time ) {
+        if ( $prayer && ( $jamat_time || ( $jamat_mode === 'offset' && $offset_mins > 0 ) ) ) {
             $col = $prayer . '_jamat';
             $dates = [];
 
@@ -133,13 +174,32 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
 
             $updated = 0;
             foreach ( $dates as $date ) {
-                $exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $pt_table WHERE mosque_id=%d AND date=%s", $mosque_id, $date ) );
-                if ( $exists ) {
-                    $wpdb->update( $pt_table, [ $col => $jamat_time ], [ 'id' => $exists ] );
+                $row_data = $wpdb->get_row( $wpdb->prepare( "SELECT id, $prayer FROM $pt_table WHERE mosque_id=%d AND date=%s", $mosque_id, $date ) );
+                if ( ! $row_data ) continue;
+
+                if ( $jamat_mode === 'offset' && $offset_mins > 0 ) {
+                    // Calculate iqamah as adhan + X minutes
+                    $adhan = $row_data->$prayer ?? '';
+                    if ( $adhan ) {
+                        $adhan_ts = strtotime( 'today ' . $adhan );
+                        $calc_time = date( 'H:i', $adhan_ts + ( $offset_mins * 60 ) );
+                        $wpdb->update( $pt_table, [ $col => $calc_time ], [ 'id' => $row_data->id ] );
+                        $updated++;
+                    }
+                } elseif ( $jamat_mode === 'min' && $jamat_time ) {
+                    // Minimum: only set if adhan is after this time
+                    $adhan = $row_data->$prayer ?? '';
+                    $use_time = ( $adhan && $adhan < $jamat_time ) ? $jamat_time : $adhan;
+                    $wpdb->update( $pt_table, [ $col => $use_time ], [ 'id' => $row_data->id ] );
+                    $updated++;
+                } else {
+                    // Fixed time
+                    $wpdb->update( $pt_table, [ $col => $jamat_time ], [ 'id' => $row_data->id ] );
                     $updated++;
                 }
             }
-            $success = sprintf( __( 'Set %s jamat to %s for %d days.', 'yourjannah' ), ucfirst( $prayer ), $jamat_time, $updated );
+            $mode_label = $jamat_mode === 'offset' ? "+{$offset_mins}min after adhan" : $jamat_time;
+            $success = sprintf( __( 'Set %s iqamah (%s) for %d days.', 'yourjannah' ), ucfirst( $prayer ), $mode_label, $updated );
         }
     }
 
@@ -234,6 +294,13 @@ $last_import = $wpdb->get_var( $wpdb->prepare(
                 <?php endforeach; ?>
             </select>
         </div>
+        <div class="d-field" style="margin:0;">
+            <label><?php esc_html_e( 'Asr School', 'yourjannah' ); ?></label>
+            <select name="school" style="padding:8px 12px;">
+                <option value="0"><?php esc_html_e( 'Shafi / Standard', 'yourjannah' ); ?></option>
+                <option value="1"><?php esc_html_e( 'Hanafi', 'yourjannah' ); ?></option>
+            </select>
+        </div>
         <button type="submit" class="d-btn d-btn--primary">📡 <?php esc_html_e( 'Import Month', 'yourjannah' ); ?></button>
     </form>
     <?php endif; ?>
@@ -241,7 +308,18 @@ $last_import = $wpdb->get_var( $wpdb->prepare(
 
 <!-- Step 2: Bulk Apply Jamat Times -->
 <div class="d-card">
-    <h3>⏰ <?php esc_html_e( 'Step 2: Set Jamat (Congregation) Times', 'yourjannah' ); ?></h3>
+    <h3 style="margin-bottom:4px;">📄 <?php esc_html_e( 'Or: Upload CSV Timetable', 'yourjannah' ); ?></h3>
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:10px;"><?php esc_html_e( 'Upload a CSV with columns: date, fajr, sunrise, dhuhr, asr, maghrib, isha (optionally: fajr_jamat, dhuhr_jamat, asr_jamat, maghrib_jamat, isha_jamat). Date format: YYYY-MM-DD.', 'yourjannah' ); ?></p>
+    <form method="post" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:end;">
+        <?php wp_nonce_field( 'ynj_dash_prayers', '_ynj_nonce' ); ?>
+        <input type="hidden" name="action" value="upload_csv">
+        <input type="file" name="csv_file" accept=".csv,.txt" required style="padding:6px;border:1px dashed var(--border);border-radius:8px;flex:1;">
+        <button type="submit" class="d-btn d-btn--outline">📄 <?php esc_html_e( 'Upload', 'yourjannah' ); ?></button>
+    </form>
+</div>
+
+<div class="d-card">
+    <h3>⏰ <?php esc_html_e( 'Step 2: Set Iqamah (Congregation) Times', 'yourjannah' ); ?></h3>
     <p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;"><?php esc_html_e( 'Apply jamat times in bulk — set a fixed jamat time for all weekdays, weekends, or the whole month.', 'yourjannah' ); ?></p>
     <form method="post" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
         <?php wp_nonce_field( 'ynj_dash_prayers', '_ynj_nonce' ); ?>
@@ -257,8 +335,24 @@ $last_import = $wpdb->get_var( $wpdb->prepare(
             </select>
         </div>
         <div class="d-field" style="margin:0;">
-            <label><?php esc_html_e( 'Jamat Time', 'yourjannah' ); ?></label>
-            <input type="time" name="jamat_time" required style="padding:8px 12px;">
+            <label><?php esc_html_e( 'Mode', 'yourjannah' ); ?></label>
+            <select name="jamat_mode" id="jamat-mode" style="padding:8px 12px;" onchange="document.getElementById('jm-fixed').style.display=this.value!=='offset'?'':'none';document.getElementById('jm-offset').style.display=this.value==='offset'?'':'none';">
+                <option value="fixed"><?php esc_html_e( 'Fixed time', 'yourjannah' ); ?></option>
+                <option value="offset"><?php esc_html_e( 'Adhan + X minutes', 'yourjannah' ); ?></option>
+                <option value="min"><?php esc_html_e( 'Minimum (won\'t go below)', 'yourjannah' ); ?></option>
+            </select>
+        </div>
+        <div class="d-field" style="margin:0;" id="jm-fixed">
+            <label><?php esc_html_e( 'Iqamah Time', 'yourjannah' ); ?></label>
+            <input type="time" name="jamat_time" style="padding:8px 12px;">
+        </div>
+        <div class="d-field" style="margin:0;display:none;" id="jm-offset">
+            <label><?php esc_html_e( 'Minutes after adhan', 'yourjannah' ); ?></label>
+            <select name="offset_minutes" style="padding:8px 12px;">
+                <?php for ( $m = 5; $m <= 30; $m += 5 ) : ?>
+                <option value="<?php echo $m; ?>"<?php echo $m === 10 ? ' selected' : ''; ?>>+<?php echo $m; ?> min</option>
+                <?php endfor; ?>
+            </select>
         </div>
         <div class="d-field" style="margin:0;">
             <label><?php esc_html_e( 'Apply To', 'yourjannah' ); ?></label>
