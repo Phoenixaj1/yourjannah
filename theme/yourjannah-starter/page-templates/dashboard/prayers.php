@@ -61,55 +61,43 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
         $asr_school = (int) ( $_POST['school'] ?? 0 ); // 0=Shafi, 1=Hanafi
         $clean = function( $t ) { return substr( preg_replace( '/\s*\(.*\)/', '', $t ), 0, 5 ); };
 
-        // Single API call for the whole month (use HTTP to avoid SSL timeout on Cloudways)
-        $url = "http://api.aladhan.com/v1/calendar/{$im_year}/{$im_mon}?latitude={$lat}&longitude={$lng}&method={$import_method}&school={$asr_school}";
-        $cache_key = 'ynj_aladhan_cal_' . md5( $url );
-        $cached = get_transient( $cache_key );
+        // Data comes from browser JS (Cloudways blocks outbound to Aladhan from PHP)
+        $json_data = $_POST['aladhan_data'] ?? '';
+        if ( $json_data ) {
+            $data = json_decode( stripslashes( $json_data ), true ) ?: [];
+            $imported = 0;
+            foreach ( $data as $day ) {
+                $timings = $day['timings'] ?? [];
+                $date_str = $day['date']['gregorian']['date'] ?? '';
+                if ( ! $date_str ) continue;
+                $parts = explode( '-', $date_str );
+                if ( count( $parts ) !== 3 ) continue;
+                $sql_date = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
 
-        if ( $cached ) {
-            $data = $cached;
-        } else {
-            $response = wp_remote_get( $url, [ 'timeout' => 15, 'sslverify' => false ] );
-            if ( is_wp_error( $response ) ) {
-                $error = sprintf( __( 'Aladhan API error: %s', 'yourjannah' ), $response->get_error_message() );
-                $data = [];
-            } else {
-                $body = json_decode( wp_remote_retrieve_body( $response ), true );
-                $data = $body['data'] ?? [];
-                if ( $data ) set_transient( $cache_key, $data, 12 * HOUR_IN_SECONDS );
+                $row = [
+                    'mosque_id' => $mosque_id,
+                    'date'      => $sql_date,
+                    'fajr'      => $clean( $timings['Fajr'] ?? '' ),
+                    'sunrise'   => $clean( $timings['Sunrise'] ?? '' ),
+                    'dhuhr'     => $clean( $timings['Dhuhr'] ?? '' ),
+                    'asr'       => $clean( $timings['Asr'] ?? '' ),
+                    'maghrib'   => $clean( $timings['Maghrib'] ?? '' ),
+                    'isha'      => $clean( $timings['Isha'] ?? '' ),
+                ];
+
+                $exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $pt_table WHERE mosque_id=%d AND date=%s", $mosque_id, $sql_date ) );
+                if ( $exists ) { $wpdb->update( $pt_table, $row, [ 'id' => $exists ] ); }
+                else { $wpdb->insert( $pt_table, $row ); }
+                $imported++;
             }
-        }
 
-        $imported = 0;
-        foreach ( $data as $day ) {
-            $timings = $day['timings'] ?? [];
-            $date_str = $day['date']['gregorian']['date'] ?? '';
-            if ( ! $date_str ) continue;
-            $parts = explode( '-', $date_str );
-            if ( count( $parts ) !== 3 ) continue;
-            $sql_date = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
-
-            $row = [
-                'mosque_id' => $mosque_id,
-                'date'      => $sql_date,
-                'fajr'      => $clean( $timings['Fajr'] ?? '' ),
-                'sunrise'   => $clean( $timings['Sunrise'] ?? '' ),
-                'dhuhr'     => $clean( $timings['Dhuhr'] ?? '' ),
-                'asr'       => $clean( $timings['Asr'] ?? '' ),
-                'maghrib'   => $clean( $timings['Maghrib'] ?? '' ),
-                'isha'      => $clean( $timings['Isha'] ?? '' ),
-            ];
-
-            $exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $pt_table WHERE mosque_id=%d AND date=%s", $mosque_id, $sql_date ) );
-            if ( $exists ) { $wpdb->update( $pt_table, $row, [ 'id' => $exists ] ); }
-            else { $wpdb->insert( $pt_table, $row ); }
-            $imported++;
-        }
-
-        if ( $imported > 0 ) {
-            $success = sprintf( __( 'Imported %d days of prayer times from Aladhan (%s, %s).', 'yourjannah' ), $imported, $methods[ $import_method ] ?? 'Method ' . $import_method, $asr_school ? 'Hanafi' : 'Shafi' );
-        } elseif ( ! $error ) {
-            $error = __( 'No data returned from Aladhan. Try a different calculation method.', 'yourjannah' );
+            if ( $imported > 0 ) {
+                $success = sprintf( __( 'Imported %d days of prayer times from Aladhan (%s, %s).', 'yourjannah' ), $imported, $methods[ $import_method ] ?? 'Method ' . $import_method, $asr_school ? 'Hanafi' : 'Shafi' );
+            } else {
+                $error = __( 'No valid data received. Try again.', 'yourjannah' );
+            }
+        } else {
+            $error = __( 'Fetching data... If this message persists, JavaScript may be blocked.', 'yourjannah' );
         }
     }
 
@@ -285,16 +273,17 @@ $last_import = $wpdb->get_var( $wpdb->prepare(
         <br><strong><?php printf( esc_html__( 'Last import covers up to: %s', 'yourjannah' ), esc_html( $last_import ) ); ?></strong>
         <?php endif; ?>
     </p>
-    <form method="post" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
+    <form method="post" id="aladhan-form" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
         <?php wp_nonce_field( 'ynj_dash_prayers', '_ynj_nonce' ); ?>
         <input type="hidden" name="action" value="import_aladhan">
+        <input type="hidden" name="aladhan_data" id="aladhan-data" value="">
         <div class="d-field" style="margin:0;">
             <label><?php esc_html_e( 'Month', 'yourjannah' ); ?></label>
-            <input type="month" name="import_month" value="<?php echo esc_attr( $month ); ?>" style="padding:8px 12px;">
+            <input type="month" name="import_month" id="import-month" value="<?php echo esc_attr( $month ); ?>" style="padding:8px 12px;">
         </div>
         <div class="d-field" style="margin:0;">
             <label><?php esc_html_e( 'Calculation Method', 'yourjannah' ); ?></label>
-            <select name="method" style="padding:8px 12px;max-width:280px;">
+            <select name="method" id="import-method" style="padding:8px 12px;max-width:280px;">
                 <?php foreach ( $methods as $mid => $mname ) : ?>
                 <option value="<?php echo $mid; ?>" <?php selected( $selected_method, $mid ); ?>><?php echo esc_html( $mname ); ?></option>
                 <?php endforeach; ?>
@@ -302,13 +291,49 @@ $last_import = $wpdb->get_var( $wpdb->prepare(
         </div>
         <div class="d-field" style="margin:0;">
             <label><?php esc_html_e( 'Asr School', 'yourjannah' ); ?></label>
-            <select name="school" style="padding:8px 12px;">
+            <select name="school" id="import-school" style="padding:8px 12px;">
                 <option value="0"><?php esc_html_e( 'Shafi / Standard', 'yourjannah' ); ?></option>
                 <option value="1"><?php esc_html_e( 'Hanafi', 'yourjannah' ); ?></option>
             </select>
         </div>
-        <button type="submit" class="d-btn d-btn--primary">📡 <?php esc_html_e( 'Import Month', 'yourjannah' ); ?></button>
+        <button type="button" id="import-btn" class="d-btn d-btn--primary" onclick="fetchAladhan()">📡 <?php esc_html_e( 'Import Month', 'yourjannah' ); ?></button>
     </form>
+    <div id="import-status" style="margin-top:8px;font-size:13px;"></div>
+    <script>
+    function fetchAladhan() {
+        var btn = document.getElementById('import-btn');
+        var status = document.getElementById('import-status');
+        var monthVal = document.getElementById('import-month').value;
+        var method = document.getElementById('import-method').value;
+        var school = document.getElementById('import-school').value;
+        var parts = monthVal.split('-');
+        var year = parts[0], mon = parts[1];
+        var lat = <?php echo json_encode( $lat ); ?>;
+        var lng = <?php echo json_encode( $lng ); ?>;
+
+        btn.disabled = true;
+        btn.textContent = 'Fetching from Aladhan...';
+        status.innerHTML = '<span style="color:var(--primary);">⏳ Fetching prayer times for ' + monthVal + '...</span>';
+
+        fetch('https://api.aladhan.com/v1/calendar/' + year + '/' + parseInt(mon) + '?latitude=' + lat + '&longitude=' + lng + '&method=' + method + '&school=' + school)
+            .then(function(r) { return r.json(); })
+            .then(function(body) {
+                var data = body.data || [];
+                if (!data.length) {
+                    status.innerHTML = '<span style="color:#dc2626;">❌ No data returned from Aladhan.</span>';
+                    btn.disabled = false; btn.textContent = '📡 Import Month';
+                    return;
+                }
+                status.innerHTML = '<span style="color:var(--primary);">✅ Got ' + data.length + ' days. Saving to database...</span>';
+                document.getElementById('aladhan-data').value = JSON.stringify(data);
+                document.getElementById('aladhan-form').submit();
+            })
+            .catch(function(e) {
+                status.innerHTML = '<span style="color:#dc2626;">❌ Browser fetch failed: ' + e.message + '</span>';
+                btn.disabled = false; btn.textContent = '📡 Import Month';
+            });
+    }
+    </script>
     <?php endif; ?>
 </div>
 
