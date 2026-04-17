@@ -99,6 +99,52 @@ $_tier_labels = [ 'supporter' => 'Bronze', 'guardian' => 'Silver', 'champion' =>
                 ) ) ?: [];
             }
             ?>
+
+            <?php if ( is_user_logged_in() ) : ?>
+            <!-- Notification bell (logged-in users only) -->
+            <style>
+            .ynj-notif-bell{position:relative;display:inline-flex;align-items:center;margin-right:8px}
+            .ynj-notif-bell__btn{background:none;border:none;cursor:pointer;padding:6px;border-radius:50%;color:#333;position:relative;display:flex;align-items:center;justify-content:center;transition:background .2s}
+            .ynj-notif-bell__btn:hover{background:rgba(0,0,0,.06)}
+            .ynj-notif-badge{position:absolute;top:0;right:0;background:#e53e3e;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;line-height:1;border:2px solid #fff}
+            .ynj-notif-panel{display:none;position:absolute;right:0;top:calc(100% + 6px);width:360px;max-height:420px;background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.15);z-index:9999;overflow:hidden}
+            .ynj-notif-panel--open{display:block}
+            .ynj-notif-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid #eee}
+            .ynj-notif-header strong{font-size:16px;color:#1a1a1a}
+            .ynj-notif-header a{font-size:12px;color:#0ea5e9;cursor:pointer;text-decoration:none}
+            .ynj-notif-header a:hover{text-decoration:underline}
+            .ynj-notif-list{overflow-y:auto;max-height:360px}
+            .ynj-notif-item{display:flex;gap:10px;padding:12px 16px;border-bottom:1px solid #f3f3f3;cursor:pointer;text-decoration:none;color:inherit;transition:background .15s}
+            .ynj-notif-item:hover{background:#f7f7f7}
+            .ynj-notif-item--unread{background:#f0f7ff}
+            .ynj-notif-item--unread:hover{background:#e6f0fa}
+            .ynj-notif-item__dot{flex-shrink:0;width:8px;height:8px;border-radius:50%;background:#0ea5e9;margin-top:6px}
+            .ynj-notif-item__dot--read{background:transparent}
+            .ynj-notif-item__body{flex:1;min-width:0}
+            .ynj-notif-item__mosque{font-size:11px;color:#888;margin-bottom:2px}
+            .ynj-notif-item__title{font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+            .ynj-notif-item__text{font-size:12px;color:#555;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+            .ynj-notif-item__time{font-size:11px;color:#aaa;margin-top:3px}
+            .ynj-notif-empty{padding:40px 16px;text-align:center;color:#999;font-size:13px}
+            @media(max-width:600px){.ynj-notif-panel{width:280px;right:-40px}}
+            </style>
+            <div class="ynj-notif-bell" id="ynj-notif-bell">
+                <button type="button" class="ynj-notif-bell__btn" id="ynj-notif-toggle" aria-label="Notifications">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    <span class="ynj-notif-badge" id="ynj-notif-badge" style="display:none">0</span>
+                </button>
+                <div class="ynj-notif-panel" id="ynj-notif-panel">
+                    <div class="ynj-notif-header">
+                        <strong>Notifications</strong>
+                        <a id="ynj-notif-mark-all">Mark all read</a>
+                    </div>
+                    <div class="ynj-notif-list" id="ynj-notif-list">
+                        <div class="ynj-notif-empty">Loading...</div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Mosque selector pill — opens JS modal -->
             <button type="button" class="ynj-mosque-pill" id="mosque-selector" onclick="window.ynjOpenMosqueModal&&window.ynjOpenMosqueModal()">
                 <span class="ynj-mosque-pill__gps" id="gps-btn" title="<?php esc_attr_e( 'Use GPS', 'yourjannah' ); ?>">
@@ -251,3 +297,153 @@ window.ynjNearbyMosques = <?php echo json_encode( array_map( function( $m ) {
     }
 })();
 </script>
+
+<?php if ( is_user_logged_in() ) : ?>
+<script>
+/* Notification bell — inline for guaranteed reliability */
+(function(){
+    var nonce = '<?php echo wp_create_nonce( "wp_rest" ); ?>';
+    var apiBase = '<?php echo esc_url_raw( rest_url( "ynj/v1/auth/" ) ); ?>';
+    var badge = document.getElementById('ynj-notif-badge');
+    var panel = document.getElementById('ynj-notif-panel');
+    var toggle = document.getElementById('ynj-notif-toggle');
+    var list = document.getElementById('ynj-notif-list');
+    var markAllBtn = document.getElementById('ynj-notif-mark-all');
+    var isOpen = false;
+    var pollTimer = null;
+
+    function apiFetch(path, opts) {
+        opts = opts || {};
+        var url = apiBase + path;
+        var init = {
+            method: opts.method || 'GET',
+            credentials: 'same-origin',
+            headers: { 'X-WP-Nonce': nonce }
+        };
+        if (opts.body) {
+            init.headers['Content-Type'] = 'application/json';
+            init.body = JSON.stringify(opts.body);
+        }
+        return fetch(url, init).then(function(r){ return r.json(); });
+    }
+
+    function timeAgo(dateStr) {
+        var now = Date.now();
+        var then = new Date(dateStr.replace(/ /, 'T') + 'Z').getTime();
+        var diff = Math.floor((now - then) / 1000);
+        if (diff < 60) return 'Just now';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+        if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+        return new Date(then).toLocaleDateString();
+    }
+
+    function updateBadge(count) {
+        if (!badge) return;
+        if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    function fetchCount() {
+        apiFetch('notifications/count').then(function(d) {
+            if (d.ok) updateBadge(d.count);
+        }).catch(function(){});
+    }
+
+    function renderNotifications(notifications) {
+        if (!notifications || !notifications.length) {
+            list.innerHTML = '<div class="ynj-notif-empty">No notifications yet.</div>';
+            return;
+        }
+        var html = '';
+        var shown = notifications.slice(0, 20);
+        shown.forEach(function(n) {
+            var unread = !n.is_read;
+            html += '<a class="ynj-notif-item' + (unread ? ' ynj-notif-item--unread' : '') + '" '
+                + 'href="' + (n.url || '#') + '" '
+                + 'data-nid="' + n.id + '" '
+                + 'onclick="window._ynjMarkRead(' + n.id + ')">'
+                + '<span class="ynj-notif-item__dot' + (unread ? '' : ' ynj-notif-item__dot--read') + '"></span>'
+                + '<span class="ynj-notif-item__body">'
+                + (n.mosque_name ? '<span class="ynj-notif-item__mosque">' + n.mosque_name + '</span>' : '')
+                + '<span class="ynj-notif-item__title">' + (n.title || '') + '</span>'
+                + '<span class="ynj-notif-item__text">' + (n.body || '') + '</span>'
+                + '<span class="ynj-notif-item__time">' + timeAgo(n.created_at) + '</span>'
+                + '</span></a>';
+        });
+        list.innerHTML = html;
+    }
+
+    function fetchNotifications() {
+        list.innerHTML = '<div class="ynj-notif-empty">Loading...</div>';
+        apiFetch('notifications').then(function(d) {
+            if (d.ok) {
+                renderNotifications(d.notifications);
+                updateBadge(d.unread_count);
+            }
+        }).catch(function() {
+            list.innerHTML = '<div class="ynj-notif-empty" style="color:#dc2626;">Could not load notifications.</div>';
+        });
+    }
+
+    function togglePanel() {
+        isOpen = !isOpen;
+        if (isOpen) {
+            panel.classList.add('ynj-notif-panel--open');
+            fetchNotifications();
+        } else {
+            panel.classList.remove('ynj-notif-panel--open');
+        }
+    }
+
+    function markAllRead() {
+        apiFetch('notifications/read', { method: 'POST', body: {} }).then(function(d) {
+            if (d.ok) {
+                updateBadge(0);
+                // Update UI — remove unread styling
+                var items = list.querySelectorAll('.ynj-notif-item--unread');
+                items.forEach(function(el) {
+                    el.classList.remove('ynj-notif-item--unread');
+                    var dot = el.querySelector('.ynj-notif-item__dot');
+                    if (dot) dot.classList.add('ynj-notif-item__dot--read');
+                });
+            }
+        });
+    }
+
+    window._ynjMarkRead = function(nid) {
+        apiFetch('notifications/read', { method: 'POST', body: { notification_id: nid } }).then(function(d) {
+            if (d.ok) fetchCount();
+        }).catch(function(){});
+    };
+
+    // Bind events
+    if (toggle) toggle.addEventListener('click', function(e) { e.stopPropagation(); togglePanel(); });
+    if (markAllBtn) markAllBtn.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); markAllRead(); });
+
+    // Close panel on outside click
+    document.addEventListener('click', function(e) {
+        if (isOpen && panel && !panel.contains(e.target) && toggle && !toggle.contains(e.target)) {
+            isOpen = false;
+            panel.classList.remove('ynj-notif-panel--open');
+        }
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && isOpen) {
+            isOpen = false;
+            panel.classList.remove('ynj-notif-panel--open');
+        }
+    });
+
+    // Initial count fetch + polling every 60s
+    fetchCount();
+    pollTimer = setInterval(fetchCount, 60000);
+})();
+</script>
+<?php endif; ?>

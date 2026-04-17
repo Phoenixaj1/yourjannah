@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '3.0.0';
+    const SCHEMA_VERSION = '3.1.0';
 
     /**
      * Return the full table name for a given short name.
@@ -557,6 +557,8 @@ class YNJ_DB {
             auth_provider varchar(20) NOT NULL DEFAULT 'email',
             auth_provider_id varchar(100) NOT NULL DEFAULT '',
             avatar_url varchar(500) NOT NULL DEFAULT '',
+            interest_categories text NOT NULL,
+            interest_radius_miles int(11) NOT NULL DEFAULT 5,
             total_points int(11) NOT NULL DEFAULT 0,
             token_hash varchar(64) NOT NULL DEFAULT '',
             token_last_used datetime DEFAULT NULL,
@@ -968,6 +970,26 @@ class YNJ_DB {
             KEY status (status)
         ) $charset_collate;";
 
+        // --- User Notifications (in-app, Facebook-style) ---
+        $tables[] = "CREATE TABLE {$t('notifications')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            type varchar(30) NOT NULL DEFAULT 'event',
+            ref_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            title varchar(255) NOT NULL DEFAULT '',
+            body varchar(500) NOT NULL DEFAULT '',
+            url varchar(500) NOT NULL DEFAULT '',
+            is_read tinyint(1) NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY user_id (user_id),
+            KEY user_read (user_id, is_read),
+            KEY mosque_id (mosque_id),
+            KEY type (type),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+
         // --- Charity Appeals ---
 
         // Appeal Requests (from charities)
@@ -1102,6 +1124,7 @@ class YNJ_DB {
             'user_subscriptions',
             'users',
             'subscribers',
+            'notifications',
             'appeal_requests',
             'appeal_responses',
             'appeal_donations',

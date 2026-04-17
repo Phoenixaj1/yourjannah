@@ -61,6 +61,7 @@ spl_autoload_register(function($class) {
         'YNJ_Pool_Ledger'          => 'inc/class-ynj-pool-ledger.php',
         'YNJ_API_Donations'        => 'api/class-ynj-api-donations.php',
         'YNJ_Social_Auth'          => 'inc/class-ynj-social-auth.php',
+        'YNJ_Interest_Notify'      => 'inc/class-ynj-interest-notify.php',
     ];
     if (isset($map[$class])) {
         require_once YNJ_DIR . $map[$class];
@@ -286,6 +287,152 @@ add_action('rest_api_init', function() {
         'permission_callback' => '__return_true',
     ]);
 
+    // --- Notification endpoints (authenticated) ---
+
+    // GET /auth/notifications — Get user's notifications (last 50)
+    register_rest_route('ynj/v1', '/auth/notifications', [
+        'methods' => 'GET',
+        'callback' => function( $request ) {
+            global $wpdb;
+            $ynj_user_id = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+            if ( ! $ynj_user_id ) return new WP_REST_Response( [ 'ok' => false, 'error' => 'No linked account.' ], 403 );
+
+            $nt = YNJ_DB::table( 'notifications' );
+            $mt = YNJ_DB::table( 'mosques' );
+            $rows = $wpdb->get_results( $wpdb->prepare(
+                "SELECT n.*, m.name AS mosque_name
+                 FROM $nt n
+                 LEFT JOIN $mt m ON m.id = n.mosque_id
+                 WHERE n.user_id = %d
+                 ORDER BY n.created_at DESC
+                 LIMIT 50",
+                $ynj_user_id
+            ) );
+
+            $unread = 0;
+            $notifications = [];
+            foreach ( $rows as $r ) {
+                if ( ! (int) $r->is_read ) $unread++;
+                $notifications[] = [
+                    'id'          => (int) $r->id,
+                    'mosque_id'   => (int) $r->mosque_id,
+                    'mosque_name' => $r->mosque_name ?: '',
+                    'type'        => $r->type,
+                    'ref_id'      => (int) $r->ref_id,
+                    'title'       => $r->title,
+                    'body'        => $r->body,
+                    'url'         => $r->url,
+                    'is_read'     => (int) $r->is_read,
+                    'created_at'  => $r->created_at,
+                ];
+            }
+
+            return new WP_REST_Response( [ 'ok' => true, 'notifications' => $notifications, 'unread_count' => $unread ] );
+        },
+        'permission_callback' => [ 'YNJ_WP_Auth', 'congregation_check' ],
+    ]);
+
+    // POST /auth/notifications/read — Mark notifications as read
+    register_rest_route('ynj/v1', '/auth/notifications/read', [
+        'methods' => 'POST',
+        'callback' => function( $request ) {
+            global $wpdb;
+            $ynj_user_id = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+            if ( ! $ynj_user_id ) return new WP_REST_Response( [ 'ok' => false, 'error' => 'No linked account.' ], 403 );
+
+            $data = $request->get_json_params();
+            $nt = YNJ_DB::table( 'notifications' );
+
+            if ( ! empty( $data['notification_id'] ) ) {
+                $nid = (int) $data['notification_id'];
+                $wpdb->query( $wpdb->prepare(
+                    "UPDATE $nt SET is_read = 1 WHERE id = %d AND user_id = %d",
+                    $nid, $ynj_user_id
+                ) );
+            } else {
+                $wpdb->query( $wpdb->prepare(
+                    "UPDATE $nt SET is_read = 1 WHERE user_id = %d AND is_read = 0",
+                    $ynj_user_id
+                ) );
+            }
+
+            return new WP_REST_Response( [ 'ok' => true ] );
+        },
+        'permission_callback' => [ 'YNJ_WP_Auth', 'congregation_check' ],
+    ]);
+
+    // GET /auth/notifications/count — Lightweight unread count (for polling)
+    register_rest_route('ynj/v1', '/auth/notifications/count', [
+        'methods' => 'GET',
+        'callback' => function( $request ) {
+            global $wpdb;
+            $ynj_user_id = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+            if ( ! $ynj_user_id ) return new WP_REST_Response( [ 'ok' => true, 'count' => 0 ] );
+
+            $nt = YNJ_DB::table( 'notifications' );
+            $count = (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(*) FROM $nt WHERE user_id = %d AND is_read = 0",
+                $ynj_user_id
+            ) );
+
+            return new WP_REST_Response( [ 'ok' => true, 'count' => $count ] );
+        },
+        'permission_callback' => [ 'YNJ_WP_Auth', 'congregation_check' ],
+    ]);
+
+    // PUT + GET /auth/interests — Save/get user's interest preferences
+    register_rest_route('ynj/v1', '/auth/interests', [
+        [
+            'methods' => 'PUT',
+            'callback' => function( $request ) {
+                global $wpdb;
+                $ynj_user_id = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+                if ( ! $ynj_user_id ) return new WP_REST_Response( [ 'ok' => false, 'error' => 'No linked account.' ], 403 );
+
+                $data = $request->get_json_params();
+                $allowed = [ 'sports', 'youth', 'women', 'social', 'education', 'religious', 'community' ];
+                $categories = [];
+                if ( ! empty( $data['categories'] ) && is_array( $data['categories'] ) ) {
+                    $categories = array_values( array_intersect( $data['categories'], $allowed ) );
+                }
+                $radius = isset( $data['radius_miles'] ) ? max( 1, min( 100, (int) $data['radius_miles'] ) ) : 5;
+
+                $ut = YNJ_DB::table( 'users' );
+                $wpdb->update( $ut, [
+                    'interest_categories'   => wp_json_encode( $categories ),
+                    'interest_radius_miles' => $radius,
+                ], [ 'id' => $ynj_user_id ] );
+
+                return new WP_REST_Response( [ 'ok' => true, 'message' => 'Preferences saved.' ] );
+            },
+            'permission_callback' => [ 'YNJ_WP_Auth', 'congregation_check' ],
+        ],
+        [
+            'methods' => 'GET',
+            'callback' => function( $request ) {
+                global $wpdb;
+                $ynj_user_id = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+                if ( ! $ynj_user_id ) return new WP_REST_Response( [ 'ok' => true, 'categories' => [], 'radius_miles' => 5 ] );
+
+                $ut = YNJ_DB::table( 'users' );
+                $row = $wpdb->get_row( $wpdb->prepare(
+                    "SELECT interest_categories, interest_radius_miles FROM $ut WHERE id = %d",
+                    $ynj_user_id
+                ) );
+
+                $categories = [];
+                if ( $row && $row->interest_categories ) {
+                    $decoded = json_decode( $row->interest_categories, true );
+                    if ( is_array( $decoded ) ) $categories = $decoded;
+                }
+                $radius = $row ? (int) $row->interest_radius_miles : 5;
+
+                return new WP_REST_Response( [ 'ok' => true, 'categories' => $categories, 'radius_miles' => $radius ] );
+            },
+            'permission_callback' => [ 'YNJ_WP_Auth', 'congregation_check' ],
+        ],
+    ]);
+
     // Platform donation — 100% to YourJannah
     register_rest_route('ynj/v1', '/platform-donate', [
         'methods' => 'POST',
@@ -401,6 +548,27 @@ add_action('ynj_new_announcement', function($mosque_id, $data) {
     }
 }, 10, 2);
 
+// Cross-mosque interest notifications for announcements
+add_action('ynj_new_announcement', function($mosque_id, $data) {
+    global $wpdb;
+    $slug = $wpdb->get_var($wpdb->prepare(
+        "SELECT slug FROM " . YNJ_DB::table('mosques') . " WHERE id = %d", $mosque_id
+    ));
+    if (!$slug) return;
+    $ann_type = $data['type'] ?? 'general';
+    $category = YNJ_Interest_Notify::map_announcement_category($ann_type);
+    $ann_id   = $data['ann_id'] ?? 0;
+    YNJ_Interest_Notify::dispatch(
+        $mosque_id,
+        'announcement',
+        $ann_id,
+        $data['title'] ?? '',
+        $data['body'] ?? '',
+        $category,
+        '/mosque/' . $slug
+    );
+}, 20, 2);
+
 add_action('ynj_new_event', function($mosque_id, $data) {
     $subs = YNJ_API_Subscriptions::get_subscribers_for($mosque_id, 'notify_events');
     if (empty($subs)) return;
@@ -416,6 +584,27 @@ add_action('ynj_new_event', function($mosque_id, $data) {
         YNJ_Push::send_push($u->push_endpoint, $u->push_p256dh, $u->push_auth, $payload);
     }
 }, 10, 2);
+
+// Cross-mosque interest notifications for events
+add_action('ynj_new_event', function($mosque_id, $data) {
+    global $wpdb;
+    $slug = $wpdb->get_var($wpdb->prepare(
+        "SELECT slug FROM " . YNJ_DB::table('mosques') . " WHERE id = %d", $mosque_id
+    ));
+    if (!$slug) return;
+    $event_type = $data['event_type'] ?? '';
+    $category   = YNJ_Interest_Notify::map_event_category($event_type);
+    $event_id   = $data['event_id'] ?? 0;
+    YNJ_Interest_Notify::dispatch(
+        $mosque_id,
+        'event',
+        $event_id,
+        $data['title'] ?? '',
+        ($data['event_date'] ?? '') . ' — ' . ($data['title'] ?? ''),
+        $category,
+        '/mosque/' . $slug . '/events/' . $event_id
+    );
+}, 20, 2);
 
 add_action('ynj_new_class', function($mosque_id, $data) {
     $subs = YNJ_API_Subscriptions::get_subscribers_for($mosque_id, 'notify_classes');

@@ -290,10 +290,30 @@ $action_pts = [
 .ynj-btn-logout:hover{background:#dc2626;color:#fff;}
 .ynj-empty{text-align:center;padding:24px 16px;color:#6b8fa3;font-size:13px;}
 
+/* Interest Preferences */
+.ynj-interests-note{font-size:13px;color:#6b8fa3;margin-bottom:14px;line-height:1.4;}
+.ynj-interest-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.ynj-interest-chip{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:8px 14px;border-radius:20px;font-size:13px;font-weight:600;
+    border:1.5px solid #e0e8ed;background:#fff;color:#0a1628;
+    cursor:pointer;font-family:inherit;transition:all .15s;user-select:none;
+}
+.ynj-interest-chip:active{transform:scale(.95);}
+.ynj-interest-chip--active{background:#00ADEF;color:#fff;border-color:#00ADEF;}
+.ynj-interest-chip--active:hover{background:#0090d0;border-color:#0090d0;}
+.ynj-interest-chip:not(.ynj-interest-chip--active):hover{border-color:#00ADEF;color:#00ADEF;}
+.ynj-radius-row{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.ynj-radius-row label{font-size:12px;font-weight:600;color:#6b8fa3;white-space:nowrap;}
+.ynj-radius-row select{padding:10px 12px;border-radius:10px;border:1px solid rgba(0,0,0,.1);font-size:14px;font-family:inherit;background:#fff;outline:none;flex:1;max-width:200px;}
+.ynj-radius-row select:focus{border-color:#00ADEF;}
+
 @media(max-width:480px){
     .ynj-pref-form .ynj-field-row{grid-template-columns:1fr;}
     .ynj-dash{padding:0 12px 32px;}
     .ynj-dash-hero{padding:24px 16px 20px;}
+    .ynj-interest-chips{gap:6px;}
+    .ynj-interest-chip{padding:6px 10px;font-size:12px;}
 }
 </style>
 
@@ -581,7 +601,43 @@ $action_pts = [
         <button class="ynj-btn-save" id="save-prefs" type="button"><?php esc_html_e( 'Save Preferences', 'yourjannah' ); ?></button>
     </div>
 
-    <!-- 10. Logout -->
+    <!-- 10. Interest Preferences -->
+    <div class="ynj-dash-card" id="interests-section">
+        <h3>&#x1F4CC; <?php esc_html_e( 'My Interests', 'yourjannah' ); ?></h3>
+        <p class="ynj-interests-note"><?php esc_html_e( 'Get notified about events and announcements matching your interests from mosques near you.', 'yourjannah' ); ?></p>
+        <div class="ynj-interest-chips" id="interest-chips">
+            <?php
+            $interest_cats = [
+                'sports'      => [ "\xF0\x9F\x8F\x83", __( 'Sports & Fitness', 'yourjannah' ) ],
+                'social'      => [ "\xF0\x9F\x91\xA5", __( 'Social & Community', 'yourjannah' ) ],
+                'women'       => [ "\xF0\x9F\x91\xA9", __( "Women's Events", 'yourjannah' ) ],
+                'youth'       => [ "\xF0\x9F\xA7\x92", __( 'Youth & Children', 'yourjannah' ) ],
+                'education'   => [ "\xF0\x9F\x93\x9A", __( 'Education & Courses', 'yourjannah' ) ],
+                'religious'   => [ "\xF0\x9F\x95\x8C", __( 'Religious / Hadith', 'yourjannah' ) ],
+                'community'   => [ "\xF0\x9F\x8E\x89", __( 'Community Events', 'yourjannah' ) ],
+                'fundraising' => [ "\xF0\x9F\x92\x9D", __( 'Fundraising & Charity', 'yourjannah' ) ],
+                'bookings'    => [ "\xF0\x9F\x8F\xA0", __( 'Room Bookings', 'yourjannah' ) ],
+                'live'        => [ "\xF0\x9F\x93\xA1", __( 'Live Events', 'yourjannah' ) ],
+            ];
+            foreach ( $interest_cats as $slug => $cat ) : ?>
+                <button type="button" class="ynj-interest-chip" data-interest="<?php echo esc_attr( $slug ); ?>" onclick="toggleInterest(this)">
+                    <span><?php echo $cat[0]; ?></span> <?php echo esc_html( $cat[1] ); ?>
+                </button>
+            <?php endforeach; ?>
+        </div>
+        <div class="ynj-radius-row">
+            <label for="interest-radius"><?php esc_html_e( 'Notification Radius', 'yourjannah' ); ?></label>
+            <select id="interest-radius">
+                <option value="5"><?php esc_html_e( '5 miles', 'yourjannah' ); ?></option>
+                <option value="10"><?php esc_html_e( '10 miles', 'yourjannah' ); ?></option>
+                <option value="25"><?php esc_html_e( '25 miles', 'yourjannah' ); ?></option>
+                <option value="nationwide"><?php esc_html_e( 'Nationwide', 'yourjannah' ); ?></option>
+            </select>
+        </div>
+        <button class="ynj-btn-save" id="save-interests" type="button"><?php esc_html_e( 'Save Interests', 'yourjannah' ); ?></button>
+    </div>
+
+    <!-- 11. Logout -->
     <button class="ynj-btn-logout" id="btn-logout" type="button"><?php esc_html_e( 'Logout', 'yourjannah' ); ?></button>
 
 </div>
@@ -654,6 +710,64 @@ $action_pts = [
             }
         });
     };
+
+    /* ── Interest Preferences ── */
+    window.toggleInterest = function(el) {
+        el.classList.toggle('ynj-interest-chip--active');
+    };
+
+    /* Load saved interests on page load */
+    (function loadInterests() {
+        fetch(API + 'auth/interests', {
+            method: 'GET',
+            headers: headers,
+            credentials: 'same-origin'
+        }).then(function(r){ return r.json(); }).then(function(resp) {
+            if (!resp || !resp.ok) return;
+            var data = resp.data || resp;
+            /* Pre-check interest chips */
+            var cats = data.categories || [];
+            cats.forEach(function(slug) {
+                var chip = document.querySelector('.ynj-interest-chip[data-interest="' + slug + '"]');
+                if (chip) chip.classList.add('ynj-interest-chip--active');
+            });
+            /* Set radius dropdown */
+            if (data.radius) {
+                var sel = document.getElementById('interest-radius');
+                if (sel) sel.value = String(data.radius);
+            }
+        }).catch(function(){});
+    })();
+
+    /* Save interests */
+    document.getElementById('save-interests').addEventListener('click', function() {
+        var btn = this;
+        var activeChips = document.querySelectorAll('.ynj-interest-chip--active');
+        var categories = [];
+        activeChips.forEach(function(c){ categories.push(c.dataset.interest); });
+        var radius = document.getElementById('interest-radius').value;
+
+        btn.disabled = true;
+        btn.textContent = <?php echo wp_json_encode( __( 'Saving...', 'yourjannah' ) ); ?>;
+
+        fetch(API + 'auth/interests', {
+            method: 'PUT',
+            headers: headers,
+            credentials: 'same-origin',
+            body: JSON.stringify({ categories: categories, radius: radius })
+        }).then(function(r){ return r.json(); }).then(function(resp) {
+            btn.disabled = false;
+            if (resp.ok) {
+                btn.textContent = <?php echo wp_json_encode( __( 'Saved', 'yourjannah' ) ); ?> + ' \u2713';
+                setTimeout(function(){ btn.textContent = <?php echo wp_json_encode( __( 'Save Interests', 'yourjannah' ) ); ?>; }, 2000);
+            } else {
+                btn.textContent = <?php echo wp_json_encode( __( 'Save Interests', 'yourjannah' ) ); ?>;
+            }
+        }).catch(function() {
+            btn.disabled = false;
+            btn.textContent = <?php echo wp_json_encode( __( 'Save Interests', 'yourjannah' ) ); ?>;
+        });
+    });
 
     /* ── Logout ── */
     document.getElementById('btn-logout').addEventListener('click', function() {
