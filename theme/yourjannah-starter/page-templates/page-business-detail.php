@@ -150,14 +150,18 @@ if ( $is_business ) {
 
             <!-- Action Buttons -->
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <?php if ( $phone ) : ?>
-                <a href="tel:<?php echo esc_attr( $phone ); ?>" class="ynj-btn" style="flex:1;justify-content:center;min-width:120px;">📞 <?php esc_html_e( 'Call Now', 'yourjannah' ); ?></a>
-                <?php endif; ?>
-                <?php if ( $email ) : ?>
-                <a href="mailto:<?php echo esc_attr( $email ); ?>" class="ynj-btn ynj-btn--outline" style="flex:1;justify-content:center;min-width:120px;">✉️ <?php esc_html_e( 'Email', 'yourjannah' ); ?></a>
+                <?php if ( $phone ) :
+                    $wa_num = preg_replace( '/[^0-9+]/', '', $phone );
+                    $wa_num = preg_replace( '/^0/', '+44', $wa_num );
+                ?>
+                <a href="tel:<?php echo esc_attr( $phone ); ?>" class="ynj-btn" style="flex:1;justify-content:center;min-width:100px;">📞 <?php esc_html_e( 'Call', 'yourjannah' ); ?></a>
+                <a href="https://wa.me/<?php echo esc_attr( preg_replace( '/[^0-9]/', '', $wa_num ) ); ?>" target="_blank" rel="noopener" class="ynj-btn" style="flex:1;justify-content:center;min-width:100px;background:#25D366;border-color:#25D366;">💬 <?php esc_html_e( 'WhatsApp', 'yourjannah' ); ?></a>
                 <?php endif; ?>
                 <?php if ( $website ) : ?>
-                <a href="<?php echo esc_url( $website ); ?>" target="_blank" rel="noopener" class="ynj-btn ynj-btn--outline" style="flex:1;justify-content:center;min-width:120px;">🌐 <?php esc_html_e( 'Visit Website', 'yourjannah' ); ?></a>
+                <a href="<?php echo esc_url( $website ); ?>" target="_blank" rel="noopener" class="ynj-btn ynj-btn--outline" style="flex:1;justify-content:center;min-width:100px;">🌐 <?php esc_html_e( 'Website', 'yourjannah' ); ?></a>
+                <?php endif; ?>
+                <?php if ( $email ) : ?>
+                <a href="mailto:<?php echo esc_attr( $email ); ?>" class="ynj-btn ynj-btn--outline" style="flex:1;justify-content:center;min-width:100px;">✉️ <?php esc_html_e( 'Email', 'yourjannah' ); ?></a>
                 <?php endif; ?>
             </div>
 

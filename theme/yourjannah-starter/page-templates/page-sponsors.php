@@ -115,9 +115,15 @@ $food_cats = [ 'Restaurant', 'Grocery', 'Butcher', 'Catering', 'Bakery', 'Cafe',
                 <?php if ( $b->address || $b->postcode ) : ?><div class="ynj-biz-detail">📍 <?php echo esc_html( implode( ', ', array_filter( [ $b->address, $b->postcode ] ) ) ); ?></div><?php endif; ?>
             </div>
             <div class="ynj-biz-actions" onclick="event.stopPropagation();">
-                <?php if ( $b->phone ) : ?><a href="tel:<?php echo esc_attr( $b->phone ); ?>" class="ynj-biz-btn">📞 Call</a><?php endif; ?>
-                <?php if ( $b->email ) : ?><a href="mailto:<?php echo esc_attr( $b->email ); ?>" class="ynj-biz-btn ynj-biz-btn--outline">✉️ Email</a><?php endif; ?>
+                <?php if ( $b->phone ) :
+                    $wa_num = preg_replace( '/[^0-9+]/', '', $b->phone );
+                    $wa_num = preg_replace( '/^0/', '+44', $wa_num );
+                ?>
+                <a href="tel:<?php echo esc_attr( $b->phone ); ?>" class="ynj-biz-btn">📞 Call</a>
+                <a href="https://wa.me/<?php echo esc_attr( preg_replace( '/[^0-9]/', '', $wa_num ) ); ?>" target="_blank" rel="noopener" class="ynj-biz-btn ynj-biz-btn--outline" style="background:#25D366 !important;color:#fff !important;border-color:#25D366 !important;">💬 WhatsApp</a>
+                <?php endif; ?>
                 <?php if ( $b->website ) : ?><a href="<?php echo esc_url( $b->website ); ?>" target="_blank" rel="noopener" class="ynj-biz-btn ynj-biz-btn--outline">🌐 Website</a><?php endif; ?>
+                <?php if ( $b->email ) : ?><a href="mailto:<?php echo esc_attr( $b->email ); ?>" class="ynj-biz-btn ynj-biz-btn--outline">✉️ Email</a><?php endif; ?>
             </div>
         </div>
     <?php endforeach;
@@ -143,7 +149,13 @@ $food_cats = [ 'Restaurant', 'Grocery', 'Butcher', 'Catering', 'Bakery', 'Cafe',
                 <?php if ( $s->area_covered ) : ?><div class="ynj-biz-detail">📍 <?php echo esc_html( $s->area_covered ); ?></div><?php endif; ?>
             </div>
             <div class="ynj-biz-actions" onclick="event.stopPropagation();">
-                <?php if ( $s->phone ) : ?><a href="tel:<?php echo esc_attr( $s->phone ); ?>" class="ynj-biz-btn">📞 Call</a><?php endif; ?>
+                <?php if ( $s->phone ) :
+                    $wa_num = preg_replace( '/[^0-9+]/', '', $s->phone );
+                    $wa_num = preg_replace( '/^0/', '+44', $wa_num );
+                ?>
+                <a href="tel:<?php echo esc_attr( $s->phone ); ?>" class="ynj-biz-btn">📞 Call</a>
+                <a href="https://wa.me/<?php echo esc_attr( preg_replace( '/[^0-9]/', '', $wa_num ) ); ?>" target="_blank" rel="noopener" class="ynj-biz-btn ynj-biz-btn--outline" style="background:#25D366 !important;color:#fff !important;border-color:#25D366 !important;">💬 WhatsApp</a>
+                <?php endif; ?>
                 <?php if ( $s->email ) : ?><a href="mailto:<?php echo esc_attr( $s->email ); ?>" class="ynj-biz-btn ynj-biz-btn--outline">✉️ Email</a><?php endif; ?>
             </div>
         </div>
