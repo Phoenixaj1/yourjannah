@@ -442,34 +442,22 @@ $last_import = $wpdb->get_var( $wpdb->prepare(
             <tr style="<?php echo $is_today ? 'background:#f0fdf4;font-weight:600;' : ''; ?><?php echo $is_friday ? 'background:#eff6ff;' : ''; ?>">
                 <td style="font-size:11px;"><?php echo esc_html( substr( $date, 5 ) ); ?></td>
                 <td><?php echo esc_html( $dow ); ?><?php if ( $is_friday ) echo ' 🕌'; ?><?php if ( $is_today ) echo ' <span class="d-badge d-badge--green" style="font-size:9px;">TODAY</span>'; ?></td>
-                <?php
-                // Fajr (with iqamah)
-                $fajr_start = substr( $row->fajr ?? '—', 0, 5 );
-                $fajr_iq = $row->fajr_jamat ?? '';
-                ?>
-                <td style="text-align:center;">
-                    <span style="font-size:11px;color:var(--text-dim);"><?php echo esc_html( $fajr_start ); ?></span>
-                    <?php if ( $editing_day ) : ?>
-                    <br><input type="time" form="edit-day-form" name="fajr_jamat" value="<?php echo esc_attr( $fajr_iq ); ?>" style="width:76px;padding:2px;font-size:11px;border:1px solid var(--border);border-radius:4px;">
-                    <?php elseif ( $fajr_iq ) : ?>
-                    <br><strong style="color:var(--primary);font-size:12px;"><?php echo esc_html( substr( $fajr_iq, 0, 5 ) ); ?></strong>
-                    <?php endif; ?>
-                </td>
-
-                <!-- Sunrise (no iqamah) -->
-                <td style="text-align:center;font-size:11px;color:#f59e0b;font-weight:600;"><?php echo esc_html( substr( $row->sunrise ?? '—', 0, 5 ) ); ?></td>
-
-                <?php foreach ( [ 'dhuhr', 'asr', 'maghrib', 'isha' ] as $p ) :
+                <?php foreach ( [ 'fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha' ] as $p ) :
                     $start = substr( $row->$p ?? '—', 0, 5 );
+                    $is_sunrise = ( $p === 'sunrise' );
                     $iq_col = $p . '_jamat';
-                    $iq = $row->$iq_col ?? '';
+                    $iq = ! $is_sunrise ? ( $row->$iq_col ?? '' ) : '';
+                    $iq_display = $iq ? substr( $iq, 0, 5 ) : '';
                 ?>
-                <td style="text-align:center;">
-                    <span style="font-size:11px;color:var(--text-dim);"><?php echo esc_html( $start ); ?></span>
-                    <?php if ( $editing_day ) : ?>
+                <td style="text-align:center;<?php echo $is_sunrise ? 'background:#fffbeb;' : ''; ?>">
+                    <?php if ( $is_sunrise ) : ?>
+                    <span style="font-size:12px;color:#d97706;font-weight:600;"><?php echo esc_html( $start ); ?></span>
+                    <?php elseif ( $editing_day ) : ?>
+                    <span style="font-size:10px;color:var(--text-dim);"><?php echo esc_html( $start ); ?></span>
                     <br><input type="time" form="edit-day-form" name="<?php echo $p; ?>_jamat" value="<?php echo esc_attr( $iq ); ?>" style="width:76px;padding:2px;font-size:11px;border:1px solid var(--border);border-radius:4px;">
-                    <?php elseif ( $iq ) : ?>
-                    <br><strong style="color:var(--primary);font-size:12px;"><?php echo esc_html( substr( $iq, 0, 5 ) ); ?></strong>
+                    <?php else : ?>
+                    <span style="font-size:10px;color:var(--text-dim);"><?php echo esc_html( $start ); ?></span>
+                    <br><strong style="color:<?php echo $iq_display ? 'var(--primary)' : '#dc2626'; ?>;font-size:12px;"><?php echo $iq_display ? esc_html( $iq_display ) : '—'; ?></strong>
                     <?php endif; ?>
                 </td>
                 <?php endforeach; ?>
