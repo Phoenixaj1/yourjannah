@@ -77,6 +77,10 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_edit
         $update['website']       = esc_url_raw( $_POST['website'] ?? '' );
         $update['address']       = sanitize_text_field( $_POST['address'] ?? '' );
         $update['postcode']      = sanitize_text_field( $_POST['postcode'] ?? '' );
+        $update['show_phone']    = isset( $_POST['show_phone'] ) ? 1 : 0;
+        $update['show_whatsapp'] = isset( $_POST['show_whatsapp'] ) ? 1 : 0;
+        $update['show_email']    = isset( $_POST['show_email'] ) ? 1 : 0;
+        $update['show_website']  = isset( $_POST['show_website'] ) ? 1 : 0;
     } else {
         $update['provider_name']    = sanitize_text_field( $_POST['provider_name'] ?? '' );
         $update['service_type']     = sanitize_text_field( $_POST['service_type'] ?? '' );
@@ -85,6 +89,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_edit
         $update['email']            = sanitize_email( $_POST['email'] ?? '' );
         $update['area_covered']     = sanitize_text_field( $_POST['area_covered'] ?? '' );
         $update['hourly_rate_pence'] = (int) ( floatval( $_POST['hourly_rate'] ?? 0 ) * 100 );
+        $update['show_phone']    = isset( $_POST['show_phone'] ) ? 1 : 0;
+        $update['show_whatsapp'] = isset( $_POST['show_whatsapp'] ) ? 1 : 0;
+        $update['show_email']    = isset( $_POST['show_email'] ) ? 1 : 0;
     }
 
     $name_field = $is_business ? 'business_name' : 'provider_name';
@@ -197,6 +204,31 @@ $profile_url = home_url( '/profile' );
                 <input type="number" name="hourly_rate" min="0" step="0.01" value="<?php echo esc_attr( ( $item->hourly_rate_pence ?? 0 ) / 100 ); ?>" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;">
             </div>
             <?php endif; ?>
+
+            <!-- Contact Visibility Toggles -->
+            <div style="margin-bottom:12px;padding:14px;background:#f9fafb;border-radius:10px;border:1px solid #e5e7eb;">
+                <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:8px;"><?php esc_html_e( 'Contact Visibility — choose what visitors can see', 'yourjannah' ); ?></label>
+                <div style="display:flex;flex-wrap:wrap;gap:12px;">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                        <input type="checkbox" name="show_phone" value="1" <?php checked( $item->show_phone ?? 1, 1 ); ?>>
+                        📞 <?php esc_html_e( 'Show Phone', 'yourjannah' ); ?>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                        <input type="checkbox" name="show_whatsapp" value="1" <?php checked( $item->show_whatsapp ?? 1, 1 ); ?>>
+                        💬 <?php esc_html_e( 'Show WhatsApp', 'yourjannah' ); ?>
+                    </label>
+                    <?php if ( $is_business ) : ?>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                        <input type="checkbox" name="show_website" value="1" <?php checked( $item->show_website ?? 1, 1 ); ?>>
+                        🌐 <?php esc_html_e( 'Show Website', 'yourjannah' ); ?>
+                    </label>
+                    <?php endif; ?>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                        <input type="checkbox" name="show_email" value="1" <?php checked( $item->show_email ?? 1, 1 ); ?>>
+                        ✉️ <?php esc_html_e( 'Show Email', 'yourjannah' ); ?>
+                    </label>
+                </div>
+            </div>
 
             <button type="submit" class="ynj-btn" style="width:100%;justify-content:center;margin-top:8px;"><?php esc_html_e( 'Save Changes', 'yourjannah' ); ?></button>
         </form>

@@ -21,12 +21,12 @@ if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
     $biz_table = YNJ_DB::table( 'businesses' );
     $svc_table = YNJ_DB::table( 'services' );
     $businesses = $wpdb->get_results( $wpdb->prepare(
-        "SELECT id, business_name, owner_name, category, description, phone, email, website, logo_url, address, postcode, monthly_fee_pence, featured_position, verified
+        "SELECT id, business_name, owner_name, category, description, phone, email, website, logo_url, address, postcode, monthly_fee_pence, featured_position, verified, show_phone, show_whatsapp, show_email, show_website
          FROM $biz_table WHERE mosque_id = %d AND status = 'active' AND (expires_at IS NULL OR expires_at > NOW())
          ORDER BY monthly_fee_pence DESC, business_name ASC LIMIT 100", $mosque_id
     ) ) ?: [];
     $services = $wpdb->get_results( $wpdb->prepare(
-        "SELECT id, provider_name, phone, email, service_type, description, hourly_rate_pence, area_covered
+        "SELECT id, provider_name, phone, email, service_type, description, hourly_rate_pence, area_covered, show_phone, show_whatsapp, show_email
          FROM $svc_table WHERE mosque_id = %d AND status = 'active'
          ORDER BY monthly_fee_pence DESC, provider_name ASC LIMIT 100", $mosque_id
     ) ) ?: [];
@@ -115,15 +115,21 @@ $food_cats = [ 'Restaurant', 'Grocery', 'Butcher', 'Catering', 'Bakery', 'Cafe',
                 <?php if ( $b->address || $b->postcode ) : ?><div class="ynj-biz-detail">📍 <?php echo esc_html( implode( ', ', array_filter( [ $b->address, $b->postcode ] ) ) ); ?></div><?php endif; ?>
             </div>
             <div class="ynj-biz-actions" onclick="event.stopPropagation();">
-                <?php if ( $b->phone ) :
+                <?php
+                $show_phone = (int) ( $b->show_phone ?? 1 );
+                $show_wa = (int) ( $b->show_whatsapp ?? 1 );
+                $show_web = (int) ( $b->show_website ?? 1 );
+                $show_email = (int) ( $b->show_email ?? 1 );
+                if ( $b->phone && $show_phone ) :
                     $wa_num = preg_replace( '/[^0-9+]/', '', $b->phone );
                     $wa_num = preg_replace( '/^0/', '+44', $wa_num );
                 ?>
                 <a href="tel:<?php echo esc_attr( $b->phone ); ?>" class="ynj-biz-btn">📞 Call</a>
+                <?php if ( $show_wa ) : ?>
                 <a href="https://wa.me/<?php echo esc_attr( preg_replace( '/[^0-9]/', '', $wa_num ) ); ?>" target="_blank" rel="noopener" class="ynj-biz-btn ynj-biz-btn--outline" style="background:#25D366 !important;color:#fff !important;border-color:#25D366 !important;">💬 WhatsApp</a>
-                <?php endif; ?>
-                <?php if ( $b->website ) : ?><a href="<?php echo esc_url( $b->website ); ?>" target="_blank" rel="noopener" class="ynj-biz-btn ynj-biz-btn--outline">🌐 Website</a><?php endif; ?>
-                <?php if ( $b->email ) : ?><a href="mailto:<?php echo esc_attr( $b->email ); ?>" class="ynj-biz-btn ynj-biz-btn--outline">✉️ Email</a><?php endif; ?>
+                <?php endif; endif; ?>
+                <?php if ( $b->website && $show_web ) : ?><a href="<?php echo esc_url( $b->website ); ?>" target="_blank" rel="noopener" class="ynj-biz-btn ynj-biz-btn--outline">🌐 Website</a><?php endif; ?>
+                <?php if ( $b->email && $show_email ) : ?><a href="mailto:<?php echo esc_attr( $b->email ); ?>" class="ynj-biz-btn ynj-biz-btn--outline">✉️ Email</a><?php endif; ?>
             </div>
         </div>
     <?php endforeach;
@@ -149,14 +155,19 @@ $food_cats = [ 'Restaurant', 'Grocery', 'Butcher', 'Catering', 'Bakery', 'Cafe',
                 <?php if ( $s->area_covered ) : ?><div class="ynj-biz-detail">📍 <?php echo esc_html( $s->area_covered ); ?></div><?php endif; ?>
             </div>
             <div class="ynj-biz-actions" onclick="event.stopPropagation();">
-                <?php if ( $s->phone ) :
+                <?php
+                $show_phone = (int) ( $s->show_phone ?? 1 );
+                $show_wa = (int) ( $s->show_whatsapp ?? 1 );
+                $show_email = (int) ( $s->show_email ?? 1 );
+                if ( $s->phone && $show_phone ) :
                     $wa_num = preg_replace( '/[^0-9+]/', '', $s->phone );
                     $wa_num = preg_replace( '/^0/', '+44', $wa_num );
                 ?>
                 <a href="tel:<?php echo esc_attr( $s->phone ); ?>" class="ynj-biz-btn">📞 Call</a>
+                <?php if ( $show_wa ) : ?>
                 <a href="https://wa.me/<?php echo esc_attr( preg_replace( '/[^0-9]/', '', $wa_num ) ); ?>" target="_blank" rel="noopener" class="ynj-biz-btn ynj-biz-btn--outline" style="background:#25D366 !important;color:#fff !important;border-color:#25D366 !important;">💬 WhatsApp</a>
-                <?php endif; ?>
-                <?php if ( $s->email ) : ?><a href="mailto:<?php echo esc_attr( $s->email ); ?>" class="ynj-biz-btn ynj-biz-btn--outline">✉️ Email</a><?php endif; ?>
+                <?php endif; endif; ?>
+                <?php if ( $s->email && $show_email ) : ?><a href="mailto:<?php echo esc_attr( $s->email ); ?>" class="ynj-biz-btn ynj-biz-btn--outline">✉️ Email</a><?php endif; ?>
             </div>
         </div>
     <?php endforeach;

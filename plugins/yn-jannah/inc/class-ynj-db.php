@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '2.8.0';
+    const SCHEMA_VERSION = '2.9.0';
 
     /**
      * Return the full table name for a given short name.
@@ -382,6 +382,10 @@ class YNJ_DB {
             featured_position int(11) NOT NULL DEFAULT 0,
             stripe_customer_id varchar(100) NOT NULL DEFAULT '',
             stripe_subscription_id varchar(100) NOT NULL DEFAULT '',
+            show_phone tinyint(1) NOT NULL DEFAULT 1,
+            show_whatsapp tinyint(1) NOT NULL DEFAULT 1,
+            show_email tinyint(1) NOT NULL DEFAULT 1,
+            show_website tinyint(1) NOT NULL DEFAULT 1,
             status varchar(20) NOT NULL DEFAULT 'pending',
             verified tinyint(1) NOT NULL DEFAULT 0,
             expires_at datetime DEFAULT NULL,
@@ -407,6 +411,9 @@ class YNJ_DB {
             hourly_rate_pence int(11) NOT NULL DEFAULT 0,
             area_covered varchar(255) NOT NULL DEFAULT '',
             monthly_fee_pence int(11) NOT NULL DEFAULT 1000,
+            show_phone tinyint(1) NOT NULL DEFAULT 1,
+            show_whatsapp tinyint(1) NOT NULL DEFAULT 1,
+            show_email tinyint(1) NOT NULL DEFAULT 1,
             stripe_subscription_id varchar(100) NOT NULL DEFAULT '',
             status varchar(20) NOT NULL DEFAULT 'pending',
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
