@@ -80,7 +80,7 @@ if ( $mosque && $mosque->latitude ) {
         }
         if ( $_ynj_is_friday ) {
             $jt = YNJ_DB::table( 'jumuah_times' );
-            $_ynj_jumuah_slots = $wpdb->get_results( $wpdb->prepare( "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND status = 'active' ORDER BY salah_time ASC", (int) $mosque->id ) ) ?: [];
+            $_ynj_jumuah_slots = $wpdb->get_results( $wpdb->prepare( "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND enabled = 1 ORDER BY salah_time ASC", (int) $mosque->id ) ) ?: [];
         }
     }
 
@@ -147,7 +147,7 @@ if ( $_mp_id && class_exists( 'YNJ_DB' ) ) {
     global $wpdb;
     $jt = YNJ_DB::table( 'jumuah_times' );
     if ( $wpdb->get_var( "SHOW TABLES LIKE '$jt'" ) === $jt ) {
-        $_mp_jumuah = $wpdb->get_results( $wpdb->prepare( "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND status = 'active' ORDER BY salah_time ASC", $_mp_id ) ) ?: [];
+        $_mp_jumuah = $wpdb->get_results( $wpdb->prepare( "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND enabled = 1 ORDER BY salah_time ASC", $_mp_id ) ) ?: [];
     }
     $bt = YNJ_DB::table( 'businesses' );
     $_mp_sponsors = $wpdb->get_results( $wpdb->prepare( "SELECT id, business_name, category, monthly_fee_pence FROM $bt WHERE mosque_id = %d AND status = 'active' ORDER BY monthly_fee_pence DESC LIMIT 20", $_mp_id ) ) ?: [];

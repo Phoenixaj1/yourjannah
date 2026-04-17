@@ -40,7 +40,7 @@ if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
     // Load Jumu'ah slots
     $jt = YNJ_DB::table( 'jumuah_times' );
     $jumuah_slots = $wpdb->get_results( $wpdb->prepare(
-        "SELECT * FROM $jt WHERE mosque_id = %d AND status = 'active' ORDER BY salah_time ASC",
+        "SELECT * FROM $jt WHERE mosque_id = %d AND enabled = 1 ORDER BY salah_time ASC",
         $mosque_id
     ) ) ?: [];
 

@@ -96,7 +96,7 @@ if ( $_ynj_mosque_for_prayer && $_ynj_mosque_for_prayer->latitude ) {
         if ( $_ynj_is_friday ) {
             $jt = YNJ_DB::table( 'jumuah_times' );
             $_ynj_jumuah_slots = $wpdb->get_results( $wpdb->prepare(
-                "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND status = 'active' ORDER BY salah_time ASC",
+                "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND enabled = 1 ORDER BY salah_time ASC",
                 (int) $_ynj_mosque_for_prayer->id
             ) ) ?: [];
         }
@@ -186,7 +186,7 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
     $jt = YNJ_DB::table( 'jumuah_times' );
     if ( $wpdb->get_var( "SHOW TABLES LIKE '$jt'" ) === $jt ) {
         $_hp_jumuah = $wpdb->get_results( $wpdb->prepare(
-            "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND status = 'active' ORDER BY salah_time ASC",
+            "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND enabled = 1 ORDER BY salah_time ASC",
             $_hp_mosque_id
         ) ) ?: [];
     }

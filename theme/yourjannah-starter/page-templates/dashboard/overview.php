@@ -34,7 +34,7 @@ $s = [
     'donation_count'=> (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $dt WHERE mosque_id=%d AND status='succeeded'", $mosque_id ) ),
     'funds'         => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $ft WHERE mosque_id=%d AND is_active=1", $mosque_id ) ),
     'imported'      => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(imported),0) FROM $it WHERE mosque_id=%d", $mosque_id ) ),
-    'jumuah'        => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $jt WHERE mosque_id=%d AND status='active'", $mosque_id ) ),
+    'jumuah'        => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $jt WHERE mosque_id=%d AND enabled=1", $mosque_id ) ),
     'has_desc'      => ! empty( $mosque->description ),
     'has_phone'     => ! empty( $mosque->phone ),
     'appeal_rev'    => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(mosque_fee_pence),0) FROM $arpt WHERE mosque_id=%d AND response='accepted'", $mosque_id ) ),
