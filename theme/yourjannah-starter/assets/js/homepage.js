@@ -622,6 +622,10 @@
                 document.getElementById('next-prayer-countdown').textContent = `${hh}:${mm}:${ss}`;
                 document.getElementById('next-prayer-name').textContent = label;
 
+                // Show/hide Jumu'ah slot cards based on whether Jumu'ah is next
+                var jumuahSlotsEl = document.getElementById('jumuah-slots');
+                if (jumuahSlotsEl) jumuahSlotsEl.style.display = isJumuah ? '' : 'none';
+
                 // Show time — for Jumu'ah just show the salah time cleanly
                 var timeDisplay;
                 if (isJumuah) {

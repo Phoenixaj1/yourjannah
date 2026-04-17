@@ -305,7 +305,8 @@ window.ynjNearbyMosques = <?php echo json_encode( array_map( function( $m ) {
 <script>
 /* Notification bell — inline for guaranteed reliability */
 (function(){
-    var nonce = '<?php echo wp_create_nonce( "wp_rest" ); ?>';
+    // Use wpApiSettings nonce if available (WordPress enqueues this), fallback to inline
+    var nonce = (typeof wpApiSettings !== 'undefined' && wpApiSettings.nonce) ? wpApiSettings.nonce : '<?php echo wp_create_nonce( "wp_rest" ); ?>';
     var apiBase = '<?php echo esc_url_raw( rest_url( "ynj/v1/auth/" ) ); ?>';
     var badge = document.getElementById('ynj-notif-badge');
     var panel = document.getElementById('ynj-notif-panel');
