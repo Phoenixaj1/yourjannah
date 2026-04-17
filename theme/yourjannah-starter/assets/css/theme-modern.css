@@ -272,6 +272,123 @@ h1, h2, h3 {
 ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.25); }
 
+/* ── Feed card date strips: softer, smaller ── */
+.ynj-feed-card__date {
+    width: 52px !important;
+    min-width: 52px !important;
+    padding: 8px 6px !important;
+    opacity: .85;
+}
+.ynj-feed-card__date-num {
+    font-size: 16px !important;
+}
+.ynj-feed-card__date-emoji {
+    font-size: 18px !important;
+}
+
+/* ── Feed card content: cleaner spacing ── */
+.ynj-feed-card {
+    padding: 14px !important;
+    gap: 12px !important;
+    margin-bottom: 8px !important;
+    transition: box-shadow .15s, transform .15s !important;
+}
+.ynj-feed-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,.07) !important;
+}
+.ynj-feed-card__content h3 {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+}
+.ynj-feed-card__content p {
+    font-size: 13px !important;
+    color: #6B7280 !important;
+    line-height: 1.5 !important;
+}
+
+/* ── Sponsor ad cards in feed: subtle, not screaming ── */
+.ynj-feed div[style*="fef3c7"],
+.ynj-feed div[style*="fffbeb"] {
+    background: #FAFAFA !important;
+    border: 1px solid rgba(0,0,0,.06) !important;
+    border-radius: 14px !important;
+}
+
+/* ── Donate button: dark, elegant ── */
+.ynj-donate-btn {
+    background: #111827 !important;
+    color: #fff !important;
+    border-radius: 14px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,.1) !important;
+}
+.ynj-donate-btn svg {
+    stroke: #fff !important;
+}
+
+/* ── Check-in button ── */
+#checkin-btn {
+    border-radius: 14px !important;
+    background: #111827 !important;
+}
+
+/* ── Points display: cleaner ── */
+#points-display {
+    border-radius: 14px !important;
+}
+
+/* ── Travel settings: blend in ── */
+.ynj-travel-settings {
+    background: transparent !important;
+}
+
+/* ── Desktop grid: more gap ── */
+.ynj-desktop-grid {
+    gap: 20px !important;
+}
+
+/* ── Feed section heading ── */
+#feed-section h3 {
+    font-size: 20px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.03em !important;
+    margin-bottom: 12px !important;
+}
+
+/* ── Hero countdown: cleaner ── */
+.ynj-countdown {
+    opacity: .7 !important;
+    font-weight: 500 !important;
+}
+.ynj-hero-prayer {
+    letter-spacing: -0.03em !important;
+}
+.ynj-hero-time {
+    letter-spacing: -0.02em !important;
+}
+
+/* ── Prayer overview: rounded pills ── */
+.ynj-po-item {
+    border-radius: 10px !important;
+}
+.ynj-po-item--active {
+    background: #111827 !important;
+    color: #fff !important;
+    border-radius: 10px !important;
+}
+
+/* ── Mosque pill in header: cleaner ── */
+.ynj-mosque-pill {
+    border-radius: 12px !important;
+    background: rgba(255,255,255,.1) !important;
+    border: 1px solid rgba(255,255,255,.15) !important;
+}
+
+/* ── Body main padding ── */
+.ynj-main {
+    max-width: 1100px !important;
+    margin: 0 auto !important;
+}
+
 /* ── Print-friendly: remove backgrounds ── */
 @media print {
     body { background: white !important; }
