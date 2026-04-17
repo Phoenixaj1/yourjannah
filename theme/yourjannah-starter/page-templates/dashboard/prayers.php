@@ -418,14 +418,13 @@ $last_import = $wpdb->get_var( $wpdb->prepare(
         <table class="d-table" style="font-size:12px;min-width:700px;">
             <thead>
                 <tr>
-                    <th style="min-width:70px;"><?php esc_html_e( 'Date', 'yourjannah' ); ?></th>
-                    <th><?php esc_html_e( 'Day', 'yourjannah' ); ?></th>
-                    <th style="text-align:center;"><?php esc_html_e( 'Fajr', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:9px;color:var(--text-dim);">Start / Iqamah</span></th>
-                    <th style="text-align:center;"><?php esc_html_e( 'Sunrise', 'yourjannah' ); ?></th>
-                    <th style="text-align:center;"><?php esc_html_e( 'Dhuhr', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:9px;color:var(--text-dim);">Start / Iqamah</span></th>
-                    <th style="text-align:center;"><?php esc_html_e( 'Asr', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:9px;color:var(--text-dim);">Start / Iqamah</span></th>
-                    <th style="text-align:center;"><?php esc_html_e( 'Maghrib', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:9px;color:var(--text-dim);">Start / Iqamah</span></th>
-                    <th style="text-align:center;"><?php esc_html_e( 'Isha', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:9px;color:var(--text-dim);">Start / Iqamah</span></th>
+                    <th style="font-size:10px;"><?php esc_html_e( 'Day', 'yourjannah' ); ?></th>
+                    <th style="font-size:10px;"><?php esc_html_e( 'Date', 'yourjannah' ); ?></th>
+                    <th colspan="3" style="text-align:center;background:#e8f4f8;font-size:11px;"><?php esc_html_e( 'FAJR', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:9px;">Start · Jamaat · Sunrise</span></th>
+                    <th colspan="2" style="text-align:center;font-size:11px;"><?php esc_html_e( 'DHUHR', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:9px;">Start · Jamaat</span></th>
+                    <th colspan="2" style="text-align:center;background:#e8f4f8;font-size:11px;"><?php esc_html_e( 'ASR', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:9px;">Start · Jamaat</span></th>
+                    <th colspan="2" style="text-align:center;font-size:11px;"><?php esc_html_e( 'MAGHRIB', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:9px;">Start · Jamaat</span></th>
+                    <th colspan="2" style="text-align:center;background:#e8f4f8;font-size:11px;"><?php esc_html_e( 'ISHA', 'yourjannah' ); ?><br><span style="font-weight:400;font-size:9px;">Start · Jamaat</span></th>
                     <th></th>
                 </tr>
             </thead>
@@ -442,23 +441,34 @@ $last_import = $wpdb->get_var( $wpdb->prepare(
             <tr style="<?php echo $is_today ? 'background:#f0fdf4;font-weight:600;' : ''; ?><?php echo $is_friday ? 'background:#eff6ff;' : ''; ?>">
                 <td style="font-size:11px;"><?php echo esc_html( substr( $date, 5 ) ); ?></td>
                 <td><?php echo esc_html( $dow ); ?><?php if ( $is_friday ) echo ' 🕌'; ?><?php if ( $is_today ) echo ' <span class="d-badge d-badge--green" style="font-size:9px;">TODAY</span>'; ?></td>
-                <?php foreach ( [ 'fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha' ] as $p ) :
-                    $start = substr( $row->$p ?? '—', 0, 5 );
-                    $is_sunrise = ( $p === 'sunrise' );
-                    $iq_col = $p . '_jamat';
-                    $iq = ! $is_sunrise ? ( $row->$iq_col ?? '' ) : '';
-                    $iq_display = $iq ? substr( $iq, 0, 5 ) : '';
+                <?php
+                // Fajr: Start | Jamaat | Sunrise
+                $fajr_s = substr( $row->fajr ?? '', 0, 5 );
+                $fajr_j = substr( $row->fajr_jamat ?? '', 0, 5 );
+                $sunrise = substr( $row->sunrise ?? '', 0, 5 );
+                $bg1 = 'background:#f0f9ff;';
                 ?>
-                <td style="text-align:center;<?php echo $is_sunrise ? 'background:#fffbeb;' : ''; ?>">
-                    <?php if ( $is_sunrise ) : ?>
-                    <span style="font-size:12px;color:#d97706;font-weight:600;"><?php echo esc_html( $start ); ?></span>
-                    <?php elseif ( $editing_day ) : ?>
-                    <span style="font-size:10px;color:var(--text-dim);"><?php echo esc_html( $start ); ?></span>
-                    <br><input type="time" form="edit-day-form" name="<?php echo $p; ?>_jamat" value="<?php echo esc_attr( $iq ); ?>" style="width:76px;padding:2px;font-size:11px;border:1px solid var(--border);border-radius:4px;">
-                    <?php else : ?>
-                    <span style="font-size:10px;color:var(--text-dim);"><?php echo esc_html( $start ); ?></span>
-                    <br><strong style="color:<?php echo $iq_display ? 'var(--primary)' : '#dc2626'; ?>;font-size:12px;"><?php echo $iq_display ? esc_html( $iq_display ) : '—'; ?></strong>
-                    <?php endif; ?>
+                <td style="text-align:center;<?php echo $bg1; ?>font-size:12px;"><?php echo esc_html( $fajr_s ?: '—' ); ?></td>
+                <td style="text-align:center;<?php echo $bg1; ?>font-size:12px;font-weight:700;color:var(--primary);">
+                    <?php if ( $editing_day ) : ?><input type="time" form="edit-day-form" name="fajr_jamat" value="<?php echo esc_attr( $row->fajr_jamat ?? '' ); ?>" style="width:72px;padding:2px;font-size:11px;border:1px solid var(--border);border-radius:4px;">
+                    <?php else : echo esc_html( $fajr_j ?: '—' ); endif; ?>
+                </td>
+                <td style="text-align:center;<?php echo $bg1; ?>font-size:11px;color:#d97706;"><?php echo esc_html( $sunrise ?: '—' ); ?></td>
+
+                <?php
+                // Dhuhr, Asr, Maghrib, Isha: Start | Jamaat each
+                $alt = false;
+                foreach ( [ 'dhuhr', 'asr', 'maghrib', 'isha' ] as $p ) :
+                    $s = substr( $row->$p ?? '', 0, 5 );
+                    $jc = $p . '_jamat';
+                    $j = substr( $row->$jc ?? '', 0, 5 );
+                    $bg = $alt ? 'background:#f0f9ff;' : '';
+                    $alt = ! $alt;
+                ?>
+                <td style="text-align:center;<?php echo $bg; ?>font-size:12px;"><?php echo esc_html( $s ?: '—' ); ?></td>
+                <td style="text-align:center;<?php echo $bg; ?>font-size:12px;font-weight:700;color:var(--primary);">
+                    <?php if ( $editing_day ) : ?><input type="time" form="edit-day-form" name="<?php echo $p; ?>_jamat" value="<?php echo esc_attr( $row->$jc ?? '' ); ?>" style="width:72px;padding:2px;font-size:11px;border:1px solid var(--border);border-radius:4px;">
+                    <?php else : echo esc_html( $j ?: '—' ); endif; ?>
                 </td>
                 <?php endforeach; ?>
                 <td>
