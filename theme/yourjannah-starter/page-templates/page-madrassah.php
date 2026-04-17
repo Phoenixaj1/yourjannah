@@ -186,7 +186,7 @@ $days_order = [ 'Monday' => 1, 'Tuesday' => 2, 'Wednesday' => 3, 'Thursday' => 4
                 <div style="font-size:12px;color:#6b8fa3;margin-top:2px;">
                     <?php if ( $c->day_of_week ) echo esc_html( $c->day_of_week ); ?>
                     <?php if ( $time ) echo ' · ' . esc_html( $time ); ?>
-                    <?php if ( $end ) echo '–' . esc_html( $end ); ?>
+                    <?php if ( $end && $end !== '00:00' ) echo '–' . esc_html( $end ); ?>
                     <?php if ( $c->instructor_name ) echo ' · ' . esc_html( $c->instructor_name ); ?>
                 </div>
                 <div style="font-size:12px;margin-top:4px;">
