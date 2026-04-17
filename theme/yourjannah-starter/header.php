@@ -40,7 +40,7 @@ $_tier_labels = [ 'supporter' => 'Bronze', 'guardian' => 'Silver', 'champion' =>
 
 <?php if ( $_ynj_bar_status === 'guest' ) : ?>
 <div class="ynj-topbar ynj-topbar--guest">
-    <span>🕌 <?php esc_html_e( 'Welcome to YourJannah', 'yourjannah' ); ?></span>
+    <span>🕌 <?php esc_html_e( 'Fall in love with your Masjid & Community', 'yourjannah' ); ?></span>
     <div class="ynj-topbar__actions">
         <a href="<?php echo esc_url( home_url( '/login' ) ); ?>"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></a>
         <a href="<?php echo esc_url( home_url( '/register' ) ); ?>" class="ynj-topbar__cta"><?php esc_html_e( 'Join Free', 'yourjannah' ); ?></a>
@@ -63,9 +63,8 @@ $_tier_labels = [ 'supporter' => 'Bronze', 'guardian' => 'Silver', 'champion' =>
 
 <header class="ynj-header">
     <div class="ynj-header__inner">
-        <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="ynj-logo" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+        <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="ynj-logo">
             <img src="<?php echo esc_url( YNJ_THEME_URI . '/assets/icons/logo2.png' ); ?>" alt="<?php bloginfo( 'name' ); ?>" style="height:36px;width:auto;">
-            <span class="ynj-tagline" style="font-size:11px;color:rgba(255,255,255,.6);font-weight:400;white-space:nowrap;">Fall in love with your Masjid &amp; Community</span>
         </a>
 
         <?php if ( has_nav_menu( 'primary' ) ) : ?>
