@@ -1,8 +1,9 @@
 <?php
 /**
- * Dashboard Section: Events CRUD
+ * Dashboard Section: Events CRUD + RSVP Viewer
  */
 $et = YNJ_DB::table( 'events' );
+$bt = YNJ_DB::table( 'bookings' );
 
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonce'] ?? '', 'ynj_dash_events' ) ) {
     $action = sanitize_text_field( $_POST['action'] ?? '' );
@@ -20,6 +21,18 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
             'ticket_price_pence' => (int) ( floatval( $_POST['ticket_price'] ?? 0 ) * 100 ),
             'status'             => sanitize_text_field( $_POST['status'] ?? 'published' ),
         ];
+
+        // Handle image upload
+        if ( ! empty( $_FILES['image']['name'] ) ) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+            $upload = wp_handle_upload( $_FILES['image'], [ 'test_form' => false ] );
+            if ( ! empty( $upload['url'] ) ) {
+                $data['image_url'] = esc_url_raw( $upload['url'] );
+            }
+        }
+
         if ( ! $data['title'] || ! $data['event_date'] ) { $error = __( 'Title and date required.', 'yourjannah' ); }
         else {
             if ( $action === 'create' ) {
@@ -56,19 +69,92 @@ $events = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $et WHERE mosque_id
 $editing = null; $edit_id = (int) ( $_GET['edit'] ?? 0 );
 if ( $edit_id ) $editing = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $et WHERE id=%d AND mosque_id=%d", $edit_id, $mosque_id ) );
 $cats = ['talk','class','course','workshop','community','sports','competition','youth','sisters','fundraiser','eid','quran','nikah','janazah','other'];
+
+// RSVP view mode
+$rsvp_event_id = (int) ( $_GET['rsvps'] ?? 0 );
 ?>
-<div class="d-header"><h1>📅 <?php esc_html_e( 'Events', 'yourjannah' ); ?></h1></div>
-<?php if ( ! empty( $success ) ) : ?><div class="d-alert d-alert--success">✅ <?php echo esc_html( $success ); ?></div><?php endif; ?>
-<?php if ( ! empty( $error ) ) : ?><div class="d-alert d-alert--error">❌ <?php echo esc_html( $error ); ?></div><?php endif; ?>
+<div class="d-header"><h1><?php esc_html_e( 'Events', 'yourjannah' ); ?></h1></div>
+<?php if ( ! empty( $success ) ) : ?><div class="d-alert d-alert--success"><?php echo esc_html( $success ); ?></div><?php endif; ?>
+<?php if ( ! empty( $error ) ) : ?><div class="d-alert d-alert--error"><?php echo esc_html( $error ); ?></div><?php endif; ?>
+
+<?php if ( $rsvp_event_id ) :
+    /* ── RSVP List View ────────────────────────────────────────── */
+    $rsvp_event = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $et WHERE id = %d AND mosque_id = %d", $rsvp_event_id, $mosque_id ) );
+    if ( $rsvp_event ) :
+        $rsvps = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM $bt WHERE event_id = %d AND mosque_id = %d ORDER BY created_at DESC", $rsvp_event_id, $mosque_id
+        ) ) ?: [];
+?>
+<div class="d-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="margin:0;"><?php echo esc_html( sprintf( __( 'RSVPs for: %s', 'yourjannah' ), $rsvp_event->title ) ); ?></h3>
+        <a href="?section=events" class="d-btn d-btn--outline"><?php esc_html_e( 'Back to Events', 'yourjannah' ); ?></a>
+    </div>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">
+        <?php echo esc_html( $rsvp_event->event_date ); ?>
+        <?php if ( $rsvp_event->start_time ) echo ' &middot; ' . esc_html( substr( $rsvp_event->start_time, 0, 5 ) ); ?>
+        &middot; <?php echo esc_html( count( $rsvps ) ); ?> <?php esc_html_e( 'registration(s)', 'yourjannah' ); ?>
+    </p>
+
+    <?php if ( empty( $rsvps ) ) : ?>
+    <div class="d-empty">
+        <div class="d-empty__icon">📋</div>
+        <p><?php esc_html_e( 'No registrations for this event yet.', 'yourjannah' ); ?></p>
+    </div>
+    <?php else : ?>
+    <table class="d-table">
+        <thead>
+            <tr>
+                <th><?php esc_html_e( 'Name', 'yourjannah' ); ?></th>
+                <th><?php esc_html_e( 'Email', 'yourjannah' ); ?></th>
+                <th><?php esc_html_e( 'Phone', 'yourjannah' ); ?></th>
+                <th><?php esc_html_e( 'Status', 'yourjannah' ); ?></th>
+                <th><?php esc_html_e( 'Date', 'yourjannah' ); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php foreach ( $rsvps as $r ) :
+            $r_color = 'gray';
+            if ( $r->status === 'confirmed' ) $r_color = 'green';
+            elseif ( $r->status === 'pending' )   $r_color = 'yellow';
+            elseif ( $r->status === 'cancelled' )  $r_color = 'red';
+        ?>
+        <tr>
+            <td><strong><?php echo esc_html( $r->user_name ?: '—' ); ?></strong></td>
+            <td style="font-size:12px;"><?php echo esc_html( $r->user_email ?: '—' ); ?></td>
+            <td style="font-size:12px;"><?php echo esc_html( $r->user_phone ?: '—' ); ?></td>
+            <td><span class="d-badge d-badge--<?php echo $r_color; ?>"><?php echo esc_html( ucfirst( $r->status ) ); ?></span></td>
+            <td style="font-size:12px;"><?php echo esc_html( date( 'j M Y H:i', strtotime( $r->created_at ) ) ); ?></td>
+        </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    <?php endif; ?>
+</div>
+
+<?php else : ?>
+<div class="d-card"><div class="d-empty"><p><?php esc_html_e( 'Event not found.', 'yourjannah' ); ?></p></div></div>
+<?php endif; ?>
+
+<?php else : ?>
 
 <div class="d-card">
     <h3><?php echo $editing ? '✏️ Edit Event' : '➕ New Event'; ?></h3>
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         <?php wp_nonce_field( 'ynj_dash_events', '_ynj_nonce' ); ?>
         <input type="hidden" name="action" value="<?php echo $editing ? 'update' : 'create'; ?>">
         <?php if ( $editing ) : ?><input type="hidden" name="event_id" value="<?php echo (int) $editing->id; ?>"><?php endif; ?>
         <div class="d-field"><label>Title *</label><input type="text" name="title" value="<?php echo esc_attr( $editing->title ?? '' ); ?>" required></div>
         <div class="d-field"><label>Description</label><textarea name="description" rows="3"><?php echo esc_textarea( $editing->description ?? '' ); ?></textarea></div>
+        <div class="d-field">
+            <label><?php esc_html_e( 'Image (optional)', 'yourjannah' ); ?></label>
+            <?php if ( $editing && ! empty( $editing->image_url ) ) : ?>
+            <div style="margin-bottom:8px;">
+                <img src="<?php echo esc_url( $editing->image_url ); ?>" alt="" style="max-width:200px;max-height:120px;border-radius:6px;border:1px solid #e5e7eb;">
+            </div>
+            <?php endif; ?>
+            <input type="file" name="image" accept="image/*">
+        </div>
         <div class="d-row">
             <div class="d-field"><label>Date *</label><input type="date" name="event_date" value="<?php echo esc_attr( $editing->event_date ?? '' ); ?>" required></div>
             <div class="d-field"><label>Category</label><select name="category"><?php foreach ( $cats as $c ) : ?><option value="<?php echo $c; ?>" <?php selected( $editing->event_type ?? '', $c ); ?>><?php echo ucfirst( $c ); ?></option><?php endforeach; ?></select></div>
@@ -105,14 +191,18 @@ $cats = ['talk','class','course','workshop','community','sports','competition','
     <table class="d-table">
         <thead><tr><th>Event</th><th>Date</th><th>Time</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
-        <?php foreach ( $events as $e ) : $past = $e->event_date < date( 'Y-m-d' ); ?>
+        <?php foreach ( $events as $e ) :
+            $past = $e->event_date < date( 'Y-m-d' );
+            $rsvp_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $bt WHERE event_id = %d AND mosque_id = %d", $e->id, $mosque_id ) );
+        ?>
         <tr<?php echo $past ? ' style="opacity:.5;"' : ''; ?>>
-            <td><strong><?php echo esc_html( $e->title ); ?></strong><?php if ( $e->ticket_price_pence > 0 ) echo ' <span class="d-badge d-badge--green">£' . number_format( $e->ticket_price_pence / 100, 0 ) . '</span>'; ?></td>
+            <td><strong><?php echo esc_html( $e->title ); ?></strong><?php if ( $e->ticket_price_pence > 0 ) echo ' <span class="d-badge d-badge--green">&pound;' . number_format( $e->ticket_price_pence / 100, 0 ) . '</span>'; ?></td>
             <td><?php echo esc_html( $e->event_date ); ?></td>
             <td><?php echo $e->start_time ? esc_html( substr( $e->start_time, 0, 5 ) ) : '—'; ?></td>
             <td><span class="d-badge d-badge--gray"><?php echo esc_html( ucfirst( $e->event_type ) ); ?></span></td>
             <td><span class="d-badge d-badge--<?php echo $e->status === 'published' ? 'green' : 'yellow'; ?>"><?php echo esc_html( ucfirst( $e->status ) ); ?></span></td>
             <td>
+                <a href="?section=events&rsvps=<?php echo (int) $e->id; ?>" class="d-btn d-btn--sm d-btn--outline" title="<?php esc_attr_e( 'View RSVPs', 'yourjannah' ); ?>">📋 <?php echo $rsvp_count; ?></a>
                 <a href="?section=events&edit=<?php echo (int) $e->id; ?>" class="d-btn d-btn--sm d-btn--outline">✏️</a>
                 <form method="post" style="display:inline;" onsubmit="return confirm('Delete?')">
                     <?php wp_nonce_field( 'ynj_dash_events', '_ynj_nonce' ); ?>
@@ -126,3 +216,5 @@ $cats = ['talk','class','course','workshop','community','sports','competition','
     </table>
 </div>
 <?php endif; ?>
+
+<?php endif; /* end RSVP view check */ ?>

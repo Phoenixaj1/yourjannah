@@ -46,6 +46,17 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
             'published_at'    => current_time( 'mysql' ),
         ];
 
+        // Handle image upload
+        if ( ! empty( $_FILES['image']['name'] ) ) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+            $upload = wp_handle_upload( $_FILES['image'], [ 'test_form' => false ] );
+            if ( ! empty( $upload['url'] ) ) {
+                $data['image_url'] = esc_url_raw( $upload['url'] );
+            }
+        }
+
         if ( ! $data['title'] ) {
             $error = __( 'Title is required.', 'yourjannah' );
         } else {
@@ -220,7 +231,7 @@ $pending_items = $wpdb->get_results( $wpdb->prepare(
 <!-- Create/Edit Form -->
 <div class="d-card">
     <h3><?php echo $editing ? '✏️ ' . esc_html__( 'Edit Announcement', 'yourjannah' ) : '➕ ' . esc_html__( 'New Announcement', 'yourjannah' ); ?></h3>
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         <?php wp_nonce_field( 'ynj_dash_ann', '_ynj_nonce' ); ?>
         <input type="hidden" name="action" value="<?php echo $editing ? 'update' : 'create'; ?>">
         <?php if ( $editing ) : ?><input type="hidden" name="ann_id" value="<?php echo (int) $editing->id; ?>"><?php endif; ?>
@@ -233,6 +244,16 @@ $pending_items = $wpdb->get_results( $wpdb->prepare(
         <div class="d-field">
             <label><?php esc_html_e( 'Message', 'yourjannah' ); ?></label>
             <textarea name="body" rows="4" placeholder="<?php esc_attr_e( 'Write your announcement...', 'yourjannah' ); ?>"><?php echo esc_textarea( $editing->body ?? '' ); ?></textarea>
+        </div>
+
+        <div class="d-field">
+            <label><?php esc_html_e( 'Image (optional)', 'yourjannah' ); ?></label>
+            <?php if ( $editing && ! empty( $editing->image_url ) ) : ?>
+            <div style="margin-bottom:8px;">
+                <img src="<?php echo esc_url( $editing->image_url ); ?>" alt="" style="max-width:200px;max-height:120px;border-radius:6px;border:1px solid #e5e7eb;">
+            </div>
+            <?php endif; ?>
+            <input type="file" name="image" accept="image/*">
         </div>
 
         <div class="d-row">

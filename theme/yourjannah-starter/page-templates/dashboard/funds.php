@@ -155,3 +155,92 @@ if ( $edit_id ) {
     <?php endforeach; ?>
 </div>
 <?php endif; ?>
+
+<?php
+/* ── Donation History ───────────────────────────────────────────── */
+$dt = YNJ_DB::table( 'donations' );
+
+// Stats
+$donation_count = (int) $wpdb->get_var( $wpdb->prepare(
+    "SELECT COUNT(*) FROM $dt WHERE mosque_id = %d AND status = 'succeeded'", $mosque_id
+) );
+$total_raised = (int) $wpdb->get_var( $wpdb->prepare(
+    "SELECT COALESCE(SUM(amount_pence), 0) FROM $dt WHERE mosque_id = %d AND status = 'succeeded'", $mosque_id
+) );
+$month_start = date( 'Y-m-01 00:00:00' );
+$month_raised = (int) $wpdb->get_var( $wpdb->prepare(
+    "SELECT COALESCE(SUM(amount_pence), 0) FROM $dt WHERE mosque_id = %d AND status = 'succeeded' AND created_at >= %s", $mosque_id, $month_start
+) );
+
+// Recent donations
+$donations = $wpdb->get_results( $wpdb->prepare(
+    "SELECT * FROM $dt WHERE mosque_id = %d ORDER BY created_at DESC LIMIT 50", $mosque_id
+) ) ?: [];
+?>
+
+<div class="d-header" style="margin-top:32px;">
+    <h1><?php esc_html_e( 'Donation History', 'yourjannah' ); ?></h1>
+    <p><?php esc_html_e( 'All donations received via your mosque niyyah bar.', 'yourjannah' ); ?></p>
+</div>
+
+<!-- Donation Stats -->
+<div class="d-card">
+    <div class="d-stats">
+        <div class="d-stat">
+            <div class="d-stat__label"><?php esc_html_e( 'Total Donations', 'yourjannah' ); ?></div>
+            <div class="d-stat__value"><?php echo number_format( $donation_count ); ?></div>
+        </div>
+        <div class="d-stat">
+            <div class="d-stat__label"><?php esc_html_e( 'Total Raised', 'yourjannah' ); ?></div>
+            <div class="d-stat__value" style="color:#16a34a;">&pound;<?php echo number_format( $total_raised / 100, 2 ); ?></div>
+        </div>
+        <div class="d-stat">
+            <div class="d-stat__label"><?php esc_html_e( 'This Month', 'yourjannah' ); ?></div>
+            <div class="d-stat__value">&pound;<?php echo number_format( $month_raised / 100, 2 ); ?></div>
+        </div>
+    </div>
+</div>
+
+<!-- Donation Table -->
+<?php if ( empty( $donations ) ) : ?>
+<div class="d-card">
+    <div class="d-empty">
+        <div class="d-empty__icon">💷</div>
+        <p><?php esc_html_e( 'No donations received yet. Share your mosque page to start receiving donations via the niyyah bar.', 'yourjannah' ); ?></p>
+    </div>
+</div>
+<?php else : ?>
+<div class="d-card">
+    <table class="d-table">
+        <thead>
+            <tr>
+                <th><?php esc_html_e( 'Date', 'yourjannah' ); ?></th>
+                <th><?php esc_html_e( 'Donor', 'yourjannah' ); ?></th>
+                <th><?php esc_html_e( 'Email', 'yourjannah' ); ?></th>
+                <th style="text-align:right;"><?php esc_html_e( 'Amount', 'yourjannah' ); ?></th>
+                <th><?php esc_html_e( 'Fund', 'yourjannah' ); ?></th>
+                <th><?php esc_html_e( 'Status', 'yourjannah' ); ?></th>
+                <th><?php esc_html_e( 'Type', 'yourjannah' ); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php foreach ( $donations as $d ) :
+            $status_color = 'gray';
+            if ( $d->status === 'succeeded' ) $status_color = 'green';
+            elseif ( $d->status === 'pending' )  $status_color = 'yellow';
+            elseif ( $d->status === 'failed' )   $status_color = 'red';
+        ?>
+        <tr>
+            <td style="font-size:12px;white-space:nowrap;"><?php echo esc_html( date( 'j M Y H:i', strtotime( $d->created_at ) ) ); ?></td>
+            <td><strong><?php echo esc_html( $d->donor_name ?: '—' ); ?></strong></td>
+            <td style="font-size:12px;"><?php echo esc_html( $d->donor_email ?: '—' ); ?></td>
+            <td style="text-align:right;font-weight:700;">&pound;<?php echo number_format( $d->amount_pence / 100, 2 ); ?></td>
+            <td><span class="d-badge d-badge--blue"><?php echo esc_html( ucfirst( str_replace( '_', ' ', $d->fund_type ?: 'general' ) ) ); ?></span></td>
+            <td><span class="d-badge d-badge--<?php echo $status_color; ?>"><?php echo esc_html( ucfirst( $d->status ) ); ?></span></td>
+            <td><?php if ( $d->is_recurring ) : ?><span class="d-badge d-badge--blue"><?php esc_html_e( 'Recurring', 'yourjannah' ); ?></span><?php else : ?><span class="d-badge d-badge--gray"><?php esc_html_e( 'One-off', 'yourjannah' ); ?></span><?php endif; ?></td>
+        </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
+<?php endif; ?>
