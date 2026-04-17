@@ -472,6 +472,166 @@ add_action('rest_api_init', function() {
         'permission_callback' => '__return_true',
     ]);
 
+    // --- Stripe Webhook ---
+    // POST /ynj/v1/stripe-webhook — handles Stripe webhook events for payment confirmation
+    register_rest_route('ynj/v1', '/stripe-webhook', [
+        'methods'             => 'POST',
+        'callback'            => function( $request ) {
+            global $wpdb;
+
+            // 1. Read raw POST body (not JSON-decoded by WP)
+            $payload = file_get_contents( 'php://input' );
+            if ( empty( $payload ) ) {
+                return new WP_REST_Response( [ 'error' => 'Empty payload' ], 400 );
+            }
+
+            // 2. Verify webhook signature
+            $sig_header     = $_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '';
+            $webhook_secret = YNJ_Stripe::webhook_secret();
+
+            if ( ! $webhook_secret ) {
+                error_log( '[YNJ Stripe Webhook] WARNING: No webhook secret configured — skipping signature verification.' );
+            } else {
+                // Parse signature header
+                $elements = [];
+                foreach ( explode( ',', $sig_header ) as $part ) {
+                    $kv = explode( '=', trim( $part ), 2 );
+                    if ( count( $kv ) === 2 ) {
+                        $elements[ $kv[0] ] = $kv[1];
+                    }
+                }
+                $timestamp = $elements['t']  ?? '';
+                $signature = $elements['v1'] ?? '';
+
+                if ( ! $timestamp || ! $signature ) {
+                    return new WP_REST_Response( [ 'error' => 'Missing signature components' ], 400 );
+                }
+
+                // Verify HMAC
+                $signed_payload = $timestamp . '.' . $payload;
+                $expected       = hash_hmac( 'sha256', $signed_payload, $webhook_secret );
+                if ( ! hash_equals( $expected, $signature ) ) {
+                    error_log( '[YNJ Stripe Webhook] Invalid signature.' );
+                    return new WP_REST_Response( [ 'error' => 'Invalid signature' ], 400 );
+                }
+
+                // Reject if timestamp older than 5 minutes
+                if ( abs( time() - (int) $timestamp ) > 300 ) {
+                    error_log( '[YNJ Stripe Webhook] Timestamp too old.' );
+                    return new WP_REST_Response( [ 'error' => 'Timestamp too old' ], 400 );
+                }
+            }
+
+            // 3. Parse the event
+            $event = json_decode( $payload, true );
+            if ( empty( $event['type'] ) ) {
+                return new WP_REST_Response( [ 'error' => 'Invalid event' ], 400 );
+            }
+
+            $event_type = $event['type'];
+            error_log( '[YNJ Stripe Webhook] Received event: ' . $event_type );
+
+            // 4. Handle event types
+            switch ( $event_type ) {
+
+                // --- checkout.session.completed: patron subscriptions + appeal payments ---
+                case 'checkout.session.completed':
+                    $session  = $event['data']['object'] ?? [];
+                    $metadata = $session['metadata'] ?? [];
+
+                    // Appeal payment
+                    if ( ! empty( $metadata['appeal_id'] ) ) {
+                        $wpdb->update(
+                            YNJ_DB::table( 'appeal_requests' ),
+                            [
+                                'status'            => 'active',
+                                'stripe_payment_id' => $session['id'] ?? '',
+                            ],
+                            [ 'id' => (int) $metadata['appeal_id'] ]
+                        );
+                        error_log( '[YNJ Stripe Webhook] Appeal #' . $metadata['appeal_id'] . ' activated.' );
+                    }
+
+                    // Patron subscription
+                    if ( ! empty( $metadata['type'] ) && $metadata['type'] === 'patron' ) {
+                        $wpdb->update(
+                            YNJ_DB::table( 'patrons' ),
+                            [
+                                'status'                 => 'active',
+                                'stripe_subscription_id' => $session['subscription'] ?? '',
+                                'started_at'             => current_time( 'mysql' ),
+                            ],
+                            [ 'id' => (int) ( $metadata['patron_id'] ?? 0 ) ]
+                        );
+                        error_log( '[YNJ Stripe Webhook] Patron #' . ( $metadata['patron_id'] ?? '?' ) . ' activated.' );
+                    }
+                    break;
+
+                // --- payment_intent.succeeded: one-off donations ---
+                case 'payment_intent.succeeded':
+                    $pi    = $event['data']['object'] ?? [];
+                    $pi_id = $pi['id'] ?? '';
+                    if ( $pi_id ) {
+                        $dt       = YNJ_DB::table( 'donations' );
+                        $donation = $wpdb->get_row( $wpdb->prepare(
+                            "SELECT * FROM $dt WHERE stripe_payment_intent = %s", $pi_id
+                        ) );
+
+                        if ( $donation && $donation->status !== 'succeeded' ) {
+                            $wpdb->update( $dt, [ 'status' => 'succeeded' ], [ 'id' => $donation->id ] );
+
+                            // Record in pool ledger
+                            if ( class_exists( 'YNJ_Pool_Ledger' ) ) {
+                                $fund_label = YNJ_API_Donations::FUND_TYPES[ $donation->fund_type ] ?? ucfirst( $donation->fund_type );
+                                YNJ_Pool_Ledger::record( [
+                                    'mosque_id'              => (int) $donation->mosque_id,
+                                    'entry_type'             => $donation->is_recurring ? 'recurring' : 'payment',
+                                    'payment_type'           => 'donation',
+                                    'item_id'                => (int) $donation->id,
+                                    'gross_pence'            => (int) $donation->amount_pence,
+                                    'currency'               => $donation->currency ?? 'gbp',
+                                    'stripe_payment_id'      => $pi_id,
+                                    'stripe_subscription_id' => $donation->stripe_subscription_id ?? '',
+                                    'payer_name'             => $donation->donor_name ?? '',
+                                    'payer_email'            => $donation->donor_email ?? '',
+                                    'description'            => 'Donation: ' . $fund_label,
+                                ] );
+                            }
+
+                            error_log( '[YNJ Stripe Webhook] Donation #' . $donation->id . ' marked succeeded.' );
+                        }
+                    }
+                    break;
+
+                // --- customer.subscription.deleted: patron cancellation ---
+                case 'customer.subscription.deleted':
+                    $sub    = $event['data']['object'] ?? [];
+                    $sub_id = $sub['id'] ?? '';
+                    if ( $sub_id ) {
+                        $pt = YNJ_DB::table( 'patrons' );
+                        $wpdb->update(
+                            $pt,
+                            [
+                                'status'       => 'cancelled',
+                                'cancelled_at' => current_time( 'mysql' ),
+                            ],
+                            [ 'stripe_subscription_id' => $sub_id ]
+                        );
+                        error_log( '[YNJ Stripe Webhook] Subscription ' . $sub_id . ' cancelled.' );
+                    }
+                    break;
+
+                default:
+                    error_log( '[YNJ Stripe Webhook] Unhandled event type: ' . $event_type );
+                    break;
+            }
+
+            // 5. Always return 200 to Stripe
+            return new WP_REST_Response( [ 'received' => true ], 200 );
+        },
+        'permission_callback' => '__return_true',
+    ]);
+
     register_rest_route('ynj/v1', '/sw', [
         'methods' => 'GET',
         'callback' => function() {

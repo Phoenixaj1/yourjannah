@@ -158,14 +158,145 @@ add_action( 'wp_enqueue_scripts', function() {
 // CUSTOM DOCUMENT TITLE
 // ================================================================
 
-add_filter( 'document_title_parts', function( $title ) {
-    $title['site'] = 'YourJannah';
-    return $title;
+add_filter( 'document_title_parts', function( $title_parts ) {
+    $page_type = get_query_var( 'ynj_page_type' );
+    $mosque_slug = get_query_var( 'ynj_mosque_slug' );
+
+    if ( $page_type === 'mosque_profile' && $mosque_slug ) {
+        $mosque = ynj_get_mosque( $mosque_slug );
+        if ( $mosque ) $title_parts['title'] = $mosque->name . ' — Prayer Times & Community';
+    } elseif ( $page_type === 'prayers' && $mosque_slug ) {
+        $mosque = ynj_get_mosque( $mosque_slug );
+        $title_parts['title'] = ( $mosque ? $mosque->name . ' ' : '' ) . 'Prayer Timetable';
+    } elseif ( $page_type === 'events' && $mosque_slug ) {
+        $mosque = ynj_get_mosque( $mosque_slug );
+        $title_parts['title'] = ( $mosque ? $mosque->name . ' ' : '' ) . 'Events';
+    } elseif ( $page_type === 'classes' || $page_type === 'classes_browse' ) {
+        $title_parts['title'] = 'Classes';
+    } elseif ( $page_type === 'appeals' ) {
+        $title_parts['title'] = 'Request a Mosque Appeal';
+    } elseif ( $page_type === 'login' ) {
+        $title_parts['title'] = 'Sign In';
+    } elseif ( $page_type === 'register' ) {
+        $title_parts['title'] = 'Join Free';
+    } elseif ( $page_type === 'live' ) {
+        $title_parts['title'] = 'Live Events';
+    } elseif ( $page_type === 'profile' ) {
+        $title_parts['title'] = 'My Account';
+    } elseif ( $page_type === 'sponsor_yourjannah' ) {
+        $title_parts['title'] = 'Sponsor YourJannah';
+    }
+
+    $title_parts['site'] = 'YourJannah';
+    return $title_parts;
 } );
 
 add_filter( 'document_title_separator', function() {
     return '—';
 } );
+
+// ================================================================
+// SEO: CANONICAL URL
+// ================================================================
+
+add_action( 'wp_head', function() {
+    $url = home_url( parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ) );
+    echo '<link rel="canonical" href="' . esc_url( $url ) . '">' . "\n";
+}, 1 );
+
+// ================================================================
+// SEO: META TAGS, OPEN GRAPH & JSON-LD SCHEMA
+// ================================================================
+
+add_action( 'wp_head', function() {
+    $page_type = get_query_var( 'ynj_page_type' );
+    $mosque_slug = get_query_var( 'ynj_mosque_slug' );
+
+    // Default SEO
+    $title = 'YourJannah — Fall in love with your Masjid & Community';
+    $description = 'Connect with your local mosque. Prayer times, events, classes, donations, and community — all in one place.';
+    $image = home_url( '/wp-content/themes/yourjannah-starter/assets/icons/logo2.png' );
+    $url = home_url( $_SERVER['REQUEST_URI'] );
+    $type = 'website';
+    $schema = null;
+
+    // Page-specific SEO
+    if ( $page_type === 'mosque_profile' && $mosque_slug ) {
+        $mosque = ynj_get_mosque( $mosque_slug );
+        if ( $mosque ) {
+            $title = $mosque->name . ' — Prayer Times, Events & Community | YourJannah';
+            $description = ( $mosque->description
+                ? wp_trim_words( strip_tags( $mosque->description ), 25 )
+                : 'Prayer times, events, classes, and community at ' . $mosque->name . '. Join ' . number_format( $mosque->member_count ?? 0 ) . ' members.' );
+            if ( $mosque->photo_url ) $image = $mosque->photo_url;
+            $type = 'place';
+            // JSON-LD for Mosque
+            $schema = [
+                '@context' => 'https://schema.org',
+                '@type'    => 'Mosque',
+                'name'     => $mosque->name,
+                'address'  => [
+                    '@type'            => 'PostalAddress',
+                    'streetAddress'    => $mosque->address,
+                    'addressLocality'  => $mosque->city,
+                    'postalCode'       => $mosque->postcode,
+                    'addressCountry'   => $mosque->country ?: 'GB',
+                ],
+                'url' => home_url( '/mosque/' . $mosque->slug ),
+            ];
+            if ( $mosque->phone ) $schema['telephone'] = $mosque->phone;
+            if ( $mosque->latitude ) {
+                $schema['geo'] = [
+                    '@type'     => 'GeoCoordinates',
+                    'latitude'  => $mosque->latitude,
+                    'longitude' => $mosque->longitude,
+                ];
+            }
+        }
+    } elseif ( $page_type === 'events' && $mosque_slug ) {
+        $title = 'Events — YourJannah';
+        $description = 'Upcoming events at your local mosque. Talks, classes, community gatherings, and more.';
+    } elseif ( $page_type === 'classes' || $page_type === 'classes_browse' ) {
+        $title = 'Classes — YourJannah';
+        $description = 'Quran, Arabic, Islamic studies, and more. Find classes at mosques near you.';
+    } elseif ( $page_type === 'prayers' && $mosque_slug ) {
+        $mosque = ynj_get_mosque( $mosque_slug );
+        $title = ( $mosque ? $mosque->name . ' ' : '' ) . 'Prayer Timetable | YourJannah';
+        $description = 'Full monthly prayer timetable with adhan and jamat times. Fajr, Dhuhr, Asr, Maghrib, Isha.';
+    } elseif ( $page_type === 'live' ) {
+        $title = 'Live Events — YourJannah';
+        $description = 'Watch live Islamic talks, lectures, and events from mosques across the UK.';
+    } elseif ( $page_type === 'appeals' ) {
+        $title = 'Request a Mosque Appeal — YourJannah';
+        $description = 'Connect your charity with mosques across the UK. Submit your cause and reach hundreds of congregations.';
+    } elseif ( $page_type === 'login' ) {
+        $title = 'Sign In — YourJannah';
+        $description = 'Sign in to your YourJannah account to connect with your mosque community.';
+    } elseif ( $page_type === 'register' ) {
+        $title = 'Join YourJannah — Free';
+        $description = 'Create your free account to join your mosque community. Prayer times, events, and more.';
+    } elseif ( $page_type === 'sponsor_yourjannah' ) {
+        $title = 'Sponsor YourJannah';
+        $description = 'Support the YourJannah platform and help mosques across the UK connect with their communities.';
+    } elseif ( is_front_page() ) {
+        // Homepage — use defaults
+    }
+
+    // Output meta tags
+    echo '<meta name="description" content="' . esc_attr( $description ) . '">' . "\n";
+    echo '<meta property="og:title" content="' . esc_attr( $title ) . '">' . "\n";
+    echo '<meta property="og:description" content="' . esc_attr( $description ) . '">' . "\n";
+    echo '<meta property="og:image" content="' . esc_url( $image ) . '">' . "\n";
+    echo '<meta property="og:url" content="' . esc_url( $url ) . '">' . "\n";
+    echo '<meta property="og:type" content="' . esc_attr( $type ) . '">' . "\n";
+    echo '<meta property="og:site_name" content="YourJannah">' . "\n";
+    echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
+
+    // JSON-LD Schema
+    if ( $schema ) {
+        echo '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) . '</script>' . "\n";
+    }
+}, 5 );
 
 // ================================================================
 // PWA SUPPORT
