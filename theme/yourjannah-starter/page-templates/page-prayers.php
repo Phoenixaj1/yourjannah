@@ -1,219 +1,180 @@
 <?php
 /**
- * Template: Prayer Times Page
+ * Template: Prayer Timetable Page (Pure PHP)
  *
- * Full prayer timetable: today's times, monthly view, Jumu'ah, Eid.
+ * Full monthly timetable with adhan + jamat times.
+ * Uses prayer_times DB table (imported via dashboard).
+ * Falls back to Aladhan API data if no DB data.
  *
  * @package YourJannah
  */
 
 get_header();
 $slug = ynj_mosque_slug();
-
-// --- Server-side pre-load: mosque data ---
 $mosque = ynj_get_mosque( $slug );
 $mosque_name = $mosque ? $mosque->name : '';
-$mosque_json = wp_json_encode( $mosque ? $mosque : null );
-?>
-<style>
-.ynj-tt-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
-.ynj-tt-nav{display:flex;align-items:center;gap:12px;}
-.ynj-tt-nav button{background:none;border:1px solid #ddd;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;color:#0a1628;}
-.ynj-tt-nav button:active{background:#f0f8ff;}
-.ynj-tt-month{font-size:15px;font-weight:700;min-width:120px;text-align:center;}
-.ynj-tt-print{background:none;border:1px solid #00ADEF;color:#00ADEF;border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;}
-.ynj-tt-table{width:100%;border-collapse:collapse;font-size:11px;line-height:1.3;}
-.ynj-tt-table th{background:#f0f8fc;padding:6px 4px;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:#6b8fa3;text-align:center;position:sticky;top:0;border-bottom:2px solid #e0e8ed;}
-.ynj-tt-table td{padding:5px 3px;text-align:center;border-bottom:1px solid #f0f0ec;font-variant-numeric:tabular-nums;}
-.ynj-tt-table tr.ynj-tt-today{background:#e8f7ff;font-weight:600;}
-.ynj-tt-table tr.ynj-tt-fri{background:#fef9ee;}
-.ynj-tt-table .ynj-tt-jamat{color:#00ADEF;font-weight:600;}
-.ynj-tt-table .ynj-tt-day{text-align:left;font-weight:500;white-space:nowrap;}
-.ynj-tt-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -20px;padding:0 20px;}
-@media print{
-    .ynj-header,.ynj-nav,.ynj-tt-print,.ynj-timetable-link,.ynj-card--subscribe{display:none!important;}
-    body{background:#fff!important;padding:0!important;}
-    .ynj-main{max-width:100%!important;padding:0!important;}
-    .ynj-card{box-shadow:none!important;border:none!important;background:#fff!important;padding:10px!important;}
-    .ynj-tt-table{font-size:10px;}
-    .ynj-print-header{display:block!important;text-align:center;margin-bottom:12px;}
+$mosque_id = $mosque ? (int) $mosque->id : 0;
+
+// Month navigation
+$month = sanitize_text_field( $_GET['month'] ?? date( 'Y-m' ) );
+$parts = explode( '-', $month );
+$year = (int) ( $parts[0] ?? date( 'Y' ) );
+$mon = (int) ( $parts[1] ?? date( 'n' ) );
+$month_label = date( 'F Y', mktime( 0, 0, 0, $mon, 1, $year ) );
+$days_in_month = cal_days_in_month( CAL_GREGORIAN, $mon, $year );
+$prev_month = date( 'Y-m', mktime( 0, 0, 0, $mon - 1, 1, $year ) );
+$next_month = date( 'Y-m', mktime( 0, 0, 0, $mon + 1, 1, $year ) );
+$today = date( 'Y-m-d' );
+
+// Load prayer times from DB
+$monthly_data = [];
+if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
+    global $wpdb;
+    $pt = YNJ_DB::table( 'prayer_times' );
+    $rows = $wpdb->get_results( $wpdb->prepare(
+        "SELECT * FROM $pt WHERE mosque_id = %d AND date BETWEEN %s AND %s ORDER BY date ASC",
+        $mosque_id, "$year-$mon-01", "$year-$mon-$days_in_month"
+    ) ) ?: [];
+    foreach ( $rows as $r ) { $monthly_data[ $r->date ] = $r; }
+
+    // Load Jumu'ah slots
+    $jt = YNJ_DB::table( 'jumuah_slots' );
+    $jumuah_slots = $wpdb->get_results( $wpdb->prepare(
+        "SELECT * FROM $jt WHERE mosque_id = %d AND status = 'active' ORDER BY salah_time ASC",
+        $mosque_id
+    ) ) ?: [];
+
+    // Today's times for the hero card
+    $today_data = $monthly_data[ $today ] ?? null;
 }
-.ynj-print-header{display:none;}
+
+$clean = function( $v ) { return $v ? substr( preg_replace( '/\s*\(.*\)/', '', $v ), 0, 5 ) : '—'; };
+?>
+
+<style>
+.ynj-tt-table{width:100%;border-collapse:collapse;font-size:11px;line-height:1.3;}
+.ynj-tt-table th{background:#f0f8fc;padding:6px 4px;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:#6b8fa3;text-align:center;border-bottom:2px solid #e0e8ed;}
+.ynj-tt-table td{padding:5px 3px;text-align:center;border-bottom:1px solid #f0f0ec;font-variant-numeric:tabular-nums;}
+.ynj-tt-today{background:#e8f7ff !important;font-weight:600;}
+.ynj-tt-fri{background:#fef9ee !important;}
+.ynj-tt-jamat{color:#00ADEF;font-weight:600;}
+.ynj-tt-day{text-align:left !important;font-weight:500;white-space:nowrap;}
+@media print{.ynj-header,.ynj-nav,.ynj-niyyah{display:none!important;}body{background:#fff!important;padding:0!important;}}
 </style>
 
 <main class="ynj-main">
-    <div class="ynj-print-header">
-        <h1 id="print-mosque" style="font-size:20px;font-weight:900;margin-bottom:4px;"></h1>
-        <p id="print-month" style="font-size:14px;color:#666;"></p>
-    </div>
+    <h1 style="font-size:20px;font-weight:800;margin-bottom:4px;"><?php echo esc_html( $mosque_name ); ?> — <?php esc_html_e( 'Prayer Timetable', 'yourjannah' ); ?></h1>
+    <p class="ynj-text-muted" style="margin-bottom:14px;"><?php esc_html_e( 'Adhan and Iqamah times', 'yourjannah' ); ?></p>
 
     <!-- Today's Times -->
-    <section class="ynj-card" id="today-card">
-        <h2 class="ynj-card__title" id="pt-mosque-name"><?php echo $mosque_name ? esc_html( $mosque_name ) : esc_html__( 'Loading...', 'yourjannah' ); ?></h2>
-        <div id="today-grid" class="ynj-prayer-grid"></div>
-    </section>
+    <?php if ( $today_data ) : ?>
+    <div class="ynj-card" style="margin-bottom:14px;">
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:10px;">📅 <?php esc_html_e( 'Today', 'yourjannah' ); ?> — <?php echo esc_html( date( 'l j F', strtotime( $today ) ) ); ?></h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px;">
+        <?php foreach ( [ 'fajr' => 'Fajr', 'sunrise' => 'Sunrise', 'dhuhr' => 'Dhuhr', 'asr' => 'Asr', 'maghrib' => 'Maghrib', 'isha' => 'Isha' ] as $key => $label ) :
+            $adhan = $clean( $today_data->$key ?? '' );
+            $jamat_col = $key . '_jamat';
+            $jamat = isset( $today_data->$jamat_col ) ? $clean( $today_data->$jamat_col ) : '';
+            $is_sunrise = ( $key === 'sunrise' );
+        ?>
+            <div style="text-align:center;padding:10px 6px;border-radius:10px;background:<?php echo $is_sunrise ? '#fffbeb' : '#f8fafc'; ?>;">
+                <div style="font-size:10px;font-weight:700;color:#6b8fa3;text-transform:uppercase;margin-bottom:4px;"><?php echo esc_html( $label ); ?></div>
+                <div style="font-size:14px;font-weight:600;"><?php echo esc_html( $adhan ); ?></div>
+                <?php if ( $jamat && ! $is_sunrise ) : ?>
+                <div style="font-size:12px;font-weight:700;color:#00ADEF;margin-top:2px;"><?php echo esc_html( $jamat ); ?></div>
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
 
-    <!-- Jumu'ah Times -->
-    <section class="ynj-card" id="jumuah-card" style="display:none;">
-        <h3 class="ynj-card__title"><?php esc_html_e( "Jumu'ah (Friday Prayer)", 'yourjannah' ); ?></h3>
-        <div id="jumuah-list"></div>
-    </section>
-
-    <!-- Eid Times -->
-    <section class="ynj-card" id="eid-card" style="display:none;">
-        <h3 class="ynj-card__title"><?php esc_html_e( 'Eid Prayer Times', 'yourjannah' ); ?></h3>
-        <div id="eid-list"></div>
-    </section>
+    <!-- Jumu'ah -->
+    <?php if ( ! empty( $jumuah_slots ) ) : ?>
+    <div class="ynj-card" style="margin-bottom:14px;">
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:8px;">🕌 <?php esc_html_e( "Jumu'ah (Friday Prayer)", 'yourjannah' ); ?></h3>
+        <?php foreach ( $jumuah_slots as $js ) : ?>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0ec;">
+            <div>
+                <strong style="font-size:13px;"><?php echo esc_html( $js->slot_name ); ?></strong>
+                <?php if ( $js->language ) : ?><span style="font-size:11px;color:#6b8fa3;margin-left:6px;"><?php echo esc_html( $js->language ); ?></span><?php endif; ?>
+            </div>
+            <div style="font-size:13px;">
+                <?php if ( $js->khutbah_time ) : ?><span style="color:#6b8fa3;">Khutbah <?php echo esc_html( substr( $js->khutbah_time, 0, 5 ) ); ?></span> · <?php endif; ?>
+                <strong style="color:#00ADEF;">Salah <?php echo esc_html( substr( $js->salah_time, 0, 5 ) ); ?></strong>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 
     <!-- Monthly Timetable -->
-    <section class="ynj-card">
-        <div class="ynj-tt-header">
-            <div class="ynj-tt-nav">
-                <button onclick="changeMonth(-1)">&#9664;</button>
-                <span class="ynj-tt-month" id="month-label"><?php esc_html_e( 'Loading...', 'yourjannah' ); ?></span>
-                <button onclick="changeMonth(1)">&#9654;</button>
-            </div>
-            <button class="ynj-tt-print" onclick="window.print()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                <?php esc_html_e( 'Print', 'yourjannah' ); ?>
-            </button>
+    <div class="ynj-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <a href="?month=<?php echo esc_attr( $prev_month ); ?>" style="padding:6px 14px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-weight:600;color:#0a1628;text-decoration:none;">← <?php esc_html_e( 'Prev', 'yourjannah' ); ?></a>
+            <h3 style="font-size:16px;font-weight:700;margin:0;">📅 <?php echo esc_html( $month_label ); ?></h3>
+            <a href="?month=<?php echo esc_attr( $next_month ); ?>" style="padding:6px 14px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-weight:600;color:#0a1628;text-decoration:none;"><?php esc_html_e( 'Next', 'yourjannah' ); ?> →</a>
         </div>
-        <div class="ynj-tt-scroll">
-            <table class="ynj-tt-table" id="month-table">
+
+        <?php if ( empty( $monthly_data ) ) : ?>
+        <div style="text-align:center;padding:30px;color:#6b8fa3;">
+            <p><?php esc_html_e( 'No prayer times imported for this month.', 'yourjannah' ); ?></p>
+            <p style="font-size:12px;"><?php esc_html_e( 'The mosque admin can import times via Dashboard → Prayer Times.', 'yourjannah' ); ?></p>
+        </div>
+        <?php else : ?>
+        <div style="overflow-x:auto;">
+            <table class="ynj-tt-table">
                 <thead>
                     <tr>
-                        <th><?php esc_html_e( 'Date', 'yourjannah' ); ?></th><th><?php esc_html_e( 'Day', 'yourjannah' ); ?></th>
-                        <th><?php esc_html_e( 'Fajr', 'yourjannah' ); ?></th><th><?php esc_html_e( 'F.Jam', 'yourjannah' ); ?></th>
+                        <th><?php esc_html_e( 'Date', 'yourjannah' ); ?></th>
+                        <th><?php esc_html_e( 'Day', 'yourjannah' ); ?></th>
+                        <th><?php esc_html_e( 'Fajr', 'yourjannah' ); ?></th>
+                        <th><?php esc_html_e( 'F.Jam', 'yourjannah' ); ?></th>
                         <th><?php esc_html_e( 'Rise', 'yourjannah' ); ?></th>
-                        <th><?php esc_html_e( 'Dhuhr', 'yourjannah' ); ?></th><th><?php esc_html_e( 'D.Jam', 'yourjannah' ); ?></th>
-                        <th><?php esc_html_e( 'Asr', 'yourjannah' ); ?></th><th><?php esc_html_e( 'A.Jam', 'yourjannah' ); ?></th>
-                        <th><?php esc_html_e( 'Magh', 'yourjannah' ); ?></th><th><?php esc_html_e( 'M.Jam', 'yourjannah' ); ?></th>
-                        <th><?php esc_html_e( 'Isha', 'yourjannah' ); ?></th><th><?php esc_html_e( 'I.Jam', 'yourjannah' ); ?></th>
+                        <th><?php esc_html_e( 'Dhuhr', 'yourjannah' ); ?></th>
+                        <th><?php esc_html_e( 'D.Jam', 'yourjannah' ); ?></th>
+                        <th><?php esc_html_e( 'Asr', 'yourjannah' ); ?></th>
+                        <th><?php esc_html_e( 'A.Jam', 'yourjannah' ); ?></th>
+                        <th><?php esc_html_e( 'Magh', 'yourjannah' ); ?></th>
+                        <th><?php esc_html_e( 'M.Jam', 'yourjannah' ); ?></th>
+                        <th><?php esc_html_e( 'Isha', 'yourjannah' ); ?></th>
+                        <th><?php esc_html_e( 'I.Jam', 'yourjannah' ); ?></th>
                     </tr>
                 </thead>
-                <tbody id="month-body"><tr><td colspan="13" style="padding:20px;color:#999;"><?php esc_html_e( 'Loading timetable...', 'yourjannah' ); ?></td></tr></tbody>
+                <tbody>
+                <?php for ( $d = 1; $d <= $days_in_month; $d++ ) :
+                    $date = sprintf( '%04d-%02d-%02d', $year, $mon, $d );
+                    $row = $monthly_data[ $date ] ?? null;
+                    if ( ! $row ) continue;
+                    $dow = date( 'D', strtotime( $date ) );
+                    $is_today = ( $date === $today );
+                    $is_friday = ( date( 'N', strtotime( $date ) ) == 5 );
+                ?>
+                <tr class="<?php echo $is_today ? 'ynj-tt-today' : ( $is_friday ? 'ynj-tt-fri' : '' ); ?>">
+                    <td class="ynj-tt-day"><?php echo esc_html( $d ); ?></td>
+                    <td><?php echo esc_html( $dow ); ?></td>
+                    <td><?php echo esc_html( $clean( $row->fajr ) ); ?></td>
+                    <td class="ynj-tt-jamat"><?php echo esc_html( $clean( $row->fajr_jamat ?? '' ) ); ?></td>
+                    <td style="color:#d97706;"><?php echo esc_html( $clean( $row->sunrise ) ); ?></td>
+                    <td><?php echo esc_html( $clean( $row->dhuhr ) ); ?></td>
+                    <td class="ynj-tt-jamat"><?php echo esc_html( $clean( $row->dhuhr_jamat ?? '' ) ); ?></td>
+                    <td><?php echo esc_html( $clean( $row->asr ) ); ?></td>
+                    <td class="ynj-tt-jamat"><?php echo esc_html( $clean( $row->asr_jamat ?? '' ) ); ?></td>
+                    <td><?php echo esc_html( $clean( $row->maghrib ) ); ?></td>
+                    <td class="ynj-tt-jamat"><?php echo esc_html( $clean( $row->maghrib_jamat ?? '' ) ); ?></td>
+                    <td><?php echo esc_html( $clean( $row->isha ) ); ?></td>
+                    <td class="ynj-tt-jamat"><?php echo esc_html( $clean( $row->isha_jamat ?? '' ) ); ?></td>
+                </tr>
+                <?php endfor; ?>
+                </tbody>
             </table>
         </div>
-    </section>
+        <?php endif; ?>
+
+        <div style="text-align:center;margin-top:12px;">
+            <button onclick="window.print()" style="padding:8px 20px;border:1px solid #00ADEF;color:#00ADEF;background:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">🖨️ <?php esc_html_e( 'Print Timetable', 'yourjannah' ); ?></button>
+        </div>
+    </div>
 </main>
 
-<script>
-(function(){
-    const slug = <?php echo wp_json_encode( $slug ); ?>;
-    const API  = ynjData.restUrl;
-    let currentMonth = new Date().toISOString().slice(0,7); // YYYY-MM
-    let mosqueName = '';
-
-    const T = s => s ? String(s).replace(/:\d{2}$/,'').replace(/\s*\(.*\)/,'') : '\u2014';
-
-    // --- Pre-loaded mosque data from PHP (no API fetch needed) ---
-    const mosqueData = <?php echo $mosque_json; ?>;
-    if (mosqueData) {
-        mosqueName = mosqueData.name || slug;
-        document.getElementById('pt-mosque-name').textContent = mosqueName;
-        document.getElementById('print-mosque').textContent = mosqueName;
-
-        if (mosqueData.prayer_times && !mosqueData.prayer_times.error) {
-            const pt = mosqueData.prayer_times;
-            const labels = [['fajr','Fajr'],['sunrise','Sunrise'],['dhuhr','Dhuhr'],['asr','Asr'],['maghrib','Maghrib'],['isha','Isha']];
-            document.getElementById('today-grid').innerHTML = labels.map(([k,v]) => {
-                const adhan = T(pt[k]);
-                const jamat = pt[k+'_jamat'] ? T(pt[k+'_jamat']) : '';
-                return '<div class="ynj-prayer-row">' +
-                    '<span class="ynj-prayer-row__name">' + v + '</span>' +
-                    '<span class="ynj-prayer-row__time">' + adhan + (jamat ? ' <span style="color:#00ADEF;font-size:12px;">Jam: ' + jamat + '</span>' : '') + '</span>' +
-                '</div>';
-            }).join('');
-        }
-    }
-
-    // Load Jumu'ah
-    fetch(API + 'mosques/' + slug + '/jumuah')
-        .then(r => r.json())
-        .then(data => {
-            const slots = data.slots || [];
-            if (!slots.length) return;
-            document.getElementById('jumuah-card').style.display = '';
-            document.getElementById('jumuah-list').innerHTML =
-                '<table class="ynj-tt-table" style="font-size:13px;">' +
-                '<thead><tr><th style="text-align:left;">Slot</th><th>Khutbah</th><th>Salah</th><th>Language</th></tr></thead>' +
-                '<tbody>' + slots.map(s =>
-                    '<tr>' +
-                    '<td style="text-align:left;font-weight:600;">' + s.slot_name + '</td>' +
-                    '<td>' + T(s.khutbah_time) + '</td>' +
-                    '<td class="ynj-tt-jamat">' + T(s.salah_time) + '</td>' +
-                    '<td>' + (s.language||'\u2014') + '</td>' +
-                    '</tr>'
-                ).join('') + '</tbody></table>';
-        });
-
-    // Load Eid
-    fetch(API + 'mosques/' + slug + '/eid?year=' + new Date().getFullYear())
-        .then(r => r.json())
-        .then(data => {
-            const eids = data.eid_times || [];
-            if (!eids.length) return;
-            document.getElementById('eid-card').style.display = '';
-            const grouped = {};
-            eids.forEach(e => { (grouped[e.eid_type] = grouped[e.eid_type] || []).push(e); });
-            let html = '';
-            for (const [type, slots] of Object.entries(grouped)) {
-                const label = type === 'eid_ul_fitr' ? 'Eid ul-Fitr' : 'Eid ul-Adha';
-                html += '<h4 style="font-size:14px;font-weight:700;margin:12px 0 8px;">' + label + '</h4>';
-                html += slots.map(s =>
-                    '<div class="ynj-prayer-row">' +
-                    '<span class="ynj-prayer-row__name">' + s.slot_name + '</span>' +
-                    '<span class="ynj-prayer-row__time">' + T(s.salah_time) + '</span>' +
-                    (s.location_notes ? '<span class="ynj-text-muted" style="font-size:11px;display:block;">' + s.location_notes + '</span>' : '') +
-                    '</div>'
-                ).join('');
-            }
-            document.getElementById('eid-list').innerHTML = html;
-        });
-
-    // Load monthly timetable
-    window.changeMonth = function(delta) {
-        const [y, m] = currentMonth.split('-').map(Number);
-        const d = new Date(y, m - 1 + delta, 1);
-        currentMonth = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-        loadMonth();
-    };
-
-    function loadMonth() {
-        const [y,m] = currentMonth.split('-');
-        const months = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
-        document.getElementById('month-label').textContent = months[parseInt(m)] + ' ' + y;
-        document.getElementById('print-month').textContent = 'Prayer Timetable \u2014 ' + months[parseInt(m)] + ' ' + y;
-        document.getElementById('month-body').innerHTML = '<tr><td colspan="13" style="padding:20px;color:#999;">Loading...</td></tr>';
-
-        fetch(API + 'mosques/' + slug + '/prayers/month?month=' + currentMonth)
-            .then(r => r.json())
-            .then(data => {
-                const days = data.days || [];
-                const today = new Date().toISOString().split('T')[0];
-                document.getElementById('month-body').innerHTML = days.map(d => {
-                    const isToday = d.date === today;
-                    const isFri = d.day === 'Fri';
-                    const cls = isToday ? ' class="ynj-tt-today"' : (isFri ? ' class="ynj-tt-fri"' : '');
-                    const dd = d.date.split('-')[2];
-                    return '<tr' + cls + '>' +
-                        '<td class="ynj-tt-day">' + dd + '</td><td>' + d.day + '</td>' +
-                        '<td>' + T(d.fajr) + '</td><td class="ynj-tt-jamat">' + T(d.fajr_jamat) + '</td>' +
-                        '<td>' + T(d.sunrise) + '</td>' +
-                        '<td>' + T(d.dhuhr) + '</td><td class="ynj-tt-jamat">' + T(d.dhuhr_jamat) + '</td>' +
-                        '<td>' + T(d.asr) + '</td><td class="ynj-tt-jamat">' + T(d.asr_jamat) + '</td>' +
-                        '<td>' + T(d.maghrib) + '</td><td class="ynj-tt-jamat">' + T(d.maghrib_jamat) + '</td>' +
-                        '<td>' + T(d.isha) + '</td><td class="ynj-tt-jamat">' + T(d.isha_jamat) + '</td>' +
-                    '</tr>';
-                }).join('');
-            })
-            .catch(() => {
-                document.getElementById('month-body').innerHTML = '<tr><td colspan="13" style="padding:20px;color:#999;"><?php echo esc_js( __( 'Failed to load.', 'yourjannah' ) ); ?></td></tr>';
-            });
-    }
-
-    loadMonth();
-})();
-</script>
-<?php
-get_footer();
+<?php get_footer(); ?>
