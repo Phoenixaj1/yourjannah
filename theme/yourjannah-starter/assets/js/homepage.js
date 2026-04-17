@@ -55,15 +55,20 @@
                         renderFeed();
                     }
 
-                    // If PHP pre-loaded this mosque, use it directly (no API call)
+                    // If PHP pre-loaded this mosque, use it directly (no API calls)
                     if (mosqueData && mosqueData.slug === savedSlug) {
-                        // Already have full data from ynjData.mosque — just trigger rendering
-                        onMosqueDataReady(mosqueData);
+                        // Use pre-loaded data — skip loadMosque API call
+                        loadMosque(savedSlug);
                     } else {
                         // Different mosque or no preload — fetch from API
                         loadMosque(savedSlug);
                     }
-                    loadFeed(savedSlug, isCacheFresh && cachedFeed);
+                    // Only load feed if not using pre-loaded data
+                    if (!(window.ynjPreloaded && window.ynjPreloaded.mosqueId)) {
+                        loadFeed(savedSlug, isCacheFresh && cachedFeed);
+                    } else {
+                        loadFeed(savedSlug, true); // use pre-loaded, don't show loading
+                    }
                 }
 
                 // First visit or stale cache: full GPS → detect mosque
@@ -340,9 +345,11 @@
             }
 
             function loadMosque(slug) {
-                fetch(`${API}/mosques/${slug}`)
-                    .then(r => r.json())
-                    .then(resp => {
+                // Use pre-loaded mosque data if available (skip API call)
+                var preM = (ynjData.mosque && ynjData.mosque.slug === slug) ? ynjData.mosque : null;
+                var fetchP = preM ? Promise.resolve({mosque: preM}) : fetch(`${API}/mosques/${slug}`).then(r => r.json());
+
+                fetchP.then(resp => {
                         const m = resp.mosque || resp;
                         mosqueData = m;
                         document.getElementById('mosque-name').textContent = m.name || slug;

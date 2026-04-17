@@ -36,14 +36,30 @@ if ( $mosque && $mosque->latitude ) {
     $cache_key = 'ynj_aladhan_' . md5( $lat . $lng . $today );
     $aladhan = get_transient( $cache_key );
 
-    if ( ! $aladhan ) {
-        $url = "https://api.aladhan.com/v1/timings/{$today}?latitude={$lat}&longitude={$lng}&method=2&school=0";
-        $response = wp_remote_get( $url, [ 'timeout' => 5 ] );
-        if ( ! is_wp_error( $response ) ) {
-            $body = json_decode( wp_remote_retrieve_body( $response ), true );
-            if ( ! empty( $body['data']['timings'] ) ) {
-                $aladhan = $body['data']['timings'];
-                set_transient( $cache_key, $aladhan, 6 * HOUR_IN_SECONDS );
+    if ( false === $aladhan ) {
+        $fail_key = $cache_key . '_fail';
+        if ( ! get_transient( $fail_key ) ) {
+            $url = "https://api.aladhan.com/v1/timings/{$today}?latitude={$lat}&longitude={$lng}&method=2&school=0";
+            $response = wp_remote_get( $url, [ 'timeout' => 3, 'sslverify' => false ] );
+            if ( ! is_wp_error( $response ) ) {
+                $body = json_decode( wp_remote_retrieve_body( $response ), true );
+                if ( ! empty( $body['data']['timings'] ) ) {
+                    $aladhan = $body['data']['timings'];
+                    set_transient( $cache_key, $aladhan, 6 * HOUR_IN_SECONDS );
+                }
+            }
+            if ( ! $aladhan ) set_transient( $fail_key, 1, HOUR_IN_SECONDS );
+        }
+        // Fallback: use prayer_times table
+        if ( ! $aladhan ) {
+            global $wpdb;
+            $pt_table = YNJ_DB::table( 'prayer_times' );
+            $db_times = $wpdb->get_row( $wpdb->prepare(
+                "SELECT fajr, sunrise, dhuhr, asr, maghrib, isha FROM $pt_table WHERE mosque_id = %d AND date = %s",
+                (int) $mosque->id, date( 'Y-m-d' )
+            ) );
+            if ( $db_times ) {
+                $aladhan = [ 'Fajr' => $db_times->fajr, 'Sunrise' => $db_times->sunrise, 'Dhuhr' => $db_times->dhuhr, 'Asr' => $db_times->asr, 'Maghrib' => $db_times->maghrib, 'Isha' => $db_times->isha ];
             }
         }
     }

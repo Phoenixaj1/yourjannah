@@ -73,9 +73,12 @@ add_action('init', function() {
     }
     // Auto-configure Stripe keys on first load
     YNJ_Stripe::auto_configure();
-    // Run DB migrations if schema version changed
-    if ( get_option( 'ynj_db_version' ) !== YNJ_DB::SCHEMA_VERSION ) {
+    // Run DB migrations if schema version changed (once only, not every page load)
+    $db_ver = get_option( 'ynj_db_version', '' );
+    if ( $db_ver !== YNJ_DB::SCHEMA_VERSION && ! get_transient( 'ynj_db_migrating' ) ) {
+        set_transient( 'ynj_db_migrating', 1, 60 ); // Prevent concurrent migrations
         YNJ_DB::install();
+        delete_transient( 'ynj_db_migrating' );
     }
 }, 5);
 
