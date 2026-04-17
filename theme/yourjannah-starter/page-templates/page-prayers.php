@@ -38,7 +38,7 @@ if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
     foreach ( $rows as $r ) { $monthly_data[ $r->date ] = $r; }
 
     // Load Jumu'ah slots
-    $jt = YNJ_DB::table( 'jumuah_slots' );
+    $jt = YNJ_DB::table( 'jumuah_times' );
     $jumuah_slots = $wpdb->get_results( $wpdb->prepare(
         "SELECT * FROM $jt WHERE mosque_id = %d AND status = 'active' ORDER BY salah_time ASC",
         $mosque_id

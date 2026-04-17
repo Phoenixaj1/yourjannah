@@ -13,7 +13,7 @@
  */
 
 $pt_table = YNJ_DB::table( 'prayer_times' );
-$jt = YNJ_DB::table( 'jumuah_slots' );
+$jt = YNJ_DB::table( 'jumuah_times' );
 $lat = $mosque->latitude ? (float) $mosque->latitude : null;
 $lng = $mosque->longitude ? (float) $mosque->longitude : null;
 

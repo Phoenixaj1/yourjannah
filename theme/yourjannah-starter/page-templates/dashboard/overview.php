@@ -15,7 +15,7 @@ $an = YNJ_DB::table( 'announcements' );
 $dt = YNJ_DB::table( 'donations' );
 $ft = YNJ_DB::table( 'mosque_funds' );
 $it = YNJ_DB::table( 'email_imports' );
-$jt = YNJ_DB::table( 'jumuah_slots' );
+$jt = YNJ_DB::table( 'jumuah_times' );
 $arpt = YNJ_DB::table( 'appeal_responses' );
 $mosq = YNJ_DB::table( 'mosques' );
 

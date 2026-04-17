@@ -79,7 +79,7 @@ if ( $mosque && $mosque->latitude ) {
             }
         }
         if ( $_ynj_is_friday ) {
-            $jt = YNJ_DB::table( 'jumuah_slots' );
+            $jt = YNJ_DB::table( 'jumuah_times' );
             $_ynj_jumuah_slots = $wpdb->get_results( $wpdb->prepare( "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND status = 'active' ORDER BY salah_time ASC", (int) $mosque->id ) ) ?: [];
         }
     }
@@ -141,7 +141,7 @@ $_mp_points = [ 'total' => 0 ];
 
 if ( $_mp_id && class_exists( 'YNJ_DB' ) ) {
     global $wpdb;
-    $jt = YNJ_DB::table( 'jumuah_slots' );
+    $jt = YNJ_DB::table( 'jumuah_times' );
     if ( $wpdb->get_var( "SHOW TABLES LIKE '$jt'" ) === $jt ) {
         $_mp_jumuah = $wpdb->get_results( $wpdb->prepare( "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND status = 'active' ORDER BY salah_time ASC", $_mp_id ) ) ?: [];
     }
