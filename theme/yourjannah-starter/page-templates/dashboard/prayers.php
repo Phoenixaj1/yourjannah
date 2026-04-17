@@ -103,13 +103,20 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
             for ( $d = 1; $d <= $days_in_month; $d++ ) {
                 $date = sprintf( '%04d-%02d-%02d', $year, $mon, $d );
                 $dow = date( 'N', strtotime( $date ) ); // 1=Mon, 7=Sun
+                $week_num = (int) ceil( $d / 7 ); // Week 1-5 of month
 
-                if ( $apply_to === 'all' ||
-                     ( $apply_to === 'weekdays' && $dow <= 5 ) ||
-                     ( $apply_to === 'weekends' && $dow >= 6 ) ||
-                     ( $apply_to === 'friday' && $dow == 5 ) ) {
-                    $dates[] = $date;
-                }
+                $match = false;
+                if ( $apply_to === 'all' ) $match = true;
+                elseif ( $apply_to === 'weekdays' && $dow <= 5 ) $match = true;
+                elseif ( $apply_to === 'weekends' && $dow >= 6 ) $match = true;
+                elseif ( $apply_to === 'friday' && $dow == 5 ) $match = true;
+                elseif ( $apply_to === 'week1' && $week_num === 1 ) $match = true;
+                elseif ( $apply_to === 'week2' && $week_num === 2 ) $match = true;
+                elseif ( $apply_to === 'week3' && $week_num === 3 ) $match = true;
+                elseif ( $apply_to === 'week4' && $week_num === 4 ) $match = true;
+                elseif ( $apply_to === 'week5' && $week_num === 5 ) $match = true;
+
+                if ( $match ) $dates[] = $date;
             }
 
             $updated = 0;
@@ -248,6 +255,11 @@ $last_import = $wpdb->get_var( $wpdb->prepare(
                 <option value="weekdays"><?php esc_html_e( 'Weekdays only (Mon-Fri)', 'yourjannah' ); ?></option>
                 <option value="weekends"><?php esc_html_e( 'Weekends only (Sat-Sun)', 'yourjannah' ); ?></option>
                 <option value="friday"><?php esc_html_e( 'Fridays only', 'yourjannah' ); ?></option>
+                <option value="week1"><?php esc_html_e( 'Week 1 (days 1-7)', 'yourjannah' ); ?></option>
+                <option value="week2"><?php esc_html_e( 'Week 2 (days 8-14)', 'yourjannah' ); ?></option>
+                <option value="week3"><?php esc_html_e( 'Week 3 (days 15-21)', 'yourjannah' ); ?></option>
+                <option value="week4"><?php esc_html_e( 'Week 4 (days 22-28)', 'yourjannah' ); ?></option>
+                <option value="week5"><?php esc_html_e( 'Week 5 (days 29+)', 'yourjannah' ); ?></option>
             </select>
         </div>
         <button type="submit" class="d-btn d-btn--primary">⏰ <?php esc_html_e( 'Apply', 'yourjannah' ); ?></button>
