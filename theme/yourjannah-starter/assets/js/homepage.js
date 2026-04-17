@@ -555,8 +555,8 @@
                 renderPrayerOverview();
             }
 
-            // Jumu'ah slot selection — defaults to first slot, user can pick
-            var selectedJumuahTime = null; // null = use default dhuhr/first slot
+            // Jumu'ah slot selection — defaults to first slot from preloaded data
+            var selectedJumuahTime = window._ynjFirstJumuahTime || null;
             window.selectJumuahSlot = function(el, salahTime) {
                 selectedJumuahTime = salahTime;
                 // Update visual selection
@@ -618,8 +618,13 @@
                 document.getElementById('next-prayer-countdown').textContent = `${hh}:${mm}:${ss}`;
                 document.getElementById('next-prayer-name').textContent = label;
 
-                // Show adhan + jamat time
-                const timeDisplay = nextJamat ? `Adhan ${nextTime} · Jamat ${nextJamat}` : nextTime;
+                // Show time — for Jumu'ah just show the salah time cleanly
+                var timeDisplay;
+                if (isJumuah) {
+                    timeDisplay = nextTime;
+                } else {
+                    timeDisplay = nextJamat ? `Adhan ${nextTime} · Jamat ${nextJamat}` : nextTime;
+                }
                 document.getElementById('next-prayer-time').textContent = timeDisplay;
                 var prayerLabelEl = document.getElementById('next-prayer-label');
                 if (isJumuah) {
@@ -1094,8 +1099,12 @@
 
                 const html = prayers.map(p => {
                     if (!prayerTimes[p]) return '';
-                    const adhan = prayerTimes[p];
-                    const jamat = jamatTimes[p+'_jamat'] || '';
+                    // On Friday, override dhuhr with selected Jumu'ah slot time
+                    let adhan = prayerTimes[p];
+                    if (isFridayOv && p === 'dhuhr' && selectedJumuahTime) {
+                        adhan = selectedJumuahTime;
+                    }
+                    const jamat = (isFridayOv && p === 'dhuhr') ? '' : (jamatTimes[p+'_jamat'] || '');
                     const [h,m] = adhan.split(':').map(Number);
                     const t = new Date(now); t.setHours(h,m,0,0);
                     const isPast = t <= now;

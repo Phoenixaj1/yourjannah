@@ -451,10 +451,10 @@ if ( $_hp_mosque_id && is_user_logged_in() ) {
         <?php if ( $_ynj_is_friday && ! empty( $_ynj_jumuah_slots ) && count( $_ynj_jumuah_slots ) > 0 ) : ?>
         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:8px 0;" id="jumuah-slots">
             <?php foreach ( $_ynj_jumuah_slots as $idx => $js ) : ?>
-            <div class="ynj-jumuah-slot<?php echo $idx === 0 ? ' active' : ''; ?>" onclick="selectJumuahSlot(this, '<?php echo esc_attr( substr( $js->salah_time, 0, 5 ) ); ?>')" data-salah="<?php echo esc_attr( substr( $js->salah_time, 0, 5 ) ); ?>" style="background:rgba(255,255,255,<?php echo $idx === 0 ? '.25' : '.12'; ?>);border-radius:10px;padding:6px 12px;text-align:center;cursor:pointer;border:2px solid <?php echo $idx === 0 ? 'rgba(255,255,255,.5)' : 'transparent'; ?>;transition:all .15s;">
-                <div style="font-size:11px;opacity:.7;"><?php echo esc_html( $js->slot_name ?: 'Jumu\'ah' ); ?></div>
+            <div class="ynj-jumuah-slot<?php echo $idx === 0 ? ' active' : ''; ?>" onclick="selectJumuahSlot(this, '<?php echo esc_attr( substr( $js->salah_time, 0, 5 ) ); ?>')" data-salah="<?php echo esc_attr( substr( $js->salah_time, 0, 5 ) ); ?>" style="background:rgba(255,255,255,<?php echo $idx === 0 ? '.25' : '.1'; ?>);border-radius:12px;padding:10px 16px;text-align:center;cursor:pointer;border:2px solid <?php echo $idx === 0 ? 'rgba(255,255,255,.5)' : 'rgba(255,255,255,.15)'; ?>;transition:all .15s;min-width:120px;">
+                <div style="font-size:12px;font-weight:600;margin-bottom:4px;"><?php echo esc_html( $js->slot_name ?: 'Jumu\'ah' ); ?></div>
                 <?php if ( $js->khutbah_time ) : ?><div style="font-size:11px;opacity:.6;">Khutbah <?php echo esc_html( substr( $js->khutbah_time, 0, 5 ) ); ?></div><?php endif; ?>
-                <div style="font-size:15px;font-weight:700;">Salah <?php echo esc_html( substr( $js->salah_time, 0, 5 ) ); ?></div>
+                <div style="font-size:18px;font-weight:800;margin:2px 0;">Salah <?php echo esc_html( substr( $js->salah_time, 0, 5 ) ); ?></div>
                 <?php if ( $js->language ) : ?><div style="font-size:10px;opacity:.5;"><?php echo esc_html( $js->language ); ?></div><?php endif; ?>
             </div>
             <?php endforeach; ?>
@@ -665,8 +665,14 @@ window.ynjPreloaded = {
     events: <?php echo wp_json_encode( $_hp_events ); ?>,
     classes: <?php echo wp_json_encode( $_hp_classes ); ?>,
     points: <?php echo wp_json_encode( $_hp_points ); ?>,
-    mosqueId: <?php echo (int) $_hp_mosque_id; ?>
+    mosqueId: <?php echo (int) $_hp_mosque_id; ?>,
+    jumuahSlots: <?php echo wp_json_encode( array_map( function( $s ) { return [ 'slot_name' => $s->slot_name, 'khutbah' => substr( $s->khutbah_time, 0, 5 ), 'salah' => substr( $s->salah_time, 0, 5 ), 'language' => $s->language ]; }, $_ynj_jumuah_slots ) ); ?>
 };
+
+// On Friday, set first Jumu'ah time for homepage.js countdown
+if (window.ynjPreloaded.jumuahSlots && window.ynjPreloaded.jumuahSlots.length > 0 && new Date().getDay() === 5) {
+    window._ynjFirstJumuahTime = window.ynjPreloaded.jumuahSlots[0].salah;
+}
 
 // Homepage join function
 async function ynjJoinMosqueHP(mosqueId) {
