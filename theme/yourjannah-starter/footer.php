@@ -462,6 +462,7 @@ function ynj_default_mobile_nav() {
         [ 'label' => 'Prayers',    'href' => '/mosque/' . $slug . '/prayers',       'icon' => '🕐' ],
         [ 'label' => 'Booking',    'href' => '/mosque/' . $slug . '/rooms',         'icon' => '🏠' ],
         [ 'label' => 'Masjid Info','href' => '/mosque/' . $slug,                    'icon' => '🕌' ],
+        [ 'label' => 'Madrassah',  'href' => '/mosque/' . $slug . '/madrassah',      'icon' => '📚' ],
         [ 'label' => 'Patron',     'href' => '/mosque/' . $slug . '/patron',        'icon' => '🏅' ],
         [ 'label' => 'Donate',     'href' => '/mosque/' . $slug . '/donate',        'icon' => '💝' ],
         [ 'label' => 'Profile',    'href' => '/profile',                            'icon' => '👤' ],
