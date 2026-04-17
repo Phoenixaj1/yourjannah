@@ -42,7 +42,7 @@ class YNJ_User_Auth {
 
         // Generate token
         $token      = bin2hex( random_bytes( 32 ) );
-        $token_hash = hash_hmac( 'sha256', $token, 'ynj_user_salt_2024' );
+        $token_hash = hash_hmac( 'sha256', $token, wp_salt( 'auth' ) );
 
         $wpdb->insert( $table, [
             'name'          => $name,
@@ -90,7 +90,7 @@ class YNJ_User_Auth {
 
         // Generate new token
         $token      = bin2hex( random_bytes( 32 ) );
-        $token_hash = hash_hmac( 'sha256', $token, 'ynj_user_salt_2024' );
+        $token_hash = hash_hmac( 'sha256', $token, wp_salt( 'auth' ) );
 
         $wpdb->update( $table, [
             'token_hash'      => $token_hash,
@@ -110,7 +110,7 @@ class YNJ_User_Auth {
     public static function verify_token( $token ) {
         if ( empty( $token ) ) return null;
 
-        $token_hash = hash_hmac( 'sha256', $token, 'ynj_user_salt_2024' );
+        $token_hash = hash_hmac( 'sha256', $token, wp_salt( 'auth' ) );
 
         global $wpdb;
         $table = YNJ_DB::table( 'users' );

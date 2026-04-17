@@ -92,13 +92,7 @@ add_action('init', function() {
 }, 5);
 
 // AJAX handler to set WP auth cookie (called after JS login/register)
-add_action('wp_ajax_nopriv_ynj_set_session', function() {
-    $wp_user_id = absint($_POST['wp_user_id'] ?? 0);
-    if ($wp_user_id && get_userdata($wp_user_id)) {
-        wp_set_auth_cookie($wp_user_id, true);
-    }
-    wp_send_json(['ok' => true]);
-});
+// NOTE: nopriv handler removed — it allowed unauthenticated session hijacking.
 add_action('wp_ajax_ynj_set_session', function() {
     wp_send_json(['ok' => true]); // Already logged in
 });
@@ -114,7 +108,8 @@ add_action('phpmailer_init', function($phpmailer) {
     $phpmailer->SMTPAutoTLS = false;
 });
 
-// Test email endpoint — works without admin login via secret key
+// Test email endpoint — only available in WP_DEBUG mode
+if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 add_action('init', function() {
     if (isset($_GET['ynj_test_email']) && isset($_GET['key']) && $_GET['key'] === 'ynj_mail_test_2026') {
         $to = sanitize_email($_GET['ynj_test_email']);
@@ -132,6 +127,7 @@ add_action('init', function() {
         }
     }
 });
+} // end WP_DEBUG test email
 
 // Auto-upgrade DB on version change
 add_action('admin_init', function() {
@@ -144,8 +140,8 @@ add_action('admin_init', function() {
         }
     }
     // Admin user already created — code removed to avoid slow init
-    // Create test user for patron testing
-    if (isset($_GET['ynj_create_test_user'])) {
+    // Create test user for patron testing — only in WP_DEBUG mode
+    if ( defined( 'WP_DEBUG' ) && WP_DEBUG && isset($_GET['ynj_create_test_user']) ) {
         $email = 'test@yourjannah.com';
         $pass = 'test1234';
         if (!email_exists($email)) {

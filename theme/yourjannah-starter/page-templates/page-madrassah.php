@@ -70,10 +70,11 @@ if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
         // Outstanding fees for parent's children
         if ( ! empty( $students ) ) {
             $child_ids = array_map( function( $s ) { return (int) $s->id; }, $students );
-            $ids_str = implode( ',', $child_ids );
-            $fees = $wpdb->get_results(
-                "SELECT f.*, s.child_name FROM $ft f JOIN $st s ON s.id = f.student_id WHERE f.student_id IN ($ids_str) AND f.status = 'unpaid' ORDER BY f.due_date ASC"
-            ) ?: [];
+            $placeholders = implode( ',', array_fill( 0, count( $child_ids ), '%d' ) );
+            $fees = $wpdb->get_results( $wpdb->prepare(
+                "SELECT f.*, s.child_name FROM $ft f JOIN $st s ON s.id = f.student_id WHERE f.student_id IN ($placeholders) AND f.status = 'unpaid' ORDER BY f.due_date ASC",
+                ...$child_ids
+            ) ) ?: [];
         }
     }
 }

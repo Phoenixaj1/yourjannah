@@ -9,10 +9,7 @@ get_header();
 
 // If already logged in via WP session, redirect to profile
 if ( is_user_logged_in() ) {
-    $redirect = home_url( '/profile' );
-    if ( ! empty( $_GET['redirect'] ) ) {
-        $redirect = esc_url_raw( $_GET['redirect'] );
-    }
+    $redirect = isset( $_GET['redirect'] ) ? wp_validate_redirect( sanitize_text_field( $_GET['redirect'] ), home_url( '/' ) ) : home_url( '/profile' );
     echo '<script>window.location.href = ' . wp_json_encode( $redirect ) . ';</script>';
     echo '<main class="ynj-main" style="padding:40px 20px;text-align:center;"><p>' . esc_html__( 'Already signed in. Redirecting...', 'yourjannah' ) . '</p></main>';
     get_footer();
@@ -27,7 +24,7 @@ if ( is_user_logged_in() ) {
     </section>
     <section class="ynj-card">
         <?php
-        $return_to    = isset( $_GET['redirect'] ) ? sanitize_text_field( $_GET['redirect'] ) : '/';
+        $return_to    = isset( $_GET['redirect'] ) ? wp_validate_redirect( sanitize_text_field( $_GET['redirect'] ), home_url( '/' ) ) : '/';
         $join_mosque  = isset( $_GET['join_mosque'] ) ? sanitize_text_field( $_GET['join_mosque'] ) : '';
         $mosque_slug  = '';
         $show_google  = class_exists( 'YNJ_Social_Auth' ) && YNJ_Social_Auth::is_google_configured();

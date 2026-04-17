@@ -189,12 +189,12 @@ class YNJ_API_Admin {
         register_rest_route( self::NS, '/admin/tickets', [
             'methods'             => 'POST',
             'callback'            => [ __CLASS__, 'create_ticket' ],
-            'permission_callback' => '__return_true',
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
         register_rest_route( self::NS, '/admin/tickets', [
             'methods'             => 'GET',
             'callback'            => [ __CLASS__, 'list_tickets' ],
-            'permission_callback' => '__return_true',
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
         // --- Eid management (bearer) ---
@@ -1403,7 +1403,7 @@ class YNJ_API_Admin {
         // Generate bearer token for dashboard
         $token = bin2hex( random_bytes( 32 ) );
         $wpdb->update( $table, [
-            'admin_token_hash'      => hash( 'sha256', $token ),
+            'admin_token_hash'      => YNJ_Auth::hash_token( $token ),
             'admin_token_last_used' => current_time( 'mysql', true ),
         ], [ 'id' => $mosque->id ] );
 

@@ -26,31 +26,34 @@ if ( class_exists( 'YNJ_DB' ) ) {
     $mt = YNJ_DB::table( 'mosques' );
 
     // Live NOW — events marked is_live=1 and happening today
-    $live_now = $wpdb->get_results(
+    $live_now = $wpdb->get_results( $wpdb->prepare(
         "SELECT e.*, m.name AS mosque_name, m.slug AS mosque_slug, m.city AS mosque_city
          FROM $et e JOIN $mt m ON m.id = e.mosque_id
          WHERE e.status = 'published' AND e.is_live = 1 AND e.is_online = 1
-         AND e.event_date = '$today'
-         ORDER BY e.start_time ASC LIMIT 20"
-    ) ?: [];
+         AND e.event_date = %s
+         ORDER BY e.start_time ASC LIMIT 20",
+        $today
+    ) ) ?: [];
 
     // Upcoming online events (next 30 days, across all mosques)
-    $upcoming = $wpdb->get_results(
+    $upcoming = $wpdb->get_results( $wpdb->prepare(
         "SELECT e.*, m.name AS mosque_name, m.slug AS mosque_slug, m.city AS mosque_city
          FROM $et e JOIN $mt m ON m.id = e.mosque_id
          WHERE e.status = 'published' AND (e.is_online = 1 OR e.live_url != '')
-         AND e.event_date >= '$today' AND e.is_live = 0
-         ORDER BY e.event_date ASC, e.start_time ASC LIMIT 50"
-    ) ?: [];
+         AND e.event_date >= %s AND e.is_live = 0
+         ORDER BY e.event_date ASC, e.start_time ASC LIMIT 50",
+        $today
+    ) ) ?: [];
 
     // Recent recordings (past 60 days, have recording_url)
-    $archive = $wpdb->get_results(
+    $archive = $wpdb->get_results( $wpdb->prepare(
         "SELECT e.*, m.name AS mosque_name, m.slug AS mosque_slug, m.city AS mosque_city
          FROM $et e JOIN $mt m ON m.id = e.mosque_id
          WHERE e.status = 'published' AND e.recording_url IS NOT NULL AND e.recording_url != ''
-         AND e.event_date < '$today'
-         ORDER BY e.event_date DESC LIMIT 30"
-    ) ?: [];
+         AND e.event_date < %s
+         ORDER BY e.event_date DESC LIMIT 30",
+        $today
+    ) ) ?: [];
 }
 
 // Search

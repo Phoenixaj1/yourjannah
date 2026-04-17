@@ -57,21 +57,21 @@ class YNJ_API_Donations {
         register_rest_route( self::NS, '/admin/funds', [
             'methods'             => 'POST',
             'callback'            => [ __CLASS__, 'admin_create_fund' ],
-            'permission_callback' => '__return_true',
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
         // PUT /admin/funds/{id} — admin: update a fund
         register_rest_route( self::NS, '/admin/funds/(?P<id>\d+)', [
             'methods'             => 'PUT',
             'callback'            => [ __CLASS__, 'admin_update_fund' ],
-            'permission_callback' => '__return_true',
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
         // DELETE /admin/funds/{id} — admin: deactivate a fund
         register_rest_route( self::NS, '/admin/funds/(?P<id>\d+)', [
             'methods'             => 'DELETE',
             'callback'            => [ __CLASS__, 'admin_delete_fund' ],
-            'permission_callback' => '__return_true',
+            'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
     }
 
@@ -265,7 +265,7 @@ class YNJ_API_Donations {
     }
 
     /**
-     * POST /donate/confirm — mark donation as succeeded.
+     * POST /donate/confirm — mark donation as succeeded after Stripe verification.
      */
     public static function confirm_donation( \WP_REST_Request $request ) {
         $donation_id = (int) ( $request->get_param( 'donation_id' ) ?: 0 );
@@ -278,6 +278,26 @@ class YNJ_API_Donations {
         $donation = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $dt WHERE id = %d", $donation_id ) );
         if ( ! $donation ) {
             return new \WP_Error( 'not_found', 'Donation not found.', [ 'status' => 404 ] );
+        }
+
+        // Verify PaymentIntent status with Stripe before marking as succeeded
+        $pi_id = $donation->stripe_payment_intent ?? '';
+        if ( empty( $pi_id ) ) {
+            return new \WP_Error( 'no_payment_intent', 'No PaymentIntent found for this donation.', [ 'status' => 400 ] );
+        }
+
+        $stripe_response = wp_remote_get( 'https://api.stripe.com/v1/payment_intents/' . $pi_id, [
+            'headers' => [ 'Authorization' => 'Bearer ' . YNJ_Stripe::secret_key() ],
+            'timeout' => 10,
+        ] );
+
+        if ( is_wp_error( $stripe_response ) ) {
+            return new \WP_Error( 'stripe_error', 'Could not verify payment with Stripe.', [ 'status' => 502 ] );
+        }
+
+        $pi_data = json_decode( wp_remote_retrieve_body( $stripe_response ), true );
+        if ( empty( $pi_data['status'] ) || $pi_data['status'] !== 'succeeded' ) {
+            return new \WP_Error( 'payment_not_confirmed', 'Stripe PaymentIntent has not succeeded (status: ' . ( $pi_data['status'] ?? 'unknown' ) . ').', [ 'status' => 400 ] );
         }
 
         $wpdb->update( $dt, [ 'status' => 'succeeded' ], [ 'id' => $donation_id ] );

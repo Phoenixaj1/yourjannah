@@ -323,13 +323,16 @@ $mosque_status = $mosque ? $mosque->status : '';
 
                 if (data.patrons && data.patrons.length) {
                     const tierEmoji = { champion: '\ud83c\udfc6', guardian: '\ud83d\udee1\ufe0f', supporter: '\u2b50' };
+                    function escHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
                     document.getElementById('patron-wall').style.display = 'block';
                     document.getElementById('patron-list').innerHTML = data.patrons.map(function(p) {
-                        const initial = (p.name || '?')[0].toUpperCase();
+                        const safeName = escHtml(p.name || '?');
+                        const initial = escHtml((p.name || '?')[0].toUpperCase());
+                        const safeTier = escHtml(p.tier || '');
                         return '<div class="ynj-pw-item">' +
                             '<div class="ynj-pw-avatar">' + initial + '</div>' +
-                            '<div class="ynj-pw-name">' + p.name + ' ' + (tierEmoji[p.tier] || '') + '</div>' +
-                            '<div class="ynj-pw-tier">' + p.tier + '</div>' +
+                            '<div class="ynj-pw-name">' + safeName + ' ' + (tierEmoji[p.tier] || '') + '</div>' +
+                            '<div class="ynj-pw-tier">' + safeTier + '</div>' +
                         '</div>';
                     }).join('');
                 }

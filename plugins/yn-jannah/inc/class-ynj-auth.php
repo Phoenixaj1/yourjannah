@@ -339,7 +339,7 @@ class YNJ_Auth {
      * @return string         64-character hex hash.
      */
     public static function hash_token( $token ) {
-        return hash_hmac( 'sha256', $token, 'ynj_salt_2024' );
+        return hash_hmac( 'sha256', $token, wp_salt( 'auth' ) );
     }
 
     /**

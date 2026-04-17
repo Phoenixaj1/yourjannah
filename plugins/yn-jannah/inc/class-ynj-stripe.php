@@ -48,19 +48,19 @@ class YNJ_Stripe {
 
     /**
      * Get the Stripe publishable key.
-     * Priority: wp_option → PHP constant → shared key
+     * Priority: wp_option → PHP constant
      */
     public static function public_key() {
         $key = get_option( 'ynj_stripe_public_key', '' )
             ?: get_option( 'yn_checkout_stripe_pk', '' );
         if ( $key ) return $key;
         if ( defined( 'YNJ_STRIPE_PK' ) ) return YNJ_STRIPE_PK;
-        return 'pk_live_51TAzchPsd2xgThKq7WwOUkq0cERDhwxMqmLvHnAF0rTNzZGwzEsa7jFByTgy2eTVkeuP0FB23fmTd1txtrZxmwd200XHEkHvWr';
+        return '';
     }
 
     /**
      * Auto-configure Stripe keys on first load if not set.
-     * Runs once — sets wp_options from encoded defaults, then skips.
+     * Admin must configure keys via Settings > Stripe.
      */
     public static function auto_configure() {
         if ( get_option( 'ynj_stripe_auto_configured' ) ) return;
@@ -68,15 +68,7 @@ class YNJ_Stripe {
             update_option( 'ynj_stripe_auto_configured', '1' );
             return;
         }
-        // Shared YourNiyyah Stripe account — encoded to avoid git secret scanning
-        $encoded_sk = 'c2tfbGl2ZV81MVRBemNoUHNkMnhnVGhLcTlyS2tFSVBteXVLbkNVblVsZFZVcThET1ZRVkMzM3pkWGRBWGx2YUo0N1dmbFZvNktzaGtLM2FuNXFhQWw1eXNqSlZpTlNMVzAwRzlUTmZsQWQ=';
-        if ( ! get_option( 'ynj_stripe_secret_key' ) ) {
-            update_option( 'ynj_stripe_secret_key', base64_decode( $encoded_sk ) );
-        }
-        if ( ! get_option( 'ynj_stripe_public_key' ) ) {
-            update_option( 'ynj_stripe_public_key', 'pk_live_51TAzchPsd2xgThKq7WwOUkq0cERDhwxMqmLvHnAF0rTNzZGwzEsa7jFByTgy2eTVkeuP0FB23fmTd1txtrZxmwd200XHEkHvWr' );
-        }
-        update_option( 'ynj_stripe_auto_configured', '1' );
+        // Keys must be configured via admin settings — no hardcoded defaults.
     }
 
     /**
