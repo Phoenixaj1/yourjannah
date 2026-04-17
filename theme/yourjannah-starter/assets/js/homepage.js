@@ -641,8 +641,8 @@
                 hero.classList.remove('ynj-hero--urgent','ynj-hero--critical');
                 if (travelMinutes) {
                     const totalLead = travelMinutes + bufferMinutes;
-                    // Calculate minutes until we need to leave (using jamat time)
-                    const jamatTime = jamatTimes[nextName+'_jamat'] || nextTime;
+                    // Calculate minutes until we need to leave (using jamat/jumuah time)
+                    const jamatTime = isJumuah ? nextTime : (jamatTimes[nextName+'_jamat'] || nextTime);
                     const [jh,jm] = jamatTime.split(':').map(Number);
                     const jt = new Date(now); jt.setHours(jh,jm,0,0);
                     const minsUntilLeave = Math.floor((jt - now) / 60000) - totalLead;
@@ -664,10 +664,17 @@
             function updateLeaveBy() {
                 if (!prayerTimes || !distanceKm) return;
                 const now = new Date();
+                const isFridayLB = (now.getDay() === 5);
                 const prayers = ['fajr','dhuhr','asr','maghrib','isha'];
                 for (const p of prayers) {
                     if (!prayerTimes[p]) continue;
-                    const targetTime = jamatTimes[p+'_jamat'] || prayerTimes[p];
+                    // On Friday, use selected Jumu'ah slot time instead of dhuhr
+                    let targetTime;
+                    if (isFridayLB && p === 'dhuhr' && selectedJumuahTime) {
+                        targetTime = selectedJumuahTime;
+                    } else {
+                        targetTime = jamatTimes[p+'_jamat'] || prayerTimes[p];
+                    }
                     const [h,m] = targetTime.split(':').map(Number);
                     const t = new Date(now); t.setHours(h,m,0,0);
 
