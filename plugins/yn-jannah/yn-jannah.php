@@ -12,6 +12,11 @@ define('YNJ_DIR', plugin_dir_path(__FILE__));
 define('YNJ_URL', plugin_dir_url(__FILE__));
 define('YNJ_TABLE_PREFIX', 'ynj_');
 
+// One-time demo seeder (run via /wp-admin/admin.php?ynj_seed_extra=1)
+if ( is_admin() && file_exists( YNJ_DIR . 'seed-demo-extra.php' ) ) {
+    require_once YNJ_DIR . 'seed-demo-extra.php';
+}
+
 // Autoloader
 spl_autoload_register(function($class) {
     $map = [
