@@ -294,17 +294,6 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
         return;
     }
 
-    // Show onboarding if not logged in and not seen
-    // Check cookie directly (not PHP) so it works even with page cache
-    var wpLoggedIn = document.cookie.indexOf('wordpress_logged_in_') !== -1;
-    var hasToken = !!localStorage.getItem('ynj_user_token');
-    var hasSeen = !!localStorage.getItem('ynj_onboard_seen');
-    if (!wpLoggedIn && !hasToken && !hasSeen) {
-        document.getElementById('ynj-onboard').style.display = 'flex';
-        // Auto-trigger GPS immediately
-        obAutoGps();
-    }
-
     var obSelectedSlug = '';
     var obSelectedName = '';
     var obEmailExists = false;
@@ -501,6 +490,15 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
         localStorage.setItem('ynj_onboard_seen', '1');
         document.getElementById('ynj-onboard').style.display = 'none';
     };
+
+    // ---- TRIGGER: show modal + start GPS (all functions defined above) ----
+    var wpLoggedIn = document.cookie.indexOf('wordpress_logged_in_') !== -1;
+    var hasToken = !!localStorage.getItem('ynj_user_token');
+    var hasSeen = !!localStorage.getItem('ynj_onboard_seen');
+    if (!wpLoggedIn && !hasToken && !hasSeen) {
+        document.getElementById('ynj-onboard').style.display = 'flex';
+        obAutoGps();
+    }
 })();
 </script>
 
