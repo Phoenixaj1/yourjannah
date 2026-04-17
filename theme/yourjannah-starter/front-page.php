@@ -294,8 +294,9 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
         return;
     }
 
-    // Show onboarding if not logged in (WP or localStorage) and not seen
-    var wpLoggedIn = <?php echo is_user_logged_in() ? 'true' : 'false'; ?>;
+    // Show onboarding if not logged in and not seen
+    // Check cookie directly (not PHP) so it works even with page cache
+    var wpLoggedIn = document.cookie.indexOf('wordpress_logged_in_') !== -1;
     var hasToken = !!localStorage.getItem('ynj_user_token');
     var hasSeen = !!localStorage.getItem('ynj_onboard_seen');
     if (!wpLoggedIn && !hasToken && !hasSeen) {
