@@ -333,9 +333,10 @@ class YNJ_API_User {
             . '<p style="font-size:13px;color:#999;">This link expires in 24 hours. If you didn\'t request this, ignore this email.</p>'
             . '</div></div>';
 
-        add_filter( 'wp_mail_content_type', function() { return 'text/html'; } );
+        $html_type = function() { return 'text/html'; };
+        add_filter( 'wp_mail_content_type', $html_type );
         wp_mail( $email, $subject, $body );
-        remove_filter( 'wp_mail_content_type', function() { return 'text/html'; } );
+        remove_filter( 'wp_mail_content_type', $html_type );
 
         return new \WP_REST_Response( [ 'ok' => true, 'message' => 'If an account exists, a reset link has been sent.' ] );
     }

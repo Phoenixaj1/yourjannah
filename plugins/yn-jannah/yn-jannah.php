@@ -82,6 +82,10 @@ add_action('init', function() {
     YNJ_Social_Auth::init();
     // Auto-configure Stripe keys on first load
     YNJ_Stripe::auto_configure();
+    // Auto-configure Postmark token if not set
+    if ( ! get_option( 'ynj_postmark_token' ) ) {
+        update_option( 'ynj_postmark_token', '0da34f0e-13dc-4b3e-bd96-0e361d429e78' );
+    }
     // Run DB migrations if schema version changed (once only, not every page load)
     $db_ver = get_option( 'ynj_db_version', '' );
     if ( $db_ver !== YNJ_DB::SCHEMA_VERSION && ! get_transient( 'ynj_db_migrating' ) ) {
@@ -97,15 +101,29 @@ add_action('wp_ajax_ynj_set_session', function() {
     wp_send_json(['ok' => true]); // Already logged in
 });
 
-// Configure wp_mail — force SMTP via localhost (Cloudways Postfix)
-add_filter('wp_mail_from', function() { return 'noreply@yourjannah.com'; });
+// Configure wp_mail — Postmark SMTP (reliable delivery)
+// Use send.yourniyyah.com which is DKIM-verified in Postmark
+add_filter('wp_mail_from', function() { return 'noreply@send.yourniyyah.com'; });
 add_filter('wp_mail_from_name', function() { return 'YourJannah'; });
 add_action('phpmailer_init', function($phpmailer) {
-    $phpmailer->isSMTP();
-    $phpmailer->Host = 'localhost';
-    $phpmailer->Port = 25;
-    $phpmailer->SMTPAuth = false;
-    $phpmailer->SMTPAutoTLS = false;
+    $token = get_option('ynj_postmark_token', '');
+    if ( $token ) {
+        // Postmark SMTP
+        $phpmailer->isSMTP();
+        $phpmailer->Host = 'smtp.postmarkapp.com';
+        $phpmailer->Port = 587;
+        $phpmailer->SMTPAuth = true;
+        $phpmailer->Username = $token;
+        $phpmailer->Password = $token;
+        $phpmailer->SMTPSecure = 'tls';
+    } else {
+        // Fallback: localhost Postfix
+        $phpmailer->isSMTP();
+        $phpmailer->Host = 'localhost';
+        $phpmailer->Port = 25;
+        $phpmailer->SMTPAuth = false;
+        $phpmailer->SMTPAutoTLS = false;
+    }
 });
 
 // Test email endpoint — only available in WP_DEBUG mode
