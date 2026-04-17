@@ -16,6 +16,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
         'phone'       => sanitize_text_field( $_POST['phone'] ?? '' ),
         'website'     => esc_url_raw( $_POST['website'] ?? '' ),
         'description' => sanitize_textarea_field( $_POST['description'] ?? '' ),
+        'theme'       => sanitize_text_field( $_POST['theme'] ?? 'minimal' ),
     ];
     if ( $update['name'] ) {
         $wpdb->update( $mt, $update, [ 'id' => $mosque_id ] );
@@ -74,6 +75,16 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
         <div class="d-field">
             <label><?php esc_html_e( 'Description', 'yourjannah' ); ?></label>
             <textarea name="description" rows="4"><?php echo esc_textarea( $mosque->description ?? '' ); ?></textarea>
+        </div>
+
+        <div class="d-field">
+            <label><?php esc_html_e( 'Page Theme', 'yourjannah' ); ?></label>
+            <select name="theme">
+                <option value="minimal" <?php selected( $mosque->theme ?? 'minimal', 'minimal' ); ?>>✨ Minimal & Clean — white, subtle shadows, modern</option>
+                <option value="dark" <?php selected( $mosque->theme ?? '', 'dark' ); ?>>🌙 Dark & Premium — dark navy, glass effect</option>
+                <option value="warm" <?php selected( $mosque->theme ?? '', 'warm' ); ?>>🌿 Warm & Organic — cream, earthy tones, calming</option>
+                <option value="bold" <?php selected( $mosque->theme ?? '', 'bold' ); ?>>🎨 Bold & Energetic — vibrant colours, playful</option>
+            </select>
         </div>
 
         <button type="submit" class="d-btn d-btn--primary"><?php esc_html_e( 'Save Profile', 'yourjannah' ); ?></button>

@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '2.7.0';
+    const SCHEMA_VERSION = '2.8.0';
 
     /**
      * Return the full table name for a given short name.
@@ -173,6 +173,7 @@ class YNJ_DB {
             admin_password_hash varchar(255) NOT NULL DEFAULT '',
             admin_token_hash varchar(64) NOT NULL DEFAULT '',
             admin_token_last_used datetime DEFAULT NULL,
+            theme varchar(20) NOT NULL DEFAULT 'minimal',
             dfm_slug varchar(100) NOT NULL DEFAULT '',
             dfm_mosque_id bigint(20) unsigned DEFAULT NULL,
             setup_complete tinyint(1) NOT NULL DEFAULT 0,
