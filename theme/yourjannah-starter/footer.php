@@ -416,6 +416,118 @@ if ( $_nb_id && $_nb_pk ) :
 </script>
 <?php endif; // $_nb_id && $_nb_pk ?>
 
+<!-- Love YourJannah? Donate floating button -->
+<style>
+.ynj-love-btn{position:fixed;right:16px;bottom:130px;z-index:900;background:linear-gradient(135deg,#ec4899,#8b5cf6);color:#fff;border:none;border-radius:24px;padding:10px 16px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(139,92,246,.4);display:flex;align-items:center;gap:6px;transition:all .2s;font-family:inherit;}
+.ynj-love-btn:hover{transform:scale(1.05);box-shadow:0 6px 24px rgba(139,92,246,.5);}
+.ynj-love-btn svg{width:16px;height:16px;fill:currentColor;}
+@media(max-width:768px){.ynj-love-btn{bottom:130px;right:12px;padding:8px 12px;font-size:11px;}}
+.ynj-love-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9998;align-items:center;justify-content:center;padding:20px;}
+.ynj-love-modal.open{display:flex;}
+.ynj-love-sheet{background:#fff;border-radius:20px;padding:28px 24px;max-width:400px;width:100%;text-align:center;position:relative;}
+.ynj-love-close{position:absolute;top:12px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#999;}
+.ynj-love-amounts{display:flex;gap:8px;justify-content:center;margin:16px 0;}
+.ynj-love-amounts button{flex:1;padding:12px 0;border:2px solid #e5e7eb;border-radius:12px;background:#fff;font-size:16px;font-weight:700;cursor:pointer;transition:all .15s;font-family:inherit;}
+.ynj-love-amounts button:hover,.ynj-love-amounts button.active{border-color:#8b5cf6;background:#f5f3ff;color:#8b5cf6;}
+.ynj-love-custom{width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:12px;font-size:16px;text-align:center;margin-bottom:16px;font-family:inherit;display:none;}
+.ynj-love-custom:focus{outline:none;border-color:#8b5cf6;}
+.ynj-love-pay{width:100%;padding:14px;background:linear-gradient(135deg,#ec4899,#8b5cf6);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s;}
+.ynj-love-pay:disabled{opacity:.5;cursor:not-allowed;}
+</style>
+
+<button class="ynj-love-btn" onclick="document.getElementById('ynj-love-modal').classList.add('open')" id="ynj-love-fab">
+    <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+    Love YourJannah?
+</button>
+
+<div class="ynj-love-modal" id="ynj-love-modal" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="ynj-love-sheet">
+        <button class="ynj-love-close" onclick="document.getElementById('ynj-love-modal').classList.remove('open')">&times;</button>
+        <div style="font-size:40px;margin-bottom:8px;">💜</div>
+        <h2 style="font-size:20px;font-weight:800;margin-bottom:4px;">Support YourJannah</h2>
+        <p style="font-size:13px;color:#666;margin-bottom:16px;">Help us keep this platform free for every masjid.<br>100% of your donation goes to YourJannah.</p>
+
+        <div class="ynj-love-amounts" id="ynj-love-amounts">
+            <button onclick="ynjLoveSelect(500,this)">£5</button>
+            <button onclick="ynjLoveSelect(1000,this)" class="active">£10</button>
+            <button onclick="ynjLoveSelect(2000,this)">£20</button>
+            <button onclick="ynjLoveSelect(0,this)">Other</button>
+        </div>
+        <input type="number" class="ynj-love-custom" id="ynj-love-custom" placeholder="Enter amount (£)" min="1" step="1" oninput="ynjLoveCustom(this.value)">
+
+        <button class="ynj-love-pay" id="ynj-love-pay" onclick="ynjLovePay()">Donate £10</button>
+        <p style="font-size:11px;color:#999;margin-top:12px;">Secure payment via Stripe. JazakAllah Khayr 🤲</p>
+    </div>
+</div>
+
+<script>
+(function(){
+    var loveAmount = 1000; // pence
+    window.ynjLoveSelect = function(pence, btn) {
+        document.querySelectorAll('#ynj-love-amounts button').forEach(function(b){b.classList.remove('active');});
+        btn.classList.add('active');
+        var customInput = document.getElementById('ynj-love-custom');
+        if (pence === 0) {
+            customInput.style.display = 'block';
+            customInput.focus();
+            loveAmount = 0;
+            document.getElementById('ynj-love-pay').textContent = 'Donate';
+            document.getElementById('ynj-love-pay').disabled = true;
+        } else {
+            customInput.style.display = 'none';
+            loveAmount = pence;
+            document.getElementById('ynj-love-pay').textContent = 'Donate £' + (pence/100);
+            document.getElementById('ynj-love-pay').disabled = false;
+        }
+    };
+    window.ynjLoveCustom = function(val) {
+        var pounds = parseFloat(val);
+        if (pounds && pounds >= 1) {
+            loveAmount = Math.round(pounds * 100);
+            document.getElementById('ynj-love-pay').textContent = 'Donate £' + pounds;
+            document.getElementById('ynj-love-pay').disabled = false;
+        } else {
+            document.getElementById('ynj-love-pay').disabled = true;
+        }
+    };
+    window.ynjLovePay = function() {
+        if (!loveAmount) return;
+        var btn = document.getElementById('ynj-love-pay');
+        btn.disabled = true; btn.textContent = 'Redirecting...';
+        fetch('/wp-json/ynj/v1/platform-donate', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({amount_pence: loveAmount})
+        }).then(function(r){return r.json();}).then(function(data){
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                btn.disabled = false; btn.textContent = 'Donate £' + (loveAmount/100);
+                alert(data.error || 'Something went wrong. Please try again.');
+            }
+        }).catch(function(){
+            btn.disabled = false; btn.textContent = 'Donate £' + (loveAmount/100);
+            alert('Network error. Please try again.');
+        });
+    };
+
+    // Move fab up/down with niyyah bar
+    var fab = document.getElementById('ynj-love-fab');
+    if (fab) {
+        var observer = new MutationObserver(function(){
+            var niyyah = document.getElementById('ynj-niyyah-bar');
+            if (niyyah && niyyah.classList.contains('open')) {
+                fab.style.bottom = '200px';
+            } else {
+                fab.style.bottom = '';
+            }
+        });
+        var niyyah = document.getElementById('ynj-niyyah-bar');
+        if (niyyah) observer.observe(niyyah, {attributes:true, attributeFilter:['class']});
+    }
+})();
+</script>
+
 <?php wp_footer(); ?>
 </body>
 </html>

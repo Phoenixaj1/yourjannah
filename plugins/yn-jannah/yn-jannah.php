@@ -286,6 +286,48 @@ add_action('rest_api_init', function() {
         'permission_callback' => '__return_true',
     ]);
 
+    // Platform donation — 100% to YourJannah
+    register_rest_route('ynj/v1', '/platform-donate', [
+        'methods' => 'POST',
+        'callback' => function( $request ) {
+            $data = $request->get_json_params();
+            $amount = absint( $data['amount_pence'] ?? 0 );
+            if ( $amount < 100 ) return new WP_REST_Response( [ 'ok' => false, 'error' => 'Minimum donation is £1.' ], 400 );
+            if ( $amount > 100000 ) return new WP_REST_Response( [ 'ok' => false, 'error' => 'Maximum donation is £1,000.' ], 400 );
+
+            $secret = YNJ_Stripe::secret_key();
+            if ( ! $secret ) return new WP_REST_Response( [ 'ok' => false, 'error' => 'Stripe not configured.' ], 500 );
+
+            $ch = curl_init( 'https://api.stripe.com/v1/checkout/sessions' );
+            curl_setopt_array( $ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST           => true,
+                CURLOPT_USERPWD        => $secret . ':',
+                CURLOPT_POSTFIELDS     => http_build_query( [
+                    'mode'                        => 'payment',
+                    'success_url'                 => home_url( '/?donation=thankyou' ),
+                    'cancel_url'                  => home_url( '/' ),
+                    'line_items[0][price_data][currency]'     => 'gbp',
+                    'line_items[0][price_data][unit_amount]'  => $amount,
+                    'line_items[0][price_data][product_data][name]' => 'Support YourJannah',
+                    'line_items[0][price_data][product_data][description]' => 'Thank you for helping us keep YourJannah free for every masjid.',
+                    'line_items[0][quantity]'      => 1,
+                ] ),
+                CURLOPT_TIMEOUT        => 15,
+            ] );
+            $response = curl_exec( $ch );
+            curl_close( $ch );
+
+            $session = json_decode( $response, true );
+            if ( ! empty( $session['url'] ) ) {
+                return new WP_REST_Response( [ 'ok' => true, 'url' => $session['url'] ] );
+            }
+
+            return new WP_REST_Response( [ 'ok' => false, 'error' => 'Could not create checkout session.' ], 500 );
+        },
+        'permission_callback' => '__return_true',
+    ]);
+
     register_rest_route('ynj/v1', '/sw', [
         'methods' => 'GET',
         'callback' => function() {
