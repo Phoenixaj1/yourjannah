@@ -201,12 +201,15 @@ $_hud_league_url = $_hud_mosque ? home_url( '/mosque/' . $_hud_mosque_slug . '#m
             <span class="ynj-hud__tier-icon"><?php echo $_hud_level ? $_hud_level['icon'] : '&#x1F54C;'; ?></span>
             <span class="ynj-hud__masjid-name"><?php echo $_hud_mosque ? esc_html( $_hud_mosque->name ) : esc_html__( 'Select Masjid', 'yourjannah' ); ?></span>
             <?php if ( $_hud_level ) : ?>
-            <span class="ynj-hud__tier-name">Lv<?php echo (int) $_hud_level['level']; ?> <?php echo esc_html( $_hud_level['name'] ); ?></span>
-            <?php endif; ?>
-            <?php if ( $_hud_rank > 0 ) : ?>
-            <span class="ynj-hud__rank-badge" id="hud-rank" data-rank="<?php echo (int) $_hud_rank; ?>">#<?php echo (int) $_hud_rank; ?></span>
+            <span class="ynj-hud__tier-name">Lv<?php echo (int) $_hud_level['level']; ?></span>
             <?php endif; ?>
         </a>
+        <?php if ( $_hud_rank > 0 ) : ?>
+        <button type="button" class="ynj-hud__league-btn" id="hud-rank" onclick="ynjHudLeagueToggle()">
+            <span class="ynj-hud__rank-badge">#<?php echo (int) $_hud_rank; ?></span>
+            <span class="ynj-hud__league-label"><?php esc_html_e( 'League', 'yourjannah' ); ?></span>
+        </button>
+        <?php endif; ?>
 
         <?php if ( $_hud_mosque && $_hud_level ) : ?>
         <div class="ynj-hud__xp">
@@ -349,6 +352,97 @@ $_hud_all_done = $_hud_done_count >= 5;
 </div>
 <?php endif; ?>
 
+<!-- ════ LEAGUE TABLE MODAL ════ -->
+<?php if ( $_hud_mosque && isset( $_hud_league ) && $_hud_league['rank'] > 0 ) :
+    $_league_top = $_hud_league['top_5'] ?? [];
+    $_h2h = null;
+    if ( function_exists( 'ynj_get_h2h_challenge' ) ) $_h2h = ynj_get_h2h_challenge( (int) $_hud_mosque->id );
+?>
+<div class="ynj-hud-popup" id="hud-league-popup" style="display:none;">
+    <div class="ynj-hud-popup__card">
+        <button type="button" class="ynj-hud-popup__close" onclick="ynjHudLeagueToggle()">&times;</button>
+
+        <!-- League header -->
+        <div style="text-align:center;padding-bottom:14px;border-bottom:1px solid rgba(0,0,0,.06);margin-bottom:14px;">
+            <div style="font-size:28px;margin-bottom:4px;"><?php echo $_hud_level ? $_hud_level['icon'] : '&#x1F54C;'; ?></div>
+            <div style="font-size:16px;font-weight:800;color:#0a1628;"><?php echo esc_html( $_hud_mosque->name ); ?></div>
+            <div style="font-size:12px;color:#6b8fa3;">
+                <?php if ( $_hud_mosque->city ) echo esc_html( $_hud_mosque->city ); ?>
+                <?php if ( $_hud_level ) : ?> &middot; Lv<?php echo (int) $_hud_level['level']; ?> <?php echo esc_html( $_hud_level['name'] ); ?><?php endif; ?>
+            </div>
+            <div style="display:inline-block;margin-top:8px;padding:4px 16px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border-radius:10px;font-size:18px;font-weight:900;">
+                #<?php echo (int) $_hud_league['rank']; ?> <span style="font-size:12px;font-weight:600;opacity:.7;"><?php esc_html_e( 'of', 'yourjannah' ); ?> <?php echo (int) $_hud_league['total']; ?></span>
+            </div>
+            <div style="font-size:10px;color:#6b8fa3;margin-top:4px;"><?php echo esc_html( $_hud_league['tier']['name'] ); ?> <?php esc_html_e( 'League', 'yourjannah' ); ?> &middot; <?php esc_html_e( 'This week', 'yourjannah' ); ?></div>
+        </div>
+
+        <!-- Leaderboard -->
+        <div style="margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;color:#6b8fa3;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;"><?php esc_html_e( 'Leaderboard', 'yourjannah' ); ?></div>
+            <?php foreach ( $_league_top as $li => $lm ) :
+                $is_me = ( (int) $lm->id === (int) $_hud_mosque->id );
+                $rank_num = $li + 1;
+                $rank_icons = [ 1 => '&#x1F947;', 2 => '&#x1F948;', 3 => '&#x1F949;' ];
+            ?>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;margin-bottom:4px;<?php echo $is_me ? 'background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1.5px solid #86efac;' : 'background:#f9fafb;border:1px solid #f0f0f0;'; ?>">
+                <span style="font-size:<?php echo $rank_num <= 3 ? '18' : '14'; ?>px;font-weight:900;width:28px;text-align:center;<?php echo $is_me ? 'color:#287e61;' : 'color:#6b8fa3;'; ?>">
+                    <?php echo isset( $rank_icons[ $rank_num ] ) ? $rank_icons[ $rank_num ] : '#' . $rank_num; ?>
+                </span>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:<?php echo $is_me ? '800' : '600'; ?>;color:#0a1628;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?php echo esc_html( $lm->name ); ?></div>
+                    <div style="font-size:10px;color:#6b8fa3;"><?php echo esc_html( $lm->city ?? '' ); ?> &middot; <?php echo (int) $lm->members; ?> <?php esc_html_e( 'members', 'yourjannah' ); ?></div>
+                </div>
+                <div style="text-align:right;flex-shrink:0;">
+                    <div style="font-size:14px;font-weight:800;color:<?php echo $is_me ? '#287e61' : '#0a1628'; ?>;"><?php echo number_format( (int) $lm->dhikr_count ); ?></div>
+                    <div style="font-size:9px;color:#6b8fa3;"><?php esc_html_e( 'dhikr', 'yourjannah' ); ?></div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+
+            <?php if ( $_hud_league['rank'] > 5 ) : ?>
+            <!-- Show your position if outside top 5 -->
+            <div style="text-align:center;padding:6px;font-size:11px;color:#6b8fa3;">&middot;&middot;&middot;</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1.5px solid #86efac;">
+                <span style="font-size:14px;font-weight:900;width:28px;text-align:center;color:#287e61;">#<?php echo (int) $_hud_league['rank']; ?></span>
+                <div style="flex:1;">
+                    <div style="font-size:13px;font-weight:800;color:#0a1628;"><?php echo esc_html( $_hud_mosque->name ); ?></div>
+                    <div style="font-size:10px;color:#6b8fa3;"><?php echo esc_html( $_hud_mosque->city ?? '' ); ?> &middot; <?php echo (int) $_hud_league['members']; ?> <?php esc_html_e( 'members', 'yourjannah' ); ?></div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:14px;font-weight:800;color:#287e61;"><?php echo number_format( (int) $_hud_league['score'] ); ?></div>
+                    <div style="font-size:9px;color:#6b8fa3;"><?php esc_html_e( 'dhikr', 'yourjannah' ); ?></div>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <?php if ( $_h2h ) : ?>
+        <!-- Head-to-head challenge -->
+        <div style="padding:12px;background:linear-gradient(135deg,#0a1628,#1a2a44);border-radius:14px;color:#fff;margin-bottom:10px;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.5);margin-bottom:8px;text-align:center;"><?php esc_html_e( 'This week\'s challenge', 'yourjannah' ); ?></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="text-align:center;flex:1;">
+                    <div style="font-size:22px;font-weight:900;color:<?php echo $is_me && $_h2h['winning'] ? '#34d399' : '#fff'; ?>;"><?php echo (int) $_h2h['my_score']; ?></div>
+                    <div style="font-size:10px;opacity:.6;"><?php echo esc_html( mb_strimwidth( $_hud_mosque->name, 0, 16, '..' ) ); ?></div>
+                </div>
+                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);padding:0 8px;">VS</div>
+                <div style="text-align:center;flex:1;">
+                    <div style="font-size:22px;font-weight:900;"><?php echo (int) $_h2h['their_score']; ?></div>
+                    <div style="font-size:10px;opacity:.6;"><?php echo esc_html( mb_strimwidth( $_h2h['opponent'], 0, 16, '..' ) ); ?></div>
+                </div>
+            </div>
+            <div style="text-align:center;margin-top:8px;font-size:11px;color:rgba(255,255,255,.5);"><?php echo (int) $_h2h['days_left']; ?> <?php esc_html_e( 'days left', 'yourjannah' ); ?></div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Call to action -->
+        <div style="text-align:center;font-size:12px;color:#6b8fa3;font-style:italic;">
+            <?php esc_html_e( 'Every dhikr you say lifts your masjid in the league', 'yourjannah' ); ?>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <style>
 /* ════════════════════════════════════════════════
    MASJID HUD — Your community's status bar
@@ -373,7 +467,11 @@ $_hud_all_done = $_hud_done_count >= 5;
 .ynj-hud__tier-icon{font-size:16px;flex-shrink:0;}
 .ynj-hud__masjid-name{font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ynj-hud__tier-name{font-size:10px;color:rgba(255,255,255,.45);white-space:nowrap;flex-shrink:0;}
-.ynj-hud__rank-badge{font-size:11px;font-weight:900;color:#a78bfa;background:rgba(124,58,237,.2);padding:1px 6px;border-radius:6px;flex-shrink:0;}
+/* League button */
+.ynj-hud__league-btn{display:flex;align-items:center;gap:3px;padding:3px 8px;background:rgba(124,58,237,.12);border:none;border-radius:8px;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .2s;}
+.ynj-hud__league-btn:hover{background:rgba(124,58,237,.2);}
+.ynj-hud__rank-badge{font-size:12px;font-weight:900;color:#a78bfa;}
+.ynj-hud__league-label{font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.3px;}
 .ynj-hud__rank-badge--up{animation:ynj-hud-rankup 1.2s ease-out;}
 @keyframes ynj-hud-rankup{0%{transform:scale(1);}30%{transform:scale(1.5);background:rgba(245,158,11,.4);}100%{transform:scale(1);}}
 
@@ -493,11 +591,26 @@ $_hud_all_done = $_hud_done_count >= 5;
 
 <script>
 (function(){
-    /* ── Quick Dhikr popup toggle ── */
+    /* ── Popup toggles ── */
+    function closeAllPopups() {
+        ['hud-dhikr-popup', 'hud-league-popup'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+    }
     window.ynjHudDhikrToggle = function() {
         var popup = document.getElementById('hud-dhikr-popup');
         if (!popup) return;
-        popup.style.display = popup.style.display === 'none' ? 'flex' : 'none';
+        var show = popup.style.display === 'none';
+        closeAllPopups();
+        if (show) popup.style.display = 'flex';
+    };
+    window.ynjHudLeagueToggle = function() {
+        var popup = document.getElementById('hud-league-popup');
+        if (!popup) return;
+        var show = popup.style.display === 'none';
+        closeAllPopups();
+        if (show) popup.style.display = 'flex';
     };
 
     /* ── Confetti helper (duplicated for header — no dependency on profile page) ── */
@@ -689,13 +802,13 @@ $_hud_all_done = $_hud_done_count >= 5;
     }
     if (currentRank > 0) localStorage.setItem('ynj_hud_rank', currentRank);
 
-    /* ── Close popup on backdrop click ── */
-    var popupEl = document.getElementById('hud-dhikr-popup');
-    if (popupEl) {
-        popupEl.addEventListener('click', function(e) {
-            if (e.target === popupEl) popupEl.style.display = 'none';
+    /* ── Close popups on backdrop click ── */
+    ['hud-dhikr-popup', 'hud-league-popup'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('click', function(e) {
+            if (e.target === el) el.style.display = 'none';
         });
-    }
+    });
 })();
 </script>
 <?php endif; ?>
