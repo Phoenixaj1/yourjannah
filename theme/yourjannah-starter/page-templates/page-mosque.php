@@ -537,75 +537,6 @@ if ( $mosque && is_user_logged_in() ) {
     </a>
     <?php endif; ?>
 
-    <!-- ═══ UNIFIED COMMUNITY CARD — All stats in one place ═══ -->
-    <?php if ( $mosque ) :
-        $cp = function_exists( 'ynj_get_congregation_points' ) ? ynj_get_congregation_points( (int) $mosque->id, 7 ) : null;
-        $whos = function_exists( 'ynj_whos_at_masjid' ) ? ynj_whos_at_masjid( (int) $mosque->id, 2 ) : [ 'count' => 0 ];
-    ?>
-    <section class="ynj-card" id="community-stats" style="padding:0;overflow:hidden;border:1px solid #e5e7eb;">
-        <!-- Header -->
-        <div style="padding:14px 16px;background:linear-gradient(135deg,#1e3a5f,#0a1628);color:#fff;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <h3 style="font-size:14px;font-weight:800;color:#fff;margin:0;">🕌 <?php esc_html_e( 'Our Community', 'yourjannah' ); ?></h3>
-                <?php if ( $whos['count'] > 0 ) : ?>
-                <span style="font-size:12px;background:rgba(34,197,94,.2);color:#4ade80;padding:3px 10px;border-radius:12px;font-weight:700;">
-                    <?php echo $whos['count']; ?> <?php esc_html_e( 'here now', 'yourjannah' ); ?>
-                </span>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <!-- Stats Grid -->
-        <?php if ( $cp && ( $cp['prayers']['total'] > 0 || $cp['quran_pages'] > 0 ) ) : ?>
-        <div style="padding:12px 16px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;background:#f8fafc;">
-            <div>
-                <div style="font-size:20px;font-weight:800;color:#1e3a5f;"><?php echo number_format( $cp['prayers']['total'] ); ?></div>
-                <div style="font-size:10px;color:#64748b;font-weight:600;">🤲 <?php esc_html_e( 'prayers', 'yourjannah' ); ?></div>
-            </div>
-            <div>
-                <div style="font-size:20px;font-weight:800;color:#1e3a5f;"><?php echo number_format( $cp['quran_pages'] ); ?></div>
-                <div style="font-size:10px;color:#64748b;font-weight:600;">📖 <?php esc_html_e( 'pages', 'yourjannah' ); ?></div>
-            </div>
-            <div>
-                <div style="font-size:20px;font-weight:800;color:#1e3a5f;"><?php echo $cp['active_members']; ?></div>
-                <div style="font-size:10px;color:#64748b;font-weight:600;">👥 <?php esc_html_e( 'active', 'yourjannah' ); ?></div>
-            </div>
-        </div>
-        <?php if ( $cp['dhikr_days'] > 0 || $cp['fasting_days'] > 0 || $cp['good_deeds'] > 0 ) : ?>
-        <div style="padding:0 16px 10px;display:flex;justify-content:center;gap:12px;font-size:11px;color:#64748b;background:#f8fafc;">
-            <?php if ( $cp['dhikr_days'] > 0 ) : ?><span>📿 <?php echo $cp['dhikr_days']; ?> dhikr</span><?php endif; ?>
-            <?php if ( $cp['fasting_days'] > 0 ) : ?><span>🌙 <?php echo $cp['fasting_days']; ?> fasting</span><?php endif; ?>
-            <?php if ( $cp['good_deeds'] > 0 ) : ?><span>⭐ <?php echo $cp['good_deeds']; ?> deeds</span><?php endif; ?>
-        </div>
-        <?php endif; ?>
-        <?php else : ?>
-        <div style="padding:16px;text-align:center;background:#f8fafc;">
-            <p style="font-size:13px;color:#64748b;margin:0;"><?php esc_html_e( 'Be the first to log your ibadah today!', 'yourjannah' ); ?></p>
-        </div>
-        <?php endif; ?>
-
-        <!-- Challenge Progress (loaded via JS) -->
-        <div id="community-challenge-bar" style="display:none;padding:10px 16px;border-top:1px solid #e5e7eb;"></div>
-    </section>
-
-    <script>
-    (function(){
-        fetch('/wp-json/ynj/v1/ibadah/community/<?php echo (int) $mosque->id; ?>')
-            .then(function(r){ return r.json(); }).then(function(d){
-                if (!d.ok || !d.challenge) return;
-                var ch = d.challenge, pct = Math.min(100, ch.pct);
-                var el = document.getElementById('community-challenge-bar');
-                el.style.display = '';
-                el.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
-                    + '<span style="font-size:12px;font-weight:700;color:#1e3a5f;">🏆 ' + ch.title + '</span>'
-                    + '<span style="font-size:11px;color:#64748b;">' + (ch.status === 'completed' ? '🎉 Done!' : ch.days_left + 'd left') + '</span></div>'
-                    + '<div style="background:#e2e8f0;border-radius:4px;height:6px;overflow:hidden;">'
-                    + '<div style="background:' + (ch.status === 'completed' ? '#16a34a' : '#287e61') + ';height:100%;width:' + pct + '%;border-radius:4px;transition:width .5s;"></div></div>'
-                    + '<div style="font-size:10px;color:#94a3b8;margin-top:2px;">' + ch.current.toLocaleString() + '/' + ch.target.toLocaleString() + '</div>';
-            }).catch(function(){});
-    })();
-    </script>
-    <?php endif; ?>
 
     <!-- ═══ HEAD-TO-HEAD CHALLENGE ═══ -->
     <?php if ( $mosque && function_exists( 'ynj_get_h2h_challenge' ) ) :
@@ -639,26 +570,6 @@ if ( $mosque && is_user_logged_in() ) {
     </section>
     <?php endif; endif; ?>
 
-    <!-- ═══ PERSONAL IMPACT SCORE (only show when 3+ members active) ═══ -->
-    <?php if ( is_user_logged_in() && $mosque && function_exists( 'ynj_personal_impact' ) ) :
-        $ynj_uid_impact = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
-        if ( $ynj_uid_impact ) :
-            $impact = ynj_personal_impact( $ynj_uid_impact, (int) $mosque->id, 7 );
-            $_impact_members = isset( $cp ) && $cp ? $cp['active_members'] : 0;
-            if ( $impact['total_points'] > 0 && $_impact_members >= 3 ) :
-    ?>
-    <section class="ynj-card" style="padding:14px 16px;text-align:center;">
-        <p style="font-size:11px;color:#6b8fa3;margin:0 0 4px;font-weight:600;"><?php esc_html_e( 'Your Impact This Week', 'yourjannah' ); ?></p>
-        <div style="font-size:32px;font-weight:800;color:#287e61;"><?php echo $impact['percentage']; ?>%</div>
-        <p style="font-size:12px;color:#6b8fa3;margin:4px 0 0;">
-            <?php printf( esc_html__( 'You contributed %s of %s pts to %s', 'yourjannah' ),
-                '<strong>' . number_format( $impact['my_points'] ) . '</strong>',
-                number_format( $impact['total_points'] ),
-                esc_html( $mosque_name )
-            ); ?>
-        </p>
-    </section>
-    <?php endif; endif; endif; ?>
 
 
     <!-- ═══ GRATITUDE WALL ═══ -->
