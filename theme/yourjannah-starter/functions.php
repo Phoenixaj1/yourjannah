@@ -37,11 +37,19 @@ if ( is_admin() ) {
 // counts, login state all depend on the current user's session.
 add_action( 'send_headers', function() {
     if ( is_admin() || wp_doing_ajax() || defined( 'DOING_CRON' ) ) return;
-    header( 'Cache-Control: no-cache, no-store, must-revalidate, max-age=0' );
+    // Browser
+    header( 'Cache-Control: no-cache, no-store, must-revalidate, max-age=0, s-maxage=0' );
     header( 'Pragma: no-cache' );
-    header( 'Expires: 0' );
-    // Tell Varnish/Nginx not to cache
+    header( 'Expires: Wed, 11 Jan 1984 05:00:00 GMT' );
+    // Varnish / Nginx reverse proxy
     header( 'X-Accel-Expires: 0' );
+    header( 'X-Varnish-Cache: BYPASS' );
+    // CDN (Cloudflare, Fastly, etc)
+    header( 'Surrogate-Control: no-store' );
+    header( 'CDN-Cache-Control: no-store' );
+    // Vary by cookie so logged-in vs guest pages are never mixed
+    header( 'Vary: Cookie' );
+    // WP caching plugins
     if ( ! defined( 'DONOTCACHEPAGE' ) ) define( 'DONOTCACHEPAGE', true );
 }, 1 );
 
@@ -320,13 +328,7 @@ add_action( 'wp_head', function() {
 // PWA SUPPORT
 // ================================================================
 
-// Prevent Varnish/page cache from caching HTML (dynamic membership bar)
-add_action( 'send_headers', function() {
-    if ( ! is_admin() ) {
-        header( 'Cache-Control: no-cache, must-revalidate, max-age=0' );
-        header( 'X-Varnish-Cache: BYPASS' );
-    }
-} );
+// Duplicate cache headers removed — consolidated into the main send_headers hook above.
 
 add_action( 'wp_head', function() {
     $plugin_url = defined( 'YNJ_URL' ) ? YNJ_URL : '';

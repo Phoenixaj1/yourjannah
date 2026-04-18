@@ -165,9 +165,9 @@ if ( $ynj_uid && class_exists( 'YNJ_DB' ) ) {
          FROM $ib_table WHERE user_id = %d AND log_date = %s", $ynj_uid, $today
     ) );
 
-    // General streak (consecutive days with any prayer)
+    // General streak (consecutive days with any prayer OR dhikr)
     $streak_dates = $wpdb->get_col( $wpdb->prepare(
-        "SELECT log_date FROM $ib_table WHERE user_id = %d AND (fajr=1 OR dhuhr=1 OR asr=1 OR maghrib=1 OR isha=1) ORDER BY log_date DESC LIMIT 120", $ynj_uid
+        "SELECT log_date FROM $ib_table WHERE user_id = %d AND (fajr=1 OR dhuhr=1 OR asr=1 OR maghrib=1 OR isha=1 OR dhikr=1) ORDER BY log_date DESC LIMIT 120", $ynj_uid
     ) );
     $ibadah_streak = 0;
     $expected = $today;
