@@ -497,11 +497,24 @@ if ( $mosque && is_user_logged_in() ) {
     </section>
     <?php endif; ?>
 
-    <!-- Jumu'ah Card -->
-    <section class="ynj-jumuah-card" id="jumuah-card" style="display:none;">
-        <div class="ynj-jumuah-card__header">🕌 <?php esc_html_e( 'Jumu\'ah', 'yourjannah' ); ?></div>
-        <div id="jumuah-slots"></div>
+    <!-- Jumu'ah Times (always visible if slots exist) -->
+    <?php if ( ! empty( $_ynj_jumuah_slots ) ) : ?>
+    <section class="ynj-card" style="padding:14px 16px;margin-bottom:10px;">
+        <h3 style="font-size:14px;font-weight:800;margin:0 0 10px;color:#0a1628;">🕌 <?php esc_html_e( 'Jumu\'ah', 'yourjannah' ); ?></h3>
+        <?php foreach ( $_ynj_jumuah_slots as $js ) : ?>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f8fafc;border-radius:10px;margin-bottom:6px;">
+            <span style="font-size:13px;font-weight:700;color:#0a1628;"><?php echo esc_html( $js->slot_name ?: "Jumu'ah" ); ?></span>
+            <div style="text-align:right;">
+                <?php if ( $js->khutbah_time ) : ?>
+                <span style="font-size:11px;color:#6b8fa3;">Khutbah <?php echo esc_html( substr( $js->khutbah_time, 0, 5 ) ); ?></span>
+                <span style="color:#d1d5db;margin:0 4px;">·</span>
+                <?php endif; ?>
+                <span style="font-size:14px;font-weight:800;color:#287e61;">Salah <?php echo esc_html( substr( $js->salah_time, 0, 5 ) ); ?></span>
+            </div>
+        </div>
+        <?php endforeach; ?>
     </section>
+    <?php endif; ?>
 
     <!-- ═══ DHIKR CTA — Personal progress + urgency ═══ -->
     <?php if ( is_user_logged_in() && $mosque ) :
