@@ -92,7 +92,7 @@ if ( is_user_logged_in() ) {
 
 <?php if ( $_ynj_bar_status === 'guest' ) : ?>
 <!-- ── Guest HUD — fully inline styles so nothing can override ── -->
-<div id="ynj-hud" style="background:linear-gradient(135deg,#0a1628 0%,#132742 100%);color:#fff;z-index:102;position:sticky;top:0;padding:8px 16px;display:flex !important;flex-direction:row !important;align-items:center;gap:10px;flex-wrap:nowrap;">
+<div id="ynj-hud" style="background:linear-gradient(135deg,#0a1628 0%,#132742 100%);color:#fff;z-index:102;position:sticky;top:0;padding:8px 16px;display:flex !important;flex-direction:row !important;align-items:center;gap:10px;flex-wrap:nowrap;max-width:1200px;margin:0 auto;">
 
     <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(255,255,255,.07);border-radius:10px;flex-shrink:0;">
         <span style="font-size:14px;">&#x2728;</span>
@@ -543,7 +543,7 @@ $_hud_all_done = $_hud_done_count >= 5;
    MASJID HUD — Your community's status bar
    Responsive: Desktop (2-row inline) → Mobile (stacked)
    ════════════════════════════════════════════════ */
-.ynj-hud{background:linear-gradient(135deg,#0a1628 0%,#132742 100%);color:#fff;z-index:102;position:sticky;top:0;padding:6px 14px;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;}
+.ynj-hud{background:linear-gradient(135deg,#0a1628 0%,#132742 100%);color:#fff;z-index:102;position:sticky;top:0;padding:6px 14px;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;max-width:1200px;margin:0 auto;}
 .admin-bar .ynj-hud{top:32px;}
 @media(max-width:782px){.admin-bar .ynj-hud{top:46px;}}
 /* Guest HUD — inherits from .ynj-hud base, no extra overrides needed */
