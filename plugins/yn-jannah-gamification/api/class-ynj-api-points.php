@@ -973,8 +973,8 @@ class YNJ_API_Points {
         if ( $index < 0 ) $index = 0;
         if ( $index > 4 ) $index = $index % 5; // Wrap around for repeats
 
-        // 1-minute cooldown to prevent spam (per user, not per dhikr)
-        $cooldown_key = 'ynj_dhikr_cd_' . $ynj_uid;
+        // 1-minute cooldown per dhikr index (can do all 5 quickly, but can't spam same one)
+        $cooldown_key = 'ynj_dhikr_cd_' . $ynj_uid . '_' . $index;
         if ( get_transient( $cooldown_key ) ) {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Please wait a moment between dhikr.', 'cooldown' => true ] );
         }
