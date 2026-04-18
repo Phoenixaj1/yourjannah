@@ -18,10 +18,9 @@ define( 'YNJ_CORE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YNJ_CORE_URL', plugin_dir_url( __FILE__ ) );
 define( 'YNJ_CORE_ACTIVE', true );
 
-// Table prefix — shared across all plugins
+// Table prefix — must match monolith's 'ynj_' (YNJ_DB prepends $wpdb->prefix)
 if ( ! defined( 'YNJ_TABLE_PREFIX' ) ) {
-    global $wpdb;
-    define( 'YNJ_TABLE_PREFIX', $wpdb->prefix . 'ynj_' );
+    define( 'YNJ_TABLE_PREFIX', 'ynj_' );
 }
 
 // ── Load core classes (priority 5 — before all domain plugins) ──
@@ -46,6 +45,9 @@ add_action( 'plugins_loaded', function() {
     }
     if ( ! class_exists( 'YNJ_WP_Auth' ) ) {
         require_once YNJ_CORE_DIR . 'inc/class-ynj-wp-auth.php';
+    }
+    if ( ! class_exists( 'YNJ_User_Auth' ) ) {
+        require_once YNJ_CORE_DIR . 'inc/class-ynj-user-auth.php';
     }
     if ( ! class_exists( 'YNJ_Social_Auth' ) ) {
         require_once YNJ_CORE_DIR . 'inc/class-ynj-social-auth.php';
