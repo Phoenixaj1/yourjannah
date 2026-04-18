@@ -22,6 +22,12 @@ add_action( 'plugins_loaded', function() {
         return;
     }
 
+    // Data layer (PHP-first, no REST round-trips).
+    if ( ! class_exists( 'YNJ_Services' ) ) {
+        require_once YNJ_SERVICES_DIR . 'inc/class-ynj-services.php';
+    }
+
+    // REST API endpoints.
     if ( ! class_exists( 'YNJ_API_Masjid_Services' ) ) {
         require_once YNJ_SERVICES_DIR . 'api/class-ynj-api-masjid-services.php';
     }

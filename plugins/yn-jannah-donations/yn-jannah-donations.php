@@ -17,6 +17,11 @@ define( 'YNJ_DONATIONS_DIR', plugin_dir_path( __FILE__ ) );
 add_action( 'plugins_loaded', function() {
     if ( ! class_exists( 'YNJ_DB' ) ) return;
 
+    // Data layer — load before API classes so they can use it
+    if ( ! class_exists( 'YNJ_Donations' ) ) {
+        require_once YNJ_DONATIONS_DIR . 'inc/class-ynj-donations.php';
+    }
+
     if ( ! class_exists( 'YNJ_API_Donations' ) ) {
         require_once YNJ_DONATIONS_DIR . 'api/class-ynj-api-donations.php';
     }

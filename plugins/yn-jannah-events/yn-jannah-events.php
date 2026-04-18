@@ -17,6 +17,12 @@ define( 'YNJ_EVENTS_DIR', plugin_dir_path( __FILE__ ) );
 add_action( 'plugins_loaded', function() {
     if ( ! class_exists( 'YNJ_DB' ) ) return;
 
+    // Data layer.
+    if ( ! class_exists( 'YNJ_Events' ) ) {
+        require_once YNJ_EVENTS_DIR . 'inc/class-ynj-events.php';
+    }
+
+    // REST API controllers.
     if ( ! class_exists( 'YNJ_API_Announcements' ) ) {
         require_once YNJ_EVENTS_DIR . 'api/class-ynj-api-announcements.php';
     }
