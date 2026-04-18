@@ -323,6 +323,25 @@ $ib_challenge = $wpdb->get_row( $wpdb->prepare(
 </div>
 <?php endif; ?>
 
+<!-- ═══ GRATITUDE FROM YOUR COMMUNITY ═══ -->
+<?php
+$grat_table = YNJ_DB::table( 'gratitude_posts' );
+$recent_grat = $wpdb->get_results( $wpdb->prepare(
+    "SELECT message, created_at FROM $grat_table WHERE mosque_id = %d ORDER BY created_at DESC LIMIT 5",
+    $mosque_id
+) );
+if ( $recent_grat ) : ?>
+<div class="d-card" style="border-left:4px solid #ec4899;">
+    <h3 style="margin-bottom:8px;">💖 <?php esc_html_e( 'Your Community Says...', 'yourjannah' ); ?></h3>
+    <?php foreach ( $recent_grat as $g ) : ?>
+    <div style="padding:8px 12px;margin-bottom:6px;background:#fdf2f8;border-radius:8px;">
+        <p style="font-size:13px;color:#831843;margin:0;font-style:italic;">&ldquo;<?php echo esc_html( $g->message ); ?>&rdquo;</p>
+        <p style="font-size:10px;color:#be185d;margin:2px 0 0;"><?php echo esc_html( human_time_diff( strtotime( $g->created_at ) ) ); ?> ago</p>
+    </div>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
 <!-- Setup Progress -->
 <?php if ( $steps_done < $steps_total ) : ?>
 <div class="d-card" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #93c5fd;">

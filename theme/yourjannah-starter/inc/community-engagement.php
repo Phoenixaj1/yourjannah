@@ -251,6 +251,123 @@ function ynj_whos_at_masjid( $mosque_id, $hours = 2 ) {
 // CONGREGATION POINTS DISPLAY — Collective ibadah breakdown
 // ================================================================
 
+// ================================================================
+// FAJR COUNTER — Who's awake for Fajr today
+// ================================================================
+
+/**
+ * Get count of people who logged Fajr today.
+ */
+function ynj_fajr_counter( $mosque_id ) {
+    global $wpdb;
+    $ib = YNJ_DB::table( 'ibadah_logs' );
+    $count = (int) $wpdb->get_var( $wpdb->prepare(
+        "SELECT COUNT(*) FROM $ib WHERE mosque_id = %d AND log_date = CURDATE() AND fajr = 1",
+        $mosque_id
+    ) );
+    return $count;
+}
+
+// ================================================================
+// MILESTONE CELEBRATIONS
+// ================================================================
+
+/**
+ * Check and return any new milestones reached by a mosque.
+ * Returns milestones that were JUST reached (not previously recorded).
+ */
+function ynj_check_milestones( $mosque_id ) {
+    global $wpdb;
+    $mt = YNJ_DB::table( 'milestones' );
+    $ib = YNJ_DB::table( 'ibadah_logs' );
+    $sub = YNJ_DB::table( 'user_subscriptions' );
+    $dt = YNJ_DB::table( 'donations' );
+
+    // Get current totals
+    $total_prayers = (int) $wpdb->get_var( $wpdb->prepare(
+        "SELECT COALESCE(SUM(fajr+dhuhr+asr+maghrib+isha),0) FROM $ib WHERE mosque_id = %d", $mosque_id
+    ) );
+    $total_pages = (int) $wpdb->get_var( $wpdb->prepare(
+        "SELECT COALESCE(SUM(quran_pages),0) FROM $ib WHERE mosque_id = %d", $mosque_id
+    ) );
+    $total_members = (int) $wpdb->get_var( $wpdb->prepare(
+        "SELECT COUNT(*) FROM $sub WHERE mosque_id = %d AND status = 'active'", $mosque_id
+    ) );
+    $total_donations_pence = (int) $wpdb->get_var( $wpdb->prepare(
+        "SELECT COALESCE(SUM(amount_pence),0) FROM $dt WHERE mosque_id = %d AND status = 'succeeded'", $mosque_id
+    ) );
+
+    $milestone_defs = [
+        [ 'key' => 'prayers_100',    'label' => '100 prayers logged',          'icon' => '🤲', 'check' => $total_prayers,         'threshold' => 100 ],
+        [ 'key' => 'prayers_500',    'label' => '500 prayers logged',          'icon' => '🤲', 'check' => $total_prayers,         'threshold' => 500 ],
+        [ 'key' => 'prayers_1000',   'label' => '1,000 prayers logged',       'icon' => '✨', 'check' => $total_prayers,         'threshold' => 1000 ],
+        [ 'key' => 'prayers_5000',   'label' => '5,000 prayers logged',       'icon' => '🌟', 'check' => $total_prayers,         'threshold' => 5000 ],
+        [ 'key' => 'prayers_10000',  'label' => '10,000 prayers logged',      'icon' => '💎', 'check' => $total_prayers,         'threshold' => 10000 ],
+        [ 'key' => 'quran_100',      'label' => '100 Quran pages read',       'icon' => '📖', 'check' => $total_pages,           'threshold' => 100 ],
+        [ 'key' => 'quran_500',      'label' => '500 Quran pages read',       'icon' => '📗', 'check' => $total_pages,           'threshold' => 500 ],
+        [ 'key' => 'quran_1000',     'label' => '1,000 Quran pages read',    'icon' => '📚', 'check' => $total_pages,           'threshold' => 1000 ],
+        [ 'key' => 'members_10',     'label' => '10 members joined',          'icon' => '👥', 'check' => $total_members,         'threshold' => 10 ],
+        [ 'key' => 'members_50',     'label' => '50 members joined',          'icon' => '👥', 'check' => $total_members,         'threshold' => 50 ],
+        [ 'key' => 'members_100',    'label' => '100 members joined',         'icon' => '🎊', 'check' => $total_members,         'threshold' => 100 ],
+        [ 'key' => 'members_500',    'label' => '500 members joined',         'icon' => '🏆', 'check' => $total_members,         'threshold' => 500 ],
+        [ 'key' => 'donations_1000', 'label' => 'First £1,000 in donations', 'icon' => '💷', 'check' => $total_donations_pence, 'threshold' => 100000 ],
+        [ 'key' => 'donations_5000', 'label' => '£5,000 in donations',       'icon' => '💰', 'check' => $total_donations_pence, 'threshold' => 500000 ],
+    ];
+
+    $existing = $wpdb->get_col( $wpdb->prepare( "SELECT milestone_key FROM $mt WHERE mosque_id = %d", $mosque_id ) );
+    $new_milestones = [];
+
+    foreach ( $milestone_defs as $ms ) {
+        if ( in_array( $ms['key'], $existing, true ) ) continue;
+        if ( $ms['check'] >= $ms['threshold'] ) {
+            $wpdb->insert( $mt, [
+                'mosque_id'      => $mosque_id,
+                'milestone_key'  => $ms['key'],
+                'milestone_value'=> $ms['threshold'],
+            ] );
+            $new_milestones[] = $ms;
+        }
+    }
+
+    return $new_milestones;
+}
+
+/**
+ * Get the latest milestone reached (for display).
+ */
+function ynj_get_latest_milestone( $mosque_id ) {
+    global $wpdb;
+    $mt = YNJ_DB::table( 'milestones' );
+    $latest = $wpdb->get_row( $wpdb->prepare(
+        "SELECT milestone_key, milestone_value, reached_at FROM $mt WHERE mosque_id = %d ORDER BY reached_at DESC LIMIT 1",
+        $mosque_id
+    ) );
+    if ( ! $latest ) return null;
+
+    // Map key to display info
+    $all_defs = [
+        'prayers_100' => [ 'icon' => '🤲', 'label' => '100 prayers' ], 'prayers_500' => [ 'icon' => '🤲', 'label' => '500 prayers' ],
+        'prayers_1000' => [ 'icon' => '✨', 'label' => '1,000 prayers' ], 'prayers_5000' => [ 'icon' => '🌟', 'label' => '5,000 prayers' ],
+        'prayers_10000' => [ 'icon' => '💎', 'label' => '10,000 prayers' ],
+        'quran_100' => [ 'icon' => '📖', 'label' => '100 Quran pages' ], 'quran_500' => [ 'icon' => '📗', 'label' => '500 Quran pages' ],
+        'quran_1000' => [ 'icon' => '📚', 'label' => '1,000 Quran pages' ],
+        'members_10' => [ 'icon' => '👥', 'label' => '10 members' ], 'members_50' => [ 'icon' => '👥', 'label' => '50 members' ],
+        'members_100' => [ 'icon' => '🎊', 'label' => '100 members' ], 'members_500' => [ 'icon' => '🏆', 'label' => '500 members' ],
+        'donations_1000' => [ 'icon' => '💷', 'label' => '£1,000 donated' ], 'donations_5000' => [ 'icon' => '💰', 'label' => '£5,000 donated' ],
+    ];
+
+    $info = $all_defs[ $latest->milestone_key ] ?? [ 'icon' => '🎉', 'label' => 'Milestone' ];
+    return [
+        'icon'  => $info['icon'],
+        'label' => $info['label'],
+        'ago'   => human_time_diff( strtotime( $latest->reached_at ) ),
+    ];
+}
+
+// ================================================================
+// CONGREGATION POINTS DISPLAY
+// ================================================================
+
 /**
  * Get detailed congregation ibadah breakdown for display.
  *

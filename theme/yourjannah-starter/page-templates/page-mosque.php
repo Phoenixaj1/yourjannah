@@ -909,6 +909,163 @@ if ( $mosque && is_user_logged_in() ) {
         <p class="ynj-subscribe-status" id="subscribe-status"></p>
     </section>
 
+    <!-- ═══ FAJR COUNTER ═══ -->
+    <?php if ( $mosque && function_exists( 'ynj_fajr_counter' ) ) :
+        $fajr_count = ynj_fajr_counter( (int) $mosque->id );
+        if ( $fajr_count > 0 ) :
+    ?>
+    <section class="ynj-card" style="padding:14px 16px;background:linear-gradient(135deg,#1e1b4b,#312e81);color:#fff;text-align:center;border:none;">
+        <p style="font-size:11px;color:rgba(255,255,255,.6);margin:0 0 4px;text-transform:uppercase;letter-spacing:1px;font-weight:600;"><?php esc_html_e( 'Fajr Today', 'yourjannah' ); ?></p>
+        <div style="font-size:32px;font-weight:800;"><?php echo $fajr_count; ?></div>
+        <p style="font-size:13px;color:rgba(255,255,255,.7);margin:4px 0 0;"><?php printf( esc_html__( 'people prayed Fajr at %s', 'yourjannah' ), esc_html( $mosque_name ) ); ?></p>
+    </section>
+    <?php endif; endif; ?>
+
+    <!-- ═══ MILESTONE CELEBRATION ═══ -->
+    <?php if ( $mosque && function_exists( 'ynj_check_milestones' ) ) :
+        // Check for new milestones (silently records them)
+        ynj_check_milestones( (int) $mosque->id );
+        $latest_ms = function_exists( 'ynj_get_latest_milestone' ) ? ynj_get_latest_milestone( (int) $mosque->id ) : null;
+        if ( $latest_ms ) :
+    ?>
+    <section class="ynj-card" style="padding:14px 16px;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #f59e0b;text-align:center;">
+        <span style="font-size:28px;"><?php echo $latest_ms['icon']; ?></span>
+        <p style="font-size:14px;font-weight:800;color:#92400e;margin:4px 0 2px;"><?php echo esc_html( $latest_ms['label'] ); ?></p>
+        <p style="font-size:11px;color:#a16207;"><?php esc_html_e( 'Milestone reached', 'yourjannah' ); ?> <?php echo esc_html( $latest_ms['ago'] ); ?> <?php esc_html_e( 'ago', 'yourjannah' ); ?></p>
+    </section>
+    <?php endif; endif; ?>
+
+    <!-- ═══ DUA WALL ═══ -->
+    <?php if ( $mosque ) : ?>
+    <section class="ynj-card" style="padding:16px;" id="dua-wall">
+        <h3 style="font-size:15px;font-weight:800;margin:0 0 10px;">🤲 <?php esc_html_e( 'Dua Wall', 'yourjannah' ); ?></h3>
+        <p style="font-size:12px;color:#6b8fa3;margin-bottom:12px;"><?php esc_html_e( 'Request prayers from your community. All requests are anonymous.', 'yourjannah' ); ?></p>
+
+        <?php if ( is_user_logged_in() ) : ?>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <input type="text" id="dua-input" placeholder="<?php esc_attr_e( 'Please make dua for...', 'yourjannah' ); ?>" maxlength="500" style="flex:1;padding:10px 14px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;font-family:inherit;min-height:44px;">
+            <button type="button" onclick="ynjPostDua()" style="padding:10px 16px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;min-height:44px;font-family:inherit;white-space:nowrap;">🤲 <?php esc_html_e( 'Ask', 'yourjannah' ); ?></button>
+        </div>
+        <?php endif; ?>
+
+        <div id="dua-list" style="display:flex;flex-direction:column;gap:8px;">
+            <p style="color:#9ca3af;font-size:12px;text-align:center;"><?php esc_html_e( 'Loading...', 'yourjannah' ); ?></p>
+        </div>
+    </section>
+
+    <script>
+    (function(){
+        var mosqueId = <?php echo (int) $mosque->id; ?>;
+        var nonce = function(){ return typeof wpApiSettings !== 'undefined' ? wpApiSettings.nonce : ''; };
+
+        function loadDuas() {
+            fetch('/wp-json/ynj/v1/mosques/' + mosqueId + '/duas')
+                .then(function(r){ return r.json(); })
+                .then(function(d){
+                    var el = document.getElementById('dua-list');
+                    if (!d.ok || !d.duas.length) { el.innerHTML = '<p style="color:#9ca3af;font-size:12px;text-align:center;">No dua requests yet. Be the first to ask.</p>'; return; }
+                    var html = '';
+                    d.duas.forEach(function(dua){
+                        var prayedClass = dua.prayed ? 'background:#f0fdf4;border-color:#86efac;' : '';
+                        var btnText = dua.prayed ? '🤲 Ameen' : '🤲 I made dua';
+                        var btnStyle = dua.prayed ? 'background:#dcfce7;color:#166534;' : 'background:#ede9fe;color:#5b21b6;';
+                        html += '<div style="padding:10px 14px;border:1px solid #e5e7eb;border-radius:10px;' + prayedClass + '">'
+                            + '<p style="font-size:13px;color:#374151;margin:0 0 6px;">' + dua.text + '</p>'
+                            + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+                            + '<span style="font-size:11px;color:#9ca3af;">' + dua.ago + ' ago</span>'
+                            + '<button onclick="ynjPrayForDua(this,' + dua.id + ')" style="padding:5px 12px;border:none;border-radius:16px;font-size:12px;font-weight:700;cursor:pointer;min-height:32px;font-family:inherit;' + btnStyle + '">'
+                            + btnText + ' <span style="font-weight:400;">(' + dua.count + ')</span></button>'
+                            + '</div></div>';
+                    });
+                    el.innerHTML = html;
+                }).catch(function(){ document.getElementById('dua-list').innerHTML = ''; });
+        }
+
+        window.ynjPostDua = function() {
+            var input = document.getElementById('dua-input');
+            var text = input.value.trim();
+            if (!text) return;
+            fetch('/wp-json/ynj/v1/duas/create', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce() },
+                credentials: 'same-origin', body: JSON.stringify({ text: text, mosque_id: mosqueId })
+            }).then(function(r){ return r.json(); }).then(function(d){
+                if (d.ok) { input.value = ''; loadDuas(); }
+                else if (d.error) alert(d.error);
+            }).catch(function(){});
+        };
+
+        window.ynjPrayForDua = function(btn, duaId) {
+            fetch('/wp-json/ynj/v1/duas/' + duaId + '/pray', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce() },
+                credentials: 'same-origin'
+            }).then(function(r){ return r.json(); }).then(function(d){
+                if (d.ok) {
+                    btn.style.background = '#dcfce7'; btn.style.color = '#166534';
+                    btn.innerHTML = '🤲 Ameen <span style="font-weight:400;">(' + (d.count || 0) + ')</span>';
+                }
+            }).catch(function(){});
+        };
+
+        setTimeout(loadDuas, 300);
+    })();
+    </script>
+    <?php endif; ?>
+
+    <!-- ═══ GRATITUDE WALL ═══ -->
+    <?php if ( $mosque ) : ?>
+    <section class="ynj-card" style="padding:16px;background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;" id="gratitude-wall">
+        <h3 style="font-size:15px;font-weight:800;color:#9d174d;margin:0 0 10px;">💖 <?php esc_html_e( 'Thank Your Mosque', 'yourjannah' ); ?></h3>
+
+        <?php if ( is_user_logged_in() ) : ?>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <input type="text" id="gratitude-input" placeholder="<?php esc_attr_e( 'JazakAllah khayr for...', 'yourjannah' ); ?>" maxlength="300" style="flex:1;padding:10px 14px;border:1px solid #f9a8d4;border-radius:10px;font-size:14px;font-family:inherit;min-height:44px;background:#fff;">
+            <button type="button" onclick="ynjPostGratitude()" style="padding:10px 16px;background:#be185d;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;min-height:44px;font-family:inherit;">💖</button>
+        </div>
+        <?php endif; ?>
+
+        <div id="gratitude-list"></div>
+    </section>
+
+    <script>
+    (function(){
+        var mosqueId = <?php echo (int) $mosque->id; ?>;
+        var nonce = function(){ return typeof wpApiSettings !== 'undefined' ? wpApiSettings.nonce : ''; };
+
+        function loadGratitude() {
+            fetch('/wp-json/ynj/v1/mosques/' + mosqueId + '/gratitude')
+                .then(function(r){ return r.json(); })
+                .then(function(d){
+                    var el = document.getElementById('gratitude-list');
+                    if (!d.ok || !d.posts.length) { el.innerHTML = '<p style="color:#be185d;font-size:12px;text-align:center;opacity:.6;">Be the first to say thank you!</p>'; return; }
+                    var html = '';
+                    d.posts.forEach(function(p){
+                        html += '<div style="padding:8px 12px;margin-bottom:6px;background:rgba(255,255,255,.6);border-radius:8px;">'
+                            + '<p style="font-size:13px;color:#831843;margin:0;">&ldquo;' + p.message + '&rdquo;</p>'
+                            + '<p style="font-size:10px;color:#be185d;margin:2px 0 0;opacity:.6;">' + p.ago + ' ago</p>'
+                            + '</div>';
+                    });
+                    el.innerHTML = html;
+                }).catch(function(){});
+        }
+
+        window.ynjPostGratitude = function() {
+            var input = document.getElementById('gratitude-input');
+            var msg = input.value.trim();
+            if (!msg) return;
+            fetch('/wp-json/ynj/v1/gratitude/create', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce() },
+                credentials: 'same-origin', body: JSON.stringify({ message: msg, mosque_id: mosqueId })
+            }).then(function(r){ return r.json(); }).then(function(d){
+                if (d.ok) { input.value = ''; loadGratitude(); }
+                else if (d.error) alert(d.error);
+            }).catch(function(){});
+        };
+
+        setTimeout(loadGratitude, 400);
+    })();
+    </script>
+    <?php endif; ?>
+
     </div><!-- end right column -->
   </div><!-- end desktop grid -->
 </main>

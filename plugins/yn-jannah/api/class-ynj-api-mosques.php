@@ -58,6 +58,35 @@ class YNJ_API_Mosques {
             'callback'            => [ __CLASS__, 'toggle_reaction' ],
             'permission_callback' => function() { return is_user_logged_in(); },
         ]);
+
+        // ── Dua Wall ──
+        register_rest_route( self::NS, '/mosques/(?P<id>\d+)/duas', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'get_duas' ],
+            'permission_callback' => '__return_true',
+        ]);
+        register_rest_route( self::NS, '/duas/create', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'create_dua' ],
+            'permission_callback' => function() { return is_user_logged_in(); },
+        ]);
+        register_rest_route( self::NS, '/duas/(?P<id>\d+)/pray', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'pray_for_dua' ],
+            'permission_callback' => function() { return is_user_logged_in(); },
+        ]);
+
+        // ── Gratitude ──
+        register_rest_route( self::NS, '/mosques/(?P<id>\d+)/gratitude', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'get_gratitude' ],
+            'permission_callback' => '__return_true',
+        ]);
+        register_rest_route( self::NS, '/gratitude/create', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'create_gratitude' ],
+            'permission_callback' => function() { return is_user_logged_in(); },
+        ]);
     }
 
     // ================================================================
@@ -333,5 +362,158 @@ class YNJ_API_Mosques {
         }
 
         return new \WP_REST_Response( [ 'ok' => true, 'action' => $action, 'counts' => $result ] );
+    }
+
+    // ================================================================
+    // DUA WALL
+    // ================================================================
+
+    public static function get_duas( \WP_REST_Request $request ) {
+        global $wpdb;
+        $mosque_id = (int) $request->get_param( 'id' );
+        $dt = YNJ_DB::table( 'dua_requests' );
+
+        $duas = $wpdb->get_results( $wpdb->prepare(
+            "SELECT id, request_text, dua_count, created_at FROM $dt WHERE mosque_id = %d AND status = 'active' ORDER BY created_at DESC LIMIT 20",
+            $mosque_id
+        ) );
+
+        // Check which ones current user has prayed for
+        $user_prayed = [];
+        if ( is_user_logged_in() ) {
+            $ynj_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+            if ( $ynj_uid && ! empty( $duas ) ) {
+                $ids = implode( ',', array_map( 'intval', array_column( $duas, 'id' ) ) );
+                $dr = YNJ_DB::table( 'dua_responses' );
+                $prayed = $wpdb->get_col( $wpdb->prepare(
+                    "SELECT dua_request_id FROM $dr WHERE user_id = %d AND dua_request_id IN ($ids)", $ynj_uid
+                ) );
+                $user_prayed = array_map( 'intval', $prayed );
+            }
+        }
+
+        $result = [];
+        foreach ( $duas as $d ) {
+            $result[] = [
+                'id'      => (int) $d->id,
+                'text'    => $d->request_text,
+                'count'   => (int) $d->dua_count,
+                'prayed'  => in_array( (int) $d->id, $user_prayed, true ),
+                'ago'     => human_time_diff( strtotime( $d->created_at ) ),
+            ];
+        }
+
+        return new \WP_REST_Response( [ 'ok' => true, 'duas' => $result ] );
+    }
+
+    public static function create_dua( \WP_REST_Request $request ) {
+        $text = sanitize_text_field( $request->get_param( 'text' ) ?: '' );
+        if ( ! $text || strlen( $text ) < 5 ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Please write your dua request' ], 400 );
+        }
+
+        $ynj_uid   = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+        $mosque_id = (int) ( $request->get_param( 'mosque_id' ) ?: get_user_meta( get_current_user_id(), 'ynj_mosque_id', true ) );
+        if ( ! $ynj_uid ) return new \WP_REST_Response( [ 'ok' => false ], 400 );
+
+        // Rate limit: max 3 per day
+        global $wpdb;
+        $dt = YNJ_DB::table( 'dua_requests' );
+        $today_count = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM $dt WHERE user_id = %d AND DATE(created_at) = CURDATE()", $ynj_uid
+        ) );
+        if ( $today_count >= 3 ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Maximum 3 dua requests per day' ], 429 );
+        }
+
+        $wpdb->insert( $dt, [
+            'mosque_id'    => $mosque_id,
+            'user_id'      => $ynj_uid,
+            'request_text' => mb_substr( $text, 0, 500 ),
+            'dua_count'    => 0,
+            'status'       => 'active',
+        ] );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'id' => $wpdb->insert_id ] );
+    }
+
+    public static function pray_for_dua( \WP_REST_Request $request ) {
+        $dua_id  = (int) $request->get_param( 'id' );
+        $ynj_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+        if ( ! $dua_id || ! $ynj_uid ) return new \WP_REST_Response( [ 'ok' => false ], 400 );
+
+        global $wpdb;
+        $dr = YNJ_DB::table( 'dua_responses' );
+        $dt = YNJ_DB::table( 'dua_requests' );
+
+        // Check if already prayed
+        $exists = $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM $dr WHERE user_id = %d AND dua_request_id = %d", $ynj_uid, $dua_id
+        ) );
+
+        if ( $exists ) {
+            return new \WP_REST_Response( [ 'ok' => true, 'already' => true ] );
+        }
+
+        $wpdb->insert( $dr, [ 'user_id' => $ynj_uid, 'dua_request_id' => $dua_id ] );
+        $wpdb->query( $wpdb->prepare( "UPDATE $dt SET dua_count = dua_count + 1 WHERE id = %d", $dua_id ) );
+
+        $new_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT dua_count FROM $dt WHERE id = %d", $dua_id ) );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'count' => $new_count ] );
+    }
+
+    // ================================================================
+    // GRATITUDE POSTS
+    // ================================================================
+
+    public static function get_gratitude( \WP_REST_Request $request ) {
+        global $wpdb;
+        $mosque_id = (int) $request->get_param( 'id' );
+        $gt = YNJ_DB::table( 'gratitude_posts' );
+
+        $posts = $wpdb->get_results( $wpdb->prepare(
+            "SELECT message, created_at FROM $gt WHERE mosque_id = %d ORDER BY created_at DESC LIMIT 10",
+            $mosque_id
+        ) );
+
+        $result = [];
+        foreach ( $posts as $p ) {
+            $result[] = [
+                'message' => $p->message,
+                'ago'     => human_time_diff( strtotime( $p->created_at ) ),
+            ];
+        }
+
+        return new \WP_REST_Response( [ 'ok' => true, 'posts' => $result, 'total' => count( $result ) ] );
+    }
+
+    public static function create_gratitude( \WP_REST_Request $request ) {
+        $message = sanitize_text_field( $request->get_param( 'message' ) ?: '' );
+        if ( ! $message || strlen( $message ) < 3 ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Please write a message' ], 400 );
+        }
+
+        $ynj_uid   = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+        $mosque_id = (int) ( $request->get_param( 'mosque_id' ) ?: get_user_meta( get_current_user_id(), 'ynj_mosque_id', true ) );
+        if ( ! $ynj_uid ) return new \WP_REST_Response( [ 'ok' => false ], 400 );
+
+        // Rate limit: 1 per day
+        global $wpdb;
+        $gt = YNJ_DB::table( 'gratitude_posts' );
+        $today = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM $gt WHERE user_id = %d AND DATE(created_at) = CURDATE()", $ynj_uid
+        ) );
+        if ( $today >= 1 ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'You can post one gratitude per day' ], 429 );
+        }
+
+        $wpdb->insert( $gt, [
+            'mosque_id' => $mosque_id,
+            'user_id'   => $ynj_uid,
+            'message'   => mb_substr( $message, 0, 300 ),
+        ] );
+
+        return new \WP_REST_Response( [ 'ok' => true ] );
     }
 }

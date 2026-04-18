@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '3.5.0';
+    const SCHEMA_VERSION = '3.6.0';
 
     /**
      * Return the full table name for a given short name.
@@ -1127,6 +1127,55 @@ class YNJ_DB {
             PRIMARY KEY  (id),
             UNIQUE KEY user_badge (user_id, badge_key),
             KEY mosque_id (mosque_id)
+        ) $charset_collate;";
+
+        // Dua wall — anonymous prayer requests
+        $tables[] = "CREATE TABLE {$t('dua_requests')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            request_text varchar(500) NOT NULL DEFAULT '',
+            dua_count int(11) NOT NULL DEFAULT 0,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+
+        // Dua responses (who made dua — for counting, anonymous display)
+        $tables[] = "CREATE TABLE {$t('dua_responses')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            dua_request_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY user_dua (user_id, dua_request_id),
+            KEY dua_request_id (dua_request_id)
+        ) $charset_collate;";
+
+        // Gratitude posts — thank your mosque (anonymous)
+        $tables[] = "CREATE TABLE {$t('gratitude_posts')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            message varchar(300) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+
+        // Milestone celebrations — track which milestones have been reached
+        $tables[] = "CREATE TABLE {$t('milestones')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            milestone_key varchar(50) NOT NULL DEFAULT '',
+            milestone_value int(11) NOT NULL DEFAULT 0,
+            reached_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY mosque_milestone (mosque_id, milestone_key)
         ) $charset_collate;";
 
         // Content view tracking (dopamine metrics for admins)
