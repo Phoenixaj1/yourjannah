@@ -11,7 +11,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YNJ_THEME_VERSION', '3.9.7' );
+define( 'YNJ_THEME_VERSION', '3.9.9' );
 define( 'YNJ_THEME_DIR', get_stylesheet_directory() );
 define( 'YNJ_THEME_URI', get_stylesheet_directory_uri() );
 
@@ -21,6 +21,8 @@ define( 'YNJ_THEME_URI', get_stylesheet_directory_uri() );
 
 require_once YNJ_THEME_DIR . '/inc/class-ynj-theme-admin.php';
 require_once YNJ_THEME_DIR . '/inc/template-tags.php';
+require_once YNJ_THEME_DIR . '/inc/quick-templates.php';
+require_once YNJ_THEME_DIR . '/inc/admin-nudges.php';
 
 // Register admin settings page
 if ( is_admin() ) {
@@ -467,6 +469,7 @@ add_action( 'init', function() {
     add_rewrite_rule( '^forgot-password/?$', 'index.php?ynj_page_type=forgot_password', 'top' );
     add_rewrite_rule( '^reset-password/?$', 'index.php?ynj_page_type=reset_password', 'top' );
     add_rewrite_rule( '^dashboard/?$', 'index.php?ynj_page_type=dashboard', 'top' );
+    add_rewrite_rule( '^mosque-setup/?$', 'index.php?ynj_page_type=mosque_setup', 'top' );
     add_rewrite_rule( '^classes/?$', 'index.php?ynj_page_type=classes_browse', 'top' );
     add_rewrite_rule( '^sponsor-yourjannah/?$', 'index.php?ynj_page_type=sponsor_yourjannah', 'top' );
     add_rewrite_rule( '^change-mosque/?$', 'index.php?ynj_page_type=change_mosque', 'top' );
@@ -522,6 +525,7 @@ add_filter( 'template_include', function( $template ) {
         'forgot_password' => 'page-templates/page-forgot-password.php',
         'reset_password'  => 'page-templates/page-reset-password.php',
         'dashboard'       => 'page-templates/page-dashboard.php',
+        'mosque_setup'    => 'page-templates/page-mosque-onboard.php',
         'classes_browse'       => 'page-templates/page-classes-browse.php',
         'sponsor_yourjannah'   => 'page-templates/page-sponsor-yourjannah.php',
         'change_mosque'        => 'page-templates/page-change-mosque.php',

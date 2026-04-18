@@ -18,9 +18,15 @@ $wp_uid = get_current_user_id();
 $mosque_id = (int) get_user_meta( $wp_uid, 'ynj_mosque_id', true );
 $mosque_ids = get_user_meta( $wp_uid, 'ynj_mosque_ids', true ) ?: [];
 
-// Check roles: admin, mosque admin, or imam
+// Check roles: admin, mosque admin, imam, or coordinator
 $is_admin = current_user_can( 'manage_options' ) || in_array( 'ynj_mosque_admin', (array) wp_get_current_user()->roles );
 $is_imam_user = in_array( 'ynj_imam', (array) wp_get_current_user()->roles, true );
+$is_coordinator = in_array( 'ynj_coordinator', (array) wp_get_current_user()->roles, true );
+
+// Coordinator: mosque_id should already be set via invite, but fallback
+if ( $is_coordinator && ! $mosque_id ) {
+    // Coordinator without mosque_id — deny access (they need to be invited properly)
+}
 
 // Imam: get mosque_id from ynj_mosques.imam_user_id
 if ( $is_imam_user && ! $mosque_id && class_exists( 'YNJ_DB' ) ) {
@@ -46,7 +52,7 @@ if ( $is_admin && ! $mosque_id && class_exists( 'YNJ_DB' ) ) {
     }
 }
 
-if ( ( ! $is_admin && ! $is_imam_user ) || ! $mosque_id ) {
+if ( ( ! $is_admin && ! $is_imam_user && ! $is_coordinator ) || ! $mosque_id ) {
     get_header(); ?>
     <main class="ynj-main">
         <section class="ynj-card" style="text-align:center;padding:40px 20px;">
@@ -145,10 +151,32 @@ $nav_groups = [
     'admin' => [
         'label' => 'ADMIN',
         'items' => [
+            [ 'key' => 'team',     'icon' => '👥', 'label' => 'Team' ],
             [ 'key' => 'settings', 'icon' => '⚙️', 'label' => 'Settings' ],
         ],
     ],
 ];
+
+// Coordinator sees limited sidebar
+if ( $is_coordinator && ! $is_admin && ! $is_imam_user ) {
+    $nav_groups = [
+        'main' => [
+            'label' => '',
+            'items' => [
+                [ 'key' => 'overview', 'icon' => '🎯', 'label' => 'Dashboard' ],
+            ],
+        ],
+        'manage' => [
+            'label' => 'MANAGE',
+            'items' => [
+                [ 'key' => 'events',       'icon' => '📅', 'label' => 'Events' ],
+                [ 'key' => 'classes',      'icon' => '🎓', 'label' => 'Classes' ],
+                [ 'key' => 'bookings',     'icon' => '📋', 'label' => 'Bookings' ],
+                [ 'key' => 'subscribers',  'icon' => '👥', 'label' => 'Subscribers' ],
+            ],
+        ],
+    ];
+}
 
 // Imam sees limited sidebar
 if ( $is_imam_user && ! $is_admin ) {
@@ -190,6 +218,7 @@ $section_help = [
     'funds'         => 'Manage the donation funds available on your niyyah bar. Add custom funds like "New Roof" or "Kitchen Renovation".',
     'madrassah'     => 'Manage your Islamic school — students, attendance, terms, fees, and progress reports.',
     'appeals'       => 'Review incoming charity appeal requests. Accept to schedule a date and fee, or decline. Enable appeals in Settings to appear in the marketplace.',
+    'team'          => 'Invite team members to help manage your mosque. Assign roles: Admin (full access), Imam (announcements), or Coordinator (events & classes).',
     'settings'      => 'Update your mosque profile (name, address, phone, website, description) and manage your admin team.',
 ];
 ?>
@@ -279,12 +308,48 @@ a{color:var(--primary);text-decoration:none;}
 
 /* Mobile */
 .d-hamburger{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--primary-dark);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:18px;cursor:pointer;}
+.d-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;-webkit-tap-highlight-color:transparent;}
+.d-sidebar--open ~ .d-overlay{display:block;}
+
+/* Bottom nav + FAB (hidden on desktop) */
+.d-bottom-nav,.d-fab,.d-fab-menu{display:none;}
+
 @media(max-width:768px){
     .d-sidebar{transform:translateX(-100%);transition:transform .2s;}
     .d-sidebar--open{transform:translateX(0);}
-    .d-main{margin-left:0;padding:16px;padding-top:56px;}
+    .d-main{margin-left:0;padding:16px;padding-top:56px;padding-bottom:80px;}
     .d-hamburger{display:block;}
     .d-row{grid-template-columns:1fr;}
+
+    /* Touch targets */
+    .d-btn{min-height:44px;}
+    .d-nav__item{min-height:44px;}
+    .d-field input,.d-field textarea,.d-field select{min-height:44px;font-size:16px;}
+
+    /* Bottom nav */
+    .d-bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:64px;
+        background:#fff;border-top:1px solid var(--border);z-index:90;
+        justify-content:space-around;align-items:center;padding:0 4px;
+        padding-bottom:env(safe-area-inset-bottom);}
+    .d-bottom-nav__item{display:flex;flex-direction:column;align-items:center;gap:2px;
+        font-size:10px;font-weight:600;color:var(--text-dim);text-decoration:none;
+        padding:8px 12px;min-width:64px;min-height:44px;justify-content:center;}
+    .d-bottom-nav__item--active{color:var(--primary);}
+    .d-bottom-nav__icon{font-size:20px;line-height:1;}
+
+    /* FAB */
+    .d-fab{display:flex;position:fixed;bottom:80px;right:16px;width:56px;height:56px;
+        border-radius:50%;background:var(--primary);color:#fff;border:none;
+        box-shadow:0 4px 16px rgba(40,126,97,.3);z-index:80;align-items:center;
+        justify-content:center;font-size:28px;cursor:pointer;transition:transform .2s;}
+    .d-fab--open{transform:rotate(45deg);}
+    .d-fab-menu{position:fixed;bottom:148px;right:16px;z-index:80;
+        background:#fff;border:1px solid var(--border);border-radius:12px;
+        box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px 0;min-width:200px;}
+    .d-fab-menu--open{display:block;}
+    .d-fab-menu a{display:flex;align-items:center;gap:10px;padding:12px 16px;
+        font-size:14px;font-weight:500;color:var(--text);text-decoration:none;min-height:44px;}
+    .d-fab-menu a:active{background:#f3f4f6;}
 }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -319,6 +384,7 @@ a{color:var(--primary);text-decoration:none;}
         </li>
     </ul>
 </nav>
+<div class="d-overlay" id="d-overlay"></div>
 
 <main class="d-main">
     <!-- Help tip for current section -->
@@ -354,6 +420,70 @@ a{color:var(--primary);text-decoration:none;}
     }
     ?>
 </main>
+
+<!-- Mobile Bottom Nav -->
+<nav class="d-bottom-nav">
+    <a class="d-bottom-nav__item<?php echo $section === 'overview' ? ' d-bottom-nav__item--active' : ''; ?>"
+       href="<?php echo esc_url( home_url( '/dashboard?section=overview' ) ); ?>">
+        <span class="d-bottom-nav__icon">🎯</span>Home
+    </a>
+    <a class="d-bottom-nav__item<?php echo $section === 'announcements' ? ' d-bottom-nav__item--active' : ''; ?>"
+       href="<?php echo esc_url( home_url( '/dashboard?section=announcements' ) ); ?>">
+        <span class="d-bottom-nav__icon">📢</span>Announce
+    </a>
+    <a class="d-bottom-nav__item<?php echo $section === 'prayers' ? ' d-bottom-nav__item--active' : ''; ?>"
+       href="<?php echo esc_url( home_url( '/dashboard?section=prayers' ) ); ?>">
+        <span class="d-bottom-nav__icon">🕐</span>Prayers
+    </a>
+    <a class="d-bottom-nav__item<?php echo $section === 'settings' ? ' d-bottom-nav__item--active' : ''; ?>"
+       href="<?php echo esc_url( home_url( '/dashboard?section=settings' ) ); ?>">
+        <span class="d-bottom-nav__icon">⚙️</span>Settings
+    </a>
+</nav>
+
+<!-- Mobile FAB -->
+<button class="d-fab" id="d-fab-btn" aria-label="Quick actions">+</button>
+<div class="d-fab-menu" id="d-fab-menu">
+    <a href="?section=announcements">📢 New Announcement</a>
+    <a href="?section=events">📅 Add Event</a>
+    <a href="?section=broadcast">📤 Send Broadcast</a>
+    <a href="?section=campaigns">💝 New Campaign</a>
+</div>
+
+<script>
+(function(){
+    // Sidebar: close on overlay tap or nav item click (mobile)
+    var sidebar = document.getElementById('d-sidebar');
+    var overlay = document.getElementById('d-overlay');
+    function closeSidebar(){ sidebar.classList.remove('d-sidebar--open'); }
+    overlay.addEventListener('click', closeSidebar);
+    document.querySelectorAll('.d-nav__item').forEach(function(link){
+        link.addEventListener('click', closeSidebar);
+    });
+
+    // Hamburger toggle (replaces inline onclick)
+    var hamburger = document.querySelector('.d-hamburger');
+    hamburger.removeAttribute('onclick');
+    hamburger.addEventListener('click', function(){
+        sidebar.classList.toggle('d-sidebar--open');
+    });
+
+    // FAB toggle
+    var fab = document.getElementById('d-fab-btn');
+    var fabMenu = document.getElementById('d-fab-menu');
+    fab.addEventListener('click', function(){
+        fab.classList.toggle('d-fab--open');
+        fabMenu.classList.toggle('d-fab-menu--open');
+    });
+    // Close FAB when clicking outside
+    document.addEventListener('click', function(e){
+        if (!fab.contains(e.target) && !fabMenu.contains(e.target)) {
+            fab.classList.remove('d-fab--open');
+            fabMenu.classList.remove('d-fab-menu--open');
+        }
+    });
+})();
+</script>
 
 </body>
 </html>

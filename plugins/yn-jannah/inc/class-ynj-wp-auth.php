@@ -42,6 +42,14 @@ class YNJ_WP_Auth {
             'ynj_send_broadcasts'       => true,
         ] );
 
+        // Coordinator role (events, classes, bookings — no financial access)
+        add_role( 'ynj_coordinator', 'Mosque Coordinator', [
+            'read'                 => true,
+            'ynj_manage_events'    => true,
+            'ynj_manage_classes'   => true,
+            'ynj_view_subscribers' => true,
+        ] );
+
         // Congregation member role
         add_role( 'ynj_congregation', 'Congregation Member', [
             'read'                => true,
@@ -73,6 +81,7 @@ class YNJ_WP_Auth {
     public static function remove_roles() {
         remove_role( 'ynj_mosque_admin' );
         remove_role( 'ynj_imam' );
+        remove_role( 'ynj_coordinator' );
         remove_role( 'ynj_congregation' );
     }
 

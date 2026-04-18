@@ -457,9 +457,23 @@ img,svg{display:block;max-width:100%;}
 .ynj-fc--other{background:#f9fafb;}
 .ynj-fc--other .ynj-feed-card__date{background:#e5e7eb;}
 
-/* Interested button on feed cards */
+/* Interested button on feed cards (legacy) */
 .ynj-interested-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid #e5e7eb;border-radius:8px;background:none;font-size:11px;font-weight:600;color:#6b8fa3;cursor:pointer;font-family:inherit;transition:all .15s;margin-top:6px;}
 .ynj-interested-btn:hover{background:#fef2f2;border-color:#fecaca;color:#dc2626;}
+
+/* Reaction bar on feed cards */
+.ynj-reaction-bar{display:flex;align-items:center;gap:2px;margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6;}
+.ynj-react-btn{display:inline-flex;align-items:center;gap:3px;padding:5px 10px;border:none;border-radius:20px;background:none;font-size:12px;cursor:pointer;font-family:inherit;color:#6b8fa3;transition:all .15s;-webkit-tap-highlight-color:transparent;min-height:32px;}
+.ynj-react-btn:hover{background:#f3f4f6;}
+.ynj-react-btn:active{transform:scale(1.15);}
+.ynj-react-btn--active{background:#fef2f2;color:#dc2626;font-weight:700;}
+.ynj-react-btn--active .ynj-react-icon{transform:scale(1.2);}
+.ynj-react-icon{font-size:16px;line-height:1;transition:transform .2s;}
+.ynj-react-count{font-size:11px;font-weight:600;min-width:8px;}
+.ynj-react-share{margin-left:auto;}
+.ynj-react-share .ynj-react-icon{font-size:14px;}
+.ynj-views-count{margin-left:auto;font-size:11px;color:#9ca3af;font-weight:500;display:flex;align-items:center;gap:2px;}
+.ynj-views-count span{font-variant-numeric:tabular-nums;}
 
 /* Sponsor ad in feed (classic style) */
 .ynj-sponsor-ad{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;}

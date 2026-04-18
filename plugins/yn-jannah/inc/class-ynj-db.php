@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '3.2.0';
+    const SCHEMA_VERSION = '3.4.0';
 
     /**
      * Return the full table name for a given short name.
@@ -273,6 +273,7 @@ class YNJ_DB {
             approved_by bigint(20) unsigned DEFAULT NULL,
             approved_at datetime DEFAULT NULL,
             status varchar(20) NOT NULL DEFAULT 'draft',
+            scheduled_at datetime DEFAULT NULL,
             published_at datetime DEFAULT NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
@@ -311,6 +312,7 @@ class YNJ_DB {
             volunteer_roles varchar(500) NOT NULL DEFAULT '',
             volunteer_count int(11) NOT NULL DEFAULT 0,
             status varchar(20) NOT NULL DEFAULT 'draft',
+            scheduled_at datetime DEFAULT NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             KEY mosque_id (mosque_id),
@@ -1071,6 +1073,76 @@ class YNJ_DB {
             PRIMARY KEY  (id),
             KEY appeal_id (appeal_id),
             KEY response_id (response_id)
+        ) $charset_collate;";
+
+        // Ibadah (worship) logs — personal daily tracking
+        $tables[] = "CREATE TABLE {$t('ibadah_logs')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            log_date date NOT NULL,
+            fajr tinyint(1) NOT NULL DEFAULT 0,
+            dhuhr tinyint(1) NOT NULL DEFAULT 0,
+            asr tinyint(1) NOT NULL DEFAULT 0,
+            maghrib tinyint(1) NOT NULL DEFAULT 0,
+            isha tinyint(1) NOT NULL DEFAULT 0,
+            quran_pages int(11) NOT NULL DEFAULT 0,
+            dhikr tinyint(1) NOT NULL DEFAULT 0,
+            fasting tinyint(1) NOT NULL DEFAULT 0,
+            charity tinyint(1) NOT NULL DEFAULT 0,
+            good_deed varchar(255) NOT NULL DEFAULT '',
+            points_earned int(11) NOT NULL DEFAULT 0,
+            PRIMARY KEY  (id),
+            UNIQUE KEY user_date (user_id, log_date),
+            KEY mosque_id (mosque_id),
+            KEY log_date (log_date)
+        ) $charset_collate;";
+
+        // Community challenges — auto-generated weekly goals
+        $tables[] = "CREATE TABLE {$t('community_challenges')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            challenge_type varchar(30) NOT NULL DEFAULT 'prayers',
+            title varchar(255) NOT NULL DEFAULT '',
+            target_value int(11) NOT NULL DEFAULT 0,
+            current_value int(11) NOT NULL DEFAULT 0,
+            start_date date NOT NULL,
+            end_date date NOT NULL,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY end_date (end_date)
+        ) $charset_collate;";
+
+        // Content view tracking (dopamine metrics for admins)
+        $tables[] = "CREATE TABLE {$t('content_views')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            content_type varchar(20) NOT NULL DEFAULT 'announcement',
+            content_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            view_count int(11) NOT NULL DEFAULT 0,
+            unique_views int(11) NOT NULL DEFAULT 0,
+            interested_count int(11) NOT NULL DEFAULT 0,
+            share_count int(11) NOT NULL DEFAULT 0,
+            view_date date NOT NULL,
+            PRIMARY KEY  (id),
+            UNIQUE KEY content_date (content_type, content_id, view_date),
+            KEY mosque_id (mosque_id),
+            KEY view_date (view_date)
+        ) $charset_collate;";
+
+        // Reactions on announcements/events (like, dua, share)
+        $tables[] = "CREATE TABLE {$t('reactions')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            content_type varchar(20) NOT NULL DEFAULT 'announcement',
+            content_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            reaction varchar(20) NOT NULL DEFAULT 'like',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY user_content_reaction (user_id, content_type, content_id, reaction),
+            KEY content_type_id (content_type, content_id)
         ) $charset_collate;";
 
         return $tables;

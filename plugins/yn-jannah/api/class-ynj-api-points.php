@@ -44,6 +44,25 @@ class YNJ_API_Points {
             'callback'            => [ __CLASS__, 'leaderboard' ],
             'permission_callback' => '__return_true',
         ] );
+
+        // ── Ibadah tracker endpoints ──
+        register_rest_route( self::NS, '/ibadah/log', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'ibadah_log' ],
+            'permission_callback' => function() { return is_user_logged_in(); },
+        ] );
+
+        register_rest_route( self::NS, '/ibadah/me', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'ibadah_me' ],
+            'permission_callback' => function() { return is_user_logged_in(); },
+        ] );
+
+        register_rest_route( self::NS, '/ibadah/community/(?P<mosque_id>\d+)', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'ibadah_community' ],
+            'permission_callback' => '__return_true',
+        ] );
     }
 
     /**
@@ -290,5 +309,296 @@ class YNJ_API_Points {
              cos( deg2rad( $lat1 ) ) * cos( deg2rad( $lat2 ) ) *
              sin( $dLng / 2 ) * sin( $dLng / 2 );
         return $R * 2 * atan2( sqrt( $a ), sqrt( 1 - $a ) );
+    }
+
+    // ================================================================
+    // IBADAH TRACKER
+    // ================================================================
+
+    /**
+     * POST /ibadah/log — Log or update today's ibadah.
+     * Calculates points, updates streak, contributes to community challenge.
+     */
+    public static function ibadah_log( \WP_REST_Request $request ) {
+        $wp_uid  = get_current_user_id();
+        $ynj_uid = (int) get_user_meta( $wp_uid, 'ynj_user_id', true );
+        if ( ! $ynj_uid ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'User not found' ], 400 );
+        }
+
+        $mosque_id = (int) get_user_meta( $wp_uid, 'ynj_mosque_id', true );
+        if ( ! $mosque_id ) {
+            // Try favourite from ynj_users
+            global $wpdb;
+            $mosque_id = (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT favourite_mosque_id FROM " . YNJ_DB::table( 'users' ) . " WHERE id = %d", $ynj_uid
+            ) );
+        }
+
+        $today = date( 'Y-m-d' );
+        $prayers = [ 'fajr', 'dhuhr', 'asr', 'maghrib', 'isha' ];
+
+        $data = [
+            'user_id'     => $ynj_uid,
+            'mosque_id'   => $mosque_id,
+            'log_date'    => $today,
+            'fajr'        => (int) ( $request->get_param( 'fajr' ) ? 1 : 0 ),
+            'dhuhr'       => (int) ( $request->get_param( 'dhuhr' ) ? 1 : 0 ),
+            'asr'         => (int) ( $request->get_param( 'asr' ) ? 1 : 0 ),
+            'maghrib'     => (int) ( $request->get_param( 'maghrib' ) ? 1 : 0 ),
+            'isha'        => (int) ( $request->get_param( 'isha' ) ? 1 : 0 ),
+            'quran_pages' => max( 0, min( 100, (int) $request->get_param( 'quran_pages' ) ) ),
+            'dhikr'       => (int) ( $request->get_param( 'dhikr' ) ? 1 : 0 ),
+            'fasting'     => (int) ( $request->get_param( 'fasting' ) ? 1 : 0 ),
+            'charity'     => (int) ( $request->get_param( 'charity' ) ? 1 : 0 ),
+            'good_deed'   => sanitize_text_field( $request->get_param( 'good_deed' ) ?: '' ),
+        ];
+
+        // Calculate points
+        $pts = 0;
+        $prayer_count = $data['fajr'] + $data['dhuhr'] + $data['asr'] + $data['maghrib'] + $data['isha'];
+        $pts += $prayer_count * 2;                           // 2 pts per prayer
+        if ( $prayer_count === 5 ) $pts += 15;               // All 5 bonus
+        $pts += $data['quran_pages'] * 5;                    // 5 pts per page
+        if ( $data['dhikr'] )   $pts += 3;
+        if ( $data['fasting'] ) $pts += 10;
+        if ( $data['charity'] ) $pts += 5;
+        if ( $data['good_deed'] ) $pts += 5;
+        $data['points_earned'] = $pts;
+
+        // UPSERT
+        global $wpdb;
+        $table = YNJ_DB::table( 'ibadah_logs' );
+        $existing = $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM $table WHERE user_id = %d AND log_date = %s", $ynj_uid, $today
+        ) );
+
+        $old_pts = 0;
+        if ( $existing ) {
+            $old_pts = (int) $wpdb->get_var( $wpdb->prepare( "SELECT points_earned FROM $table WHERE id = %d", $existing ) );
+            $wpdb->update( $table, $data, [ 'id' => $existing ] );
+        } else {
+            $wpdb->insert( $table, $data );
+        }
+
+        // Update user total points (delta)
+        $delta = $pts - $old_pts;
+        if ( $delta !== 0 ) {
+            $ut = YNJ_DB::table( 'users' );
+            $wpdb->query( $wpdb->prepare(
+                "UPDATE $ut SET total_points = total_points + %d WHERE id = %d",
+                $delta, $ynj_uid
+            ) );
+        }
+
+        // Update community challenge progress
+        if ( $mosque_id ) {
+            $ct = YNJ_DB::table( 'community_challenges' );
+            $active = $wpdb->get_row( $wpdb->prepare(
+                "SELECT id, challenge_type, target_value, current_value FROM $ct WHERE mosque_id = %d AND status = 'active' AND end_date >= %s LIMIT 1",
+                $mosque_id, $today
+            ) );
+            if ( $active ) {
+                // Recalculate from scratch for accuracy
+                $since = $active->start_date ?? $today;
+                $it = YNJ_DB::table( 'ibadah_logs' );
+                $new_val = 0;
+                if ( $active->challenge_type === 'prayers' ) {
+                    $new_val = (int) $wpdb->get_var( $wpdb->prepare(
+                        "SELECT COALESCE(SUM(fajr+dhuhr+asr+maghrib+isha),0) FROM $it WHERE mosque_id=%d AND log_date BETWEEN %s AND %s",
+                        $mosque_id, $since, $active->end_date ?? $today
+                    ) );
+                } elseif ( $active->challenge_type === 'quran_pages' ) {
+                    $new_val = (int) $wpdb->get_var( $wpdb->prepare(
+                        "SELECT COALESCE(SUM(quran_pages),0) FROM $it WHERE mosque_id=%d AND log_date BETWEEN %s AND %s",
+                        $mosque_id, $since, $active->end_date ?? $today
+                    ) );
+                } elseif ( $active->challenge_type === 'good_deeds' ) {
+                    $new_val = (int) $wpdb->get_var( $wpdb->prepare(
+                        "SELECT COUNT(*) FROM $it WHERE mosque_id=%d AND good_deed != '' AND log_date BETWEEN %s AND %s",
+                        $mosque_id, $since, $active->end_date ?? $today
+                    ) );
+                }
+                $update_data = [ 'current_value' => $new_val ];
+                if ( $new_val >= (int) $active->target_value ) {
+                    $update_data['status'] = 'completed';
+                }
+                $wpdb->update( $ct, $update_data, [ 'id' => $active->id ] );
+            }
+        }
+
+        // Calculate streak
+        $streak = self::calculate_ibadah_streak( $ynj_uid );
+
+        // Check streak milestones (award bonus points)
+        $milestones = [ 7 => 50, 14 => 100, 30 => 250, 60 => 500, 90 => 1000 ];
+        foreach ( $milestones as $days => $bonus ) {
+            if ( $streak === $days ) {
+                $milestone_key = 'ynj_streak_' . $ynj_uid . '_' . $days;
+                if ( ! get_transient( $milestone_key ) ) {
+                    set_transient( $milestone_key, 1, 365 * DAY_IN_SECONDS );
+                    $wpdb->query( $wpdb->prepare(
+                        "UPDATE " . YNJ_DB::table( 'users' ) . " SET total_points = total_points + %d WHERE id = %d",
+                        $bonus, $ynj_uid
+                    ) );
+                    $pts += $bonus;
+                }
+                break;
+            }
+        }
+
+        $total = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT total_points FROM " . YNJ_DB::table( 'users' ) . " WHERE id = %d", $ynj_uid
+        ) );
+
+        return new \WP_REST_Response( [
+            'ok'           => true,
+            'points_today' => $pts,
+            'streak'       => $streak,
+            'total_points' => $total,
+        ] );
+    }
+
+    /**
+     * GET /ibadah/me — Get user's ibadah summary.
+     */
+    public static function ibadah_me( \WP_REST_Request $request ) {
+        $wp_uid  = get_current_user_id();
+        $ynj_uid = (int) get_user_meta( $wp_uid, 'ynj_user_id', true );
+        if ( ! $ynj_uid ) {
+            return new \WP_REST_Response( [ 'ok' => false ], 400 );
+        }
+
+        global $wpdb;
+        $table = YNJ_DB::table( 'ibadah_logs' );
+        $today = date( 'Y-m-d' );
+
+        // Today's log
+        $today_log = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM $table WHERE user_id = %d AND log_date = %s", $ynj_uid, $today
+        ) );
+
+        // This week totals
+        $week_start = date( 'Y-m-d', strtotime( 'Monday this week' ) );
+        $week = $wpdb->get_row( $wpdb->prepare(
+            "SELECT COALESCE(SUM(fajr+dhuhr+asr+maghrib+isha),0) AS prayers, COALESCE(SUM(quran_pages),0) AS pages,
+                    COALESCE(SUM(points_earned),0) AS points, COUNT(*) AS days_logged
+             FROM $table WHERE user_id = %d AND log_date >= %s",
+            $ynj_uid, $week_start
+        ) );
+
+        $streak = self::calculate_ibadah_streak( $ynj_uid );
+
+        return new \WP_REST_Response( [
+            'ok'      => true,
+            'today'   => $today_log ? [
+                'fajr' => (int) $today_log->fajr, 'dhuhr' => (int) $today_log->dhuhr,
+                'asr' => (int) $today_log->asr, 'maghrib' => (int) $today_log->maghrib,
+                'isha' => (int) $today_log->isha, 'quran_pages' => (int) $today_log->quran_pages,
+                'dhikr' => (int) $today_log->dhikr, 'fasting' => (int) $today_log->fasting,
+                'charity' => (int) $today_log->charity, 'good_deed' => $today_log->good_deed,
+                'points' => (int) $today_log->points_earned,
+            ] : null,
+            'streak'  => $streak,
+            'week'    => [
+                'prayers' => (int) $week->prayers,
+                'pages'   => (int) $week->pages,
+                'points'  => (int) $week->points,
+                'days'    => (int) $week->days_logged,
+            ],
+        ] );
+    }
+
+    /**
+     * GET /ibadah/community/{mosque_id} — Anonymous aggregate stats.
+     */
+    public static function ibadah_community( \WP_REST_Request $request ) {
+        $mosque_id = (int) $request->get_param( 'mosque_id' );
+        if ( ! $mosque_id ) return new \WP_REST_Response( [ 'ok' => false ], 400 );
+
+        global $wpdb;
+        $table = YNJ_DB::table( 'ibadah_logs' );
+        $week_start = date( 'Y-m-d', strtotime( 'Monday this week' ) );
+        $today = date( 'Y-m-d' );
+
+        // This week aggregates
+        $week = $wpdb->get_row( $wpdb->prepare(
+            "SELECT COALESCE(SUM(fajr+dhuhr+asr+maghrib+isha),0) AS prayers,
+                    COALESCE(SUM(quran_pages),0) AS pages,
+                    COALESCE(SUM(fasting),0) AS fasting_days,
+                    COUNT(DISTINCT CASE WHEN good_deed != '' THEN id END) AS good_deeds,
+                    COUNT(DISTINCT user_id) AS active_members
+             FROM $table WHERE mosque_id = %d AND log_date >= %s",
+            $mosque_id, $week_start
+        ) );
+
+        // Active today
+        $active_today = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(DISTINCT user_id) FROM $table WHERE mosque_id = %d AND log_date = %s",
+            $mosque_id, $today
+        ) );
+
+        // Current challenge
+        $ct = YNJ_DB::table( 'community_challenges' );
+        $challenge = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM $ct WHERE mosque_id = %d AND status = 'active' AND end_date >= %s ORDER BY id DESC LIMIT 1",
+            $mosque_id, $today
+        ) );
+
+        $days_left = $challenge ? max( 0, (int) ( ( strtotime( $challenge->end_date ) - time() ) / DAY_IN_SECONDS ) + 1 ) : 0;
+
+        return new \WP_REST_Response( [
+            'ok'    => true,
+            'week'  => [
+                'prayers'      => (int) $week->prayers,
+                'pages'        => (int) $week->pages,
+                'fasting'      => (int) $week->fasting_days,
+                'good_deeds'   => (int) $week->good_deeds,
+                'active_members' => (int) $week->active_members,
+            ],
+            'active_today' => $active_today,
+            'challenge'    => $challenge ? [
+                'title'    => $challenge->title,
+                'type'     => $challenge->challenge_type,
+                'target'   => (int) $challenge->target_value,
+                'current'  => (int) $challenge->current_value,
+                'pct'      => (int) $challenge->target_value > 0 ? min( 100, round( (int) $challenge->current_value / (int) $challenge->target_value * 100 ) ) : 0,
+                'days_left'=> $days_left,
+                'status'   => $challenge->status,
+            ] : null,
+        ] );
+    }
+
+    /**
+     * Calculate consecutive-day ibadah streak for a user.
+     */
+    private static function calculate_ibadah_streak( $user_id ) {
+        global $wpdb;
+        $table = YNJ_DB::table( 'ibadah_logs' );
+
+        $dates = $wpdb->get_col( $wpdb->prepare(
+            "SELECT log_date FROM $table WHERE user_id = %d AND (fajr=1 OR dhuhr=1 OR asr=1 OR maghrib=1 OR isha=1) ORDER BY log_date DESC LIMIT 120",
+            $user_id
+        ) );
+
+        if ( empty( $dates ) ) return 0;
+
+        $streak   = 0;
+        $expected = date( 'Y-m-d' ); // today
+
+        foreach ( $dates as $d ) {
+            if ( $d === $expected ) {
+                $streak++;
+                $expected = date( 'Y-m-d', strtotime( $expected . ' -1 day' ) );
+            } elseif ( $streak === 0 && $d === date( 'Y-m-d', strtotime( '-1 day' ) ) ) {
+                // Allow starting from yesterday if not logged today yet
+                $streak = 1;
+                $expected = date( 'Y-m-d', strtotime( $d . ' -1 day' ) );
+            } else {
+                break;
+            }
+        }
+
+        return $streak;
     }
 }

@@ -22,6 +22,7 @@ class YNJ_Platform_Admin {
      */
     public static function register() {
         add_action( 'admin_menu', [ __CLASS__, 'add_menus' ] );
+        add_action( 'ynj_user_registered', [ __CLASS__, 'notify_new_registration' ], 10, 2 );
     }
 
     /**
@@ -96,6 +97,44 @@ class YNJ_Platform_Admin {
                 <?php endforeach; ?>
             </div>
 
+            <?php
+            // Recent registrations
+            $pending_regs = get_option( 'ynj_pending_registrations', [] );
+            $recent_regs = array_filter( $pending_regs, function( $r ) {
+                return strtotime( $r['time'] ?? '' ) > strtotime( '-7 days' );
+            } );
+            $recent_count = count( $recent_regs );
+            if ( $recent_count > 0 ) :
+            ?>
+            <div style="background:#fff;border:1px solid #e5e7eb;border-left:4px solid #f59e0b;border-radius:8px;padding:20px;margin-bottom:16px;">
+                <h3 style="margin:0 0 12px;">🔔 <?php echo esc_html( $recent_count ); ?> new registration<?php echo $recent_count !== 1 ? 's' : ''; ?> this week</h3>
+                <table class="wp-list-table widefat striped" style="margin:0;">
+                    <thead><tr><th>Name</th><th>Email</th><th>Mosque</th><th>When</th><th>Action</th></tr></thead>
+                    <tbody>
+                    <?php foreach ( array_reverse( array_slice( $recent_regs, -10 ) ) as $r ) : ?>
+                    <tr>
+                        <td><strong><?php echo esc_html( $r['user_name'] ?? '' ); ?></strong></td>
+                        <td><?php echo esc_html( $r['user_email'] ?? '' ); ?></td>
+                        <td><?php echo esc_html( $r['mosque_name'] ?? '' ); ?></td>
+                        <td><?php echo esc_html( human_time_diff( strtotime( $r['time'] ?? '' ) ) ); ?> ago</td>
+                        <td>
+                            <form method="post" style="display:inline;">
+                                <?php wp_nonce_field( 'ynj_assign_admin', '_ynj_assign_nonce' ); ?>
+                                <input type="hidden" name="assign_mosque_id" value="<?php echo (int) ( $r['mosque_id'] ?? 0 ); ?>">
+                                <input type="hidden" name="assign_email" value="<?php echo esc_attr( $r['user_email'] ?? '' ); ?>">
+                                <button type="submit" name="ynj_assign_admin" class="button button-small button-primary"
+                                        onclick="return confirm('Make <?php echo esc_js( $r['user_name'] ?? '' ); ?> admin for <?php echo esc_js( $r['mosque_name'] ?? '' ); ?>?');">
+                                    Make Admin
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
+
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                 <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:20px;">
                     <h3>Quick Actions</h3>
@@ -123,6 +162,26 @@ class YNJ_Platform_Admin {
         global $wpdb;
         $table = YNJ_DB::table( 'mosques' );
         $sub_table = YNJ_DB::table( 'user_subscriptions' );
+
+        // Handle assign admin
+        if ( isset( $_POST['ynj_assign_admin'] ) && wp_verify_nonce( $_POST['_ynj_assign_nonce'] ?? '', 'ynj_assign_admin' ) ) {
+            $assign_mosque_id = (int) ( $_POST['assign_mosque_id'] ?? 0 );
+            $assign_email     = sanitize_email( $_POST['assign_email'] ?? '' );
+            if ( $assign_mosque_id && is_email( $assign_email ) ) {
+                $mosque_row = $wpdb->get_row( $wpdb->prepare(
+                    "SELECT name FROM $table WHERE id = %d", $assign_mosque_id
+                ) );
+                if ( $mosque_row ) {
+                    $result = YNJ_WP_Auth::invite_admin( $assign_mosque_id, $assign_email, $mosque_row->name );
+                    if ( is_wp_error( $result ) ) {
+                        echo '<div class="notice notice-error"><p>' . esc_html( $result->get_error_message() ) . '</p></div>';
+                    } else {
+                        $wpdb->update( $table, [ 'status' => 'active', 'admin_email' => $assign_email ], [ 'id' => $assign_mosque_id ] );
+                        echo '<div class="notice notice-success"><p>Admin assigned: ' . esc_html( $assign_email ) . ' for ' . esc_html( $mosque_row->name ) . '</p></div>';
+                    }
+                }
+            }
+        }
         $search = sanitize_text_field( $_GET['s'] ?? '' );
         $paged  = max( 1, absint( $_GET['paged'] ?? 1 ) );
         $per_page = 50;
@@ -181,7 +240,7 @@ class YNJ_Platform_Admin {
             <?php endif; ?>
             <table class="wp-list-table widefat striped">
                 <thead>
-                    <tr><th>Name</th><th>City</th><th>Postcode</th><th>Admin Email</th><th>Members</th><th>Status</th><th>Created</th></tr>
+                    <tr><th>Name</th><th>City</th><th>Postcode</th><th>Admin Email</th><th>Members</th><th>Status</th><th>Created</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                 <?php foreach ( $mosques as $m ) :
@@ -195,6 +254,17 @@ class YNJ_Platform_Admin {
                     <td><?php echo esc_html( $members ); ?></td>
                     <td><span style="color:<?php echo $m->status === 'active' ? '#16a34a' : '#dc2626'; ?>;"><?php echo esc_html( $m->status ); ?></span></td>
                     <td><?php echo esc_html( date( 'j M Y', strtotime( $m->created_at ) ) ); ?></td>
+                    <td>
+                        <form method="post" style="display:flex;gap:4px;align-items:center;">
+                            <?php wp_nonce_field( 'ynj_assign_admin', '_ynj_assign_nonce' ); ?>
+                            <input type="hidden" name="assign_mosque_id" value="<?php echo (int) $m->id; ?>">
+                            <input type="email" name="assign_email" placeholder="admin@email.com" required
+                                   style="width:180px;padding:4px 8px;font-size:12px;">
+                            <button type="submit" name="ynj_assign_admin" class="button button-small button-primary">
+                                Assign Admin
+                            </button>
+                        </form>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
                 </tbody>
@@ -209,6 +279,28 @@ class YNJ_Platform_Admin {
 
     public static function page_members() {
         global $wpdb;
+
+        // Handle make admin
+        if ( isset( $_POST['ynj_make_admin'] ) && wp_verify_nonce( $_POST['_ynj_make_admin_nonce'] ?? '', 'ynj_make_admin' ) ) {
+            $target_email     = sanitize_email( $_POST['target_email'] ?? '' );
+            $target_mosque_id = (int) ( $_POST['target_mosque_id'] ?? 0 );
+            if ( is_email( $target_email ) && $target_mosque_id ) {
+                $wp_user = get_user_by( 'email', $target_email );
+                if ( $wp_user ) {
+                    $wp_user->add_role( 'ynj_mosque_admin' );
+                    update_user_meta( $wp_user->ID, 'ynj_mosque_id', $target_mosque_id );
+                    $ids = get_user_meta( $wp_user->ID, 'ynj_mosque_ids', true ) ?: [];
+                    if ( ! in_array( $target_mosque_id, $ids, true ) ) {
+                        $ids[] = $target_mosque_id;
+                        update_user_meta( $wp_user->ID, 'ynj_mosque_ids', $ids );
+                    }
+                    echo '<div class="notice notice-success"><p>User ' . esc_html( $target_email ) . ' promoted to mosque admin.</p></div>';
+                } else {
+                    echo '<div class="notice notice-warning"><p>No WordPress user found with email ' . esc_html( $target_email ) . '. They need to register first.</p></div>';
+                }
+            }
+        }
+
         $table = YNJ_DB::table( 'users' );
         $mosque_filter = absint( $_GET['mosque_id'] ?? 0 );
         $search = sanitize_text_field( $_GET['s'] ?? '' );
@@ -251,7 +343,7 @@ class YNJ_Platform_Admin {
             </form>
             <table class="wp-list-table widefat striped">
                 <thead>
-                    <tr><th>Name</th><th>Email</th><th>Phone</th><th>Mosque</th><th>Verified</th><th>Joined</th></tr>
+                    <tr><th>Name</th><th>Email</th><th>Phone</th><th>Mosque</th><th>Verified</th><th>Joined</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                 <?php foreach ( $users as $u ) : ?>
@@ -262,6 +354,18 @@ class YNJ_Platform_Admin {
                     <td><?php echo esc_html( $u->mosque_name ?: '—' ); ?></td>
                     <td><?php echo $u->verified_congregation ? '✅' : '—'; ?></td>
                     <td><?php echo esc_html( date( 'j M Y', strtotime( $u->created_at ) ) ); ?></td>
+                    <td>
+                        <?php if ( $u->favourite_mosque_id ) : ?>
+                        <form method="post" style="display:inline;" onsubmit="return confirm('Make <?php echo esc_js( $u->name ); ?> an admin for <?php echo esc_js( $u->mosque_name ); ?>?');">
+                            <?php wp_nonce_field( 'ynj_make_admin', '_ynj_make_admin_nonce' ); ?>
+                            <input type="hidden" name="target_email" value="<?php echo esc_attr( $u->email ); ?>">
+                            <input type="hidden" name="target_mosque_id" value="<?php echo (int) $u->favourite_mosque_id; ?>">
+                            <button type="submit" name="ynj_make_admin" class="button button-small">Make Admin</button>
+                        </form>
+                        <?php else : ?>
+                        <span style="color:#999;font-size:11px;">No mosque</span>
+                        <?php endif; ?>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
                 </tbody>
@@ -1045,5 +1149,38 @@ class YNJ_Platform_Admin {
             <?php endif; ?>
         </div>
         <?php
+    }
+
+    // ================================================================
+    // REGISTRATION NOTIFICATION
+    // ================================================================
+
+    /**
+     * Store a notification when a new user registers and selects a mosque.
+     */
+    public static function notify_new_registration( $wp_user_id, $data ) {
+        $mosque_slug = sanitize_title( $data['mosque_slug'] ?? '' );
+        if ( ! $mosque_slug ) return;
+
+        global $wpdb;
+        $mosque = $wpdb->get_row( $wpdb->prepare(
+            "SELECT id, name FROM " . YNJ_DB::table( 'mosques' ) . " WHERE slug = %s",
+            $mosque_slug
+        ) );
+        if ( ! $mosque ) return;
+
+        $wp_user  = get_userdata( $wp_user_id );
+        $existing = get_option( 'ynj_pending_registrations', [] );
+        $existing[] = [
+            'user_id'    => $wp_user_id,
+            'user_name'  => $wp_user->display_name,
+            'user_email' => $wp_user->user_email,
+            'mosque_id'  => $mosque->id,
+            'mosque_name'=> $mosque->name,
+            'time'       => current_time( 'mysql' ),
+        ];
+        // Keep only last 100
+        $existing = array_slice( $existing, -100 );
+        update_option( 'ynj_pending_registrations', $existing, false );
     }
 }

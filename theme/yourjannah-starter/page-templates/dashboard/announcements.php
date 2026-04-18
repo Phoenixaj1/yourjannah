@@ -33,6 +33,17 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
             }
         }
 
+        // Handle scheduled status
+        $scheduled_at = null;
+        if ( $requested_status === 'scheduled' && ! empty( $_POST['scheduled_at'] ) ) {
+            $scheduled_at = sanitize_text_field( $_POST['scheduled_at'] );
+            // Validate it's in the future
+            if ( strtotime( $scheduled_at ) <= time() ) {
+                $requested_status = 'published'; // Past time → publish immediately
+                $scheduled_at = null;
+            }
+        }
+
         $data = [
             'mosque_id'       => $mosque_id,
             'title'           => sanitize_text_field( $_POST['title'] ?? '' ),
@@ -43,7 +54,8 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
             'author_role'     => $is_imam ? 'imam' : 'admin',
             'approval_status' => $approval_status,
             'status'          => $requested_status,
-            'published_at'    => current_time( 'mysql' ),
+            'scheduled_at'    => $scheduled_at,
+            'published_at'    => $requested_status === 'scheduled' ? null : current_time( 'mysql' ),
         ];
 
         // Handle image upload
@@ -242,6 +254,38 @@ $pending_items = $wpdb->get_results( $wpdb->prepare(
 
 <?php else : ?>
 
+<!-- Quick Templates (only on create, not edit) -->
+<?php if ( ! $editing && function_exists( 'ynj_get_quick_templates' ) ) :
+    $dash_templates = ynj_get_quick_templates( $mosque_name );
+?>
+<div class="d-card" style="border-left:4px solid #00ADEF;">
+    <h3>⚡ <?php esc_html_e( 'Quick Templates', 'yourjannah' ); ?></h3>
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:10px;"><?php esc_html_e( 'Tap a template to prefill the form below. Edit before posting.', 'yourjannah' ); ?></p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;">
+        <?php foreach ( $dash_templates as $i => $tpl ) : ?>
+        <button type="button" onclick="ynjDashTpl(<?php echo $i; ?>)"
+                style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;color:#374151;text-align:center;min-height:44px;font-family:inherit;">
+            <span style="font-size:20px;"><?php echo $tpl['icon']; ?></span>
+            <?php echo esc_html( $tpl['label'] ); ?>
+        </button>
+        <?php endforeach; ?>
+    </div>
+</div>
+<script>
+var _dTpls = <?php echo wp_json_encode( $dash_templates ); ?>;
+function ynjDashTpl(i) {
+    var t = _dTpls[i]; if (!t) return;
+    var form = document.querySelector('form[enctype]') || document.querySelector('input[name="title"]').closest('form');
+    form.querySelector('[name="title"]').value = t.title;
+    form.querySelector('[name="body"]').value = t.body;
+    var typeEl = form.querySelector('[name="type"]');
+    if (typeEl) { for(var j=0;j<typeEl.options.length;j++) { if(typeEl.options[j].value===t.type){typeEl.selectedIndex=j;break;} } }
+    form.querySelector('[name="title"]').focus();
+    form.scrollIntoView({behavior:'smooth',block:'start'});
+}
+</script>
+<?php endif; ?>
+
 <!-- Create/Edit Form -->
 <div class="d-card">
     <h3><?php echo $editing ? '✏️ ' . esc_html__( 'Edit Announcement', 'yourjannah' ) : '➕ ' . esc_html__( 'New Announcement', 'yourjannah' ); ?></h3>
@@ -282,11 +326,18 @@ $pending_items = $wpdb->get_results( $wpdb->prepare(
             </div>
             <div class="d-field">
                 <label><?php esc_html_e( 'Status', 'yourjannah' ); ?></label>
-                <select name="status">
-                    <option value="published" <?php selected( $editing->status ?? '', 'published' ); ?>><?php esc_html_e( 'Published', 'yourjannah' ); ?></option>
-                    <option value="draft" <?php selected( $editing->status ?? '', 'draft' ); ?>><?php esc_html_e( 'Draft', 'yourjannah' ); ?></option>
+                <select name="status" id="ann-status" onchange="document.getElementById('ann-schedule-row').style.display=this.value==='scheduled'?'':'none';">
+                    <option value="published" <?php selected( $editing->status ?? '', 'published' ); ?>><?php esc_html_e( 'Publish Now', 'yourjannah' ); ?></option>
+                    <option value="scheduled" <?php selected( $editing->status ?? '', 'scheduled' ); ?>>⏰ <?php esc_html_e( 'Schedule for Later', 'yourjannah' ); ?></option>
+                    <option value="draft" <?php selected( $editing->status ?? '', 'draft' ); ?>><?php esc_html_e( 'Save as Draft', 'yourjannah' ); ?></option>
                 </select>
             </div>
+        </div>
+
+        <div class="d-field" id="ann-schedule-row" style="<?php echo ( $editing->status ?? '' ) === 'scheduled' ? '' : 'display:none;'; ?>">
+            <label>⏰ <?php esc_html_e( 'Schedule Date & Time', 'yourjannah' ); ?></label>
+            <input type="datetime-local" name="scheduled_at" value="<?php echo esc_attr( $editing->scheduled_at ?? '' ); ?>"
+                   min="<?php echo date( 'Y-m-d\TH:i' ); ?>">
         </div>
 
         <div class="d-field">
@@ -321,6 +372,7 @@ $pending_items = $wpdb->get_results( $wpdb->prepare(
         <thead><tr>
             <th><?php esc_html_e( 'Title', 'yourjannah' ); ?></th>
             <th><?php esc_html_e( 'Type', 'yourjannah' ); ?></th>
+            <th><?php esc_html_e( 'Views', 'yourjannah' ); ?></th>
             <th><?php esc_html_e( 'Status', 'yourjannah' ); ?></th>
             <?php if ( $is_admin ) : ?><th><?php esc_html_e( 'Author', 'yourjannah' ); ?></th><?php endif; ?>
             <th><?php esc_html_e( 'Date', 'yourjannah' ); ?></th>
@@ -339,7 +391,22 @@ $pending_items = $wpdb->get_results( $wpdb->prepare(
                 <?php if ( $approval === 'rejected' ) echo ' <span class="d-badge d-badge--red">❌ Rejected</span>'; ?>
             </td>
             <td><span class="d-badge d-badge--<?php echo $a->type === 'urgent' ? 'red' : ( $a->type === 'religious' ? 'blue' : 'gray' ); ?>"><?php echo esc_html( ucfirst( $a->type ) ); ?></span></td>
-            <td><span class="d-badge d-badge--<?php echo $a->status === 'published' ? 'green' : 'yellow'; ?>"><?php echo esc_html( ucfirst( $a->status ) ); ?></span></td>
+            <td style="white-space:nowrap;">
+                <?php
+                $cv_table = YNJ_DB::table( 'content_views' );
+                $ann_views = (int) $wpdb->get_var( $wpdb->prepare(
+                    "SELECT COALESCE(SUM(view_count),0) FROM $cv_table WHERE content_type='announcement' AND content_id=%d", $a->id
+                ) );
+                $ann_interested = (int) $wpdb->get_var( $wpdb->prepare(
+                    "SELECT COUNT(*) FROM " . YNJ_DB::table( 'reactions' ) . " WHERE content_type='announcement' AND content_id=%d", $a->id
+                ) );
+                ?>
+                <span style="font-weight:700;">👁 <?php echo number_format( $ann_views ); ?></span>
+                <?php if ( $ann_interested > 0 ) : ?>
+                <span style="color:#ec4899;margin-left:4px;">❤️ <?php echo $ann_interested; ?></span>
+                <?php endif; ?>
+            </td>
+            <td><span class="d-badge d-badge--<?php echo $a->status === 'published' ? 'green' : ( $a->status === 'scheduled' ? 'blue' : 'yellow' ); ?>"><?php echo $a->status === 'scheduled' ? '⏰ ' . esc_html( substr( $a->scheduled_at ?? '', 0, 16 ) ) : esc_html( ucfirst( $a->status ) ); ?></span></td>
             <?php if ( $is_admin ) : ?>
             <td>
                 <span class="d-badge d-badge--<?php echo $author_role === 'imam' ? 'blue' : 'gray'; ?>" style="font-size:11px;">

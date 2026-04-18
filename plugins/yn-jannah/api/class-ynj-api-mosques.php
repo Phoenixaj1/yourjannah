@@ -44,6 +44,20 @@ class YNJ_API_Mosques {
             'callback'            => [ __CLASS__, 'track_view' ],
             'permission_callback' => '__return_true',
         ]);
+
+        // POST /content/view — Track announcement/event/class view (fire-and-forget)
+        register_rest_route( self::NS, '/content/view', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'track_content_view' ],
+            'permission_callback' => '__return_true',
+        ]);
+
+        // POST /content/react — Add/remove reaction (requires login)
+        register_rest_route( self::NS, '/content/react', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'toggle_reaction' ],
+            'permission_callback' => function() { return is_user_logged_in(); },
+        ]);
     }
 
     // ================================================================
@@ -227,5 +241,97 @@ class YNJ_API_Mosques {
         ) );
 
         return new \WP_REST_Response( [ 'ok' => true ] );
+    }
+
+    /**
+     * POST /content/view — Track content view (announcement, event, class).
+     * Fire-and-forget, no auth needed. Aggregated daily.
+     */
+    public static function track_content_view( \WP_REST_Request $request ) {
+        $type = sanitize_text_field( $request->get_param( 'type' ) ?: '' );
+        $id   = (int) $request->get_param( 'id' );
+
+        if ( ! $id || ! in_array( $type, [ 'announcement', 'event', 'class' ], true ) ) {
+            return new \WP_REST_Response( [ 'ok' => false ], 400 );
+        }
+
+        // Look up mosque_id from the content
+        global $wpdb;
+        $table_map = [
+            'announcement' => YNJ_DB::table( 'announcements' ),
+            'event'        => YNJ_DB::table( 'events' ),
+            'class'        => YNJ_DB::table( 'classes' ),
+        ];
+        $mosque_id = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT mosque_id FROM {$table_map[$type]} WHERE id = %d", $id
+        ) );
+        if ( ! $mosque_id ) {
+            return new \WP_REST_Response( [ 'ok' => false ], 404 );
+        }
+
+        $cv = YNJ_DB::table( 'content_views' );
+        $today = date( 'Y-m-d' );
+
+        $wpdb->query( $wpdb->prepare(
+            "INSERT INTO $cv (content_type, content_id, mosque_id, view_count, unique_views, view_date)
+             VALUES (%s, %d, %d, 1, 1, %s)
+             ON DUPLICATE KEY UPDATE view_count = view_count + 1",
+            $type, $id, $mosque_id, $today
+        ) );
+
+        return new \WP_REST_Response( [ 'ok' => true ] );
+    }
+
+    /**
+     * POST /content/react — Toggle a reaction (like, dua, share) on content.
+     * Requires login. Returns new counts.
+     */
+    public static function toggle_reaction( \WP_REST_Request $request ) {
+        $type     = sanitize_text_field( $request->get_param( 'type' ) ?: '' );
+        $id       = (int) $request->get_param( 'id' );
+        $reaction = sanitize_text_field( $request->get_param( 'reaction' ) ?: 'like' );
+        $user_id  = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+
+        if ( ! $id || ! $user_id || ! in_array( $type, [ 'announcement', 'event', 'class' ], true ) ) {
+            return new \WP_REST_Response( [ 'ok' => false ], 400 );
+        }
+        if ( ! in_array( $reaction, [ 'like', 'dua', 'interested', 'share' ], true ) ) {
+            $reaction = 'like';
+        }
+
+        global $wpdb;
+        $rt = YNJ_DB::table( 'reactions' );
+
+        // Check if already reacted
+        $exists = $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM $rt WHERE user_id = %d AND content_type = %s AND content_id = %d AND reaction = %s",
+            $user_id, $type, $id, $reaction
+        ) );
+
+        if ( $exists ) {
+            $wpdb->delete( $rt, [ 'id' => $exists ] );
+            $action = 'removed';
+        } else {
+            $wpdb->insert( $rt, [
+                'user_id'      => $user_id,
+                'content_type' => $type,
+                'content_id'   => $id,
+                'reaction'     => $reaction,
+            ] );
+            $action = 'added';
+        }
+
+        // Return updated counts
+        $counts = $wpdb->get_results( $wpdb->prepare(
+            "SELECT reaction, COUNT(*) AS cnt FROM $rt WHERE content_type = %s AND content_id = %d GROUP BY reaction",
+            $type, $id
+        ), OBJECT_K );
+
+        $result = [];
+        foreach ( [ 'like', 'dua', 'interested', 'share' ] as $r ) {
+            $result[ $r ] = (int) ( $counts[ $r ]->cnt ?? 0 );
+        }
+
+        return new \WP_REST_Response( [ 'ok' => true, 'action' => $action, 'counts' => $result ] );
     }
 }

@@ -18,6 +18,85 @@ if ( $slug && $mosque ) {
     setcookie( 'ynj_mosque_slug', $slug, time() + 365 * DAY_IN_SECONDS, '/' );
 }
 
+// ── Admin detection for edit shortcuts ──
+$_ynj_is_page_admin = false;
+$_ynj_is_page_imam  = false;
+if ( $mosque && is_user_logged_in() ) {
+    $_wp_uid = get_current_user_id();
+    $_user_mosque_id = (int) get_user_meta( $_wp_uid, 'ynj_mosque_id', true );
+    $_ynj_is_page_admin = ( $_user_mosque_id === (int) $mosque->id ) &&
+                          ( current_user_can( 'ynj_manage_mosque' ) || current_user_can( 'manage_options' ) );
+    $_ynj_is_page_imam  = ( $_user_mosque_id === (int) $mosque->id ) &&
+                          in_array( 'ynj_imam', (array) wp_get_current_user()->roles, true );
+}
+$_ynj_can_edit = $_ynj_is_page_admin || $_ynj_is_page_imam;
+
+// ── Quick Post handler (PRG — before any output) ──
+$_ynj_posted = '';
+if ( $mosque && $_ynj_can_edit && $_SERVER['REQUEST_METHOD'] === 'POST'
+     && wp_verify_nonce( $_POST['_ynj_nonce'] ?? '', 'ynj_quick_post' ) ) {
+
+    $qp_action = sanitize_text_field( $_POST['qp_action'] ?? '' );
+    global $wpdb;
+
+    if ( $qp_action === 'announcement' ) {
+        $title = sanitize_text_field( $_POST['title'] ?? '' );
+        if ( $title ) {
+            $ann_data = [
+                'mosque_id'       => (int) $mosque->id,
+                'title'           => $title,
+                'body'            => sanitize_textarea_field( $_POST['body'] ?? '' ),
+                'type'            => sanitize_text_field( $_POST['type'] ?? 'general' ),
+                'status'          => 'published',
+                'author_user_id'  => $_wp_uid,
+                'author_role'     => $_ynj_is_page_imam && ! $_ynj_is_page_admin ? 'imam' : 'admin',
+                'approval_status' => 'approved',
+                'published_at'    => current_time( 'mysql' ),
+            ];
+            // Imam without auto-publish → pending
+            if ( $_ynj_is_page_imam && ! $_ynj_is_page_admin ) {
+                $imam_auto = $wpdb->get_var( $wpdb->prepare(
+                    "SELECT imam_auto_publish FROM " . YNJ_DB::table( 'mosques' ) . " WHERE id = %d",
+                    (int) $mosque->id
+                ) );
+                if ( ! $imam_auto ) {
+                    $ann_data['status']          = 'draft';
+                    $ann_data['approval_status'] = 'pending';
+                }
+            }
+            $wpdb->insert( YNJ_DB::table( 'announcements' ), $ann_data );
+            $_ynj_posted = $ann_data['approval_status'] === 'pending' ? 'pending' : 'announcement';
+        }
+    }
+
+    if ( $qp_action === 'event' ) {
+        $title = sanitize_text_field( $_POST['event_title'] ?? '' );
+        $date  = sanitize_text_field( $_POST['event_date'] ?? '' );
+        if ( $title && $date ) {
+            $wpdb->insert( YNJ_DB::table( 'events' ), [
+                'mosque_id'   => (int) $mosque->id,
+                'title'       => $title,
+                'description' => sanitize_textarea_field( $_POST['event_description'] ?? '' ),
+                'event_date'  => $date,
+                'start_time'  => sanitize_text_field( $_POST['event_start'] ?? '' ),
+                'end_time'    => sanitize_text_field( $_POST['event_end'] ?? '' ),
+                'location'    => sanitize_text_field( $_POST['event_location'] ?? '' ),
+                'event_type'  => sanitize_text_field( $_POST['event_type'] ?? 'community' ),
+                'status'      => 'published',
+            ] );
+            $_ynj_posted = 'event';
+        }
+    }
+
+    // PRG redirect
+    if ( $_ynj_posted ) {
+        wp_redirect( home_url( '/mosque/' . $slug . '?posted=' . $_ynj_posted ) );
+        exit;
+    }
+}
+// Read posted flash from URL
+$_ynj_posted = sanitize_text_field( $_GET['posted'] ?? '' );
+
 get_header();
 
 // ── Fetch prayer times from Aladhan in PHP (server-side, always works) ──
@@ -156,6 +235,20 @@ if ( $_mp_id && class_exists( 'YNJ_DB' ) ) {
     $_mp_services = $wpdb->get_results( $wpdb->prepare( "SELECT id, provider_name, service_type, phone, area_covered, hourly_rate_pence FROM $svt WHERE mosque_id = %d AND status = 'active' ORDER BY RAND() LIMIT 10", $_mp_id ) ) ?: [];
     $at = YNJ_DB::table( 'announcements' );
     $_mp_announcements = $wpdb->get_results( $wpdb->prepare( "SELECT id, title, body, type, pinned, published_at FROM $at WHERE mosque_id = %d AND status = 'published' ORDER BY pinned DESC, published_at DESC LIMIT 20", $_mp_id ) ) ?: [];
+
+    // Enrich announcements with view counts + reaction counts
+    $cv_table = YNJ_DB::table( 'content_views' );
+    $rt_table = YNJ_DB::table( 'reactions' );
+    foreach ( $_mp_announcements as &$_ann ) {
+        $_ann->views = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(view_count),0) FROM $cv_table WHERE content_type='announcement' AND content_id=%d", $_ann->id ) );
+        $r_counts = $wpdb->get_results( $wpdb->prepare( "SELECT reaction, COUNT(*) AS cnt FROM $rt_table WHERE content_type='announcement' AND content_id=%d GROUP BY reaction", $_ann->id ), OBJECT_K );
+        $_ann->reactions = new stdClass();
+        foreach ( [ 'like', 'dua', 'interested' ] as $_rk ) {
+            $_ann->reactions->$_rk = (int) ( $r_counts[ $_rk ]->cnt ?? 0 );
+        }
+    }
+    unset( $_ann );
+
     $et = YNJ_DB::table( 'events' );
     $_mp_events = $wpdb->get_results( $wpdb->prepare( "SELECT id, title, description, event_date, start_time, end_time, location, category, ticket_price_pence, max_capacity, rsvp_count FROM $et WHERE mosque_id = %d AND status = 'published' AND event_date >= CURDATE() ORDER BY event_date ASC LIMIT 20", $_mp_id ) ) ?: [];
     $ct = YNJ_DB::table( 'classes' );
@@ -286,7 +379,10 @@ if ( $mosque && is_user_logged_in() ) {
     </div>
 
     <!-- Next Prayer Hero (PHP-rendered from Aladhan) -->
-    <section class="ynj-card ynj-card--hero" id="next-prayer-card">
+    <section class="ynj-card ynj-card--hero" id="next-prayer-card" style="position:relative;">
+        <?php if ( $_ynj_can_edit ) : ?>
+        <a href="<?php echo esc_url( home_url( '/dashboard?section=prayers' ) ); ?>" class="ynj-admin-edit" title="<?php esc_attr_e( 'Edit Prayer Times', 'yourjannah' ); ?>">✏️</a>
+        <?php endif; ?>
         <?php if ( $_ynj_is_friday && strpos( $_ynj_next_name, "Jumu'ah" ) !== false ) : ?>
         <p class="ynj-label" id="next-prayer-label" style="color:#fbbf24;">🕌 <?php echo esc_html( 'It\'s Friday! Jumu\'ah at ' . $mosque_name ); ?></p>
         <?php else : ?>
@@ -381,6 +477,194 @@ if ( $mosque && is_user_logged_in() ) {
         <div id="jumuah-slots"></div>
     </section>
 
+    <!-- ═══ IBADAH TRACKER (logged-in users) ═══ -->
+    <?php if ( is_user_logged_in() && $mosque ) : ?>
+    <section class="ynj-card" id="ibadah-tracker" style="padding:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 style="font-size:15px;font-weight:800;margin:0;">🤲 <?php esc_html_e( 'My Daily Ibadah', 'yourjannah' ); ?></h3>
+            <span id="ibadah-streak" style="font-size:14px;font-weight:700;color:#f59e0b;"></span>
+        </div>
+
+        <div style="margin-bottom:12px;">
+            <p style="font-size:11px;color:#6b8fa3;margin-bottom:6px;font-weight:600;"><?php esc_html_e( "Today's Prayers", 'yourjannah' ); ?></p>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;" id="ibadah-prayers">
+                <?php foreach ( [ 'fajr' => 'Fajr', 'dhuhr' => 'Dhuhr', 'asr' => 'Asr', 'maghrib' => 'Maghrib', 'isha' => 'Isha' ] as $pk => $plabel ) : ?>
+                <button type="button" class="ynj-ibadah-prayer" data-prayer="<?php echo $pk; ?>" onclick="ynjTogglePrayer(this)" style="flex:1;min-width:58px;padding:8px 4px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;font-size:12px;font-weight:700;color:#6b8fa3;cursor:pointer;text-align:center;transition:all .15s;min-height:44px;">
+                    <?php echo esc_html( $plabel ); ?>
+                </button>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f9fafb;border-radius:8px;min-height:40px;">
+                <span>📖</span>
+                <input type="number" id="ibadah-quran" min="0" max="100" value="0" style="width:48px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:6px;font-size:14px;font-weight:700;text-align:center;" onchange="ynjSaveIbadah()">
+                <span style="font-size:11px;color:#6b8fa3;"><?php esc_html_e( 'pages', 'yourjannah' ); ?></span>
+            </div>
+            <button type="button" class="ynj-ibadah-toggle" data-field="dhikr" onclick="ynjToggleField(this)" style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;color:#6b8fa3;cursor:pointer;min-height:40px;font-family:inherit;">
+                📿 <?php esc_html_e( 'Dhikr', 'yourjannah' ); ?>
+            </button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <button type="button" class="ynj-ibadah-toggle" data-field="fasting" onclick="ynjToggleField(this)" style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;color:#6b8fa3;cursor:pointer;min-height:40px;font-family:inherit;">
+                🌙 <?php esc_html_e( 'Fasting', 'yourjannah' ); ?>
+            </button>
+            <button type="button" class="ynj-ibadah-toggle" data-field="charity" onclick="ynjToggleField(this)" style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;color:#6b8fa3;cursor:pointer;min-height:40px;font-family:inherit;">
+                💝 <?php esc_html_e( 'Charity', 'yourjannah' ); ?>
+            </button>
+        </div>
+
+        <div style="margin-bottom:10px;">
+            <input type="text" id="ibadah-deed" placeholder="<?php esc_attr_e( 'Good deed today... (optional)', 'yourjannah' ); ?>" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;" onchange="ynjSaveIbadah()">
+        </div>
+
+        <div id="ibadah-status" style="display:flex;justify-content:space-between;font-size:12px;color:#6b8fa3;">
+            <span id="ibadah-pts-today"></span>
+            <span id="ibadah-pts-week"></span>
+        </div>
+    </section>
+
+    <script>
+    (function(){
+        var ibadahState = { fajr:0, dhuhr:0, asr:0, maghrib:0, isha:0, quran_pages:0, dhikr:0, fasting:0, charity:0, good_deed:'' };
+        var saving = false;
+        function getNonce() { return typeof wpApiSettings !== 'undefined' ? wpApiSettings.nonce : ''; }
+
+        // Load current state (delay slightly to let wpApiSettings load)
+        setTimeout(function(){
+        fetch('/wp-json/ynj/v1/ibadah/me', { headers: { 'X-WP-Nonce': getNonce() }, credentials: 'same-origin' })
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if (!d.ok) return;
+                if (d.today) {
+                    ibadahState = d.today;
+                    updateUI();
+                }
+                if (d.streak > 0) {
+                    document.getElementById('ibadah-streak').textContent = '🔥 ' + d.streak + ' day' + (d.streak > 1 ? 's' : '');
+                }
+                if (d.week) {
+                    document.getElementById('ibadah-pts-today').textContent = 'Today: ' + (d.today ? d.today.points : 0) + ' pts';
+                    document.getElementById('ibadah-pts-week').textContent = 'This week: ' + d.week.points + ' pts';
+                }
+            }).catch(function(){});
+        }, 500); // end setTimeout
+
+        function updateUI() {
+            ['fajr','dhuhr','asr','maghrib','isha'].forEach(function(p){
+                var btn = document.querySelector('[data-prayer="'+p+'"]');
+                if (btn) {
+                    var on = ibadahState[p];
+                    btn.style.background = on ? '#287e61' : '#fff';
+                    btn.style.color = on ? '#fff' : '#6b8fa3';
+                    btn.style.borderColor = on ? '#287e61' : '#e5e7eb';
+                }
+            });
+            document.getElementById('ibadah-quran').value = ibadahState.quran_pages || 0;
+            ['dhikr','fasting','charity'].forEach(function(f){
+                var btn = document.querySelector('[data-field="'+f+'"]');
+                if (btn) {
+                    var on = ibadahState[f];
+                    btn.style.background = on ? '#287e61' : '#f9fafb';
+                    btn.style.color = on ? '#fff' : '#6b8fa3';
+                    btn.style.borderColor = on ? '#287e61' : '#e5e7eb';
+                }
+            });
+            if (ibadahState.good_deed) document.getElementById('ibadah-deed').value = ibadahState.good_deed;
+        }
+
+        window.ynjTogglePrayer = function(btn) {
+            var p = btn.getAttribute('data-prayer');
+            ibadahState[p] = ibadahState[p] ? 0 : 1;
+            updateUI();
+            ynjSaveIbadah();
+        };
+
+        window.ynjToggleField = function(btn) {
+            var f = btn.getAttribute('data-field');
+            ibadahState[f] = ibadahState[f] ? 0 : 1;
+            updateUI();
+            ynjSaveIbadah();
+        };
+
+        window.ynjSaveIbadah = function() {
+            if (saving) return;
+            saving = true;
+            ibadahState.quran_pages = parseInt(document.getElementById('ibadah-quran').value) || 0;
+            ibadahState.good_deed = document.getElementById('ibadah-deed').value || '';
+
+            fetch('/wp-json/ynj/v1/ibadah/log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': getNonce() },
+                credentials: 'same-origin',
+                body: JSON.stringify(ibadahState)
+            }).then(function(r){ return r.json(); }).then(function(d){
+                saving = false;
+                if (d.ok) {
+                    document.getElementById('ibadah-pts-today').textContent = 'Today: ' + d.points_today + ' pts';
+                    if (d.streak > 0) {
+                        document.getElementById('ibadah-streak').textContent = '🔥 ' + d.streak + ' day' + (d.streak > 1 ? 's' : '');
+                    }
+                }
+            }).catch(function(){ saving = false; });
+        };
+    })();
+    </script>
+    <?php endif; ?>
+
+    <!-- ═══ COMMUNITY STATS (visible to everyone) ═══ -->
+    <?php if ( $mosque ) : ?>
+    <section class="ynj-card" id="community-stats" style="padding:16px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #93c5fd;">
+        <h3 style="font-size:14px;font-weight:800;color:#1e40af;margin:0 0 10px;">🕌 <?php esc_html_e( 'Our Community This Week', 'yourjannah' ); ?></h3>
+        <div id="community-stats-data" style="font-size:13px;color:#1e40af;">
+            <p style="color:#6b8fa3;font-size:12px;"><?php esc_html_e( 'Loading...', 'yourjannah' ); ?></p>
+        </div>
+    </section>
+
+    <script>
+    (function(){
+        fetch('/wp-json/ynj/v1/ibadah/community/<?php echo (int) $mosque->id; ?>')
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if (!d.ok) return;
+                var el = document.getElementById('community-stats-data');
+                var w = d.week || {};
+                var html = '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:8px;">';
+                if (w.prayers > 0) html += '<span>🤲 <strong>' + w.prayers.toLocaleString() + '</strong> prayers</span>';
+                if (w.pages > 0) html += '<span>📖 <strong>' + w.pages.toLocaleString() + '</strong> pages</span>';
+                if (w.fasting > 0) html += '<span>🌙 <strong>' + w.fasting + '</strong> fasting</span>';
+                if (w.good_deeds > 0) html += '<span>💝 <strong>' + w.good_deeds + '</strong> good deeds</span>';
+                html += '</div>';
+                if (d.active_today > 0) html += '<p style="font-size:12px;color:#3b82f6;margin-bottom:8px;">' + d.active_today + ' member' + (d.active_today > 1 ? 's' : '') + ' active today</p>';
+
+                if (d.challenge) {
+                    var ch = d.challenge;
+                    var pct = Math.min(100, ch.pct);
+                    html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #93c5fd;">';
+                    html += '<p style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:6px;">🏆 ' + ch.title + '</p>';
+                    html += '<div style="background:#bfdbfe;border-radius:6px;height:8px;overflow:hidden;margin-bottom:4px;">';
+                    html += '<div style="background:#2563eb;height:100%;width:' + pct + '%;border-radius:6px;transition:width .5s;"></div></div>';
+                    html += '<div style="display:flex;justify-content:space-between;font-size:11px;color:#3b82f6;">';
+                    html += '<span>' + ch.current.toLocaleString() + '/' + ch.target.toLocaleString() + ' (' + pct + '%)</span>';
+                    if (ch.status === 'completed') { html += '<span style="color:#16a34a;font-weight:700;">Completed! 🎉</span>'; }
+                    else if (ch.days_left > 0) { html += '<span>' + ch.days_left + ' day' + (ch.days_left > 1 ? 's' : '') + ' left</span>'; }
+                    html += '</div></div>';
+                }
+
+                if (w.prayers === 0 && w.pages === 0 && !d.challenge) {
+                    html = '<p style="font-size:12px;color:#6b8fa3;text-align:center;">Be the first to log your ibadah today!</p>';
+                }
+
+                el.innerHTML = html;
+            }).catch(function(){
+                document.getElementById('community-stats-data').innerHTML = '<p style="font-size:12px;color:#6b8fa3;">Community stats coming soon</p>';
+            });
+    })();
+    </script>
+    <?php endif; ?>
+
     <!-- Hadith -->
     <p class="ynj-hadith" id="hadith-line">
         <em>&ldquo;<?php esc_html_e( 'Prayer in congregation is twenty-seven times more virtuous than prayer offered alone.', 'yourjannah' ); ?>&rdquo;</em>
@@ -468,7 +752,12 @@ if ( $mosque && is_user_logged_in() ) {
 
     <!-- Feed -->
     <section id="feed-section">
-        <h3 id="feed-heading" style="font-size:16px;font-weight:700;margin:0 0 10px;"><?php printf( esc_html__( 'What\'s Happening at %s', 'yourjannah' ), esc_html( $mosque_name ) ); ?></h3>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <h3 id="feed-heading" style="font-size:16px;font-weight:700;margin:0;"><?php printf( esc_html__( 'What\'s Happening at %s', 'yourjannah' ), esc_html( $mosque_name ) ); ?></h3>
+            <?php if ( $_ynj_can_edit ) : ?>
+            <button type="button" onclick="document.getElementById('ynj-quick-post-modal').style.display='flex'" style="background:#287e61;color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;min-height:32px;">+ <?php esc_html_e( 'New Post', 'yourjannah' ); ?></button>
+            <?php endif; ?>
+        </div>
 
         <div class="ynj-filter-chips" id="feed-filters">
             <button class="ynj-chip ynj-chip--active" data-filter="all" onclick="filterFeed('all')">All</button>
@@ -517,6 +806,47 @@ if (window.ynjPreloaded.jumuahSlots && window.ynjPreloaded.jumuahSlots.length > 
     // Set the initial selectedJumuahTime for homepage.js to use
     window._ynjFirstJumuahTime = window.ynjPreloaded.jumuahSlots[0].salah;
 }
+
+// ── Content View Tracking (Intersection Observer) ──
+(function(){
+    var tracked = JSON.parse(sessionStorage.getItem('ynj_tracked_views') || '{}');
+    var nonce = '<?php echo wp_create_nonce("wp_rest"); ?>';
+
+    function trackView(type, id) {
+        var key = type + '_' + id;
+        if (tracked[key]) return;
+        tracked[key] = 1;
+        sessionStorage.setItem('ynj_tracked_views', JSON.stringify(tracked));
+        fetch('/wp-json/ynj/v1/content/view', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: type, id: id }),
+            keepalive: true
+        }).catch(function(){});
+    }
+
+    // Observe feed cards when they scroll into view
+    if ('IntersectionObserver' in window) {
+        var obs = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    var el = entry.target;
+                    var type = el.getAttribute('data-ynj-type');
+                    var id = el.getAttribute('data-ynj-id');
+                    if (type && id) trackView(type, parseInt(id));
+                    obs.unobserve(el);
+                }
+            });
+        }, { threshold: 0.5 });
+
+        // Observe after feed renders (homepage.js renders feed async)
+        setTimeout(function() {
+            document.querySelectorAll('[data-ynj-type][data-ynj-id]').forEach(function(el) {
+                obs.observe(el);
+            });
+        }, 2000);
+    }
+})();
 
 // ── Membership functions ──
 async function ynjJoinMosque(mosqueId) {
@@ -613,6 +943,230 @@ function ynjCloseJoinModal() {
     </div>
 </div>
 <?php endif; ?>
+
+<?php // ── Admin Tools: FAB, Quick Post Modal, Edit Shortcuts, Toast ── ?>
+<?php if ( $mosque && $_ynj_can_edit ) :
+    $qp_templates = function_exists( 'ynj_get_quick_templates' ) ? ynj_get_quick_templates( $mosque_name ) : [];
+?>
+
+<!-- Admin edit shortcut CSS -->
+<style>
+.ynj-admin-edit{position:absolute;top:8px;right:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.9);border-radius:50%;font-size:14px;text-decoration:none;z-index:5;box-shadow:0 1px 4px rgba(0,0,0,.15);-webkit-tap-highlight-color:transparent;}
+.ynj-admin-edit:hover{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+
+/* Admin floating toolbar */
+.ynj-admin-toolbar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;gap:8px;padding:10px 16px;background:#fff;border-top:1px solid #e5e7eb;z-index:900;padding-bottom:max(10px,env(safe-area-inset-bottom));}
+.ynj-admin-toolbar a,.ynj-admin-toolbar button{display:flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;border:none;cursor:pointer;min-height:44px;font-family:inherit;}
+.ynj-atb-primary{background:#287e61;color:#fff;}
+.ynj-atb-outline{background:#f3f4f6;color:#1a1a1a;border:1px solid #e5e7eb;}
+
+/* Quick Post Modal */
+.ynj-qp-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;-webkit-tap-highlight-color:transparent;}
+.ynj-qp-modal{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;padding:0;animation:ynj-slide-up .25s ease-out;}
+@keyframes ynj-slide-up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.ynj-qp-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;position:sticky;top:0;background:#fff;z-index:1;}
+.ynj-qp-header h3{font-size:17px;font-weight:800;margin:0;}
+.ynj-qp-close{background:none;border:none;font-size:24px;cursor:pointer;color:#999;padding:4px 8px;min-height:44px;min-width:44px;display:flex;align-items:center;justify-content:center;}
+.ynj-qp-body{padding:16px 20px 24px;}
+.ynj-qp-tabs{display:flex;gap:0;margin-bottom:16px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;}
+.ynj-qp-tab{flex:1;padding:10px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;background:#f9fafb;color:#6b7280;border:none;min-height:44px;font-family:inherit;}
+.ynj-qp-tab--active{background:#287e61;color:#fff;}
+
+/* Template grid */
+.ynj-tpl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+.ynj-tpl-card{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;font-size:11px;font-weight:600;color:#374151;text-align:center;min-height:44px;-webkit-tap-highlight-color:transparent;transition:border-color .15s;}
+.ynj-tpl-card:active,.ynj-tpl-card--selected{border-color:#287e61;background:#e6f2ed;}
+.ynj-tpl-icon{font-size:22px;}
+.ynj-tpl-more{grid-column:1/-1;padding:8px;text-align:center;color:#287e61;font-size:12px;font-weight:700;cursor:pointer;}
+
+/* Quick post form */
+.ynj-qp-field{margin-bottom:12px;}
+.ynj-qp-field label{display:block;font-size:12px;font-weight:600;color:#6b7280;margin-bottom:4px;}
+.ynj-qp-field input,.ynj-qp-field textarea,.ynj-qp-field select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-size:15px;font-family:inherit;min-height:44px;}
+.ynj-qp-field textarea{resize:vertical;min-height:80px;}
+.ynj-qp-submit{display:block;width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:700;border:none;cursor:pointer;background:#287e61;color:#fff;min-height:48px;font-family:inherit;}
+
+/* Toast */
+.ynj-toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#166534;color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:600;z-index:10000;box-shadow:0 4px 16px rgba(0,0,0,.2);animation:ynj-fade-in .3s ease-out;}
+@keyframes ynj-fade-in{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+@media(min-width:769px){
+    .ynj-qp-overlay{align-items:center;}
+    .ynj-qp-modal{border-radius:20px;max-height:85vh;}
+}
+</style>
+
+<!-- Success Toast -->
+<?php if ( $_ynj_posted === 'announcement' ) : ?>
+<div class="ynj-toast" id="ynj-toast">Announcement posted!</div>
+<?php elseif ( $_ynj_posted === 'event' ) : ?>
+<div class="ynj-toast" id="ynj-toast">Event created!</div>
+<?php elseif ( $_ynj_posted === 'pending' ) : ?>
+<div class="ynj-toast" id="ynj-toast" style="background:#92400e;">Submitted for admin approval</div>
+<?php endif; ?>
+
+<!-- Admin Floating Toolbar -->
+<div class="ynj-admin-toolbar">
+    <button type="button" onclick="document.getElementById('ynj-quick-post-modal').style.display='flex'" class="ynj-atb-primary">📢 <?php esc_html_e( 'New Post', 'yourjannah' ); ?></button>
+    <a href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>" class="ynj-atb-outline">📊 <?php esc_html_e( 'Dashboard', 'yourjannah' ); ?></a>
+    <a href="<?php echo esc_url( home_url( '/dashboard?section=settings' ) ); ?>" class="ynj-atb-outline">⚙️ <?php esc_html_e( 'Settings', 'yourjannah' ); ?></a>
+</div>
+
+<!-- Quick Post Modal -->
+<div class="ynj-qp-overlay" id="ynj-quick-post-modal" onclick="if(event.target===this)this.style.display='none'">
+    <div class="ynj-qp-modal">
+        <div class="ynj-qp-header">
+            <h3>📢 <?php esc_html_e( 'Quick Post', 'yourjannah' ); ?></h3>
+            <button class="ynj-qp-close" onclick="document.getElementById('ynj-quick-post-modal').style.display='none'">&times;</button>
+        </div>
+        <div class="ynj-qp-body">
+            <!-- Tabs -->
+            <div class="ynj-qp-tabs">
+                <button class="ynj-qp-tab ynj-qp-tab--active" id="qp-tab-ann" onclick="ynjQpTab('ann')">📢 <?php esc_html_e( 'Announcement', 'yourjannah' ); ?></button>
+                <button class="ynj-qp-tab" id="qp-tab-event" onclick="ynjQpTab('event')">📅 <?php esc_html_e( 'Event', 'yourjannah' ); ?></button>
+            </div>
+
+            <!-- Announcement Form -->
+            <div id="qp-form-ann">
+                <!-- Template Picker -->
+                <div class="ynj-tpl-grid" id="ynj-tpl-grid">
+                    <?php foreach ( array_slice( $qp_templates, 0, 6 ) as $i => $tpl ) : ?>
+                    <div class="ynj-tpl-card" onclick="ynjPickTemplate(<?php echo $i; ?>)">
+                        <span class="ynj-tpl-icon"><?php echo $tpl['icon']; ?></span>
+                        <?php echo esc_html( $tpl['label'] ); ?>
+                    </div>
+                    <?php endforeach; ?>
+                    <?php if ( count( $qp_templates ) > 6 ) : ?>
+                    <div class="ynj-tpl-more" id="ynj-tpl-more" onclick="ynjShowAllTemplates()">▼ <?php printf( esc_html__( 'Show all %d templates', 'yourjannah' ), count( $qp_templates ) ); ?></div>
+                    <?php endif; ?>
+                </div>
+                <div id="ynj-tpl-grid-all" style="display:none;">
+                    <div class="ynj-tpl-grid">
+                        <?php foreach ( $qp_templates as $i => $tpl ) : ?>
+                        <div class="ynj-tpl-card" onclick="ynjPickTemplate(<?php echo $i; ?>)">
+                            <span class="ynj-tpl-icon"><?php echo $tpl['icon']; ?></span>
+                            <?php echo esc_html( $tpl['label'] ); ?>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <form method="post" id="qp-ann-form">
+                    <?php wp_nonce_field( 'ynj_quick_post', '_ynj_nonce' ); ?>
+                    <input type="hidden" name="qp_action" value="announcement">
+                    <div class="ynj-qp-field">
+                        <label><?php esc_html_e( 'Title', 'yourjannah' ); ?></label>
+                        <input type="text" name="title" id="qp-ann-title" required placeholder="<?php esc_attr_e( 'What do you want to announce?', 'yourjannah' ); ?>">
+                    </div>
+                    <div class="ynj-qp-field">
+                        <label><?php esc_html_e( 'Message', 'yourjannah' ); ?></label>
+                        <textarea name="body" id="qp-ann-body" rows="3" placeholder="<?php esc_attr_e( 'Add details...', 'yourjannah' ); ?>"></textarea>
+                    </div>
+                    <div class="ynj-qp-field">
+                        <label><?php esc_html_e( 'Type', 'yourjannah' ); ?></label>
+                        <select name="type" id="qp-ann-type">
+                            <option value="general"><?php esc_html_e( 'General', 'yourjannah' ); ?></option>
+                            <option value="urgent"><?php esc_html_e( 'Urgent', 'yourjannah' ); ?></option>
+                            <option value="religious"><?php esc_html_e( 'Religious', 'yourjannah' ); ?></option>
+                            <option value="event"><?php esc_html_e( 'Event', 'yourjannah' ); ?></option>
+                        </select>
+                    </div>
+                    <button type="submit" class="ynj-qp-submit">📢 <?php esc_html_e( 'Post Announcement', 'yourjannah' ); ?></button>
+                </form>
+            </div>
+
+            <!-- Event Form -->
+            <div id="qp-form-event" style="display:none;">
+                <form method="post">
+                    <?php wp_nonce_field( 'ynj_quick_post', '_ynj_nonce' ); ?>
+                    <input type="hidden" name="qp_action" value="event">
+                    <div class="ynj-qp-field">
+                        <label><?php esc_html_e( 'Event Title', 'yourjannah' ); ?></label>
+                        <input type="text" name="event_title" required placeholder="<?php esc_attr_e( 'e.g. Community BBQ', 'yourjannah' ); ?>">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="ynj-qp-field">
+                            <label><?php esc_html_e( 'Date', 'yourjannah' ); ?></label>
+                            <input type="date" name="event_date" required min="<?php echo date( 'Y-m-d' ); ?>">
+                        </div>
+                        <div class="ynj-qp-field">
+                            <label><?php esc_html_e( 'Type', 'yourjannah' ); ?></label>
+                            <select name="event_type">
+                                <option value="community"><?php esc_html_e( 'Community', 'yourjannah' ); ?></option>
+                                <option value="talk"><?php esc_html_e( 'Talk', 'yourjannah' ); ?></option>
+                                <option value="class"><?php esc_html_e( 'Class', 'yourjannah' ); ?></option>
+                                <option value="sports"><?php esc_html_e( 'Sports', 'yourjannah' ); ?></option>
+                                <option value="youth"><?php esc_html_e( 'Youth', 'yourjannah' ); ?></option>
+                                <option value="sisters"><?php esc_html_e( 'Sisters', 'yourjannah' ); ?></option>
+                                <option value="fundraiser"><?php esc_html_e( 'Fundraiser', 'yourjannah' ); ?></option>
+                                <option value="eid"><?php esc_html_e( 'Eid', 'yourjannah' ); ?></option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="ynj-qp-field">
+                            <label><?php esc_html_e( 'Start Time', 'yourjannah' ); ?></label>
+                            <input type="time" name="event_start">
+                        </div>
+                        <div class="ynj-qp-field">
+                            <label><?php esc_html_e( 'End Time', 'yourjannah' ); ?></label>
+                            <input type="time" name="event_end">
+                        </div>
+                    </div>
+                    <div class="ynj-qp-field">
+                        <label><?php esc_html_e( 'Location', 'yourjannah' ); ?></label>
+                        <input type="text" name="event_location" placeholder="<?php esc_attr_e( 'e.g. Main Hall', 'yourjannah' ); ?>">
+                    </div>
+                    <div class="ynj-qp-field">
+                        <label><?php esc_html_e( 'Description', 'yourjannah' ); ?></label>
+                        <textarea name="event_description" rows="2" placeholder="<?php esc_attr_e( 'Add details...', 'yourjannah' ); ?>"></textarea>
+                    </div>
+                    <button type="submit" class="ynj-qp-submit">📅 <?php esc_html_e( 'Create Event', 'yourjannah' ); ?></button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Templates data
+var ynjTemplates = <?php echo wp_json_encode( $qp_templates ); ?>;
+
+// Tab switching
+function ynjQpTab(tab) {
+    document.getElementById('qp-form-ann').style.display = tab === 'ann' ? '' : 'none';
+    document.getElementById('qp-form-event').style.display = tab === 'event' ? '' : 'none';
+    document.getElementById('qp-tab-ann').className = 'ynj-qp-tab' + (tab === 'ann' ? ' ynj-qp-tab--active' : '');
+    document.getElementById('qp-tab-event').className = 'ynj-qp-tab' + (tab === 'event' ? ' ynj-qp-tab--active' : '');
+}
+
+// Template picker
+function ynjPickTemplate(idx) {
+    var t = ynjTemplates[idx];
+    if (!t) return;
+    document.getElementById('qp-ann-title').value = t.title;
+    document.getElementById('qp-ann-body').value = t.body;
+    document.getElementById('qp-ann-type').value = t.type;
+    // Highlight selected card
+    document.querySelectorAll('.ynj-tpl-card').forEach(function(c) { c.classList.remove('ynj-tpl-card--selected'); });
+    event.currentTarget.classList.add('ynj-tpl-card--selected');
+    // Focus body so admin can edit
+    document.getElementById('qp-ann-body').focus();
+}
+
+// Show all templates
+function ynjShowAllTemplates() {
+    document.getElementById('ynj-tpl-grid').style.display = 'none';
+    document.getElementById('ynj-tpl-more').style.display = 'none';
+    document.getElementById('ynj-tpl-grid-all').style.display = '';
+}
+
+// Auto-hide toast after 4s
+var toast = document.getElementById('ynj-toast');
+if (toast) { setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .5s'; setTimeout(function(){ toast.remove(); }, 500); }, 4000); }
+</script>
+
+<?php endif; // end admin tools ?>
 
 <?php
 get_footer();

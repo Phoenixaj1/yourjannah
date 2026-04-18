@@ -812,39 +812,116 @@
                     </div>`;
                 }
 
-                return `<div class="ynj-feed-card ${cardAccent}">
+                // Content ID for tracking
+                const contentId = item.id || item.event_id || item.class_id || 0;
+                const contentType = item.type === 'live' ? 'event' : item.type;
+                const shareUrl = item.mosque_slug
+                    ? ynjData.siteUrl + 'mosque/' + item.mosque_slug + (item.event_id ? '/events/' + item.event_id : '')
+                    : window.location.href;
+                const shareTitle = item.title || '';
+
+                // Pre-loaded counts
+                const rc = item.reactions || {};
+                const likeCount = rc.like || 0;
+                const duaCount = rc.dua || 0;
+                const intCount = rc.interested || 0;
+                const viewCount = item.views || 0;
+
+                return `<div class="ynj-feed-card ${cardAccent}" data-ynj-type="${contentType}" data-ynj-id="${contentId}">
                     ${dateStrip}
                     <div class="ynj-feed-card__content">
                         <div class="ynj-feed-card__top">${badge}<h4>${item.title}</h4></div>
                         ${snippet ? `<div class="ynj-feed-card__body">${snippet}</div>` : ''}
-                        <div class="ynj-feed-card__meta">${meta.join(' ')}${item.type !== 'announcement' && item.mosque_slug ? ` <a href="#" onclick="ynjWhatsApp('${item.title.replace(/'/g,"\\'")}','${ynjData.siteUrl}mosque/${item.mosque_slug}/events/${item.event_id||''}');return false;" style="color:#25D366;font-weight:700;">WhatsApp</a>` : ''}</div>
+                        <div class="ynj-feed-card__meta">${meta.join(' ')}</div>
                         ${mosqueTag}
-                        <button class="ynj-interested-btn" onclick="event.stopPropagation();toggleInterest(this,'${item.type}',${item.event_id||0},'${(item.title||'').replace(/'/g,"\\'")}')">
-                            <span class="ynj-interested-icon">🤍</span> <span class="ynj-interested-text">Interested</span>
-                        </button>
+                        <div class="ynj-reaction-bar" data-type="${contentType}" data-id="${contentId}">
+                            <button class="ynj-react-btn" onclick="event.stopPropagation();ynjReact(this,'like')" title="Like">
+                                <span class="ynj-react-icon">👍</span><span class="ynj-react-count" data-r="like">${likeCount||''}</span>
+                            </button>
+                            <button class="ynj-react-btn" onclick="event.stopPropagation();ynjReact(this,'dua')" title="Make Dua">
+                                <span class="ynj-react-icon">🤲</span><span class="ynj-react-count" data-r="dua">${duaCount||''}</span>
+                            </button>
+                            <button class="ynj-react-btn" onclick="event.stopPropagation();ynjReact(this,'interested')" title="Interested">
+                                <span class="ynj-react-icon">❤️</span><span class="ynj-react-count" data-r="interested">${intCount||''}</span>
+                            </button>
+                            <button class="ynj-react-btn ynj-react-share" onclick="event.stopPropagation();ynjShareCard('${shareTitle.replace(/'/g,"\\'")}','${shareUrl}')" title="Share">
+                                <span class="ynj-react-icon">↗️</span>
+                            </button>
+                            <span class="ynj-views-count">👁 <span>${viewCount > 0 ? viewCount : ''}</span></span>
+                        </div>
                     </div>
                 </div>`;
             }
 
-            window.toggleInterest = function(btn, type, id, title) {
-                var key = 'ynj_interest_' + type + '_' + id;
-                var interested = !localStorage.getItem(key);
-                if (interested) {
-                    localStorage.setItem(key, '1');
-                    btn.querySelector('.ynj-interested-icon').textContent = '❤️';
-                    btn.querySelector('.ynj-interested-text').textContent = 'Interested!';
-                    btn.style.color = '#dc2626';
-                    // Fire-and-forget API call
-                    fetch(ynjData.restUrl + 'interest', {
-                        method: 'POST', headers: {'Content-Type':'application/json'},
-                        body: JSON.stringify({type: type, item_id: id, title: title, mosque_slug: mosqueSlug})
-                    }).catch(function(){});
-                } else {
-                    localStorage.removeItem(key);
-                    btn.querySelector('.ynj-interested-icon').textContent = '🤍';
-                    btn.querySelector('.ynj-interested-text').textContent = 'Interested';
-                    btn.style.color = '';
+            // ── Reaction system ──
+            window.ynjReact = function(btn, reaction) {
+                var bar = btn.closest('.ynj-reaction-bar');
+                if (!bar) return;
+                var type = bar.getAttribute('data-type');
+                var id = parseInt(bar.getAttribute('data-id'));
+                if (!type || !id) return;
+
+                // Toggle active state locally
+                btn.classList.toggle('ynj-react-btn--active');
+
+                // Also track interest via old transient system (for backward compat)
+                if (reaction === 'interested') {
+                    var key = 'ynj_interest_' + type + '_' + id;
+                    if (btn.classList.contains('ynj-react-btn--active')) {
+                        localStorage.setItem(key, '1');
+                    } else {
+                        localStorage.removeItem(key);
+                    }
                 }
+
+                // Fire API call
+                var nonce = typeof wpApiSettings !== 'undefined' ? wpApiSettings.nonce : '';
+                fetch('/wp-json/ynj/v1/content/react', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ type: type, id: id, reaction: reaction })
+                }).then(function(r) { return r.json(); }).then(function(data) {
+                    if (data.ok && data.counts) {
+                        // Update all count displays in this bar
+                        Object.keys(data.counts).forEach(function(r) {
+                            var el = bar.querySelector('[data-r="' + r + '"]');
+                            if (el) el.textContent = data.counts[r] > 0 ? data.counts[r] : '';
+                        });
+                    }
+                }).catch(function(){});
+            };
+
+            // Share via WhatsApp or native share
+            window.ynjShareCard = function(title, url) {
+                var text = title + ' — ' + url;
+                if (navigator.share) {
+                    navigator.share({ title: title, url: url }).catch(function(){});
+                } else {
+                    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+                }
+            };
+
+            // Load reaction counts + view counts after feed renders
+            window.ynjLoadReactionCounts = function() {
+                document.querySelectorAll('.ynj-reaction-bar').forEach(function(bar) {
+                    var type = bar.getAttribute('data-type');
+                    var id = bar.getAttribute('data-id');
+                    if (!type || !id || id === '0') return;
+
+                    // Load view count
+                    fetch('/wp-json/ynj/v1/content/view', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ type: type, id: parseInt(id) }),
+                        keepalive: true
+                    }).catch(function(){});
+                });
+            };
+
+            // Backward compat: keep old toggleInterest working
+            window.toggleInterest = function(btn, type, id, title) {
+                ynjReact(btn, 'interested');
             };
 
             let allFeedItems = [];
@@ -880,7 +957,7 @@
             function processFeedData(aData, eData, cData, slug, silent) {
                     allFeedItems = [];
                     (aData.announcements || []).forEach(a => {
-                        allFeedItems.push({ type:'announcement', title:a.title, body:a.body, date:a.published_at||'', pinned:a.pinned });
+                        allFeedItems.push({ type:'announcement', id:a.id, title:a.title, body:a.body, date:a.published_at||'', pinned:a.pinned, views:a.views||0, reactions:a.reactions||{} });
                     });
                     (eData.events || []).forEach(e => {
                         const time = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';

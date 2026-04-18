@@ -45,6 +45,24 @@ $s = [
 $total_mrr = $s['patron_mrr'] + $s['sponsor_mrr'];
 $total_yearly = $total_mrr * 12;
 
+// Dopamine data (engagement metrics)
+$content_stats    = function_exists( 'ynj_get_content_stats' ) ? ynj_get_content_stats( $mosque_id, 7 ) : [ 'views' => 0, 'interested' => 0, 'shares' => 0, 'change_pct' => 0 ];
+$top_content      = function_exists( 'ynj_get_top_content' ) ? ynj_get_top_content( $mosque_id, 7, 3 ) : [];
+$posting_streak   = function_exists( 'ynj_get_posting_streak' ) ? ynj_get_posting_streak( $mosque_id ) : [ 'streak' => 0, 'this_week' => [] ];
+$sub_growth       = function_exists( 'ynj_get_subscriber_growth' ) ? ynj_get_subscriber_growth( $mosque_id ) : [ 'weekly_data' => [0,0,0,0], 'this_week' => 0, 'this_month' => 0 ];
+$city_rank        = function_exists( 'ynj_get_mosque_ranking' ) ? ynj_get_mosque_ranking( $mosque_id, $mosque->city ?? '' ) : null;
+$activity_feed    = function_exists( 'ynj_get_activity_feed' ) ? ynj_get_activity_feed( $mosque_id, 10 ) : [];
+
+// Donations this week
+$donations_week = (int) $wpdb->get_var( $wpdb->prepare(
+    "SELECT COALESCE(SUM(amount_pence),0) FROM $dt WHERE mosque_id=%d AND status='succeeded' AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)", $mosque_id
+) );
+
+// New subscribers this week
+$new_subs_week = (int) $wpdb->get_var( $wpdb->prepare(
+    "SELECT COUNT(*) FROM " . YNJ_DB::table( 'user_subscriptions' ) . " WHERE mosque_id=%d AND subscribed_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)", $mosque_id
+) );
+
 // Setup checklist
 $setup_steps = [
     [ 'done' => $s['has_desc'] && $s['has_phone'], 'label' => 'Complete mosque profile (name, address, phone, description)', 'link' => '?section=settings', 'icon' => '⚙️' ],
@@ -67,6 +85,243 @@ $progress_pct = round( $steps_done / $steps_total * 100 );
     <h1>👋 <?php printf( esc_html__( 'Welcome, %s', 'yourjannah' ), esc_html( wp_get_current_user()->display_name ) ); ?></h1>
     <p><?php echo esc_html( $mosque_name ); ?></p>
 </div>
+
+<!-- Setup Complete Celebration -->
+<?php if ( isset( $_GET['setup_complete'] ) && $_GET['setup_complete'] == '1' ) : ?>
+<div class="d-card" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #22c55e;text-align:center;padding:32px 20px;">
+    <div style="font-size:48px;margin-bottom:12px;">🎉</div>
+    <h2 style="color:#166534;margin-bottom:8px;"><?php esc_html_e( 'Setup Complete!', 'yourjannah' ); ?></h2>
+    <p style="color:#15803d;font-size:14px;"><?php esc_html_e( 'MashAllah! Your mosque is now live on YourJannah. Share your page with the congregation.', 'yourjannah' ); ?></p>
+    <a href="<?php echo esc_url( home_url( '/mosque/' . $mosque_slug ) ); ?>"
+       class="d-btn d-btn--primary" style="margin-top:16px;display:inline-flex;" target="_blank">
+       🕌 <?php esc_html_e( 'View Your Mosque Page', 'yourjannah' ); ?>
+    </a>
+</div>
+<?php endif; ?>
+
+<!-- Setup Wizard CTA (first-time admins) -->
+<?php
+$onboard_complete = (int) get_user_meta( $wp_uid, 'ynj_onboard_complete', true );
+if ( ! $onboard_complete && $steps_done < 3 ) :
+?>
+<div class="d-card" style="background:linear-gradient(135deg,#0a1628,#1a3a5c);color:#fff;text-align:center;padding:32px 20px;border:none;">
+    <div style="font-size:40px;margin-bottom:12px;">🚀</div>
+    <h2 style="color:#fff;margin-bottom:8px;"><?php esc_html_e( 'Set Up Your Mosque in 5 Minutes', 'yourjannah' ); ?></h2>
+    <p style="color:rgba(255,255,255,.7);font-size:14px;margin-bottom:20px;max-width:400px;margin-left:auto;margin-right:auto;">
+        <?php esc_html_e( 'Our guided wizard will help you import prayer times, post your first announcement, and get your page ready to share.', 'yourjannah' ); ?>
+    </p>
+    <a href="<?php echo esc_url( home_url( '/mosque-setup' ) ); ?>"
+       class="d-btn" style="display:inline-flex;background:#00ADEF;color:#fff;padding:14px 32px;font-size:16px;">
+       <?php esc_html_e( 'Start Setup Wizard', 'yourjannah' ); ?> →
+    </a>
+</div>
+<?php endif; ?>
+
+<!-- ═══ SMART NUDGES ═══ -->
+<?php
+$nudges = function_exists( 'ynj_get_admin_nudges' ) ? ynj_get_admin_nudges( $mosque_id, $mosque, $s ) : [];
+foreach ( $nudges as $nudge ) : ?>
+<div class="d-card" style="border-left:4px solid <?php echo esc_attr( $nudge['color'] ); ?>;display:flex;align-items:center;gap:12px;padding:14px 16px;">
+    <span style="font-size:24px;"><?php echo $nudge['icon']; ?></span>
+    <div style="flex:1;">
+        <strong style="font-size:14px;"><?php echo esc_html( $nudge['title'] ); ?></strong>
+        <p style="font-size:12px;color:var(--text-dim);margin:2px 0 0;"><?php echo esc_html( $nudge['body'] ); ?></p>
+    </div>
+    <a href="<?php echo esc_url( $nudge['action_url'] ); ?>" class="d-btn d-btn--sm d-btn--primary" style="white-space:nowrap;"><?php echo esc_html( $nudge['action_label'] ); ?></a>
+</div>
+<?php endforeach; ?>
+
+<!-- ═══ THIS WEEK'S HIGHLIGHTS (Dopamine Hero) ═══ -->
+<div class="d-card" style="background:linear-gradient(135deg,#0a1628,#1a2d4a);border:none;color:#fff;">
+    <h3 style="color:#fff;margin-bottom:14px;">📈 <?php esc_html_e( 'This Week', 'yourjannah' ); ?></h3>
+    <div class="d-stats" style="margin-bottom:0;">
+        <div class="d-stat" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);">
+            <div class="d-stat__label" style="color:rgba(255,255,255,.5);"><?php esc_html_e( 'Content Views', 'yourjannah' ); ?></div>
+            <div class="d-stat__value" style="color:#fff;"><?php echo number_format( $content_stats['views'] ); ?></div>
+            <?php if ( $content_stats['change_pct'] != 0 ) : ?>
+            <div style="font-size:11px;font-weight:700;color:<?php echo $content_stats['change_pct'] > 0 ? '#4ade80' : '#f87171'; ?>;margin-top:2px;">
+                <?php echo $content_stats['change_pct'] > 0 ? '↑' : '↓'; ?><?php echo abs( $content_stats['change_pct'] ); ?>% <?php esc_html_e( 'vs last week', 'yourjannah' ); ?>
+            </div>
+            <?php endif; ?>
+        </div>
+        <div class="d-stat" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);">
+            <div class="d-stat__label" style="color:rgba(255,255,255,.5);"><?php esc_html_e( 'New Subscribers', 'yourjannah' ); ?></div>
+            <div class="d-stat__value" style="color:#00ADEF;">+<?php echo $new_subs_week; ?></div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;"><?php echo $s['subscribers']; ?> <?php esc_html_e( 'total', 'yourjannah' ); ?></div>
+        </div>
+        <div class="d-stat" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);">
+            <div class="d-stat__label" style="color:rgba(255,255,255,.5);"><?php esc_html_e( 'Donations', 'yourjannah' ); ?></div>
+            <div class="d-stat__value" style="color:#4ade80;">£<?php echo number_format( $donations_week / 100, 0 ); ?></div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;"><?php esc_html_e( 'this week', 'yourjannah' ); ?></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ TOP PERFORMING CONTENT ═══ -->
+<?php if ( ! empty( $top_content ) ) : ?>
+<div class="d-card">
+    <h3>📊 <?php esc_html_e( 'Top Performing Content', 'yourjannah' ); ?></h3>
+    <?php foreach ( $top_content as $i => $tc ) : ?>
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;<?php echo $i < count( $top_content ) - 1 ? 'border-bottom:1px solid #f3f4f6;' : ''; ?>">
+        <span style="font-size:18px;font-weight:800;color:<?php echo $i === 0 ? '#f59e0b' : ( $i === 1 ? '#94a3b8' : '#cd7f32' ); ?>;min-width:24px;">#<?php echo $i + 1; ?></span>
+        <div style="flex:1;min-width:0;">
+            <strong style="font-size:13px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?php echo esc_html( $tc->title ?: 'Untitled' ); ?></strong>
+            <span style="font-size:11px;color:var(--text-dim);"><?php echo $tc->content_type === 'announcement' ? '📢' : '📅'; ?> <?php echo esc_html( ucfirst( $tc->content_type ) ); ?></span>
+        </div>
+        <div style="text-align:right;white-space:nowrap;">
+            <span style="font-size:13px;font-weight:700;">👁 <?php echo number_format( (int) $tc->total_views ); ?></span>
+            <?php if ( (int) $tc->total_interested > 0 ) : ?>
+            <span style="font-size:12px;color:#ec4899;margin-left:6px;">❤️ <?php echo (int) $tc->total_interested; ?></span>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<!-- ═══ POSTING STREAK ═══ -->
+<?php if ( $posting_streak['streak'] > 0 ) : ?>
+<div class="d-card" style="border-left:4px solid #f59e0b;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <h3 style="margin:0;">🔥 <?php printf( esc_html__( '%d-week posting streak!', 'yourjannah' ), $posting_streak['streak'] ); ?></h3>
+    </div>
+    <div style="display:flex;gap:4px;margin-bottom:8px;">
+        <?php
+        $day_labels = [ 'M', 'T', 'W', 'T', 'F', 'S', 'S' ];
+        for ( $d = 1; $d <= 7; $d++ ) :
+            $posted = in_array( (string) $d, $posting_streak['this_week'], true );
+            $is_today = ( (int) date( 'N' ) === $d );
+        ?>
+        <div style="flex:1;text-align:center;padding:6px 0;border-radius:6px;font-size:11px;font-weight:700;
+            background:<?php echo $posted ? '#16a34a' : ( $is_today ? '#fef3c7' : '#f3f4f6' ); ?>;
+            color:<?php echo $posted ? '#fff' : ( $is_today ? '#92400e' : '#9ca3af' ); ?>;">
+            <?php echo $day_labels[ $d - 1 ]; ?>
+        </div>
+        <?php endfor; ?>
+    </div>
+    <?php if ( ! in_array( (string) date( 'N' ), $posting_streak['this_week'], true ) ) : ?>
+    <p style="font-size:12px;color:#92400e;font-weight:600;"><?php esc_html_e( 'Post today to keep your streak alive!', 'yourjannah' ); ?> <a href="?section=announcements" style="color:#f59e0b;"><?php esc_html_e( 'Quick Post →', 'yourjannah' ); ?></a></p>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
+
+<!-- ═══ SUBSCRIBER GROWTH ═══ -->
+<div class="d-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <h3 style="margin:0;">👥 <?php esc_html_e( 'Subscriber Growth', 'yourjannah' ); ?></h3>
+        <span style="font-size:12px;color:var(--text-dim);"><?php esc_html_e( 'Last 4 weeks', 'yourjannah' ); ?></span>
+    </div>
+    <?php
+    $max_bar = max( 1, max( $sub_growth['weekly_data'] ) );
+    ?>
+    <div style="display:flex;align-items:end;gap:4px;height:60px;margin-bottom:8px;">
+        <?php foreach ( $sub_growth['weekly_data'] as $wi => $wcount ) :
+            $h = max( 4, round( $wcount / $max_bar * 56 ) );
+        ?>
+        <div style="flex:1;background:<?php echo $wi === 3 ? 'var(--primary)' : '#d1d5db'; ?>;height:<?php echo $h; ?>px;border-radius:4px;position:relative;" title="<?php echo $wcount; ?> new">
+            <?php if ( $wcount > 0 ) : ?>
+            <span style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:var(--text-dim);"><?php echo $wcount; ?></span>
+            <?php endif; ?>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <div style="display:flex;gap:16px;font-size:12px;color:var(--text-dim);">
+        <span><strong style="color:var(--text);"><?php echo $s['subscribers']; ?></strong> <?php esc_html_e( 'total', 'yourjannah' ); ?></span>
+        <span><strong style="color:var(--primary);">+<?php echo $sub_growth['this_week']; ?></strong> <?php esc_html_e( 'this week', 'yourjannah' ); ?></span>
+        <span><strong>+<?php echo $sub_growth['this_month']; ?></strong> <?php esc_html_e( 'this month', 'yourjannah' ); ?></span>
+    </div>
+</div>
+
+<!-- ═══ CITY RANKING ═══ -->
+<?php if ( $city_rank && $city_rank['total'] > 1 ) : ?>
+<div class="d-card" style="background:linear-gradient(135deg,#faf5ff,#ede9fe);border:1px solid #c4b5fd;">
+    <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:36px;">🏆</span>
+        <div>
+            <h3 style="margin:0;color:#5b21b6;"><?php printf( esc_html__( '#%d in %s', 'yourjannah' ), $city_rank['rank'], esc_html( $city_rank['city'] ) ); ?></h3>
+            <p style="font-size:12px;color:#7c3aed;margin:2px 0 0;"><?php printf( esc_html__( 'Out of %d mosques · Score: %s this month', 'yourjannah' ), $city_rank['total'], number_format( $city_rank['score'] ) ); ?></p>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- ═══ RECENT ACTIVITY FEED ═══ -->
+<?php if ( ! empty( $activity_feed ) ) : ?>
+<div class="d-card">
+    <h3>🕐 <?php esc_html_e( 'Recent Activity', 'yourjannah' ); ?></h3>
+    <?php
+    $activity_icons = [ 'booking' => '📋', 'subscriber' => '👥', 'donation' => '💷', 'enquiry' => '✉️', 'patron' => '🏅' ];
+    foreach ( $activity_feed as $act ) :
+        $icon = $activity_icons[ $act->activity_type ] ?? '📌';
+        $ago = human_time_diff( strtotime( $act->when_at ) );
+    ?>
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f9fafb;font-size:13px;">
+        <span style="font-size:16px;"><?php echo $icon; ?></span>
+        <div style="flex:1;min-width:0;">
+            <strong><?php echo esc_html( $act->who ?: 'Someone' ); ?></strong>
+            <span style="color:var(--text-dim);"><?php echo esc_html( $act->what ); ?></span>
+        </div>
+        <span style="font-size:11px;color:var(--text-dim);white-space:nowrap;"><?php echo esc_html( $ago ); ?> ago</span>
+    </div>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<!-- ═══ COMMUNITY IBADAH STATS ═══ -->
+<?php
+$ib_table = YNJ_DB::table( 'ibadah_logs' );
+$ib_week_start = date( 'Y-m-d', strtotime( 'Monday this week' ) );
+$ib_week = $wpdb->get_row( $wpdb->prepare(
+    "SELECT COALESCE(SUM(fajr+dhuhr+asr+maghrib+isha),0) AS prayers,
+            COALESCE(SUM(quran_pages),0) AS pages,
+            COUNT(DISTINCT user_id) AS active_members
+     FROM $ib_table WHERE mosque_id = %d AND log_date >= %s",
+    $mosque_id, $ib_week_start
+) );
+$ib_prayers = (int) ( $ib_week->prayers ?? 0 );
+$ib_pages   = (int) ( $ib_week->pages ?? 0 );
+$ib_active  = (int) ( $ib_week->active_members ?? 0 );
+$ch_table   = YNJ_DB::table( 'community_challenges' );
+$ib_challenge = $wpdb->get_row( $wpdb->prepare(
+    "SELECT title, target_value, current_value, status FROM $ch_table WHERE mosque_id = %d AND status IN ('active','completed') AND end_date >= %s ORDER BY id DESC LIMIT 1",
+    $mosque_id, date( 'Y-m-d' )
+) );
+?>
+<?php if ( $ib_prayers > 0 || $ib_pages > 0 || $ib_challenge ) : ?>
+<div class="d-card" style="border-left:4px solid #7c3aed;">
+    <h3 style="margin-bottom:10px;">🤲 <?php esc_html_e( 'Community Ibadah This Week', 'yourjannah' ); ?></h3>
+    <div class="d-stats" style="margin-bottom:8px;">
+        <div class="d-stat">
+            <div class="d-stat__label"><?php esc_html_e( 'Prayers', 'yourjannah' ); ?></div>
+            <div class="d-stat__value" style="color:#7c3aed;"><?php echo number_format( $ib_prayers ); ?></div>
+        </div>
+        <div class="d-stat">
+            <div class="d-stat__label"><?php esc_html_e( 'Quran Pages', 'yourjannah' ); ?></div>
+            <div class="d-stat__value"><?php echo number_format( $ib_pages ); ?></div>
+        </div>
+        <div class="d-stat">
+            <div class="d-stat__label"><?php esc_html_e( 'Active Members', 'yourjannah' ); ?></div>
+            <div class="d-stat__value" style="color:#0369a1;"><?php echo $ib_active; ?></div>
+        </div>
+    </div>
+    <?php if ( $ib_challenge ) :
+        $ch_pct = (int) $ib_challenge->target_value > 0 ? min( 100, round( (int) $ib_challenge->current_value / (int) $ib_challenge->target_value * 100 ) ) : 0;
+    ?>
+    <div style="padding-top:8px;border-top:1px solid #f3f4f6;">
+        <p style="font-size:12px;font-weight:700;color:#7c3aed;margin-bottom:6px;">🏆 <?php echo esc_html( $ib_challenge->title ); ?></p>
+        <div style="background:#e5e7eb;border-radius:6px;height:8px;overflow:hidden;margin-bottom:4px;">
+            <div style="background:<?php echo $ib_challenge->status === 'completed' ? '#16a34a' : '#7c3aed'; ?>;height:100%;width:<?php echo $ch_pct; ?>%;border-radius:6px;transition:width .3s;"></div>
+        </div>
+        <p style="font-size:11px;color:var(--text-dim);">
+            <?php echo number_format( (int) $ib_challenge->current_value ); ?>/<?php echo number_format( (int) $ib_challenge->target_value ); ?> (<?php echo $ch_pct; ?>%)
+            <?php if ( $ib_challenge->status === 'completed' ) : ?>
+            — <span style="color:#16a34a;font-weight:700;"><?php esc_html_e( 'Completed!', 'yourjannah' ); ?> 🎉</span>
+            <?php endif; ?>
+        </p>
+    </div>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
 
 <!-- Setup Progress -->
 <?php if ( $steps_done < $steps_total ) : ?>
