@@ -109,32 +109,25 @@ class YNJ_API_User {
         global $wpdb;
         $exists = false;
 
-        // Check ynj_users table
+        // Check if user exists in either system
         $has_pin = false;
-        if ( class_exists( 'YNJ_DB' ) ) {
+        $wp_user = get_user_by( 'email', $email );
+
+        // Check WP user first (source of truth for PIN auth)
+        if ( $wp_user ) {
+            $exists = true;
+            $has_pin = (bool) get_user_meta( $wp_user->ID, 'ynj_has_pin', true );
+        }
+
+        // Also check ynj_users (legacy users who may not have WP account yet)
+        if ( ! $exists && class_exists( 'YNJ_DB' ) ) {
             $row = $wpdb->get_row( $wpdb->prepare(
                 "SELECT id, password_hash FROM " . YNJ_DB::table( 'users' ) . " WHERE email = %s AND status = 'active' LIMIT 1", $email
             ) );
-            $exists = (bool) $row;
-            // PIN hashes are short bcrypt of 4-6 digit numbers; old passwords start with 'YJ_' or are longer
-            // We detect PIN by checking if the hash verifies against a 4-6 digit pattern
-            // Simpler: check if a pin_set flag transient exists, or just check hash length
-            if ( $row && $row->password_hash ) {
-                // Check WP usermeta for ynj_has_pin flag
-                $wp_uid = (int) $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM {$wpdb->users} WHERE user_email = %s LIMIT 1", $email ) );
-                if ( $wp_uid ) {
-                    $has_pin = (bool) get_user_meta( $wp_uid, 'ynj_has_pin', true );
-                } else {
-                    // No WP user yet — if ynj_users has a password_hash, treat as PIN-ready
-                    // (user set a PIN but no WP user was created yet)
-                    $has_pin = true;
-                }
+            if ( $row ) {
+                $exists = true;
+                $has_pin = ! empty( $row->password_hash );
             }
-        }
-
-        // Also check WP users
-        if ( ! $exists ) {
-            $exists = (bool) get_user_by( 'email', $email );
         }
 
         return new \WP_REST_Response( [ 'ok' => true, 'exists' => $exists, 'has_pin' => $has_pin ] );

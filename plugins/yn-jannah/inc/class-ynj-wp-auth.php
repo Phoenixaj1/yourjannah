@@ -375,12 +375,14 @@ class YNJ_WP_Auth {
             "SELECT id FROM $ynj_table WHERE email = %s AND status = 'active' LIMIT 1", $email
         ) );
 
+        $pin_hash = password_hash( $password, PASSWORD_DEFAULT );
         if ( $existing_ynj ) {
             // Reuse existing record (preserves points, streaks, badges)
             $ynj_user_id = (int) $existing_ynj->id;
             $wpdb->update( $ynj_table, [
-                'name'  => $name,
-                'phone' => $phone ?: $wpdb->get_var( $wpdb->prepare( "SELECT phone FROM $ynj_table WHERE id = %d", $ynj_user_id ) ),
+                'name'          => $name,
+                'phone'         => $phone ?: $wpdb->get_var( $wpdb->prepare( "SELECT phone FROM $ynj_table WHERE id = %d", $ynj_user_id ) ),
+                'password_hash' => $pin_hash,
             ], [ 'id' => $ynj_user_id ] );
         } else {
             // No existing record — create fresh
@@ -388,12 +390,13 @@ class YNJ_WP_Auth {
                 'name'          => $name,
                 'email'         => $email,
                 'phone'         => $phone,
-                'password_hash' => '',
+                'password_hash' => $pin_hash,
                 'status'        => 'active',
             ] );
             $ynj_user_id = (int) $wpdb->insert_id;
         }
         update_user_meta( $wp_user_id, 'ynj_user_id', $ynj_user_id );
+        update_user_meta( $wp_user_id, 'ynj_has_pin', 1 );
 
         // Generate email verification token
         $verify_token = bin2hex( random_bytes( 32 ) );
