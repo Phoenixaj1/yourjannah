@@ -393,7 +393,6 @@ if ( $mosque && is_user_logged_in() ) {
         <?php if ( is_user_logged_in() ) : ?>
         <a href="#ibadah-tracker" style="flex-shrink:0;padding:8px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:20px;font-size:12px;font-weight:600;color:#374151;text-decoration:none;white-space:nowrap;">🤲 My Ibadah</a>
         <?php endif; ?>
-        <a href="#dua-wall" style="flex-shrink:0;padding:8px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:20px;font-size:12px;font-weight:600;color:#374151;text-decoration:none;white-space:nowrap;">🤲 Dua Wall</a>
         <a href="#mosque-league-table" style="flex-shrink:0;padding:8px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:20px;font-size:12px;font-weight:600;color:#374151;text-decoration:none;white-space:nowrap;">🏆 League</a>
         <a href="#gratitude-wall" style="flex-shrink:0;padding:8px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:20px;font-size:12px;font-weight:600;color:#374151;text-decoration:none;white-space:nowrap;">💖 Gratitude</a>
     </div>
@@ -733,132 +732,8 @@ if ( $mosque && is_user_logged_in() ) {
     </section>
     <?php endif; endif; endif; ?>
 
-    <!-- ═══ MOSQUE LEAGUE TABLE — Size-tiered competition ═══ -->
-    <?php if ( $mosque && function_exists( 'ynj_get_league_standings' ) ) :
-        $league = ynj_get_league_standings( (int) $mosque->id, $mosque->city ?? null, 7 );
-        if ( $league['total'] > 0 ) :
-    ?>
-    <section class="ynj-card" id="mosque-league-table" style="padding:0;overflow:hidden;border:1px solid #fde68a;">
-        <!-- League Header -->
-        <div style="padding:16px;background:linear-gradient(135deg,#78350f,#92400e);color:#fff;">
-            <div style="display:flex;align-items:center;gap:10px;">
-                <span style="font-size:32px;"><?php echo $league['tier']['icon']; ?></span>
-                <div style="flex:1;">
-                    <h3 style="font-size:16px;font-weight:800;color:#fff;margin:0;"><?php echo esc_html( $league['tier']['name'] ); ?> <?php esc_html_e( 'League', 'yourjannah' ); ?></h3>
-                    <p style="font-size:12px;color:rgba(255,255,255,.7);margin:2px 0 0;">
-                        <?php echo $league['tier']['min']; ?>–<?php echo $league['tier']['max'] < 999999 ? number_format( $league['tier']['max'] ) : '∞'; ?> <?php esc_html_e( 'members', 'yourjannah' ); ?>
-                        · <?php esc_html_e( 'This week', 'yourjannah' ); ?>
-                        <?php if ( $mosque->city ) : ?> · <?php echo esc_html( $mosque->city ); ?><?php endif; ?>
-                    </p>
-                </div>
-                <?php if ( $league['rank'] > 0 ) : ?>
-                <div style="text-align:center;background:rgba(255,255,255,.15);padding:8px 14px;border-radius:10px;">
-                    <div style="font-size:22px;font-weight:800;">#<?php echo $league['rank']; ?></div>
-                    <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;opacity:.7;"><?php esc_html_e( 'rank', 'yourjannah' ); ?></div>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
 
-        <!-- League Table -->
-        <?php if ( ! empty( $league['top_5'] ) ) : ?>
-        <div style="padding:0;">
-            <?php
-            $medals = [ '🥇', '🥈', '🥉' ];
-            foreach ( $league['top_5'] as $i => $tm ) :
-                $is_me = ( (int) $tm->id === (int) $mosque->id );
-                $pos = $i + 1;
-                $bar_w = $league['top_5'][0]->per_member > 0 ? min( 100, round( (float) $tm->per_member / (float) $league['top_5'][0]->per_member * 100 ) ) : 0;
-            ?>
-            <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid #f5f0e8;<?php echo $is_me ? 'background:#fef3c7;' : ''; ?>">
-                <span style="font-size:16px;min-width:24px;text-align:center;font-weight:800;color:<?php echo $pos <= 3 ? '#92400e' : '#a16207'; ?>;">
-                    <?php echo $medals[ $i ] ?? $pos; ?>
-                </span>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:13px;font-weight:<?php echo $is_me ? '800' : '600'; ?>;color:#78350f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                        <?php echo esc_html( $tm->name ); ?>
-                        <?php if ( $is_me ) : ?><span style="font-size:10px;background:#92400e;color:#fff;padding:1px 6px;border-radius:4px;margin-left:4px;"><?php esc_html_e( 'YOU', 'yourjannah' ); ?></span><?php endif; ?>
-                    </div>
-                    <div style="margin-top:4px;background:#f5f0e8;border-radius:3px;height:4px;overflow:hidden;">
-                        <div style="background:linear-gradient(90deg,#f59e0b,#d97706);height:100%;width:<?php echo $bar_w; ?>%;border-radius:3px;"></div>
-                    </div>
-                </div>
-                <div style="text-align:right;white-space:nowrap;">
-                    <div style="font-size:14px;font-weight:800;color:#92400e;"><?php echo number_format( (float) $tm->per_member, 1 ); ?></div>
-                    <div style="font-size:9px;color:#a16207;"><?php esc_html_e( 'pts/member', 'yourjannah' ); ?></div>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
-
-        <!-- Your Breakdown (if ranked) -->
-        <?php if ( $league['rank'] > 0 && ! empty( $league['breakdown'] ) ) :
-            $bd = $league['breakdown'];
-        ?>
-        <div style="padding:12px 16px;background:#fffbeb;border-top:1px solid #fde68a;">
-            <p style="font-size:11px;font-weight:700;color:#92400e;margin:0 0 6px;text-transform:uppercase;letter-spacing:.5px;"><?php esc_html_e( 'Your Activity Breakdown', 'yourjannah' ); ?></p>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px;">
-                <?php if ( $bd['page_views'] ) : ?><span style="padding:3px 8px;background:#fff;border-radius:6px;color:#78350f;">👁 <?php echo $bd['page_views']; ?> <?php esc_html_e( 'views', 'yourjannah' ); ?></span><?php endif; ?>
-                <?php if ( $bd['reactions'] ) : ?><span style="padding:3px 8px;background:#fff;border-radius:6px;color:#78350f;">❤️ <?php echo $bd['reactions']; ?> <?php esc_html_e( 'reactions', 'yourjannah' ); ?></span><?php endif; ?>
-                <?php if ( $bd['rsvps'] ) : ?><span style="padding:3px 8px;background:#fff;border-radius:6px;color:#78350f;">📋 <?php echo $bd['rsvps']; ?> <?php esc_html_e( 'RSVPs', 'yourjannah' ); ?></span><?php endif; ?>
-                <?php if ( $bd['checkins'] ) : ?><span style="padding:3px 8px;background:#fff;border-radius:6px;color:#78350f;">📍 <?php echo $bd['checkins']; ?> <?php esc_html_e( 'check-ins', 'yourjannah' ); ?></span><?php endif; ?>
-                <?php if ( $bd['new_subs'] ) : ?><span style="padding:3px 8px;background:#fff;border-radius:6px;color:#78350f;">👥 +<?php echo $bd['new_subs']; ?> <?php esc_html_e( 'new members', 'yourjannah' ); ?></span><?php endif; ?>
-                <?php if ( $bd['content_posted'] ) : ?><span style="padding:3px 8px;background:#fff;border-radius:6px;color:#78350f;">📢 <?php echo $bd['content_posted']; ?> <?php esc_html_e( 'posts', 'yourjannah' ); ?></span><?php endif; ?>
-            </div>
-        </div>
-        <?php endif; ?>
-    </section>
-    <?php endif; endif; ?>
-
-    <!-- ═══ MY BADGES (logged-in only) ═══ -->
-    <?php if ( is_user_logged_in() && $mosque && function_exists( 'ynj_get_user_badges' ) ) :
-        $ynj_uid_badges = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
-        $my_badges = $ynj_uid_badges ? ynj_get_user_badges( $ynj_uid_badges ) : [];
-        $all_badges = function_exists( 'ynj_get_badge_definitions' ) ? ynj_get_badge_definitions() : [];
-        if ( ! empty( $all_badges ) ) :
-    ?>
-    <section class="ynj-card" style="padding:16px;">
-        <h3 style="font-size:14px;font-weight:800;margin:0 0 10px;">🏅 <?php esc_html_e( 'My Badges', 'yourjannah' ); ?>
-            <span style="font-size:12px;font-weight:500;color:#6b8fa3;margin-left:4px;"><?php echo count( $my_badges ); ?>/<?php echo count( $all_badges ); ?></span>
-        </h3>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;">
-            <?php
-            $earned_keys = array_column( $my_badges, 'badge_key' );
-            foreach ( $all_badges as $bd ) :
-                $earned = in_array( $bd['key'], $earned_keys, true );
-            ?>
-            <div title="<?php echo esc_attr( $bd['name'] . ': ' . $bd['desc'] ); ?>" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 6px;min-width:56px;border-radius:10px;font-size:10px;font-weight:600;text-align:center;
-                background:<?php echo $earned ? '#fff' : '#f3f4f6'; ?>;
-                border:1px solid <?php echo $earned ? '#e5e7eb' : '#f3f4f6'; ?>;
-                opacity:<?php echo $earned ? '1' : '0.4'; ?>;
-                <?php echo $earned ? 'box-shadow:0 1px 3px rgba(0,0,0,.08);' : ''; ?>">
-                <span style="font-size:20px;<?php echo $earned ? '' : 'filter:grayscale(1);'; ?>"><?php echo $bd['icon']; ?></span>
-                <span style="color:<?php echo $earned ? '#374151' : '#9ca3af'; ?>;"><?php echo esc_html( $bd['name'] ); ?></span>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </section>
-    <?php endif; endif; ?>
-
-    <!-- ═══ DUA WALL (moved up for visibility) ═══ -->
-    <?php if ( $mosque ) : ?>
-    <section class="ynj-card" style="padding:16px;" id="dua-wall">
-        <h3 style="font-size:15px;font-weight:800;margin:0 0 10px;">🤲 <?php esc_html_e( 'Dua Wall', 'yourjannah' ); ?></h3>
-        <p style="font-size:12px;color:#6b8fa3;margin-bottom:12px;"><?php esc_html_e( 'Request prayers from your community. All requests are anonymous.', 'yourjannah' ); ?></p>
-        <?php if ( is_user_logged_in() ) : ?>
-        <div style="display:flex;gap:8px;margin-bottom:12px;">
-            <input type="text" id="dua-input" placeholder="<?php esc_attr_e( 'Please make dua for...', 'yourjannah' ); ?>" maxlength="500" style="flex:1;padding:10px 14px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;font-family:inherit;min-height:44px;">
-            <button type="button" onclick="ynjPostDua()" style="padding:10px 16px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;min-height:44px;font-family:inherit;white-space:nowrap;">🤲 <?php esc_html_e( 'Ask', 'yourjannah' ); ?></button>
-        </div>
-        <?php endif; ?>
-        <div id="dua-list" style="display:flex;flex-direction:column;gap:8px;">
-            <p style="color:#9ca3af;font-size:12px;text-align:center;"><?php esc_html_e( 'Loading...', 'yourjannah' ); ?></p>
-        </div>
-    </section>
-    <?php endif; ?>
-
-    <!-- ═══ GRATITUDE WALL (moved up for visibility) ═══ -->
+    <!-- ═══ GRATITUDE WALL ═══ -->
     <?php if ( $mosque ) : ?>
     <section class="ynj-card" style="padding:16px;background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;" id="gratitude-wall">
         <h3 style="font-size:15px;font-weight:800;color:#9d174d;margin:0 0 10px;">💖 <?php esc_html_e( 'Thank Your Mosque', 'yourjannah' ); ?></h3>
@@ -953,6 +828,105 @@ if ( $mosque && is_user_logged_in() ) {
         <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/services/join' ) ); ?>" style="display:block;text-align:center;padding:8px;margin-top:4px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:12px;font-weight:700;text-decoration:none;">🤝 <?php esc_html_e( 'List Your Service — from £10/mo', 'yourjannah' ); ?></a>
     </div>
     <?php endif; ?>
+
+    <!-- ═══ MOSQUE LEAGUE TABLE — at bottom of left column ═══ -->
+    <?php if ( $mosque && function_exists( 'ynj_get_league_standings' ) ) :
+        $league = ynj_get_league_standings( (int) $mosque->id, $mosque->city ?? null, 7 );
+        if ( $league['total'] > 0 ) :
+    ?>
+    <section class="ynj-card" id="mosque-league-table" style="padding:0;overflow:hidden;border:1px solid #fde68a;margin-top:12px;">
+        <div style="padding:16px;background:linear-gradient(135deg,#78350f,#92400e);color:#fff;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-size:32px;"><?php echo $league['tier']['icon']; ?></span>
+                <div style="flex:1;">
+                    <h3 style="font-size:16px;font-weight:800;color:#fff;margin:0;"><?php echo esc_html( $league['tier']['name'] ); ?> <?php esc_html_e( 'League', 'yourjannah' ); ?></h3>
+                    <p style="font-size:12px;color:rgba(255,255,255,.7);margin:2px 0 0;">
+                        <?php echo $league['tier']['min']; ?>–<?php echo $league['tier']['max'] < 999999 ? number_format( $league['tier']['max'] ) : '∞'; ?> <?php esc_html_e( 'members', 'yourjannah' ); ?>
+                        · <?php esc_html_e( 'This week', 'yourjannah' ); ?>
+                        <?php if ( $mosque->city ) : ?> · <?php echo esc_html( $mosque->city ); ?><?php endif; ?>
+                    </p>
+                </div>
+                <?php if ( $league['rank'] > 0 ) : ?>
+                <div style="text-align:center;background:rgba(255,255,255,.15);padding:8px 14px;border-radius:10px;">
+                    <div style="font-size:22px;font-weight:800;">#<?php echo $league['rank']; ?></div>
+                    <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;opacity:.7;"><?php esc_html_e( 'rank', 'yourjannah' ); ?></div>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php if ( ! empty( $league['top_5'] ) ) : ?>
+        <div style="padding:0;">
+            <?php
+            $medals = [ '🥇', '🥈', '🥉' ];
+            foreach ( $league['top_5'] as $i => $tm ) :
+                $is_me = ( (int) $tm->id === (int) $mosque->id );
+                $pos = $i + 1;
+                $bar_w = $league['top_5'][0]->per_member > 0 ? min( 100, round( (float) $tm->per_member / (float) $league['top_5'][0]->per_member * 100 ) ) : 0;
+            ?>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid #f5f0e8;<?php echo $is_me ? 'background:#fef3c7;' : ''; ?>">
+                <span style="font-size:16px;min-width:24px;text-align:center;font-weight:800;color:<?php echo $pos <= 3 ? '#92400e' : '#a16207'; ?>;"><?php echo $medals[ $i ] ?? $pos; ?></span>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:<?php echo $is_me ? '800' : '600'; ?>;color:#78350f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                        <?php echo esc_html( $tm->name ); ?>
+                        <?php if ( $is_me ) : ?><span style="font-size:10px;background:#92400e;color:#fff;padding:1px 6px;border-radius:4px;margin-left:4px;"><?php esc_html_e( 'YOU', 'yourjannah' ); ?></span><?php endif; ?>
+                    </div>
+                    <div style="margin-top:4px;background:#f5f0e8;border-radius:3px;height:4px;overflow:hidden;">
+                        <div style="background:linear-gradient(90deg,#f59e0b,#d97706);height:100%;width:<?php echo $bar_w; ?>%;border-radius:3px;"></div>
+                    </div>
+                </div>
+                <div style="text-align:right;white-space:nowrap;">
+                    <div style="font-size:14px;font-weight:800;color:#92400e;"><?php echo number_format( (float) $tm->per_member, 1 ); ?></div>
+                    <div style="font-size:9px;color:#a16207;"><?php esc_html_e( 'pts/member', 'yourjannah' ); ?></div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+        <?php if ( $league['rank'] > 0 && ! empty( $league['breakdown'] ) ) : $bd = $league['breakdown']; ?>
+        <div style="padding:12px 16px;background:#fffbeb;border-top:1px solid #fde68a;">
+            <p style="font-size:11px;font-weight:700;color:#92400e;margin:0 0 6px;text-transform:uppercase;letter-spacing:.5px;"><?php esc_html_e( 'Your Activity Breakdown', 'yourjannah' ); ?></p>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px;">
+                <?php if ( $bd['page_views'] ) : ?><span style="padding:3px 8px;background:#fff;border-radius:6px;color:#78350f;">👁 <?php echo $bd['page_views']; ?> <?php esc_html_e( 'views', 'yourjannah' ); ?></span><?php endif; ?>
+                <?php if ( $bd['reactions'] ) : ?><span style="padding:3px 8px;background:#fff;border-radius:6px;color:#78350f;">❤️ <?php echo $bd['reactions']; ?> <?php esc_html_e( 'reactions', 'yourjannah' ); ?></span><?php endif; ?>
+                <?php if ( $bd['rsvps'] ) : ?><span style="padding:3px 8px;background:#fff;border-radius:6px;color:#78350f;">📋 <?php echo $bd['rsvps']; ?> <?php esc_html_e( 'RSVPs', 'yourjannah' ); ?></span><?php endif; ?>
+                <?php if ( $bd['checkins'] ) : ?><span style="padding:3px 8px;background:#fff;border-radius:6px;color:#78350f;">📍 <?php echo $bd['checkins']; ?> <?php esc_html_e( 'check-ins', 'yourjannah' ); ?></span><?php endif; ?>
+                <?php if ( $bd['new_subs'] ) : ?><span style="padding:3px 8px;background:#fff;border-radius:6px;color:#78350f;">👥 +<?php echo $bd['new_subs']; ?> <?php esc_html_e( 'new members', 'yourjannah' ); ?></span><?php endif; ?>
+                <?php if ( $bd['content_posted'] ) : ?><span style="padding:3px 8px;background:#fff;border-radius:6px;color:#78350f;">📢 <?php echo $bd['content_posted']; ?> <?php esc_html_e( 'posts', 'yourjannah' ); ?></span><?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+    </section>
+    <?php endif; endif; ?>
+
+    <!-- ═══ MY BADGES — at bottom of left column ═══ -->
+    <?php if ( is_user_logged_in() && $mosque && function_exists( 'ynj_get_user_badges' ) ) :
+        $ynj_uid_badges = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+        $my_badges = $ynj_uid_badges ? ynj_get_user_badges( $ynj_uid_badges ) : [];
+        $all_badges = function_exists( 'ynj_get_badge_definitions' ) ? ynj_get_badge_definitions() : [];
+        if ( ! empty( $all_badges ) ) :
+    ?>
+    <section class="ynj-card" style="padding:16px;margin-top:12px;">
+        <h3 style="font-size:14px;font-weight:800;margin:0 0 10px;">🏅 <?php esc_html_e( 'My Badges', 'yourjannah' ); ?>
+            <span style="font-size:12px;font-weight:500;color:#6b8fa3;margin-left:4px;"><?php echo count( $my_badges ); ?>/<?php echo count( $all_badges ); ?></span>
+        </h3>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            <?php
+            $earned_keys = array_column( $my_badges, 'badge_key' );
+            foreach ( $all_badges as $bd ) :
+                $earned = in_array( $bd['key'], $earned_keys, true );
+            ?>
+            <div title="<?php echo esc_attr( $bd['name'] . ': ' . $bd['desc'] ); ?>" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 6px;min-width:56px;border-radius:10px;font-size:10px;font-weight:600;text-align:center;
+                background:<?php echo $earned ? '#fff' : '#f3f4f6'; ?>;
+                border:1px solid <?php echo $earned ? '#e5e7eb' : '#f3f4f6'; ?>;
+                opacity:<?php echo $earned ? '1' : '0.4'; ?>;
+                <?php echo $earned ? 'box-shadow:0 1px 3px rgba(0,0,0,.08);' : ''; ?>">
+                <span style="font-size:20px;<?php echo $earned ? '' : 'filter:grayscale(1);'; ?>"><?php echo $bd['icon']; ?></span>
+                <span style="color:<?php echo $earned ? '#374151' : '#9ca3af'; ?>;"><?php echo esc_html( $bd['name'] ); ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <?php endif; endif; ?>
 
     </div><!-- end left column -->
     <div class="ynj-desktop-grid__right">
