@@ -566,6 +566,16 @@ if ( $_hp_mosque_id && is_user_logged_in() ) {
     </div>
     <?php endif; ?>
 
+    <!-- Community Score Bar + Section Nav (shared include) -->
+    <?php
+    $mosque      = $_ynj_mosque_for_prayer;
+    $mosque_name = $mosque ? $mosque->name : '';
+    $slug        = $_hp_slug;
+    if ( $mosque ) {
+        include get_template_directory() . '/inc/community-cards.php';
+    }
+    ?>
+
     <!-- Ramadan banner (shown automatically during Ramadan) -->
     <div id="ramadan-banner" style="display:none;background:linear-gradient(135deg,#1a1628,#2d1b69);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:10px;"></div>
 
