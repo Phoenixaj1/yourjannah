@@ -109,40 +109,7 @@
     // bar works for everyone.
     // ================================================================
 
-    (function() {
-        // Don't double-render if PHP topbar or HUD already exists
-        if (document.querySelector('.ynj-topbar') || document.querySelector('.ynj-hud')) return;
-
-        var token = localStorage.getItem('ynj_user_token');
-        var user = null;
-        try { user = JSON.parse(localStorage.getItem('ynj_user')); } catch(e) {}
-
-        var bar = document.createElement('div');
-        bar.className = 'ynj-topbar';
-
-        if (token && user && user.name) {
-            // Logged in — check patron status
-            var isPatron = user.patron && user.patron.tier;
-            if (isPatron) {
-                var tierNames = {supporter:'Bronze',guardian:'Silver',champion:'Gold',platinum:'Platinum'};
-                bar.className += ' ynj-topbar--patron';
-                bar.innerHTML = '<span>\uD83C\uDFC5 ' + user.name.split(' ')[0] + ' \u00B7 <strong>' + (tierNames[user.patron.tier] || user.patron.tier) + ' Patron</strong></span><a href="/profile" style="font-size:11px;color:rgba(255,255,255,.9);text-decoration:none;">My Account</a>';
-            } else {
-                var mosqueSlug = localStorage.getItem('ynj_mosque_slug') || 'yourniyyah-masjid';
-                bar.className += ' ynj-topbar--member';
-                bar.innerHTML = '<span>\uD83D\uDC4B Salam, ' + user.name.split(' ')[0] + ' \u00B7 <strong>Free Member</strong></span><div class="ynj-topbar__actions"><a href="/mosque/' + mosqueSlug + '/patron" class="ynj-topbar__cta">Become a Patron \u2192</a><a href="/profile">My Account</a></div>';
-            }
-        } else {
-            // Guest
-            bar.className += ' ynj-topbar--guest';
-            bar.innerHTML = '<span>\uD83D\uDD4C Welcome to YourJannah</span><div class="ynj-topbar__actions"><a href="/login">Sign In</a><a href="/register" class="ynj-topbar__cta">Join Free</a></div>';
-        }
-
-        // Insert before header
-        var header = document.querySelector('.ynj-header');
-        if (header && header.parentNode) {
-            header.parentNode.insertBefore(bar, header);
-        }
-    })();
+    // Legacy JS topbar removed — PHP HUD in header.php handles all states
+    // (guest geo-aura bar + logged-in RPG HUD)
 
 })();
