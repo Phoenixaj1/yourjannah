@@ -280,14 +280,17 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
             <input type="tel" id="ob-newpin2" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="off" style="width:100%;padding:14px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;letter-spacing:12px;text-align:center;font-family:inherit;outline:none;">
         </div>
 
+        <!-- Two clear buttons: Next (auto-detects), or explicit Sign In link -->
         <button id="ob-submit" onclick="obSubmitEmail()" style="width:100%;padding:14px;border:none;border-radius:12px;background:#fff;color:#0a1628;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">
-            Join
+            <?php esc_html_e( 'Next', 'yourjannah' ); ?>
         </button>
         <p id="ob-error" style="color:#fca5a5;font-size:13px;text-align:center;margin-top:8px;"></p>
 
-        <p style="margin-top:16px;font-size:11px;opacity:.3;">
-            <a href="#" onclick="obSkip();return false;" style="color:#fff;text-decoration:underline;">Skip for now</a>
-        </p>
+        <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
+            <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" style="font-size:13px;color:rgba(255,255,255,.7);text-decoration:none;font-weight:600;"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></a>
+            <span style="color:rgba(255,255,255,.2);">|</span>
+            <a href="#" onclick="obSkip();return false;" style="font-size:13px;color:rgba(255,255,255,.4);text-decoration:none;"><?php esc_html_e( 'Skip for now', 'yourjannah' ); ?></a>
+        </div>
     </div>
 </div>
 
