@@ -91,35 +91,32 @@ if ( is_user_logged_in() ) {
 ?>
 
 <?php if ( $_ynj_bar_status === 'guest' ) : ?>
-<!-- ── Guest HUD — Geo Aura (matches logged-in HUD styling) ── -->
-<div class="ynj-hud ynj-hud--guest" id="ynj-hud">
+<!-- ── Guest HUD — fully inline styles so nothing can override ── -->
+<div id="ynj-hud" style="background:linear-gradient(135deg,#0a1628 0%,#132742 100%);color:#fff;z-index:102;position:sticky;top:0;padding:8px 16px;display:flex !important;flex-direction:row !important;align-items:center;gap:10px;flex-wrap:nowrap;">
 
-    <!-- Location chip (reuses mosque chip style) -->
-    <div class="ynj-hud__masjid">
-        <span class="ynj-hud__tier-icon">&#x2728;</span>
-        <span class="ynj-hud__masjid-name" id="hud-guest-location"><?php esc_html_e( 'Your area', 'yourjannah' ); ?></span>
+    <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(255,255,255,.07);border-radius:10px;flex-shrink:0;">
+        <span style="font-size:14px;">&#x2728;</span>
+        <span id="hud-guest-location" style="font-size:12px;font-weight:800;white-space:nowrap;"><?php esc_html_e( 'Your area', 'yourjannah' ); ?></span>
     </div>
 
-    <!-- Stats (reuse logged-in stat pill style) -->
-    <div class="ynj-hud__stat" id="hud-guest-dhikr" style="display:none;">
-        <span class="ynj-hud__stat-icon">&#x1F4FF;</span>
-        <span class="ynj-hud__stat-num" id="hud-guest-dhikr-num">0</span>
-        <span class="ynj-hud__stat-label"><?php esc_html_e( 'dhikr', 'yourjannah' ); ?></span>
-    </div>
-    <div class="ynj-hud__stat" id="hud-guest-masjids" style="display:none;">
-        <span class="ynj-hud__stat-icon">&#x1F54C;</span>
-        <span class="ynj-hud__stat-num" id="hud-guest-masjid-num">0</span>
-        <span class="ynj-hud__stat-label"><?php esc_html_e( 'masjids', 'yourjannah' ); ?></span>
+    <div id="hud-guest-dhikr" style="display:none;align-items:center;gap:3px;padding:3px 7px;border-radius:8px;background:rgba(255,255,255,.06);flex-shrink:0;">
+        <span style="font-size:12px;">&#x1F4FF;</span>
+        <span id="hud-guest-dhikr-num" style="font-size:12px;font-weight:800;color:#fbbf24;">0</span>
+        <span style="font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;"><?php esc_html_e( 'dhikr', 'yourjannah' ); ?></span>
     </div>
 
-    <!-- Spacer pushes actions to the right -->
+    <div id="hud-guest-masjids" style="display:none;align-items:center;gap:3px;padding:3px 7px;border-radius:8px;background:rgba(255,255,255,.06);flex-shrink:0;">
+        <span style="font-size:12px;">&#x1F54C;</span>
+        <span id="hud-guest-masjid-num" style="font-size:12px;font-weight:800;color:#fbbf24;">0</span>
+        <span style="font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;"><?php esc_html_e( 'masjids', 'yourjannah' ); ?></span>
+    </div>
+
     <div style="flex:1;"></div>
 
-    <!-- Sign In (subtle link) -->
-    <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" class="ynj-hud__guest-link"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></a>
+    <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" style="color:rgba(255,255,255,.6);text-decoration:none;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></a>
 
-    <!-- Join CTA (reuses dhikr button style with pulse) -->
-    <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" class="ynj-hud__dhikr">&#x1F4FF; <?php esc_html_e( 'Join', 'yourjannah' ); ?></a>
+    <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" style="display:inline-flex;align-items:center;gap:4px;padding:5px 14px;background:linear-gradient(135deg,#287e61,#1a5c43);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;box-shadow:0 2px 10px rgba(40,126,97,.3);">&#x1F4FF; <?php esc_html_e( 'Join', 'yourjannah' ); ?></a>
+
 </div>
 <script>
 (function(){
