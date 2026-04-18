@@ -552,16 +552,17 @@ if ( $mosque && is_user_logged_in() ) {
         <div id="jumuah-slots"></div>
     </section>
 
-    <!-- ═══ LOG YOUR IBADAH CTA (links to personal profile) ═══ -->
+    <!-- ═══ DHIKR CTA — Personal progress + urgency ═══ -->
     <?php if ( is_user_logged_in() && $mosque ) :
-        // Get user's streak for the CTA
-        $_cta_streak = 0;
         $_cta_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+        $_cta_streak = 0;
+        $_cta_done = 0;
         if ( $_cta_uid && class_exists( 'YNJ_DB' ) ) {
             global $wpdb;
             $_ib_t = YNJ_DB::table( 'ibadah_logs' );
+            // Streak
             $_sd = $wpdb->get_col( $wpdb->prepare(
-                "SELECT log_date FROM $_ib_t WHERE user_id = %d AND (fajr=1 OR dhuhr=1 OR asr=1 OR maghrib=1 OR isha=1) ORDER BY log_date DESC LIMIT 120", $_cta_uid
+                "SELECT log_date FROM $_ib_t WHERE user_id = %d AND dhikr = 1 ORDER BY log_date DESC LIMIT 120", $_cta_uid
             ) );
             $expected = date( 'Y-m-d' );
             foreach ( $_sd as $d ) {
@@ -569,16 +570,38 @@ if ( $mosque && is_user_logged_in() ) {
                 elseif ( $_cta_streak === 0 && $d === date( 'Y-m-d', strtotime( '-1 day' ) ) ) { $_cta_streak = 1; $expected = date( 'Y-m-d', strtotime( "$d -1 day" ) ); }
                 else break;
             }
+            // Done count today
+            for ( $i = 0; $i < 5; $i++ ) {
+                if ( get_transient( 'ynj_dhikr_' . $_cta_uid . '_' . date( 'Y-m-d' ) . '_' . $i ) ) $_cta_done++;
+            }
         }
+        $_cta_hours = 24 - (int) date( 'G' );
+        $_cta_complete = $_cta_done >= 5;
+        $_cta_bg = $_cta_complete ? 'background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;'
+            : ( $_cta_hours <= 3 ? 'background:linear-gradient(135deg,#fef2f2,#fee2e2);border:2px solid #ef4444;animation:ynj-urgency-pulse 1s infinite;'
+            : 'background:linear-gradient(135deg,#fefce8,#fef9c3);border:2px solid #fde68a;' );
     ?>
-    <a href="<?php echo esc_url( home_url( '/profile#ibadah' ) ); ?>" class="ynj-card" style="display:block;text-decoration:none;text-align:center;padding:20px 16px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;">
-        <div style="font-size:28px;margin-bottom:6px;">&#x1F932;</div>
-        <div style="font-size:15px;font-weight:800;color:#166534;margin-bottom:4px;"><?php esc_html_e( "Today's Remembrance & Shukr", 'yourjannah' ); ?></div>
-        <div style="font-size:12px;color:#15803d;margin-bottom:6px;"><?php esc_html_e( 'Say your dhikr, earn points for you & your masjid', 'yourjannah' ); ?></div>
-        <?php if ( $_cta_streak > 0 ) : ?>
-            <div style="font-size:14px;font-weight:700;color:#f59e0b;">&#x1F525; <?php printf( esc_html__( '%d day streak', 'yourjannah' ), $_cta_streak ); ?></div>
-        <?php else : ?>
-            <div style="font-size:12px;color:#15803d;"><?php esc_html_e( 'Start your streak today!', 'yourjannah' ); ?></div>
+    <style>.ynj-cta-pulse{animation:ynj-urgency-pulse 2s infinite;}@keyframes ynj-urgency-pulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.2);}50%{box-shadow:0 0 0 6px rgba(245,158,11,.1);}}</style>
+    <a href="<?php echo esc_url( home_url( '/profile#ibadah' ) ); ?>" class="ynj-card" style="display:block;text-decoration:none;padding:16px;<?php echo $_cta_bg; ?>">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+                <?php if ( $_cta_complete ) : ?>
+                    <div style="font-size:14px;font-weight:800;color:#166534;">&#x2705; <?php esc_html_e( 'All 5 dhikr done today!', 'yourjannah' ); ?></div>
+                    <div style="font-size:12px;color:#15803d;"><?php esc_html_e( 'MashaAllah! Come back tomorrow.', 'yourjannah' ); ?></div>
+                <?php elseif ( $_cta_done > 0 ) : ?>
+                    <div style="font-size:14px;font-weight:800;color:#92400e;">&#x1F3AF; <?php printf( esc_html__( '%d of 5 done — %d more for +200 bonus!', 'yourjannah' ), $_cta_done, 5 - $_cta_done ); ?></div>
+                    <div style="font-size:12px;color:#a16207;"><?php echo (int) $_cta_hours; ?>h <?php esc_html_e( 'left', 'yourjannah' ); ?> <?php if ( $_cta_streak > 0 ) : ?>&middot; &#x1F525; <?php echo (int) $_cta_streak; ?> <?php esc_html_e( 'day streak', 'yourjannah' ); ?><?php endif; ?></div>
+                <?php else : ?>
+                    <div style="font-size:14px;font-weight:800;color:<?php echo $_cta_hours <= 3 ? '#991b1b' : '#92400e'; ?>;">&#x1F4FF; <?php esc_html_e( 'Say your daily dhikr', 'yourjannah' ); ?></div>
+                    <div style="font-size:12px;color:<?php echo $_cta_hours <= 3 ? '#b91c1c' : '#a16207'; ?>;"><?php echo (int) $_cta_hours; ?>h <?php esc_html_e( 'left', 'yourjannah' ); ?> &middot; 5 dhikr = <?php esc_html_e( '+200 bonus pts', 'yourjannah' ); ?></div>
+                <?php endif; ?>
+            </div>
+            <div style="font-size:24px;font-weight:900;color:<?php echo $_cta_complete ? '#166534' : '#d97706'; ?>;"><?php echo $_cta_done; ?>/5</div>
+        </div>
+        <?php if ( ! $_cta_complete ) : ?>
+        <div style="height:4px;background:rgba(0,0,0,.06);border-radius:2px;margin-top:10px;overflow:hidden;">
+            <div style="height:100%;width:<?php echo $_cta_done * 20; ?>%;background:linear-gradient(90deg,#287e61,#34d399);border-radius:2px;"></div>
+        </div>
         <?php endif; ?>
     </a>
     <?php endif; ?>

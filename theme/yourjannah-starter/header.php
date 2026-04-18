@@ -227,7 +227,7 @@ $_hud_league_url = $_hud_mosque ? home_url( '/mosque/' . $_hud_mosque_slug . '#m
     <!-- Row 2: Actions -->
     <div class="ynj-hud__row2">
         <!-- Streak -->
-        <div class="ynj-hud__stat<?php echo $_hud_streak >= 7 ? ' ynj-hud__stat--glow' : ''; ?>">
+        <div class="ynj-hud__stat<?php echo $_hud_streak >= 3 ? ' ynj-hud__stat--glow' : ''; ?>">
             <span class="ynj-hud__stat-icon">&#x1F525;</span>
             <span class="ynj-hud__stat-num" id="hud-streak"><?php echo (int) $_hud_streak; ?></span>
             <span class="ynj-hud__stat-label"><?php esc_html_e( 'streak', 'yourjannah' ); ?></span>
@@ -338,7 +338,9 @@ $_hud_league_url = $_hud_mosque ? home_url( '/mosque/' . $_hud_mosque_slug . '#m
 .ynj-hud__dhikr{display:flex;align-items:center;gap:4px;padding:5px 12px;background:linear-gradient(135deg,#287e61,#1a5c43);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .2s;box-shadow:0 2px 10px rgba(40,126,97,.3);}
 .ynj-hud__dhikr:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(40,126,97,.4);}
 .ynj-hud__dhikr:active{transform:scale(.95);}
-.ynj-hud__dhikr--done{background:rgba(40,126,97,.15);box-shadow:none;cursor:default;}
+.ynj-hud__dhikr:not(.ynj-hud__dhikr--done){animation:ynj-hud-dhikr-pulse 2s ease-in-out infinite;}
+@keyframes ynj-hud-dhikr-pulse{0%,100%{box-shadow:0 2px 10px rgba(40,126,97,.3);}50%{box-shadow:0 2px 18px rgba(40,126,97,.6),0 0 0 4px rgba(40,126,97,.1);}}
+.ynj-hud__dhikr--done{background:rgba(40,126,97,.15);box-shadow:none;cursor:default;animation:none;}
 .ynj-hud__dhikr--done:hover{transform:none;}
 
 /* ── Profile Link ── */

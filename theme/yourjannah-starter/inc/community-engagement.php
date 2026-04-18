@@ -27,15 +27,15 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 function ynj_get_masjid_level( $total_dhikr ) {
     $levels = [
         [ 'level' => 1,  'name' => 'Seedling',       'icon' => '&#x1F331;', 'xp' => 0 ],
-        [ 'level' => 2,  'name' => 'Sprout',          'icon' => '&#x1F33F;', 'xp' => 50 ],
-        [ 'level' => 3,  'name' => 'Rising Star',     'icon' => '&#x1F31F;', 'xp' => 150 ],
-        [ 'level' => 4,  'name' => 'Shining Light',   'icon' => '&#x2728;',  'xp' => 300 ],
-        [ 'level' => 5,  'name' => 'Blessed',         'icon' => '&#x1F54C;', 'xp' => 500 ],
-        [ 'level' => 6,  'name' => 'Radiant',         'icon' => '&#x1F4AB;', 'xp' => 1000 ],
-        [ 'level' => 7,  'name' => 'Luminous',        'icon' => '&#x1F320;', 'xp' => 2000 ],
-        [ 'level' => 8,  'name' => 'Majestic',        'icon' => '&#x1F451;', 'xp' => 5000 ],
-        [ 'level' => 9,  'name' => 'Glorious',        'icon' => '&#x1F3C6;', 'xp' => 10000 ],
-        [ 'level' => 10, 'name' => 'Heavenly',        'icon' => '&#x1F30D;', 'xp' => 25000 ],
+        [ 'level' => 2,  'name' => 'Sprout',          'icon' => '&#x1F33F;', 'xp' => 25 ],     // ~1 week
+        [ 'level' => 3,  'name' => 'Rising Star',     'icon' => '&#x1F31F;', 'xp' => 75 ],     // ~2 weeks
+        [ 'level' => 4,  'name' => 'Shining Light',   'icon' => '&#x2728;',  'xp' => 150 ],    // ~1 month
+        [ 'level' => 5,  'name' => 'Blessed',         'icon' => '&#x1F54C;', 'xp' => 300 ],    // ~2 months
+        [ 'level' => 6,  'name' => 'Radiant',         'icon' => '&#x1F4AB;', 'xp' => 600 ],    // ~4 months
+        [ 'level' => 7,  'name' => 'Luminous',        'icon' => '&#x1F320;', 'xp' => 1200 ],   // ~8 months
+        [ 'level' => 8,  'name' => 'Majestic',        'icon' => '&#x1F451;', 'xp' => 2500 ],   // ~1.5 years
+        [ 'level' => 9,  'name' => 'Glorious',        'icon' => '&#x1F3C6;', 'xp' => 5000 ],   // ~3 years
+        [ 'level' => 10, 'name' => 'Heavenly',        'icon' => '&#x1F30D;', 'xp' => 10000 ],  // legendary
     ];
 
     $current = $levels[0];
@@ -183,26 +183,28 @@ function ynj_get_league_standings( $mosque_id, $city = null, $days = 7 ) {
  */
 function ynj_get_badge_definitions() {
     return [
-        // Prayer badges
-        [ 'key' => 'first_prayer',    'name' => 'First Step',       'icon' => '🤲', 'desc' => 'Log your first prayer',              'check' => 'prayers >= 1' ],
-        [ 'key' => 'all_five',        'name' => 'Complete Day',     'icon' => '✨', 'desc' => 'Log all 5 prayers in one day',        'check' => 'all_five >= 1' ],
-        [ 'key' => 'prayer_week',     'name' => 'Devoted Week',     'icon' => '🌟', 'desc' => 'Log prayers 7 days in a row',         'check' => 'streak >= 7' ],
-        [ 'key' => 'prayer_month',    'name' => 'Steadfast',        'icon' => '💎', 'desc' => 'Log prayers 30 days in a row',        'check' => 'streak >= 30' ],
-        [ 'key' => 'prayer_100',      'name' => 'Century',          'icon' => '💯', 'desc' => 'Log 100 total prayers',               'check' => 'prayers >= 100' ],
-        [ 'key' => 'prayer_500',      'name' => 'Mumin',            'icon' => '🕌', 'desc' => 'Log 500 total prayers',               'check' => 'prayers >= 500' ],
+        // ── Quick wins (unlock in days, not months) ──
+        [ 'key' => 'first_dhikr',     'name' => 'First Light',      'icon' => '🌟', 'desc' => 'Say your first dhikr',                'check' => 'dhikr_days >= 1' ],
+        [ 'key' => 'dhikr_3',         'name' => 'Sparkling',        'icon' => '✨', 'desc' => 'Say dhikr 3 days',                    'check' => 'dhikr_days >= 3' ],
+        [ 'key' => 'all_five',        'name' => 'Perfect Day',      'icon' => '🎯', 'desc' => 'Complete all 5 dhikr in one day',     'check' => 'all_five >= 1' ],
+        [ 'key' => 'dhikr_7',         'name' => 'Devoted Week',     'icon' => '📿', 'desc' => 'Say dhikr 7 days',                    'check' => 'dhikr_days >= 7' ],
 
-        // Quran badges
-        [ 'key' => 'quran_first',     'name' => 'First Page',       'icon' => '📖', 'desc' => 'Read your first page of Quran',       'check' => 'quran >= 1' ],
-        [ 'key' => 'quran_juz',       'name' => 'Juz Complete',     'icon' => '📗', 'desc' => 'Read 20 pages (1 Juz)',               'check' => 'quran >= 20' ],
-        [ 'key' => 'quran_100',       'name' => 'Quran Explorer',   'icon' => '📚', 'desc' => 'Read 100 pages total',                'check' => 'quran >= 100' ],
+        // ── Streak badges ──
+        [ 'key' => 'streak_3',        'name' => 'On Fire',          'icon' => '🔥', 'desc' => '3-day streak',                        'check' => 'streak >= 3' ],
+        [ 'key' => 'streak_7',        'name' => 'Unstoppable',      'icon' => '💪', 'desc' => '7-day streak',                        'check' => 'streak >= 7' ],
+        [ 'key' => 'streak_14',       'name' => 'Warrior',          'icon' => '⚔️', 'desc' => '14-day streak',                       'check' => 'streak >= 14' ],
+        [ 'key' => 'streak_30',       'name' => 'Steadfast',        'icon' => '💎', 'desc' => '30-day streak',                       'check' => 'streak >= 30' ],
 
-        // Habit badges
-        [ 'key' => 'dhikr_7',         'name' => 'Remembrance',      'icon' => '📿', 'desc' => 'Log dhikr 7 days',                    'check' => 'dhikr_days >= 7' ],
-        [ 'key' => 'fasting_3',       'name' => 'Sunnah Faster',    'icon' => '🌙', 'desc' => 'Log 3 voluntary fasts',               'check' => 'fasting_days >= 3' ],
-        [ 'key' => 'charity_5',       'name' => 'Generous Heart',   'icon' => '💝', 'desc' => 'Log charity 5 times',                 'check' => 'charity_days >= 5' ],
-        [ 'key' => 'good_deeds_10',   'name' => 'Doer of Good',     'icon' => '⭐', 'desc' => 'Log 10 good deeds',                   'check' => 'good_deeds >= 10' ],
+        // ── Dhikr milestones ──
+        [ 'key' => 'dhikr_14',        'name' => 'Remembrance',      'icon' => '🤲', 'desc' => 'Say dhikr 14 days',                   'check' => 'dhikr_days >= 14' ],
+        [ 'key' => 'dhikr_30',        'name' => 'Luminous',         'icon' => '🌙', 'desc' => 'Say dhikr 30 days',                   'check' => 'dhikr_days >= 30' ],
+        [ 'key' => 'dhikr_100',       'name' => 'Century',          'icon' => '💯', 'desc' => 'Say dhikr 100 days',                  'check' => 'dhikr_days >= 100' ],
 
-        // Community badges
+        // ── Gratitude badges ──
+        [ 'key' => 'charity_3',       'name' => 'Grateful Heart',   'icon' => '💝', 'desc' => 'Log shukr 3 times',                   'check' => 'charity_days >= 3' ],
+        [ 'key' => 'charity_10',      'name' => 'Overflowing',      'icon' => '🌊', 'desc' => 'Log shukr 10 times',                  'check' => 'charity_days >= 10' ],
+
+        // ── Community badges ──
         [ 'key' => 'checkin_first',   'name' => 'First Visit',      'icon' => '📍', 'desc' => 'Check in at your mosque',             'check' => 'checkins >= 1' ],
         [ 'key' => 'checkin_10',      'name' => 'Regular',          'icon' => '🏠', 'desc' => 'Check in 10 times',                   'check' => 'checkins >= 10' ],
         [ 'key' => 'checkin_50',      'name' => 'Pillar',           'icon' => '🏛️', 'desc' => 'Check in 50 times',                   'check' => 'checkins >= 50' ],

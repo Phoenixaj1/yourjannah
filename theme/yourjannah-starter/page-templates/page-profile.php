@@ -392,9 +392,23 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST'
 .ynj-level-bar__fill{height:100%;background:linear-gradient(90deg,#287e61,#34d399);border-radius:4px;transition:width 1s ease-out;box-shadow:0 0 8px rgba(52,211,153,.4);}
 .ynj-level-bar__bottom{display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.5);}
 .ynj-level-bar__next{color:#34d399;font-weight:700;}
-/* ── Dhikr Progress (X/5) ── */
-.ynj-dhikr-progress{background:rgba(255,255,255,.92);border-radius:12px;padding:10px 14px;margin-bottom:10px;border:1px solid rgba(255,255,255,.6);box-shadow:0 2px 8px rgba(0,0,0,.03);}
-.ynj-dhikr-progress__text{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:#0a1628;margin-bottom:6px;}
+/* ── Bonus Banner ── */
+.ynj-bonus-banner{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:14px;background:linear-gradient(135deg,#fefce8,#fef9c3);border:2px solid #fde68a;margin-bottom:6px;animation:ynj-celebrate-pop .4s ease-out;}
+.ynj-bonus-banner__left{display:flex;align-items:center;gap:10px;}
+.ynj-bonus-banner__icon{font-size:24px;}
+.ynj-bonus-banner__title{font-size:14px;font-weight:900;color:#92400e;}
+.ynj-bonus-banner__sub{font-size:11px;color:#a16207;}
+.ynj-bonus-banner__count{font-size:22px;font-weight:900;color:#d97706;flex-shrink:0;}
+.ynj-bonus-banner--complete{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:#86efac;gap:10px;}
+.ynj-bonus-banner--complete .ynj-bonus-banner__title{color:#166534;}
+.ynj-bonus-banner--complete .ynj-bonus-banner__sub{color:#15803d;}
+.ynj-urgency--amber{border-color:#f59e0b;animation:ynj-urgency-pulse 2s infinite;}
+.ynj-urgency--red{border-color:#ef4444;background:linear-gradient(135deg,#fef2f2,#fee2e2);animation:ynj-urgency-pulse 1s infinite;}
+.ynj-urgency--red .ynj-bonus-banner__title{color:#991b1b;}
+.ynj-urgency--red .ynj-bonus-banner__sub{color:#b91c1c;}
+@keyframes ynj-urgency-pulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.2);}50%{box-shadow:0 0 0 6px rgba(245,158,11,.1);}}
+/* ── Dhikr Progress Bar ── */
+.ynj-dhikr-progress{padding:0 4px;margin-bottom:12px;}
 .ynj-dhikr-progress__bar{height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;}
 .ynj-dhikr-progress__fill{height:100%;background:linear-gradient(90deg,#287e61,#34d399);border-radius:3px;transition:width .5s ease-out;}
 /* ── Multi-dhikr card tweaks ── */
@@ -665,16 +679,32 @@ if ( $fav_mosque_id && function_exists( 'ynj_get_masjid_level' ) ) {
 </div>
 <?php endif; ?>
 
-<!-- Progress: X/5 done today -->
-<div class="ynj-dhikr-progress">
-    <div class="ynj-dhikr-progress__text">
-        <span><?php printf( esc_html__( '%d of 5 done today', 'yourjannah' ), $done_count ); ?></span>
-        <?php if ( $done_count === 5 ) : ?>
-            <span style="color:#f59e0b;font-weight:800;">&#x1F31F; <?php esc_html_e( 'ALL COMPLETE! +200 bonus', 'yourjannah' ); ?></span>
-        <?php else : ?>
-            <span style="color:#6b8fa3;"><?php echo number_format( $total_possible ); ?> <?php esc_html_e( 'pts available', 'yourjannah' ); ?></span>
-        <?php endif; ?>
+<!-- ═══ BONUS BANNER + PROGRESS + COUNTDOWN ═══ -->
+<?php
+$hours_left = 24 - (int) date( 'G' );
+$urgency_class = $hours_left <= 3 ? 'ynj-urgency--red' : ( $hours_left <= 8 ? 'ynj-urgency--amber' : '' );
+?>
+<?php if ( $done_count < 5 ) : ?>
+<div class="ynj-bonus-banner <?php echo $urgency_class; ?>">
+    <div class="ynj-bonus-banner__left">
+        <span class="ynj-bonus-banner__icon">&#x1F3AF;</span>
+        <div>
+            <div class="ynj-bonus-banner__title"><?php printf( esc_html__( 'Complete all 5 = +%d BONUS', 'yourjannah' ), 200 ); ?></div>
+            <div class="ynj-bonus-banner__sub"><?php echo (int) $hours_left; ?>h <?php esc_html_e( 'left today', 'yourjannah' ); ?> &middot; <?php echo number_format( $total_possible + 200 ); ?> <?php esc_html_e( 'pts total', 'yourjannah' ); ?></div>
+        </div>
     </div>
+    <div class="ynj-bonus-banner__count"><?php echo $done_count; ?>/5</div>
+</div>
+<?php else : ?>
+<div class="ynj-bonus-banner ynj-bonus-banner--complete">
+    <span style="font-size:24px;">&#x1F31F;</span>
+    <div>
+        <div class="ynj-bonus-banner__title"><?php esc_html_e( 'ALL 5 COMPLETE! +200 bonus earned', 'yourjannah' ); ?></div>
+        <div class="ynj-bonus-banner__sub"><?php esc_html_e( 'MashaAllah! Come back tomorrow for more.', 'yourjannah' ); ?></div>
+    </div>
+</div>
+<?php endif; ?>
+<div class="ynj-dhikr-progress">
     <div class="ynj-dhikr-progress__bar">
         <div class="ynj-dhikr-progress__fill" style="width:<?php echo $done_count * 20; ?>%"></div>
     </div>
@@ -996,10 +1026,11 @@ if ( $fav_mosque_id && $ynj_uid && class_exists( 'YNJ_DB' ) ) {
     <?php
     // Group badges by category
     $badge_cats = [
-        'Prayer'    => [ 'first_prayer', 'all_five', 'prayer_week', 'prayer_month', 'prayer_100', 'prayer_500' ],
-        'Quran'     => [ 'quran_first', 'quran_juz', 'quran_100' ],
-        'Habits'    => [ 'dhikr_7', 'fasting_3', 'charity_5', 'good_deeds_10' ],
-        'Community' => [ 'checkin_first', 'checkin_10', 'checkin_50' ],
+        'Quick Wins'  => [ 'first_dhikr', 'dhikr_3', 'all_five', 'dhikr_7' ],
+        'Streaks'     => [ 'streak_3', 'streak_7', 'streak_14', 'streak_30' ],
+        'Dhikr'       => [ 'dhikr_14', 'dhikr_30', 'dhikr_100' ],
+        'Gratitude'   => [ 'charity_3', 'charity_10' ],
+        'Community'   => [ 'checkin_first', 'checkin_10', 'checkin_50' ],
     ];
     $badge_defs_map = [];
     foreach ( $all_badge_defs as $bd ) $badge_defs_map[ $bd['key'] ] = $bd;
@@ -1388,13 +1419,37 @@ if ( $fav_mosque_id && $ynj_uid && class_exists( 'YNJ_DB' ) ) {
                         if (pt) pt.innerHTML = '<span>\uD83C\uDF1F ALL COMPLETE!</span><span style="color:#f59e0b;font-weight:800;">+200 bonus!</span>';
                     }, 1000);
                 } else {
-                    showToast('\u2728 <?php echo esc_js( __( 'Your remembrance elevates your masjid!', 'yourjannah' ) ); ?>', 'linear-gradient(135deg,#287e61,#1a5c43)', 3000);
+                    // Cascade: tell them how close to bonus
+                    var remaining = 5 - d.done_count;
+                    if (remaining === 1) {
+                        showToast('\uD83C\uDFAF <?php echo esc_js( __( 'ONE MORE for +200 bonus! Go go go!', 'yourjannah' ) ); ?>', 'linear-gradient(135deg,#d97706,#b45309)', 4000);
+                    } else if (remaining <= 3) {
+                        showToast('\u2728 ' + remaining + ' <?php echo esc_js( __( 'more to unlock +200 bonus!', 'yourjannah' ) ); ?>', 'linear-gradient(135deg,#287e61,#1a5c43)', 3500);
+                    } else {
+                        showToast('\u2728 <?php echo esc_js( __( 'Your remembrance elevates your masjid!', 'yourjannah' ) ); ?>', 'linear-gradient(135deg,#287e61,#1a5c43)', 3000);
+                    }
                 }
                 haptic();
 
-                // 6. Animate level XP bar
+                // 6. Animate level XP bar + check level-up
                 var xpFill = document.getElementById('level-xp-fill');
-                if (xpFill) { xpFill.style.boxShadow='0 0 16px rgba(52,211,153,.6)'; setTimeout(function(){xpFill.style.boxShadow='';},1000); }
+                if (xpFill) {
+                    xpFill.style.boxShadow='0 0 16px rgba(52,211,153,.6)';
+                    // Check if we leveled up (XP bar hits 100%)
+                    var currentWidth = parseInt(xpFill.style.width) || 0;
+                    if (currentWidth >= 95) {
+                        // LEVEL UP! Mega celebration
+                        setTimeout(function(){
+                            var levelBar = document.querySelector('.ynj-level-bar');
+                            if (levelBar) {
+                                fireConfetti(levelBar);
+                                setTimeout(function(){ fireConfetti(levelBar); }, 400);
+                                showToast('\uD83C\uDF89 MASJID LEVEL UP! <?php echo esc_js( $fav_mosque ? $fav_mosque->name : '' ); ?> <?php echo esc_js( __( 'ascends!', 'yourjannah' ) ); ?>', 'linear-gradient(135deg,#7c3aed,#5b21b6)', 6000);
+                            }
+                        }, 1500);
+                    }
+                    setTimeout(function(){xpFill.style.boxShadow='';},1000);
+                }
             } else if (d.already_done) {
                 btn.outerHTML = '<div class="ynj-dhikr-done-inline">\u2705 <?php echo esc_js( __( 'Already done!', 'yourjannah' ) ); ?></div>';
             }
