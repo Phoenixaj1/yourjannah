@@ -33,4 +33,10 @@ add_action( 'plugins_loaded', function() {
         require_once YNJ_EVENTS_DIR . 'api/class-ynj-api-bookings.php';
     }
 
+    // WP Admin pages.
+    if ( is_admin() ) {
+        require_once YNJ_EVENTS_DIR . 'inc/class-ynj-events-admin.php';
+        YNJ_Events_Admin::init();
+    }
+
 }, 10 );

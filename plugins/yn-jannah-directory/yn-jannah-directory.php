@@ -33,4 +33,10 @@ add_action( 'plugins_loaded', function() {
         require_once YNJ_DIRECTORY_DIR . 'api/class-ynj-api-search.php';
     }
 
+    // WP Admin pages (businesses, services, enquiries)
+    if ( is_admin() ) {
+        require_once YNJ_DIRECTORY_DIR . 'inc/class-ynj-directory-admin.php';
+        YNJ_Directory_Admin::init();
+    }
+
 }, 10 );

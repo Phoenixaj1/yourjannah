@@ -41,4 +41,10 @@ add_action( 'plugins_loaded', function() {
         require_once YNJ_DONATIONS_DIR . 'api/class-ynj-api-dfm-webhook.php';
     }
 
+    // WP Admin pages — only load in admin context
+    if ( is_admin() && ! class_exists( 'YNJ_Donations_Admin' ) ) {
+        require_once YNJ_DONATIONS_DIR . 'inc/class-ynj-donations-admin.php';
+        YNJ_Donations_Admin::init();
+    }
+
 }, 10 );
