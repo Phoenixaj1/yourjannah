@@ -124,15 +124,20 @@ class YNJ_User_Auth {
     public static function verify_token( $token ) {
         if ( empty( $token ) ) return null;
 
-        $token_hash = hash_hmac( 'sha256', $token, wp_salt( 'auth' ) );
-
         global $wpdb;
         $table = YNJ_DB::table( 'users' );
 
-        $user = $wpdb->get_row( $wpdb->prepare(
-            "SELECT * FROM $table WHERE token_hash = %s AND status = 'active' LIMIT 1",
-            $token_hash
-        ) );
+        // Try both salts (new system uses 'ynj_user_salt_2024', legacy uses wp_salt)
+        $salts = [ 'ynj_user_salt_2024', wp_salt( 'auth' ) ];
+        $user = null;
+        foreach ( $salts as $salt ) {
+            $token_hash = hash_hmac( 'sha256', $token, $salt );
+            $user = $wpdb->get_row( $wpdb->prepare(
+                "SELECT * FROM $table WHERE token_hash = %s AND status = 'active' LIMIT 1",
+                $token_hash
+            ) );
+            if ( $user ) break;
+        }
 
         if ( ! $user ) return null;
 
@@ -148,16 +153,33 @@ class YNJ_User_Auth {
      * Permission callback for user-authenticated routes.
      */
     public static function user_check( \WP_REST_Request $request ) {
+        // Try Bearer token first
         $header = $request->get_header( 'authorization' );
-        if ( ! $header || ! preg_match( '/^Bearer\s+(.+)$/i', $header, $matches ) ) {
-            return false;
+        if ( $header && preg_match( '/^Bearer\s+(.+)$/i', $header, $matches ) ) {
+            $user = self::verify_token( $matches[1] );
+            if ( $user ) {
+                $request->set_param( '_ynj_user', $user );
+                return true;
+            }
         }
 
-        $user = self::verify_token( $matches[1] );
-        if ( ! $user ) return false;
+        // Fallback: WP cookie auth (for PIN-logged-in users)
+        $wp_user_id = get_current_user_id();
+        if ( $wp_user_id ) {
+            $ynj_user_id = (int) get_user_meta( $wp_user_id, 'ynj_user_id', true );
+            if ( $ynj_user_id ) {
+                global $wpdb;
+                $user = $wpdb->get_row( $wpdb->prepare(
+                    "SELECT * FROM " . YNJ_DB::table( 'users' ) . " WHERE id = %d AND status = 'active'", $ynj_user_id
+                ) );
+                if ( $user ) {
+                    $request->set_param( '_ynj_user', $user );
+                    return true;
+                }
+            }
+        }
 
-        $request->set_param( '_ynj_user', $user );
-        return true;
+        return false;
     }
 
     /**
