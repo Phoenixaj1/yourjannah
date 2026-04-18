@@ -266,10 +266,18 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
             <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;">Your Email</label>
             <input type="email" id="ob-email" placeholder="your@email.com" autocomplete="email" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-family:inherit;outline:none;">
         </div>
-        <div id="ob-pass-row" style="display:none;margin-bottom:12px;text-align:left;">
-            <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;">Welcome back! Enter your password</label>
-            <input type="password" id="ob-pass" placeholder="Your password" autocomplete="current-password" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-family:inherit;outline:none;">
-            <a href="<?php echo esc_url( home_url( '/forgot-password' ) ); ?>" style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px;display:block;">Forgot password?</a>
+        <!-- Existing user: enter PIN -->
+        <div id="ob-pin-row" style="display:none;margin-bottom:12px;text-align:left;">
+            <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;"><?php esc_html_e( 'Welcome back! Enter your PIN', 'yourjannah' ); ?></label>
+            <input type="tel" id="ob-pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="off" style="width:100%;padding:14px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;letter-spacing:12px;text-align:center;font-family:inherit;outline:none;">
+            <a href="<?php echo esc_url( home_url( '/forgot-password' ) ); ?>" style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px;display:block;"><?php esc_html_e( 'Forgot PIN?', 'yourjannah' ); ?></a>
+        </div>
+        <!-- New user: create PIN -->
+        <div id="ob-newpin-row" style="display:none;margin-bottom:12px;text-align:left;">
+            <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;"><?php esc_html_e( 'Choose a 4-digit PIN', 'yourjannah' ); ?></label>
+            <input type="tel" id="ob-newpin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="off" style="width:100%;padding:14px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;letter-spacing:12px;text-align:center;font-family:inherit;outline:none;margin-bottom:8px;">
+            <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;"><?php esc_html_e( 'Confirm PIN', 'yourjannah' ); ?></label>
+            <input type="tel" id="ob-newpin2" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="off" style="width:100%;padding:14px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;letter-spacing:12px;text-align:center;font-family:inherit;outline:none;">
         </div>
 
         <button id="ob-submit" onclick="obSubmitEmail()" style="width:100%;padding:14px;border:none;border-radius:12px;background:#fff;color:#0a1628;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">
@@ -403,26 +411,28 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
     // Step 3: Email check + register/login
     window.obSubmitEmail = async function() {
         var email = document.getElementById('ob-email').value.trim();
-        var pass = document.getElementById('ob-pass').value;
+        var pin = document.getElementById('ob-pin').value.trim();
+        var newpin = document.getElementById('ob-newpin').value.trim();
+        var newpin2 = document.getElementById('ob-newpin2').value.trim();
         var errEl = document.getElementById('ob-error');
         var btn = document.getElementById('ob-submit');
         errEl.textContent = '';
 
         if (!email || email.indexOf('@') < 1) { errEl.textContent = 'Please enter a valid email.'; return; }
 
-        // If password field is showing, this is a login attempt
-        if (document.getElementById('ob-pass-row').style.display !== 'none' && pass) {
+        // If PIN field is showing, this is a login attempt
+        if (document.getElementById('ob-pin-row').style.display !== 'none' && pin) {
+            if (pin.length < 4) { errEl.textContent = 'PIN must be at least 4 digits.'; return; }
             btn.disabled = true; btn.textContent = 'Signing in...';
             try {
                 var resp = await fetch(API + 'auth/login', {
                     method: 'POST', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({email: email, password: pass})
+                    body: JSON.stringify({email: email, pin: pin})
                 });
                 var data = await resp.json();
                 if (data.ok && data.token) {
                     localStorage.setItem('ynj_user_token', data.token);
                     localStorage.setItem('ynj_onboard_seen', '1');
-                    // Set WP session
                     if (data.wp_user_id) {
                         await fetch('<?php echo admin_url("admin-ajax.php"); ?>', {
                             method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'},
@@ -431,10 +441,43 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
                     }
                     window.location.reload();
                 } else {
-                    errEl.textContent = data.error || 'Incorrect password. Try again.';
+                    errEl.textContent = data.error || 'Incorrect PIN. Try again.';
                     btn.disabled = false; btn.textContent = 'Sign In';
                 }
             } catch(e) { errEl.textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Sign In'; }
+            return;
+        }
+
+        // If new PIN fields are showing, this is registration
+        if (document.getElementById('ob-newpin-row').style.display !== 'none' && newpin) {
+            if (newpin.length < 4) { errEl.textContent = 'PIN must be at least 4 digits.'; return; }
+            if (!/^\d+$/.test(newpin)) { errEl.textContent = 'PIN must be numbers only.'; return; }
+            if (newpin !== newpin2) { errEl.textContent = "PINs don't match. Try again."; document.getElementById('ob-newpin2').value = ''; document.getElementById('ob-newpin2').focus(); return; }
+
+            btn.disabled = true; btn.textContent = 'Creating your account...';
+            var name = email.split('@')[0].replace(/[._]/g, ' ');
+            try {
+                var regResp = await fetch(API + 'auth/register', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({name: name, email: email, pin: newpin, mosque_slug: obSelectedSlug})
+                });
+                var regData = await regResp.json();
+                if (regData.ok && regData.token) {
+                    localStorage.setItem('ynj_user_token', regData.token);
+                    localStorage.setItem('ynj_onboard_seen', '1');
+                    if (regData.wp_user_id) {
+                        await fetch('<?php echo admin_url("admin-ajax.php"); ?>', {
+                            method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                            body: 'action=ynj_set_session&wp_user_id=' + regData.wp_user_id, credentials: 'same-origin'
+                        });
+                    }
+                    // Auto-join mosque (continue to existing join logic below)
+                    obJoinAndReload(regData);
+                } else {
+                    errEl.textContent = regData.error || 'Registration failed. Try again.';
+                    btn.disabled = false; btn.textContent = 'Create Account';
+                }
+            } catch(e) { errEl.textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Create Account'; }
             return;
         }
 
@@ -448,48 +491,34 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
             var checkData = await checkResp.json();
 
             if (checkData.exists) {
-                // Show password field
-                document.getElementById('ob-pass-row').style.display = '';
-                document.getElementById('ob-pass').focus();
+                // Existing user → show PIN field
+                document.getElementById('ob-pin-row').style.display = '';
+                document.getElementById('ob-pin').focus();
                 btn.textContent = 'Sign In';
                 btn.disabled = false;
                 return;
             }
 
-            // New user: auto-register
-            btn.textContent = 'Creating your account...';
-            var name = email.split('@')[0].replace(/[._]/g, ' ');
-            var autoPass = 'YJ_' + Math.random().toString(36).slice(2, 10) + '!';
-            var regResp = await fetch(API + 'auth/register', {
-                method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({name: name, email: email, password: autoPass, mosque_slug: obSelectedSlug})
-            });
-            var regData = await regResp.json();
-            if (regData.ok && regData.token) {
-                localStorage.setItem('ynj_user_token', regData.token);
-                localStorage.setItem('ynj_onboard_seen', '1');
-                // Join the mosque as member
-                if (regData.wp_user_id) {
-                    await fetch('<?php echo admin_url("admin-ajax.php"); ?>', {
-                        method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'},
-                        body: 'action=ynj_set_session&wp_user_id=' + regData.wp_user_id, credentials: 'same-origin'
-                    });
-                }
-                // Auto-join mosque
-                try {
-                    await fetch(API + 'auth/join-mosque', {
-                        method: 'POST', headers: {'Content-Type':'application/json', 'X-WP-Nonce': '<?php echo wp_create_nonce("wp_rest"); ?>'},
-                        credentials: 'same-origin',
-                        body: JSON.stringify({mosque_slug: obSelectedSlug, set_primary: true})
-                    });
-                } catch(e) {}
-                window.location.reload();
-            } else {
-                errEl.textContent = regData.error || 'Could not create account. Try again.';
-                btn.disabled = false; btn.textContent = 'Continue';
-            }
+            // New user → show create PIN fields
+            document.getElementById('ob-newpin-row').style.display = '';
+            document.getElementById('ob-newpin').focus();
+            btn.textContent = 'Create Account';
+            btn.disabled = false;
+            return;
         } catch(e) { errEl.textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Continue'; }
     };
+
+    // Helper: auto-join mosque + reload after registration
+    async function obJoinAndReload(regData) {
+        try {
+            await fetch(API + 'auth/join-mosque', {
+                method: 'POST', headers: {'Content-Type':'application/json', 'X-WP-Nonce': '<?php echo wp_create_nonce("wp_rest"); ?>'},
+                credentials: 'same-origin',
+                body: JSON.stringify({mosque_slug: obSelectedSlug, set_primary: true})
+            });
+        } catch(e) {}
+        window.location.reload();
+    }
 
     window.obSkip = function() {
         localStorage.setItem('ynj_onboard_seen', '1');
