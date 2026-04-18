@@ -29,6 +29,10 @@ add_action( 'plugins_loaded', function() {
     require_once YNJ_GAMIFICATION_DIR . 'inc/class-ynj-streaks.php';
     require_once YNJ_GAMIFICATION_DIR . 'inc/class-ynj-badges.php';
 
+    if ( ! class_exists( 'YNJ_API_Points' ) ) {
+        require_once YNJ_GAMIFICATION_DIR . 'api/class-ynj-api-points.php';
+    }
+
     // ── Register global helper functions (backward compat) ──
     // These wrap the class methods so existing code keeps working.
 
