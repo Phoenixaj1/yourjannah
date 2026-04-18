@@ -38,18 +38,33 @@ function ynj_get_league_tier( $member_count ) {
 
 /**
  * Get mosque league standings — ranked against same-tier mosques.
- * Score = ibadah points PER MEMBER (normalised, so small mosques can win).
+ *
+ * Score is based on REAL ENGAGEMENT (not ibadah — that's private):
+ *   - Page views on mosque page (mosque_views)
+ *   - Content reactions (likes, duas, interested on announcements/events)
+ *   - RSVPs / event bookings
+ *   - New subscriber joins
+ *   - GPS check-ins (physical attendance)
+ *   - Content posted by admin (announcements + events)
+ *
+ * All normalised PER MEMBER so a 50-person mosque can beat a 5000-person one.
  *
  * @param int    $mosque_id
- * @param string $city        Optional city filter (null = national)
+ * @param string $city        Optional city filter (null = national league)
  * @param int    $days        Period (default 7 = this week)
- * @return array { rank, total, score, per_member, tier, top_mosques[] }
+ * @return array { rank, total, score, per_member, tier, top_mosques[], breakdown }
  */
 function ynj_get_league_standings( $mosque_id, $city = null, $days = 7 ) {
     global $wpdb;
-    $mt  = YNJ_DB::table( 'mosques' );
-    $sub = YNJ_DB::table( 'user_subscriptions' );
-    $ib  = YNJ_DB::table( 'ibadah_logs' );
+    $mt   = YNJ_DB::table( 'mosques' );
+    $sub  = YNJ_DB::table( 'user_subscriptions' );
+    $mv   = YNJ_DB::table( 'mosque_views' );
+    $cv   = YNJ_DB::table( 'content_views' );
+    $rt   = YNJ_DB::table( 'reactions' );
+    $bk   = YNJ_DB::table( 'bookings' );
+    $pt   = YNJ_DB::table( 'points' );
+    $at   = YNJ_DB::table( 'announcements' );
+    $ev   = YNJ_DB::table( 'events' );
     $since = date( 'Y-m-d', strtotime( "-{$days} days" ) );
 
     // Get this mosque's member count + tier
@@ -58,32 +73,89 @@ function ynj_get_league_standings( $mosque_id, $city = null, $days = 7 ) {
     ) );
     $my_tier = ynj_get_league_tier( $my_members );
 
-    // Find all mosques in same tier
+    // Build league table for all mosques in same tier
+    // Score components (weighted):
+    //   Page views × 1
+    //   Content views × 1
+    //   Reactions × 3 (high-value engagement)
+    //   RSVPs/bookings × 5 (commitment action)
+    //   Check-ins × 5 (physical attendance)
+    //   New subscribers × 10 (growth)
+    //   Content posted × 8 (admin activity)
     $city_clause = $city ? $wpdb->prepare( " AND m.city = %s", $city ) : '';
+
     $mosques_in_tier = $wpdb->get_results(
         "SELECT m.id, m.name, m.slug, m.city,
                 COALESCE(s.cnt, 0) AS members,
-                COALESCE(ib_agg.total_pts, 0) AS total_ibadah,
-                CASE WHEN COALESCE(s.cnt, 0) > 0 THEN ROUND(COALESCE(ib_agg.total_pts, 0) / s.cnt, 1) ELSE 0 END AS per_member
+                COALESCE(pg.page_views, 0) AS page_views,
+                COALESCE(cv_agg.content_views, 0) AS content_views,
+                COALESCE(rx.reaction_count, 0) AS reactions,
+                COALESCE(bk_agg.rsvps, 0) AS rsvps,
+                COALESCE(ci.checkins, 0) AS checkins,
+                COALESCE(ns.new_subs, 0) AS new_subs,
+                COALESCE(cp.posts, 0) AS content_posted,
+                (
+                    COALESCE(pg.page_views, 0) * 1 +
+                    COALESCE(cv_agg.content_views, 0) * 1 +
+                    COALESCE(rx.reaction_count, 0) * 3 +
+                    COALESCE(bk_agg.rsvps, 0) * 5 +
+                    COALESCE(ci.checkins, 0) * 5 +
+                    COALESCE(ns.new_subs, 0) * 10 +
+                    COALESCE(cp.posts, 0) * 8
+                ) AS raw_score,
+                CASE WHEN COALESCE(s.cnt, 0) > 0 THEN ROUND(
+                    (
+                        COALESCE(pg.page_views, 0) * 1 +
+                        COALESCE(cv_agg.content_views, 0) * 1 +
+                        COALESCE(rx.reaction_count, 0) * 3 +
+                        COALESCE(bk_agg.rsvps, 0) * 5 +
+                        COALESCE(ci.checkins, 0) * 5 +
+                        COALESCE(ns.new_subs, 0) * 10 +
+                        COALESCE(cp.posts, 0) * 8
+                    ) / s.cnt, 1
+                ) ELSE 0 END AS per_member
          FROM $mt m
          LEFT JOIN (SELECT mosque_id, COUNT(*) AS cnt FROM $sub WHERE status = 'active' GROUP BY mosque_id) s ON s.mosque_id = m.id
-         LEFT JOIN (SELECT mosque_id, SUM(points_earned) AS total_pts FROM $ib WHERE log_date >= '$since' GROUP BY mosque_id) ib_agg ON ib_agg.mosque_id = m.id
+         LEFT JOIN (SELECT mosque_id, SUM(view_count) AS page_views FROM $mv WHERE view_date >= '$since' GROUP BY mosque_id) pg ON pg.mosque_id = m.id
+         LEFT JOIN (SELECT mosque_id, SUM(view_count) AS content_views FROM $cv WHERE view_date >= '$since' GROUP BY mosque_id) cv_agg ON cv_agg.mosque_id = m.id
+         LEFT JOIN (SELECT c.mosque_id, COUNT(*) AS reaction_count FROM $rt r JOIN $at c ON c.id = r.content_id AND r.content_type = 'announcement' WHERE r.created_at >= '$since' GROUP BY c.mosque_id) rx ON rx.mosque_id = m.id
+         LEFT JOIN (SELECT mosque_id, COUNT(*) AS rsvps FROM $bk WHERE created_at >= '$since' GROUP BY mosque_id) bk_agg ON bk_agg.mosque_id = m.id
+         LEFT JOIN (SELECT mosque_id, COUNT(*) AS checkins FROM $pt WHERE action = 'check_in' AND created_at >= '$since' GROUP BY mosque_id) ci ON ci.mosque_id = m.id
+         LEFT JOIN (SELECT mosque_id, COUNT(*) AS new_subs FROM $sub WHERE subscribed_at >= '$since' GROUP BY mosque_id) ns ON ns.mosque_id = m.id
+         LEFT JOIN (
+             SELECT mosque_id, COUNT(*) AS posts FROM (
+                 SELECT mosque_id FROM $at WHERE published_at >= '$since' AND status = 'published'
+                 UNION ALL
+                 SELECT mosque_id FROM $ev WHERE created_at >= '$since' AND status = 'published'
+             ) combined GROUP BY mosque_id
+         ) cp ON cp.mosque_id = m.id
          WHERE m.status = 'active'
            AND COALESCE(s.cnt, 0) BETWEEN {$my_tier['min']} AND {$my_tier['max']}
            {$city_clause}
+         HAVING raw_score > 0
          ORDER BY per_member DESC
          LIMIT 50"
     );
 
-    // Find our rank
+    // Find our rank + breakdown
     $rank = 0;
     $my_score = 0;
     $my_per_member = 0;
+    $my_breakdown = [];
     foreach ( $mosques_in_tier as $i => $m ) {
         if ( (int) $m->id === $mosque_id ) {
             $rank = $i + 1;
-            $my_score = (int) $m->total_ibadah;
+            $my_score = (int) $m->raw_score;
             $my_per_member = (float) $m->per_member;
+            $my_breakdown = [
+                'page_views'     => (int) $m->page_views,
+                'content_views'  => (int) $m->content_views,
+                'reactions'      => (int) $m->reactions,
+                'rsvps'          => (int) $m->rsvps,
+                'checkins'       => (int) $m->checkins,
+                'new_subs'       => (int) $m->new_subs,
+                'content_posted' => (int) $m->content_posted,
+            ];
             break;
         }
     }
@@ -95,7 +167,8 @@ function ynj_get_league_standings( $mosque_id, $city = null, $days = 7 ) {
         'per_member' => $my_per_member,
         'members'    => $my_members,
         'tier'       => $my_tier,
-        'top_3'      => array_slice( $mosques_in_tier, 0, 3 ),
+        'top_5'      => array_slice( $mosques_in_tier, 0, 5 ),
+        'breakdown'  => $my_breakdown,
     ];
 }
 

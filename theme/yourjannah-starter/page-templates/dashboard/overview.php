@@ -232,16 +232,40 @@ foreach ( $nudges as $nudge ) : ?>
     </div>
 </div>
 
-<!-- ═══ CITY RANKING ═══ -->
-<?php if ( $city_rank && $city_rank['total'] > 1 ) : ?>
-<div class="d-card" style="background:linear-gradient(135deg,#faf5ff,#ede9fe);border:1px solid #c4b5fd;">
-    <div style="display:flex;align-items:center;gap:12px;">
-        <span style="font-size:36px;">🏆</span>
-        <div>
-            <h3 style="margin:0;color:#5b21b6;"><?php printf( esc_html__( '#%d in %s', 'yourjannah' ), $city_rank['rank'], esc_html( $city_rank['city'] ) ); ?></h3>
-            <p style="font-size:12px;color:#7c3aed;margin:2px 0 0;"><?php printf( esc_html__( 'Out of %d mosques · Score: %s this month', 'yourjannah' ), $city_rank['total'], number_format( $city_rank['score'] ) ); ?></p>
+<!-- ═══ MOSQUE LEAGUE POSITION ═══ -->
+<?php
+$dash_league = function_exists( 'ynj_get_league_standings' ) ? ynj_get_league_standings( $mosque_id, $mosque->city ?? null, 7 ) : null;
+if ( $dash_league && $dash_league['total'] > 0 ) :
+?>
+<div class="d-card" style="background:linear-gradient(135deg,#78350f,#92400e);color:#fff;border:none;">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+        <span style="font-size:36px;"><?php echo $dash_league['tier']['icon']; ?></span>
+        <div style="flex:1;">
+            <h3 style="margin:0;color:#fff;"><?php echo esc_html( $dash_league['tier']['name'] ); ?> <?php esc_html_e( 'League', 'yourjannah' ); ?></h3>
+            <p style="font-size:12px;color:rgba(255,255,255,.6);margin:2px 0 0;">
+                <?php printf( esc_html__( '%d mosques · %s · This week', 'yourjannah' ), $dash_league['total'], esc_html( $mosque->city ?? 'National' ) ); ?>
+            </p>
         </div>
+        <?php if ( $dash_league['rank'] > 0 ) : ?>
+        <div style="text-align:center;background:rgba(255,255,255,.15);padding:10px 16px;border-radius:12px;">
+            <div style="font-size:28px;font-weight:800;">#<?php echo $dash_league['rank']; ?></div>
+            <div style="font-size:10px;opacity:.7;"><?php esc_html_e( 'rank', 'yourjannah' ); ?></div>
+        </div>
+        <?php endif; ?>
     </div>
+    <?php if ( $dash_league['rank'] > 0 && ! empty( $dash_league['breakdown'] ) ) :
+        $dbd = $dash_league['breakdown'];
+    ?>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px;">
+        <?php if ( $dbd['page_views'] ) : ?><span style="padding:4px 10px;background:rgba(255,255,255,.12);border-radius:6px;">👁 <?php echo $dbd['page_views']; ?> views</span><?php endif; ?>
+        <?php if ( $dbd['reactions'] ) : ?><span style="padding:4px 10px;background:rgba(255,255,255,.12);border-radius:6px;">❤️ <?php echo $dbd['reactions']; ?> reactions</span><?php endif; ?>
+        <?php if ( $dbd['rsvps'] ) : ?><span style="padding:4px 10px;background:rgba(255,255,255,.12);border-radius:6px;">📋 <?php echo $dbd['rsvps']; ?> RSVPs</span><?php endif; ?>
+        <?php if ( $dbd['checkins'] ) : ?><span style="padding:4px 10px;background:rgba(255,255,255,.12);border-radius:6px;">📍 <?php echo $dbd['checkins']; ?> check-ins</span><?php endif; ?>
+        <?php if ( $dbd['new_subs'] ) : ?><span style="padding:4px 10px;background:rgba(255,255,255,.12);border-radius:6px;">👥 +<?php echo $dbd['new_subs']; ?> new</span><?php endif; ?>
+        <?php if ( $dbd['content_posted'] ) : ?><span style="padding:4px 10px;background:rgba(255,255,255,.12);border-radius:6px;">📢 <?php echo $dbd['content_posted']; ?> posts</span><?php endif; ?>
+    </div>
+    <p style="font-size:11px;color:rgba(255,255,255,.5);margin-top:8px;"><?php esc_html_e( 'Score = engagement per member. Post more, get reactions, grow subscribers to climb!', 'yourjannah' ); ?></p>
+    <?php endif; ?>
 </div>
 <?php endif; ?>
 
