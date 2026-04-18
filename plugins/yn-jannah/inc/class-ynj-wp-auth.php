@@ -529,7 +529,7 @@ class YNJ_WP_Auth {
             }
         }
 
-        // ── Step 4: Link WP user → ynj_users record ──
+        // ── Step 4: Link WP user → ynj_users record + ensure role ──
         $ynj_user_id = (int) get_user_meta( $wp_user->ID, 'ynj_user_id', true );
         if ( ! $ynj_user_id ) {
             $ynj_user_id = (int) $wpdb->get_var( $wpdb->prepare(
@@ -540,6 +540,12 @@ class YNJ_WP_Auth {
             }
         }
         update_user_meta( $wp_user->ID, 'ynj_has_pin', 1 );
+        // Ensure congregation role (skip for administrators)
+        if ( ! in_array( 'administrator', (array) $wp_user->roles, true ) && ! user_can( $wp_user, 'ynj_manage_mosque' ) ) {
+            if ( ! in_array( 'ynj_congregation', (array) $wp_user->roles, true ) ) {
+                $wp_user->add_role( 'ynj_congregation' );
+            }
+        }
 
         // ── Step 5: Generate session token ──
         $token = bin2hex( random_bytes( 32 ) );

@@ -109,25 +109,19 @@ class YNJ_API_User {
         global $wpdb;
         $exists = false;
 
-        // Check if user exists in either system
+        // Check both systems — WP user AND ynj_users
         $has_pin = false;
         $wp_user = get_user_by( 'email', $email );
+        $ynj_row = class_exists( 'YNJ_DB' ) ? $wpdb->get_row( $wpdb->prepare(
+            "SELECT id, password_hash FROM " . YNJ_DB::table( 'users' ) . " WHERE email = %s AND status = 'active' LIMIT 1", $email
+        ) ) : null;
 
-        // Check WP user first (source of truth for PIN auth)
-        if ( $wp_user ) {
-            $exists = true;
-            $has_pin = (bool) get_user_meta( $wp_user->ID, 'ynj_has_pin', true );
-        }
+        $exists = (bool) $wp_user || (bool) $ynj_row;
 
-        // Also check ynj_users (legacy users who may not have WP account yet)
-        if ( ! $exists && class_exists( 'YNJ_DB' ) ) {
-            $row = $wpdb->get_row( $wpdb->prepare(
-                "SELECT id, password_hash FROM " . YNJ_DB::table( 'users' ) . " WHERE email = %s AND status = 'active' LIMIT 1", $email
-            ) );
-            if ( $row ) {
-                $exists = true;
-                $has_pin = ! empty( $row->password_hash );
-            }
+        if ( $exists ) {
+            // has_pin is true if EITHER source confirms it
+            $has_pin = ( $wp_user && (bool) get_user_meta( $wp_user->ID, 'ynj_has_pin', true ) )
+                    || ( $ynj_row && ! empty( $ynj_row->password_hash ) );
         }
 
         return new \WP_REST_Response( [ 'ok' => true, 'exists' => $exists, 'has_pin' => $has_pin ] );
@@ -164,7 +158,7 @@ class YNJ_API_User {
         // Update password_hash with PIN hash
         $pin_hash = password_hash( $pin, PASSWORD_DEFAULT );
         $token = bin2hex( random_bytes( 32 ) );
-        $token_hash = hash_hmac( 'sha256', $token, wp_salt( 'auth' ) );
+        $token_hash = hash_hmac( 'sha256', $token, 'ynj_user_salt_2024' );
 
         $wpdb->update( $table, [
             'password_hash' => $pin_hash,
