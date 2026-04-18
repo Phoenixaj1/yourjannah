@@ -91,14 +91,84 @@ if ( is_user_logged_in() ) {
 ?>
 
 <?php if ( $_ynj_bar_status === 'guest' ) : ?>
-<!-- ── Guest bar ── -->
-<div class="ynj-hud ynj-hud--guest">
-    <span class="ynj-hud__msg">&#x1F54C; <?php esc_html_e( 'Fall in love with your Masjid & Community', 'yourjannah' ); ?></span>
-    <div class="ynj-hud__actions">
+<!-- ── Guest HUD — Geo Aura ── -->
+<div class="ynj-hud ynj-hud--guest" id="ynj-hud">
+    <div class="ynj-hud__row1">
+        <span class="ynj-hud__aura-icon">&#x2728;</span>
+        <span class="ynj-hud__aura-location" id="hud-guest-location"><?php esc_html_e( 'Detecting your area...', 'yourjannah' ); ?></span>
+        <span class="ynj-hud__aura-stat" id="hud-guest-dhikr" style="display:none;">
+            <span class="ynj-hud__aura-num" id="hud-guest-dhikr-num">0</span>
+            <span class="ynj-hud__aura-label"><?php esc_html_e( 'dhikr', 'yourjannah' ); ?></span>
+        </span>
+        <span class="ynj-hud__aura-stat" id="hud-guest-masjids" style="display:none;">
+            <span class="ynj-hud__aura-num" id="hud-guest-masjid-num">0</span>
+            <span class="ynj-hud__aura-label"><?php esc_html_e( 'masjids', 'yourjannah' ); ?></span>
+        </span>
+    </div>
+    <div class="ynj-hud__row2">
         <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" class="ynj-hud__link"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></a>
-        <a href="<?php echo esc_url( home_url( '/register' ) ); ?>" class="ynj-hud__cta">&#x2728; <?php esc_html_e( 'Join Free', 'yourjannah' ); ?></a>
+        <a href="<?php echo esc_url( home_url( '/register' ) ); ?>" class="ynj-hud__cta">&#x2728; <?php esc_html_e( 'Join & Add Your Dhikr', 'yourjannah' ); ?></a>
     </div>
 </div>
+<style>
+.ynj-hud--guest .ynj-hud__row1{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
+.ynj-hud--guest .ynj-hud__row2{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:auto;}
+.ynj-hud__aura-icon{font-size:16px;flex-shrink:0;}
+.ynj-hud__aura-location{font-size:12px;font-weight:800;color:#fff;white-space:nowrap;}
+.ynj-hud__aura-stat{display:flex;align-items:center;gap:3px;padding:2px 8px;background:rgba(255,255,255,.08);border-radius:8px;flex-shrink:0;}
+.ynj-hud__aura-num{font-size:13px;font-weight:900;color:#34d399;}
+.ynj-hud__aura-label{font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.3px;}
+.ynj-hud--guest .ynj-hud__link{color:rgba(255,255,255,.7);text-decoration:none;font-size:12px;font-weight:600;}
+.ynj-hud--guest .ynj-hud__cta{padding:5px 14px;border-radius:10px;background:linear-gradient(135deg,#287e61,#1a5c43);font-weight:700;font-size:12px;text-decoration:none;color:#fff !important;white-space:nowrap;box-shadow:0 2px 8px rgba(40,126,97,.3);}
+@media(max-width:480px){
+    .ynj-hud--guest .ynj-hud__aura-location{font-size:11px;}
+    .ynj-hud--guest .ynj-hud__cta{font-size:11px;padding:4px 10px;}
+    .ynj-hud--guest .ynj-hud__link{display:none;}
+}
+</style>
+<script>
+(function(){
+    /* Detect guest location: GPS first, then IP fallback */
+    function loadAura(city) {
+        var url = '/wp-json/ynj/v1/aura' + (city ? '?city=' + encodeURIComponent(city) : '');
+        fetch(url).then(function(r){return r.json();}).then(function(d){
+            if (!d.ok) return;
+            var loc = document.getElementById('hud-guest-location');
+            var dhikrEl = document.getElementById('hud-guest-dhikr');
+            var masjidEl = document.getElementById('hud-guest-masjids');
+            if (loc && d.location) loc.textContent = d.location;
+            if (dhikrEl && d.total_dhikr > 0) {
+                dhikrEl.style.display = 'flex';
+                document.getElementById('hud-guest-dhikr-num').textContent = d.total_dhikr.toLocaleString();
+            }
+            if (masjidEl && d.masjid_count > 0) {
+                masjidEl.style.display = 'flex';
+                document.getElementById('hud-guest-masjid-num').textContent = d.masjid_count;
+            }
+        }).catch(function(){});
+    }
+
+    /* Try GPS first (fast timeout) */
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(pos) {
+                /* Got GPS — find nearest city */
+                fetch('/wp-json/ynj/v1/aura/nearby?lat=' + pos.coords.latitude + '&lng=' + pos.coords.longitude)
+                    .then(function(r){return r.json();})
+                    .then(function(d){
+                        if (d.ok && d.city) loadAura(d.city);
+                        else loadAura(''); /* IP fallback via server */
+                    }).catch(function(){ loadAura(''); });
+            },
+            function() { loadAura(''); }, /* GPS denied — IP fallback */
+            { timeout: 3000, maximumAge: 300000 }
+        );
+    } else {
+        loadAura(''); /* No GPS — IP fallback */
+    }
+})();
+</script>
+<?php endif; ?>
 <?php else : ?>
 <?php
 // ── Masjid XP data for progress bar ──

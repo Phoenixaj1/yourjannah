@@ -65,6 +65,20 @@ class YNJ_API_Points {
             'permission_callback' => '__return_true',
         ] );
 
+        // GET /aura — city/country dhikr totals for guests (geo-detected)
+        register_rest_route( self::NS, '/aura', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'aura_stats' ],
+            'permission_callback' => '__return_true',
+        ] );
+
+        // GET /aura/nearby — find nearest city with dhikr data from lat/lng
+        register_rest_route( self::NS, '/aura/nearby', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'aura_nearby' ],
+            'permission_callback' => '__return_true',
+        ] );
+
         // POST /ibadah/dhikr — say "Ameen" / "I've said it" to earn points
         register_rest_route( self::NS, '/ibadah/dhikr', [
             'methods'             => 'POST',
@@ -982,5 +996,138 @@ class YNJ_API_Points {
 
         set_transient( $key, 1, 365 * DAY_IN_SECONDS );
         return $pts;
+    }
+
+    // ================================================================
+    // AURA — City/country-level dhikr stats for guests
+    // ================================================================
+
+    /**
+     * GET /aura?city=London — Get dhikr totals for a city.
+     * Also accepts ?country=UK for country-level fallback.
+     */
+    public static function aura_stats( \WP_REST_Request $request ) {
+        $city    = sanitize_text_field( $request->get_param( 'city' ) ?: '' );
+        $country = sanitize_text_field( $request->get_param( 'country' ) ?: '' );
+
+        if ( ! $city && ! $country ) {
+            // Try to detect from IP
+            $city = self::detect_city_from_ip();
+        }
+
+        global $wpdb;
+        $mt = YNJ_DB::table( 'mosques' );
+        $ib = YNJ_DB::table( 'ibadah_logs' );
+
+        // Find matching mosques
+        $where = '';
+        $label = '';
+        if ( $city ) {
+            $where = $wpdb->prepare( "m.city = %s", $city );
+            $label = $city;
+        } elseif ( $country ) {
+            $where = $wpdb->prepare( "m.country = %s", $country );
+            $label = $country;
+        } else {
+            // Global fallback
+            $where = '1=1';
+            $label = 'Global';
+        }
+
+        $stats = $wpdb->get_row(
+            "SELECT COUNT(DISTINCT m.id) AS masjid_count,
+                    COALESCE(SUM(dk.cnt), 0) AS total_dhikr,
+                    COALESCE(SUM(dk.today_cnt), 0) AS today_dhikr,
+                    COALESCE(SUM(dk.members), 0) AS total_members
+             FROM $mt m
+             LEFT JOIN (
+                 SELECT mosque_id,
+                        COUNT(*) AS cnt,
+                        SUM(CASE WHEN log_date = CURDATE() THEN 1 ELSE 0 END) AS today_cnt,
+                        COUNT(DISTINCT user_id) AS members
+                 FROM $ib WHERE dhikr = 1 GROUP BY mosque_id
+             ) dk ON dk.mosque_id = m.id
+             WHERE m.status IN ('active','unclaimed') AND $where"
+        );
+
+        // Top 3 masjids in this area
+        $top_masjids = $wpdb->get_results(
+            "SELECT m.name, m.slug, COALESCE(dk.cnt, 0) AS dhikr_count
+             FROM $mt m
+             LEFT JOIN (SELECT mosque_id, COUNT(*) AS cnt FROM $ib WHERE dhikr = 1 GROUP BY mosque_id) dk ON dk.mosque_id = m.id
+             WHERE m.status IN ('active','unclaimed') AND $where
+             ORDER BY dhikr_count DESC LIMIT 3"
+        ) ?: [];
+
+        return new \WP_REST_Response( [
+            'ok'           => true,
+            'location'     => $label,
+            'total_dhikr'  => (int) $stats->total_dhikr,
+            'today_dhikr'  => (int) $stats->today_dhikr,
+            'masjid_count' => (int) $stats->masjid_count,
+            'members'      => (int) $stats->total_members,
+            'top_masjids'  => array_map( function( $m ) {
+                return [ 'name' => $m->name, 'slug' => $m->slug, 'dhikr' => (int) $m->dhikr_count ];
+            }, $top_masjids ),
+        ] );
+    }
+
+    /**
+     * GET /aura/nearby?lat=51.5&lng=-0.1 — Find nearest city with dhikr data.
+     */
+    public static function aura_nearby( \WP_REST_Request $request ) {
+        $lat = floatval( $request->get_param( 'lat' ) );
+        $lng = floatval( $request->get_param( 'lng' ) );
+
+        if ( ! $lat || ! $lng ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'lat/lng required' ], 400 );
+        }
+
+        global $wpdb;
+        $mt = YNJ_DB::table( 'mosques' );
+
+        // Find nearest mosque to get its city
+        $nearest = $wpdb->get_row( $wpdb->prepare(
+            "SELECT city, country,
+                    ( 6371 * acos( cos(radians(%f)) * cos(radians(latitude)) * cos(radians(longitude) - radians(%f)) + sin(radians(%f)) * sin(radians(latitude)) )) AS distance
+             FROM $mt WHERE status IN ('active','unclaimed') AND latitude IS NOT NULL
+             ORDER BY distance ASC LIMIT 1",
+            $lat, $lng, $lat
+        ) );
+
+        if ( ! $nearest || ! $nearest->city ) {
+            return new \WP_REST_Response( [ 'ok' => true, 'city' => '', 'country' => $nearest->country ?? '' ] );
+        }
+
+        return new \WP_REST_Response( [
+            'ok'      => true,
+            'city'    => $nearest->city,
+            'country' => $nearest->country ?? '',
+        ] );
+    }
+
+    /**
+     * Detect city from visitor IP using ip-api.com (free, no key needed).
+     * Cached per IP for 1 hour.
+     */
+    private static function detect_city_from_ip() {
+        $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['HTTP_X_REAL_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
+        $ip = explode( ',', $ip )[0]; // First IP if multiple
+        $ip = trim( $ip );
+
+        if ( ! $ip || $ip === '127.0.0.1' || $ip === '::1' ) return '';
+
+        $cache_key = 'ynj_ip_city_' . md5( $ip );
+        $cached = get_transient( $cache_key );
+        if ( $cached !== false ) return $cached;
+
+        $response = wp_remote_get( "http://ip-api.com/json/{$ip}?fields=city,country", [ 'timeout' => 2 ] );
+        if ( is_wp_error( $response ) ) return '';
+
+        $data = json_decode( wp_remote_retrieve_body( $response ), true );
+        $city = $data['city'] ?? '';
+
+        set_transient( $cache_key, $city, HOUR_IN_SECONDS );
+        return $city;
     }
 }
