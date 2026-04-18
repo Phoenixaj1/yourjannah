@@ -5,7 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <?php wp_head(); ?>
 
-<!-- Theme system: disabled for now — needs proper per-component redesign -->
+<!-- Force unregister old service workers that may cache stale pages -->
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+        regs.forEach(function(r) { r.unregister(); });
+    });
+    caches.keys().then(function(names) {
+        names.forEach(function(name) { caches.delete(name); });
+    });
+}
+</script>
 </head>
 <body <?php body_class(); ?>>
 <?php wp_body_open(); ?>
@@ -91,77 +101,16 @@ if ( is_user_logged_in() ) {
 ?>
 
 <?php if ( $_ynj_bar_status === 'guest' ) : ?>
-<!-- ── Guest HUD — full-width background, constrained content ── -->
-<div style="background:linear-gradient(135deg,#0a1628 0%,#132742 100%);position:sticky;top:0;z-index:102;">
-<div id="ynj-hud" class="ynj-hud" style="display:flex !important;flex-direction:row !important;align-items:center;gap:10px;flex-wrap:nowrap;">
-
-    <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(255,255,255,.07);border-radius:10px;flex-shrink:0;">
-        <span style="font-size:14px;">&#x2728;</span>
-        <span id="hud-guest-location" style="font-size:12px;font-weight:800;white-space:nowrap;"><?php esc_html_e( 'Your area', 'yourjannah' ); ?></span>
-    </div>
-
-    <div id="hud-guest-dhikr" style="display:none;align-items:center;gap:3px;padding:3px 7px;border-radius:8px;background:rgba(255,255,255,.06);flex-shrink:0;">
-        <span style="font-size:12px;">&#x1F4FF;</span>
-        <span id="hud-guest-dhikr-num" style="font-size:12px;font-weight:800;color:#fbbf24;">0</span>
-        <span style="font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;"><?php esc_html_e( 'dhikr', 'yourjannah' ); ?></span>
-    </div>
-
-    <div id="hud-guest-masjids" style="display:none;align-items:center;gap:3px;padding:3px 7px;border-radius:8px;background:rgba(255,255,255,.06);flex-shrink:0;">
-        <span style="font-size:12px;">&#x1F54C;</span>
-        <span id="hud-guest-masjid-num" style="font-size:12px;font-weight:800;color:#fbbf24;">0</span>
-        <span style="font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;"><?php esc_html_e( 'masjids', 'yourjannah' ); ?></span>
-    </div>
-
+<!-- ── Guest HUD — clean, simple: Sign In + Join ── -->
+<div class="ynj-hud-wrap">
+<div class="ynj-hud" id="ynj-hud">
+    <span style="font-size:14px;">&#x1F54C;</span>
+    <span style="font-size:13px;font-weight:700;color:#fff;"><?php esc_html_e( 'YourJannah', 'yourjannah' ); ?></span>
     <div style="flex:1;"></div>
-
-    <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" style="color:rgba(255,255,255,.6);text-decoration:none;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></a>
-
-    <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" style="display:inline-flex;align-items:center;gap:4px;padding:5px 14px;background:linear-gradient(135deg,#287e61,#1a5c43);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;box-shadow:0 2px 10px rgba(40,126,97,.3);">&#x1F4FF; <?php esc_html_e( 'Join', 'yourjannah' ); ?></a>
-
+    <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" style="color:rgba(255,255,255,.6);text-decoration:none;font-size:12px;font-weight:600;white-space:nowrap;"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></a>
+    <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" style="display:inline-flex;align-items:center;gap:4px;padding:5px 14px;background:linear-gradient(135deg,#287e61,#1a5c43);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;box-shadow:0 2px 10px rgba(40,126,97,.3);"><?php esc_html_e( 'Join', 'yourjannah' ); ?></a>
 </div>
-</div><!-- end guest hud wrap -->
-<script>
-(function(){
-    /* Detect guest location: GPS first, then IP fallback */
-    function loadAura(city) {
-        var url = '/wp-json/ynj/v1/aura' + (city ? '?city=' + encodeURIComponent(city) : '');
-        fetch(url).then(function(r){return r.json();}).then(function(d){
-            if (!d.ok) return;
-            var loc = document.getElementById('hud-guest-location');
-            var dhikrEl = document.getElementById('hud-guest-dhikr');
-            var masjidEl = document.getElementById('hud-guest-masjids');
-            if (loc && d.location) loc.textContent = d.location;
-            if (dhikrEl && d.total_dhikr > 0) {
-                dhikrEl.style.display = 'flex';
-                document.getElementById('hud-guest-dhikr-num').textContent = d.total_dhikr.toLocaleString();
-            }
-            if (masjidEl && d.masjid_count > 0) {
-                masjidEl.style.display = 'flex';
-                document.getElementById('hud-guest-masjid-num').textContent = d.masjid_count;
-            }
-        }).catch(function(){});
-    }
-
-    /* Try GPS first (fast timeout) */
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            function(pos) {
-                /* Got GPS — find nearest city */
-                fetch('/wp-json/ynj/v1/aura/nearby?lat=' + pos.coords.latitude + '&lng=' + pos.coords.longitude)
-                    .then(function(r){return r.json();})
-                    .then(function(d){
-                        if (d.ok && d.city) loadAura(d.city);
-                        else loadAura(''); /* IP fallback via server */
-                    }).catch(function(){ loadAura(''); });
-            },
-            function() { loadAura(''); }, /* GPS denied — IP fallback */
-            { timeout: 3000, maximumAge: 300000 }
-        );
-    } else {
-        loadAura(''); /* No GPS — IP fallback */
-    }
-})();
-</script>
+</div>
 <?php else : ?>
 <?php
 // ── Masjid XP data for progress bar ──

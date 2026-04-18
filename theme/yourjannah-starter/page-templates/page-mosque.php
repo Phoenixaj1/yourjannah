@@ -837,76 +837,11 @@ if (window.ynjPreloaded.jumuahSlots && window.ynjPreloaded.jumuahSlots.length > 
     window._ynjFirstJumuahTime = window.ynjPreloaded.jumuahSlots[0].salah;
 }
 
-// ── Dua Wall + Gratitude Wall loaders ──
+// ── Gratitude button handler ──
 (function(){
     var mosqueId = window.ynjPreloaded ? window.ynjPreloaded.mosqueId : 0;
     if (!mosqueId) return;
     var nonce = function(){ return typeof wpApiSettings !== 'undefined' ? wpApiSettings.nonce : ''; };
-
-    // Dua Wall
-    function loadDuas() {
-        var el = document.getElementById('dua-list');
-        if (!el) return;
-        fetch('/wp-json/ynj/v1/mosques/' + mosqueId + '/duas')
-            .then(function(r){ return r.json(); })
-            .then(function(d){
-                if (!d.ok || !d.duas.length) { el.innerHTML = '<p style="color:#9ca3af;font-size:12px;text-align:center;">No dua requests yet. Be the first to ask.</p>'; return; }
-                var html = '';
-                d.duas.forEach(function(dua){
-                    var prayedClass = dua.prayed ? 'background:#f0fdf4;border-color:#86efac;' : '';
-                    var btnText = dua.prayed ? '🤲 Ameen' : '🤲 I made dua';
-                    var btnStyle = dua.prayed ? 'background:#dcfce7;color:#166534;' : 'background:#ede9fe;color:#5b21b6;';
-                    html += '<div style="padding:10px 14px;border:1px solid #e5e7eb;border-radius:10px;' + prayedClass + '">'
-                        + '<p style="font-size:13px;color:#374151;margin:0 0 6px;">' + dua.text + '</p>'
-                        + '<div style="display:flex;justify-content:space-between;align-items:center;">'
-                        + '<span style="font-size:11px;color:#9ca3af;">' + dua.ago + ' ago</span>'
-                        + '<button onclick="ynjPrayForDua(this,' + dua.id + ')" style="padding:5px 12px;border:none;border-radius:16px;font-size:12px;font-weight:700;cursor:pointer;min-height:32px;font-family:inherit;' + btnStyle + '">'
-                        + btnText + ' <span style="font-weight:400;">(' + dua.count + ')</span></button>'
-                        + '</div></div>';
-                });
-                el.innerHTML = html;
-            }).catch(function(){});
-    }
-    window.ynjPostDua = function() {
-        var input = document.getElementById('dua-input');
-        if (!input) return;
-        var text = input.value.trim();
-        if (!text) return;
-        fetch('/wp-json/ynj/v1/duas/create', {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce() },
-            credentials: 'same-origin', body: JSON.stringify({ text: text, mosque_id: mosqueId })
-        }).then(function(r){ return r.json(); }).then(function(d){
-            if (d.ok) { input.value = ''; loadDuas(); }
-            else if (d.error) alert(d.error);
-        }).catch(function(){});
-    };
-    window.ynjPrayForDua = function(btn, duaId) {
-        fetch('/wp-json/ynj/v1/duas/' + duaId + '/pray', {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce() },
-            credentials: 'same-origin'
-        }).then(function(r){ return r.json(); }).then(function(d){
-            if (d.ok) { btn.style.background='#dcfce7'; btn.style.color='#166534'; btn.innerHTML='🤲 Ameen <span style="font-weight:400;">('+( d.count||0)+')</span>'; }
-        }).catch(function(){});
-    };
-    setTimeout(loadDuas, 300);
-
-    // Gratitude Wall
-    function loadGratitude() {
-        var el = document.getElementById('gratitude-list');
-        if (!el) return;
-        fetch('/wp-json/ynj/v1/mosques/' + mosqueId + '/gratitude')
-            .then(function(r){ return r.json(); })
-            .then(function(d){
-                if (!d.ok || !d.posts.length) { el.innerHTML = '<p style="color:#be185d;font-size:12px;text-align:center;opacity:.6;">Be the first to say thank you!</p>'; return; }
-                var html = '';
-                d.posts.forEach(function(p){
-                    html += '<div style="padding:8px 12px;margin-bottom:6px;background:rgba(255,255,255,.6);border-radius:8px;">'
-                        + '<p style="font-size:13px;color:#831843;margin:0;">&ldquo;' + p.message + '&rdquo;</p>'
-                        + '<p style="font-size:10px;color:#be185d;margin:2px 0 0;opacity:.6;">' + p.ago + ' ago</p></div>';
-                });
-                el.innerHTML = html;
-            }).catch(function(){});
-    }
     window.ynjPostGratitude = function() {
         var btn = event ? event.target : null;
         if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
