@@ -665,6 +665,7 @@ img,svg{display:block;max-width:100%;}
 /* Desktop Grid */
 .ynj-desktop-grid{display:flex;flex-direction:column;overflow:hidden;}
 .ynj-desktop-grid__left,.ynj-desktop-grid__right{width:100%;max-width:100%;overflow:hidden;}
+/* Mobile: interleave left + right content using order */
 
 /* Desktop Responsive */
 @media(min-width:900px){
