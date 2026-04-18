@@ -155,7 +155,7 @@ class YNJ_API_Patrons {
             $mosque->name,
             $base . '/patron?payment=success',
             $base . '/patron?payment=cancelled',
-            [ 'mosque_id' => $mosque_id, 'user_id' => $user->id, 'tier' => $tier ]
+            [ 'mosque_id' => $mosque_id, 'user_id' => $user->id, 'tier' => $tier, 'patron_id' => $patron_id ]
         );
 
         if ( is_wp_error( $session ) ) {

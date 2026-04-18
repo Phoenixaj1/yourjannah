@@ -785,18 +785,21 @@ add_action('rest_api_init', function() {
                         error_log( '[YNJ Stripe Webhook] Appeal #' . $metadata['appeal_id'] . ' activated.' );
                     }
 
-                    // Patron subscription
-                    if ( ! empty( $metadata['type'] ) && $metadata['type'] === 'patron' ) {
-                        $wpdb->update(
-                            YNJ_DB::table( 'patrons' ),
-                            [
-                                'status'                 => 'active',
-                                'stripe_subscription_id' => $session['subscription'] ?? '',
-                                'started_at'             => current_time( 'mysql' ),
-                            ],
-                            [ 'id' => (int) ( $metadata['patron_id'] ?? 0 ) ]
-                        );
-                        error_log( '[YNJ Stripe Webhook] Patron #' . ( $metadata['patron_id'] ?? '?' ) . ' activated.' );
+                    // Patron subscription (check both type strings for backward compat)
+                    if ( ! empty( $metadata['type'] ) && in_array( $metadata['type'], [ 'patron', 'patron_membership' ], true ) ) {
+                        $pid = (int) ( $metadata['patron_id'] ?? $metadata['item_id'] ?? 0 );
+                        if ( $pid ) {
+                            $wpdb->update(
+                                YNJ_DB::table( 'patrons' ),
+                                [
+                                    'status'                 => 'active',
+                                    'stripe_subscription_id' => $session['subscription'] ?? '',
+                                    'started_at'             => current_time( 'mysql' ),
+                                ],
+                                [ 'id' => $pid ]
+                            );
+                            error_log( '[YNJ Stripe Webhook] Patron #' . $pid . ' activated.' );
+                        }
                     }
                     break;
 
