@@ -7,56 +7,76 @@ Copy everything below this line and paste as your first message:
 I'm continuing work on YourJannah — a mosque community SaaS platform (WordPress + custom plugin). The codebase is at `C:\Users\user\Documents\yourjannah` and auto-deploys to `yourjannah.com` via GitHub push to main.
 
 ## Read these memory files first:
-1. `C:\Users\user\.claude\projects\C--Users-user-Documents-yourniyyah\memory\yourjannah-next-session.md` — full context on what to build next, session summary, current state
-2. `C:\Users\user\.claude\projects\C--Users-user-Documents-yourniyyah\memory\yourjannah-audit-plan.md` — completed audit plan (7 sprints done)
-3. `C:\Users\user\.claude\projects\C--Users-user-Documents-yourniyyah\memory\MEMORY.md` — project overview and environment
+1. `C:\Users\user\.claude\projects\C--Users-user-Documents-yourniyyah\memory\yourjannah-next-session.md`
+2. `C:\Users\user\.claude\projects\C--Users-user-Documents-yourniyyah\memory\MEMORY.md`
 
-## What to build now: Mobile-First Mosque Admin Onboarding + Dashboard
+## What was built in the last session (massive feature release):
 
-### The vision:
-I go to masjids giving talks about community. Imams and mosque committees sign up. Their onboarding needs to be AS SIMPLE as the user onboarding we built (GPS → select masjid → email → done). Then a step-by-step wizard guides them through setup. Mobile is primary — most mosque admins will manage everything from their phone.
+### Features shipped:
+- Onboarding wizard (/mosque-setup), mobile dashboard (bottom nav, FAB)
+- Team management, quick post templates (12), front-end posting modal
+- Content scheduling, admin edit shortcuts, admin toolbar
+- Dopamine dashboard (nudges, streaks, rankings, activity feed)
+- Reaction buttons (like/dua/interested/share) + view counts on feed
+- Ibadah tracker (5 prayers, Quran, dhikr, fasting, charity, good deeds)
+- 27x mosque prayer multiplier (Hadith-based)
+- Community stats, auto-generated weekly challenges
+- Badge system (17 badges), mosque leagues (4 tiers)
+- Head-to-head mosque challenges, personal impact score
+- Variable reward surprises (Duolingo-style)
+- Dua Wall, Gratitude Wall, Fajr Counter, Milestones
+- Section nav chips, "Our Masjid" score bar on homepage
 
-### Three things to build:
+### DB Schema: v3.7.0
+### Theme: v3.10.1
+### Key tables added: content_views, reactions, ibadah_logs, community_challenges, user_badges, h2h_challenges, dua_requests, dua_responses, gratitude_posts, milestones
 
-**1. Mosque Admin Onboarding Wizard**
-- New page at `/mosque-setup` — standalone wizard, not inside the dashboard
-- Step 1: Confirm mosque details (name, address, phone)
-- Step 2: Set prayer times + Jumu'ah slots (THIS IS THE MOST IMPORTANT)
-- Step 3: Post first announcement
-- Step 4: Import email list or share mosque page link
-- Progress bar, big mobile-friendly buttons, one thing per step
-- On completion → redirect to dashboard with celebration
+## What to build next: SEPARATION OF PERSONAL vs COMMUNITY
 
-**2. Mobile-Responsive Dashboard**
-- Current dashboard: `theme/yourjannah-starter/page-templates/page-dashboard.php` with 240px fixed sidebar
-- Need: hamburger menu on mobile, collapsible sidebar, bottom nav for key actions
-- All 18 section files in `theme/yourjannah-starter/page-templates/dashboard/`
-- Forms need to stack vertically on mobile, big touch targets (44px min)
-- Quick actions: "New Announcement", "Add Event", "Add Class" as floating buttons
+### The user's vision:
+"The users themselves need their own profile section. Dua requests, ibadah tracking, check-in, streaks — the masjid page should just show the overall count, overall points, and leagues. But there needs to be a personal aspect with a profile button in the header and a good flow from homepage to profile. They can focus on themselves and what they're doing, but it also impacts the community's total masjid points. They need a feedback loop so they can see their masjid points go up and push past other masjids."
 
-**3. Easy Admin Assignment**
-- Platform admin (me) needs one-click "Make Admin" for any user+mosque
-- In `plugins/yn-jannah/inc/class-ynj-platform-admin.php` — add mosque admin assignment UI
-- When someone registers for a mosque → I get notified → one tap to approve as admin
+### Architecture change needed:
+1. **Move personal features FROM mosque page TO profile page:**
+   - Ibadah tracker (prayer checkboxes, Quran pages, dhikr, fasting)
+   - Personal streaks, badges
+   - Personal impact score
+   - "At Mosque" toggle
+   - Dua requests I've made
+   
+2. **Mosque page keeps ONLY community/collective:**
+   - "Our Masjid" score bar + league
+   - Community stats (anonymous aggregates)
+   - H2H challenges
+   - Feed with reactions + views
+   - Dua Wall (community view — make dua for others)
+   - Gratitude Wall
+
+3. **Profile page redesign (`page-profile.php`):**
+   - Add ibadah tracker as the hero section
+   - Show personal stats (total prayers, streak, badges earned)
+   - "My contribution to [Mosque Name]: X%"
+   - Live feedback: "Your prayers helped push [Mosque] to #2!"
+   - Badge collection with progress
+   - Personal dua request history
+   - Check-in history
+
+4. **Header: Add "My Ibadah" button/link**
+   - Quick access from any page to log prayers
+   - Shows streak count as badge: "🔥 14"
+
+5. **Design cohesion:**
+   - Consistent colour palette (dark navy for community, green for personal)
+   - Reduce card count on mosque page
+   - Better badge visibility (greyed-out badges too hard to read)
+   - Mobile-first flow testing
 
 ### Key files:
-- Plugin: `plugins/yn-jannah/` (yn-jannah.php, inc/, api/)
-- Theme: `theme/yourjannah-starter/` (functions.php, header.php, footer.php)
-- Dashboard: `theme/yourjannah-starter/page-templates/page-dashboard.php`
-- Dashboard sections: `theme/yourjannah-starter/page-templates/dashboard/*.php` (18 files)
-- DB schema: `plugins/yn-jannah/inc/class-ynj-db.php` (v3.2.0)
-- Auth: `plugins/yn-jannah/inc/class-ynj-wp-auth.php` (roles: ynj_mosque_admin, ynj_imam, ynj_congregation)
+- `theme/yourjannah-starter/page-templates/page-mosque.php` — remove personal, keep community
+- `theme/yourjannah-starter/page-templates/page-profile.php` — add personal ibadah hub
+- `theme/yourjannah-starter/header.php` — add "My Ibadah" nav link
+- `plugins/yn-jannah/api/class-ynj-api-points.php` — ibadah API (already built)
+- `theme/yourjannah-starter/inc/community-engagement.php` — league/badge/impact logic
+- `theme/yourjannah-starter/inc/community-cards.php` — shared score bar include
 
-### Current versions:
-- Theme: 3.9.7 (`YNJ_THEME_VERSION` in functions.php)
-- DB Schema: 3.2.0
-- Plugin: 2.4.0 (`YNJ_VERSION` in yn-jannah.php)
-
-### Design principles:
-- Mobile FIRST — design for 375px, scale up
-- Big touch targets (min 44px)
-- One action per screen in wizard
-- Progress indicators throughout
-- Encouraging copy ("You're doing great", "Almost there")
-
-Start by reading the memory files, then plan the implementation, then build it.
+Start by reading the profile page and mosque page, then plan the restructure.
