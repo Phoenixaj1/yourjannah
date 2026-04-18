@@ -861,8 +861,23 @@
                 var id = parseInt(bar.getAttribute('data-id'));
                 if (!type || !id) return;
 
-                // Toggle active state locally
-                btn.classList.toggle('ynj-react-btn--active');
+                // INSTANT visual feedback before API call
+                var isActive = btn.classList.contains('ynj-react-btn--active');
+                var countEl = btn.querySelector('.ynj-react-count');
+                var currentCount = parseInt(countEl.textContent) || 0;
+
+                if (isActive) {
+                    // Removing reaction
+                    btn.classList.remove('ynj-react-btn--active');
+                    countEl.textContent = Math.max(0, currentCount - 1) || '';
+                } else {
+                    // Adding reaction — pop animation + highlight
+                    btn.classList.add('ynj-react-btn--active');
+                    countEl.textContent = currentCount + 1;
+                    // Quick scale pop
+                    btn.style.transform = 'scale(1.2)';
+                    setTimeout(function() { btn.style.transform = ''; }, 200);
+                }
 
                 // Also track interest via old transient system (for backward compat)
                 if (reaction === 'interested') {
@@ -874,7 +889,7 @@
                     }
                 }
 
-                // Fire API call
+                // Fire API call (updates server, corrects count if needed)
                 var nonce = typeof wpApiSettings !== 'undefined' ? wpApiSettings.nonce : '';
                 fetch('/wp-json/ynj/v1/content/react', {
                     method: 'POST',
@@ -883,7 +898,7 @@
                     body: JSON.stringify({ type: type, id: id, reaction: reaction })
                 }).then(function(r) { return r.json(); }).then(function(data) {
                     if (data.ok && data.counts) {
-                        // Update all count displays in this bar
+                        // Correct counts from server (in case of race condition)
                         Object.keys(data.counts).forEach(function(r) {
                             var el = bar.querySelector('[data-r="' + r + '"]');
                             if (el) el.textContent = data.counts[r] > 0 ? data.counts[r] : '';
