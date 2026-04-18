@@ -17,7 +17,10 @@ define( 'YNJ_ENGAGEMENT_DIR', plugin_dir_path( __FILE__ ) );
 add_action( 'plugins_loaded', function() {
     if ( ! class_exists( 'YNJ_DB' ) ) return;
 
-    // Engagement endpoints will be extracted from api-mosques.php
-    // For now, the monolith still handles dua/gratitude/reaction endpoints
+    // Data layer
+    require_once YNJ_ENGAGEMENT_DIR . 'inc/class-ynj-engagement.php';
+
+    // API endpoints (when ready)
+    // require_once YNJ_ENGAGEMENT_DIR . 'api/class-ynj-api-engagement.php';
 
 }, 10 );
