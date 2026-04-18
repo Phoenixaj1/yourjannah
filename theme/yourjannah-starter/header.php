@@ -382,11 +382,35 @@ $_hud_league_url = $_hud_mosque ? home_url( '/mosque/' . $_hud_mosque_slug . '#m
         if (!el) return;
         var old = parseInt(el.textContent.replace(/,/g,''))||0;
         if (old===newVal) return;
-        var diff=newVal-old, steps=Math.min(25,Math.abs(diff)), sv=diff/steps, cur=old, i=0;
-        el.style.transition='transform .3s, color .3s';
-        el.style.transform='scale(1.3)'; el.style.color='#fbbf24';
-        var iv=setInterval(function(){i++;cur=i>=steps?newVal:Math.round(old+sv*i);el.textContent=cur.toLocaleString();if(i>=steps)clearInterval(iv);},30);
-        setTimeout(function(){el.style.transform='';},400);
+        var diff=newVal-old, steps=Math.min(30,Math.abs(diff)), sv=diff/steps, cur=old, i=0;
+        // Dramatic golden flash + scale up
+        el.style.transition='transform .4s cubic-bezier(.34,1.56,.64,1), color .3s, text-shadow .3s';
+        el.style.transform='scale(1.6)';
+        el.style.color='#fbbf24';
+        el.style.textShadow='0 0 12px rgba(245,158,11,.6)';
+        // Roll up the number
+        var iv=setInterval(function(){
+            i++;cur=i>=steps?newVal:Math.round(old+sv*i);
+            el.textContent=cur.toLocaleString();
+            if(i>=steps){clearInterval(iv);}
+        },25);
+        // Settle back
+        setTimeout(function(){
+            el.style.transform='scale(1)';
+            el.style.textShadow='none';
+        },600);
+        // Also pulse the XP bar fill if it exists
+        var xpFill = document.querySelector('.ynj-hud__xp-fill');
+        if (xpFill) {
+            xpFill.style.boxShadow='0 0 14px rgba(40,126,97,.7)';
+            setTimeout(function(){ xpFill.style.boxShadow='0 0 6px rgba(40,126,97,.4)'; },800);
+        }
+        // Update XP text counter too
+        var xpText = document.querySelector('.ynj-hud__xp-text');
+        if (xpText) {
+            var xpOld = parseInt(xpText.textContent.replace(/,/g,''))||0;
+            xpText.textContent = (xpOld + diff).toLocaleString() + ' dhikr';
+        }
     }
 
     function hudToast(text, bg) {

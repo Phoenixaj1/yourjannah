@@ -1291,6 +1291,8 @@ if ( $fav_mosque_id && $ynj_uid && class_exists( 'YNJ_DB' ) ) {
                 floatPoints('+' + d.points + ' pts', btn, '#287e61');
                 // 3. Animate hero counter
                 animateCounter(document.getElementById('hero-pts'), d.total);
+                // Also update HUD bar counter live
+                animateCounter(document.getElementById('hud-pts-num'), d.total);
                 // 4. Replace button with success + SHARE prompt (peak dopamine moment)
                 var waUrl = <?php echo wp_json_encode( isset( $wa_url ) ? $wa_url : '#' ); ?>;
                 setTimeout(function(){
@@ -1335,6 +1337,8 @@ if ( $fav_mosque_id && $ynj_uid && class_exists( 'YNJ_DB' ) ) {
                 floatPoints('+50 pts', btn, '#1e40af');
                 // 3. Animate hero counter
                 animateCounter(document.getElementById('hero-pts'), d.total_points);
+                // Also update HUD bar counter live
+                animateCounter(document.getElementById('hud-pts-num'), d.total_points);
                 // 4. Replace with beautiful success state
                 setTimeout(function(){
                     btn.outerHTML = '<div style="padding:16px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:12px;text-align:center;animation:ynj-celebrate-pop .5s ease-out;">'
