@@ -705,6 +705,12 @@ $_hud_all_done = $_hud_done_count >= 5;
 
 <script>
 (function(){
+    /* ── Failsafe: if both guest + logged-in HUDs rendered, hide guest ── */
+    var allHuds = document.querySelectorAll('.ynj-hud');
+    if (allHuds.length > 1) {
+        allHuds.forEach(function(h){ if (h.classList.contains('ynj-hud--guest')) h.style.display = 'none'; });
+    }
+
     /* ── Popup toggles ── */
     function closeAllPopups() {
         ['hud-dhikr-popup', 'hud-league-popup', 'hud-info-popup'].forEach(function(id) {
