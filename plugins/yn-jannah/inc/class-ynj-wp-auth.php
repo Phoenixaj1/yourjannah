@@ -466,26 +466,32 @@ class YNJ_WP_Auth {
         $user = wp_authenticate( $email, $password );
 
         if ( is_wp_error( $user ) ) {
-            // Fallback: try old custom auth and auto-migrate
+            // Fallback: try old custom auth (PIN or legacy password in ynj_users)
             $old_result = YNJ_User_Auth::login( [ 'email' => $email, 'password' => $password ] );
 
             if ( ! isset( $old_result['ok'] ) || ! $old_result['ok'] ) {
-                return new WP_Error( 'invalid_credentials', 'Invalid email or password.', [ 'status' => 401 ] );
+                return new WP_Error( 'invalid_credentials', 'Invalid email or PIN.', [ 'status' => 401 ] );
             }
 
-            // Old auth succeeded — migrate to WP
+            // Old auth succeeded — ensure WP user exists for session cookies
             $wp_user = get_user_by( 'email', $email );
             if ( $wp_user ) {
+                // Update WP password so future logins use WP auth directly
                 wp_set_password( $password, $wp_user->ID );
-                $user = wp_authenticate( $email, $password );
-                if ( is_wp_error( $user ) ) {
-                    // Return old token as fallback
-                    return $old_result;
-                }
+                // Use WP user directly — we already verified credentials via old auth
+                $user = $wp_user;
             } else {
-                $username = sanitize_user( str_replace( '@', '_', $email ), true );
+                // Create WP user (handle username collision)
+                $base_username = sanitize_user( str_replace( '@', '_', $email ), true );
+                $username = $base_username;
+                $i = 1;
+                while ( username_exists( $username ) ) {
+                    $username = $base_username . $i++;
+                }
                 $wp_user_id = wp_create_user( $username, $password, $email );
                 if ( is_wp_error( $wp_user_id ) ) {
+                    error_log( '[YNJ Login] Cannot create WP user for ' . $email . ': ' . $wp_user_id->get_error_message() );
+                    $old_result['wp_user_id'] = 0;
                     return $old_result;
                 }
                 $user = new WP_User( $wp_user_id );
