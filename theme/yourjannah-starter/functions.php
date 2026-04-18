@@ -11,7 +11,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YNJ_THEME_VERSION', '3.11.0' );
+define( 'YNJ_THEME_VERSION', '3.12.0' );
 define( 'YNJ_THEME_DIR', get_stylesheet_directory() );
 define( 'YNJ_THEME_URI', get_stylesheet_directory_uri() );
 

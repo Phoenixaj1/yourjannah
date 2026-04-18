@@ -132,12 +132,29 @@ class YNJ_HUD {
      */
     public static function get_js_data() {
         $data = self::get_data();
+
+        // First dhikr action text (for error fallback in JS)
+        $dhikr_text  = 'Ameen';
+        $dhikr_pts   = 0;
+        if ( ! empty( $data['five_dhikr'] ) ) {
+            $first = $data['five_dhikr'][0] ?? null;
+            if ( $first ) {
+                $dhikr_text = $first['action_text'] ?? 'Ameen';
+                $dhikr_pts  = $first['points'] ?? 0;
+            }
+        }
+
         return [
-            'restUrl'    => rest_url( 'ynj/v1/' ),
-            'nonce'      => wp_create_nonce( 'wp_rest' ),
-            'isLoggedIn' => is_user_logged_in(),
-            'rank'       => (int) $data['rank'],
-            'mosqueName' => $data['mosque'] ? $data['mosque']->name : '',
+            'restUrl'         => rest_url( 'ynj/v1/' ),
+            'nonce'           => wp_create_nonce( 'wp_rest' ),
+            'isLoggedIn'      => is_user_logged_in(),
+            'currentRank'     => (int) $data['rank'],
+            'mosqueName'      => $data['mosque'] ? $data['mosque']->name : '',
+            'quranVerse'      => __( 'Truly, in the remembrance of Allah do hearts find rest.', 'yourjannah' ),
+            'quranRef'        => __( 'Quran 13:28', 'yourjannah' ),
+            'rankedUpText'    => __( 'ranked up!', 'yourjannah' ),
+            'dhikrActionText' => $dhikr_text,
+            'dhikrPoints'     => (int) $dhikr_pts,
         ];
     }
 }
