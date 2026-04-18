@@ -126,21 +126,20 @@ add_action( 'init', function() {
         exit;
     }
 
-    // Verify token against ynj_users table
+    // Verify token belongs to the requested WP user (prevents session hijacking)
     if ( class_exists( 'YNJ_DB' ) ) {
         global $wpdb;
         $token_hash = hash_hmac( 'sha256', $token, 'ynj_user_salt_2024' );
-        $valid = (bool) $wpdb->get_var( $wpdb->prepare(
-            "SELECT id FROM " . YNJ_DB::table( 'users' ) . " WHERE token_hash = %s",
-            $token_hash
+        // Token must match AND belong to a ynj_user linked to this WP user
+        $ynj_user_id = (int) get_user_meta( $wp_user_id, 'ynj_user_id', true );
+        $valid = $ynj_user_id && (bool) $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM " . YNJ_DB::table( 'users' ) . " WHERE id = %d AND token_hash = %s",
+            $ynj_user_id, $token_hash
         ) );
 
         if ( $valid ) {
-            $user = get_user_by( 'ID', $wp_user_id );
-            if ( $user ) {
-                wp_set_current_user( $wp_user_id );
-                wp_set_auth_cookie( $wp_user_id, true );
-            }
+            wp_set_current_user( $wp_user_id );
+            wp_set_auth_cookie( $wp_user_id, true );
         }
     }
 
@@ -148,20 +147,9 @@ add_action( 'init', function() {
     exit;
 }, 1 );
 
-// Legacy AJAX handler (kept as fallback)
-$_ynj_session_handler = function() {
-    $wp_user_id = (int) ( $_POST['wp_user_id'] ?? 0 );
-    if ( $wp_user_id && ! is_user_logged_in() ) {
-        $user = get_user_by( 'ID', $wp_user_id );
-        if ( $user ) {
-            wp_set_current_user( $wp_user_id );
-            wp_set_auth_cookie( $wp_user_id, true );
-        }
-    }
-    wp_send_json(['ok' => true]);
-};
-add_action('wp_ajax_ynj_set_session', $_ynj_session_handler);
-add_action('wp_ajax_nopriv_ynj_set_session', $_ynj_session_handler);
+// Legacy AJAX session handler REMOVED — was a security vulnerability
+// (accepted wp_user_id without any token validation = account takeover)
+// All auth now uses the ynj_autologin redirect with token verification.
 
 // Configure wp_mail — Postmark SMTP (reliable delivery)
 // yourjannah.com is DKIM + Return-Path verified in Postmark

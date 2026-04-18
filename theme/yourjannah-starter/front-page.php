@@ -606,11 +606,15 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
 // ── Homepage membership status check ──
 $_hp_is_member = false;
 $_hp_is_primary = false;
-$_hp_member_count = $_ynj_mosque_for_prayer ? (int) ( $_ynj_mosque_for_prayer->member_count ?? 0 ) : 0;
+// Live member count: real subscriptions + 1 (admin)
 $_hp_mosque_id = $_ynj_mosque_for_prayer ? (int) $_ynj_mosque_for_prayer->id : 0;
-// Social proof: under 20 real members show a seeded number (5-20)
-if ( $_hp_member_count < 20 && $_ynj_mosque_for_prayer ) {
-    $_hp_member_count = ( crc32( $_ynj_mosque_for_prayer->slug ?? '' ) % 16 ) + 5;
+$_hp_member_count = 1;
+if ( $_hp_mosque_id ) {
+    global $wpdb;
+    $_hp_member_count = 1 + (int) $wpdb->get_var( $wpdb->prepare(
+        "SELECT COUNT(*) FROM " . YNJ_DB::table( 'user_subscriptions' ) . " WHERE mosque_id = %d AND status = 'active'",
+        $_hp_mosque_id
+    ) );
 }
 if ( $_hp_mosque_id && is_user_logged_in() ) {
     $ynj_uid_hp = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );

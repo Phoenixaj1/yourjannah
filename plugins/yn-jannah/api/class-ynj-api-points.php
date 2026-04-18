@@ -3,7 +3,8 @@
  * YourJannah Points API — Gamification system.
  *
  * Point values:
- *   check_in     = 10 pts (GPS verified, max 1/day/mosque)
+ *   check_in     = 500 pts (GPS verified, max 1/2hrs/mosque)
+ *   check_in_jumuah = 2000 pts (Friday check-in bonus)
  *   event_rsvp   = 25 pts
  *   donation     = 50 pts
  *   class_enrol  = 20 pts
@@ -16,11 +17,12 @@ class YNJ_API_Points {
     const NS = 'ynj/v1';
 
     const POINTS = [
-        'check_in'    => 10,
-        'event_rsvp'  => 25,
-        'donation'    => 50,
-        'class_enrol' => 20,
-        'volunteer'   => 30,
+        'check_in'         => 500,
+        'check_in_jumuah'  => 2000,
+        'event_rsvp'       => 25,
+        'donation'         => 50,
+        'class_enrol'      => 20,
+        'volunteer'        => 30,
     ];
 
     public static function register() {
@@ -211,19 +213,27 @@ class YNJ_API_Points {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => 'You checked in recently. Next check-in available in 2 hours.' ], 429 );
         }
 
-        // Award points
-        $pts = self::award( $user->id, (int) $mosque->id, 'check_in', null, 'Checked in at ' . $mosque->name );
+        // Award points — Jumu'ah (Friday) gets 2000 pts, other days 500
+        $is_jumuah = ( (int) date( 'w' ) === 5 );
+        $action = $is_jumuah ? 'check_in_jumuah' : 'check_in';
+        $label = $is_jumuah ? "Jumu'ah check-in at " . $mosque->name : 'Checked in at ' . $mosque->name;
+        $pts = self::award( $user->id, (int) $mosque->id, $action, null, $label );
 
         // Get updated total
         $total = (int) $wpdb->get_var( $wpdb->prepare(
             "SELECT total_points FROM $user_table WHERE id = %d", $user->id
         ) );
 
+        $msg = $is_jumuah
+            ? "Jumu'ah Mubarak! +" . number_format( $pts ) . " points!"
+            : '+' . number_format( $pts ) . ' points! Checked in at ' . $mosque->name;
+
         return new \WP_REST_Response( [
             'ok'      => true,
             'points'  => $pts,
             'total'   => $total,
-            'message' => '+' . $pts . ' points! Checked in at ' . $mosque->name,
+            'jumuah'  => $is_jumuah,
+            'message' => $msg,
         ] );
     }
 
