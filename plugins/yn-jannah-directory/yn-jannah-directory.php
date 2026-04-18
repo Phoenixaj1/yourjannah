@@ -4,7 +4,7 @@
  * Description: Muslim business directory, service provider listings, enquiry management, cross-mosque search.
  * Version:     1.0.0
  * Author:      YourNiyyah
- * Requires:    yn-jannah (core — for YNJ_DB, YNJ_Auth)
+ * Requires:    yn-jannah (core — for YNJ_DB)
  *
  * @package YNJ_Directory
  */
@@ -22,7 +22,10 @@ add_action( 'plugins_loaded', function() {
         return;
     }
 
-    // Load API classes only if monolith hasn't loaded them
+    // PHP data layer (direct DB — used by templates)
+    require_once YNJ_DIRECTORY_DIR . 'inc/class-ynj-directory.php';
+
+    // REST API (only for async operations — submissions, admin CRUD)
     if ( ! class_exists( 'YNJ_API_Directory' ) ) {
         require_once YNJ_DIRECTORY_DIR . 'api/class-ynj-api-directory.php';
     }

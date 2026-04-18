@@ -17,6 +17,10 @@ define( 'YNJ_NOTIFICATIONS_DIR', plugin_dir_path( __FILE__ ) );
 add_action( 'plugins_loaded', function() {
     if ( ! class_exists( 'YNJ_DB' ) ) return;
 
+    // PHP data layer
+    require_once YNJ_NOTIFICATIONS_DIR . 'inc/class-ynj-notifications.php';
+
+    // Push + email sending
     if ( ! class_exists( 'YNJ_Push' ) ) {
         require_once YNJ_NOTIFICATIONS_DIR . 'inc/class-ynj-push.php';
     }

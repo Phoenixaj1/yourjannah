@@ -17,6 +17,10 @@ define( 'YNJ_MADRASSAH_DIR', plugin_dir_path( __FILE__ ) );
 add_action( 'plugins_loaded', function() {
     if ( ! class_exists( 'YNJ_DB' ) ) return;
 
+    // PHP data layer
+    require_once YNJ_MADRASSAH_DIR . 'inc/class-ynj-madrassah.php';
+
+    // REST API
     if ( ! class_exists( 'YNJ_API_Madrassah' ) ) {
         require_once YNJ_MADRASSAH_DIR . 'api/class-ynj-api-madrassah.php';
     }
