@@ -19,6 +19,13 @@ class YNJ_API_User {
             'permission_callback' => '__return_true',
         ] );
 
+        // POST /auth/set-pin — set PIN for existing users migrating from password
+        register_rest_route( self::NS, '/auth/set-pin', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'handle_set_pin' ],
+            'permission_callback' => '__return_true',
+        ] );
+
         // POST /auth/register — user signup
         register_rest_route( self::NS, '/auth/register', [
             'methods'             => 'POST',
@@ -103,10 +110,23 @@ class YNJ_API_User {
         $exists = false;
 
         // Check ynj_users table
+        $has_pin = false;
         if ( class_exists( 'YNJ_DB' ) ) {
-            $exists = (bool) $wpdb->get_var( $wpdb->prepare(
-                "SELECT id FROM " . YNJ_DB::table( 'users' ) . " WHERE email = %s AND status = 'active' LIMIT 1", $email
+            $row = $wpdb->get_row( $wpdb->prepare(
+                "SELECT id, password_hash FROM " . YNJ_DB::table( 'users' ) . " WHERE email = %s AND status = 'active' LIMIT 1", $email
             ) );
+            $exists = (bool) $row;
+            // PIN hashes are short bcrypt of 4-6 digit numbers; old passwords start with 'YJ_' or are longer
+            // We detect PIN by checking if the hash verifies against a 4-6 digit pattern
+            // Simpler: check if a pin_set flag transient exists, or just check hash length
+            if ( $row && $row->password_hash ) {
+                // If password_hash exists, user has SOME credential set
+                // We'll consider it a PIN if it was set via the PIN flow (stored in usermeta)
+                $has_pin = (bool) get_user_meta(
+                    (int) $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM {$wpdb->users} WHERE user_email = %s LIMIT 1", $email ) ),
+                    'ynj_has_pin', true
+                );
+            }
         }
 
         // Also check WP users
@@ -114,7 +134,64 @@ class YNJ_API_User {
             $exists = (bool) get_user_by( 'email', $email );
         }
 
-        return new \WP_REST_Response( [ 'ok' => true, 'exists' => $exists ] );
+        return new \WP_REST_Response( [ 'ok' => true, 'exists' => $exists, 'has_pin' => $has_pin ] );
+    }
+
+    /**
+     * POST /auth/set-pin — Set PIN for existing user (migrating from password).
+     * Verifies email exists, sets new PIN hash, returns token.
+     */
+    public static function handle_set_pin( \WP_REST_Request $request ) {
+        $data  = $request->get_json_params();
+        $email = sanitize_email( $data['email'] ?? '' );
+        $pin   = $data['pin'] ?? '';
+
+        if ( ! is_email( $email ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Valid email required.' ], 400 );
+        }
+
+        $pin = preg_replace( '/\D/', '', $pin );
+        if ( strlen( $pin ) < 4 || strlen( $pin ) > 6 ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'PIN must be 4-6 digits.' ], 400 );
+        }
+
+        global $wpdb;
+        $table = YNJ_DB::table( 'users' );
+        $user = $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM $table WHERE email = %s AND status = 'active' LIMIT 1", $email
+        ) );
+
+        if ( ! $user ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Account not found.' ], 404 );
+        }
+
+        // Update password_hash with PIN hash
+        $pin_hash = password_hash( $pin, PASSWORD_DEFAULT );
+        $token = bin2hex( random_bytes( 32 ) );
+        $token_hash = hash_hmac( 'sha256', $token, wp_salt( 'auth' ) );
+
+        $wpdb->update( $table, [
+            'password_hash' => $pin_hash,
+            'token_hash'    => $token_hash,
+            'token_last_used' => current_time( 'mysql', true ),
+        ], [ 'id' => $user->id ] );
+
+        // Mark as having PIN set (for check-email detection)
+        $wp_user = get_user_by( 'email', $email );
+        if ( $wp_user ) {
+            update_user_meta( $wp_user->ID, 'ynj_has_pin', 1 );
+            // Also update WP password so WP-native auth works too
+            wp_set_password( $pin, $wp_user->ID );
+            // Set session
+            wp_set_auth_cookie( $wp_user->ID, true );
+        }
+
+        return new \WP_REST_Response( [
+            'ok'         => true,
+            'token'      => $token,
+            'wp_user_id' => $wp_user ? $wp_user->ID : 0,
+            'message'    => 'PIN set successfully.',
+        ] );
     }
 
     public static function handle_register( \WP_REST_Request $request ) {
@@ -126,6 +203,12 @@ class YNJ_API_User {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => $result->get_error_message() ], $status );
         }
 
+        // Mark as having PIN if registered with one
+        if ( ! empty( $data['pin'] ) ) {
+            $wp_user = get_user_by( 'email', sanitize_email( $data['email'] ?? '' ) );
+            if ( $wp_user ) update_user_meta( $wp_user->ID, 'ynj_has_pin', 1 );
+        }
+
         return new \WP_REST_Response( [
             'ok'      => true,
             'token'   => $result['token'],
@@ -134,13 +217,16 @@ class YNJ_API_User {
                 'name' => sanitize_text_field( $data['name'] ?? '' ),
                 'email' => sanitize_email( $data['email'] ?? '' ),
             ],
+            'wp_user_id' => $result['wp_user_id'] ?? 0,
             'message' => 'Account created. Welcome to YourJannah!',
         ], 201 );
     }
 
     public static function handle_login( \WP_REST_Request $request ) {
         $data   = $request->get_json_params();
-        $result = YNJ_WP_Auth::login_congregation( $data['email'] ?? '', $data['password'] ?? '' );
+        // Accept PIN or password
+        $credential = $data['pin'] ?? $data['password'] ?? '';
+        $result = YNJ_WP_Auth::login_congregation( $data['email'] ?? '', $credential );
 
         if ( is_wp_error( $result ) ) {
             $status = $result->get_error_data()['status'] ?? 400;

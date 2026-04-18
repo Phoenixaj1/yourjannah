@@ -185,13 +185,21 @@ $show_fb     = class_exists( 'YNJ_Social_Auth' ) && YNJ_Social_Auth::is_facebook
 
             savedEmail = email;
 
-            if (data.exists) {
-                // Existing user → enter PIN
+            if (data.exists && data.has_pin) {
+                // Existing user with PIN → enter it
                 document.getElementById('login-email-show').textContent = email;
                 showStep('pin-login');
                 document.getElementById('auth-pin-login').focus();
+            } else if (data.exists && !data.has_pin) {
+                // Existing user WITHOUT PIN → set one
+                document.getElementById('create-email-show').textContent = email;
+                document.querySelector('#step-pin-create p').textContent = <?php echo wp_json_encode( __( "Set a PIN to secure your account. You'll use this instead of a password.", 'yourjannah' ) ); ?>;
+                window._setPinForExisting = true;
+                showStep('pin-create');
+                document.getElementById('auth-pin-new').focus();
             } else {
                 // New user → create PIN
+                window._setPinForExisting = false;
                 document.getElementById('create-email-show').textContent = email;
                 showStep('pin-create');
                 document.getElementById('auth-pin-new').focus();
@@ -283,37 +291,43 @@ $show_fb     = class_exists( 'YNJ_Social_Auth' ) && YNJ_Social_Auth::is_facebook
             return;
         }
 
-        btn.disabled = true; btn.textContent = <?php echo wp_json_encode( __( 'Creating account...', 'yourjannah' ) ); ?>;
+        btn.disabled = true;
+
+        // Choose endpoint: set-pin for existing users, register for new
+        var endpoint = window._setPinForExisting ? 'auth/set-pin' : 'auth/register';
+        var label = window._setPinForExisting ? <?php echo wp_json_encode( __( 'Setting PIN...', 'yourjannah' ) ); ?> : <?php echo wp_json_encode( __( 'Creating account...', 'yourjannah' ) ); ?>;
+        btn.textContent = label;
 
         try {
             var name = savedEmail.split('@')[0];
             var slug = localStorage.getItem('ynj_mosque_slug') || '';
+            var payload = window._setPinForExisting
+                ? {email: savedEmail, pin: pin}
+                : {name: name, email: savedEmail, pin: pin, mosque_slug: slug};
 
-            var resp = await fetch(API + 'auth/register', {
+            var resp = await fetch(API + endpoint, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json', 'X-WP-Nonce': nonce},
-                body: JSON.stringify({name: name, email: savedEmail, pin: pin, mosque_slug: slug})
+                body: JSON.stringify(payload)
             });
             var data = await resp.json();
 
             if (data.ok && data.token) {
                 localStorage.setItem('ynj_user_token', data.token);
                 if (data.user) localStorage.setItem('ynj_user', JSON.stringify(data.user));
-                // Set WP session
                 await fetch(<?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                     body: 'action=ynj_set_session&wp_user_id=' + (data.wp_user_id || '')
                 }).catch(function(){});
-                // Success! Redirect
-                btn.textContent = <?php echo wp_json_encode( __( 'Account Created!', 'yourjannah' ) ); ?> + ' \u2713';
+                btn.textContent = (window._setPinForExisting ? <?php echo wp_json_encode( __( 'PIN Set!', 'yourjannah' ) ); ?> : <?php echo wp_json_encode( __( 'Account Created!', 'yourjannah' ) ); ?>) + ' \u2713';
                 btn.style.background = '#166534';
                 var s = localStorage.getItem('ynj_mosque_slug');
                 setTimeout(function(){
                     window.location.href = s ? <?php echo wp_json_encode( home_url( '/mosque/' ) ); ?> + s : <?php echo wp_json_encode( home_url( '/profile' ) ); ?>;
                 }, 1500);
             } else {
-                err.textContent = data.error || <?php echo wp_json_encode( __( 'Registration failed. Try again.', 'yourjannah' ) ); ?>;
+                err.textContent = data.error || <?php echo wp_json_encode( __( 'Failed. Try again.', 'yourjannah' ) ); ?>;
                 btn.disabled = false; btn.textContent = '\uD83D\uDD4C ' + <?php echo wp_json_encode( __( 'Create Account', 'yourjannah' ) ); ?>;
             }
         } catch(e) {

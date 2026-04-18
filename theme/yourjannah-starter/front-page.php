@@ -454,30 +454,58 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
             if (!/^\d+$/.test(newpin)) { errEl.textContent = 'PIN must be numbers only.'; return; }
             if (newpin !== newpin2) { errEl.textContent = "PINs don't match. Try again."; document.getElementById('ob-newpin2').value = ''; document.getElementById('ob-newpin2').focus(); return; }
 
-            btn.disabled = true; btn.textContent = 'Creating your account...';
-            var name = email.split('@')[0].replace(/[._]/g, ' ');
-            try {
-                var regResp = await fetch(API + 'auth/register', {
-                    method: 'POST', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({name: name, email: email, pin: newpin, mosque_slug: obSelectedSlug})
-                });
-                var regData = await regResp.json();
-                if (regData.ok && regData.token) {
-                    localStorage.setItem('ynj_user_token', regData.token);
-                    localStorage.setItem('ynj_onboard_seen', '1');
-                    if (regData.wp_user_id) {
-                        await fetch('<?php echo admin_url("admin-ajax.php"); ?>', {
-                            method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'},
-                            body: 'action=ynj_set_session&wp_user_id=' + regData.wp_user_id, credentials: 'same-origin'
-                        });
+            btn.disabled = true;
+
+            if (window._obSetPinForExisting) {
+                // Existing user setting PIN for the first time
+                btn.textContent = 'Setting your PIN...';
+                try {
+                    var setResp = await fetch(API + 'auth/set-pin', {
+                        method: 'POST', headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({email: email, pin: newpin})
+                    });
+                    var setData = await setResp.json();
+                    if (setData.ok && setData.token) {
+                        localStorage.setItem('ynj_user_token', setData.token);
+                        localStorage.setItem('ynj_onboard_seen', '1');
+                        if (setData.wp_user_id) {
+                            await fetch('<?php echo admin_url("admin-ajax.php"); ?>', {
+                                method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                                body: 'action=ynj_set_session&wp_user_id=' + setData.wp_user_id, credentials: 'same-origin'
+                            });
+                        }
+                        window.location.reload();
+                    } else {
+                        errEl.textContent = setData.error || 'Could not set PIN. Try again.';
+                        btn.disabled = false; btn.textContent = 'Set PIN & Sign In';
                     }
-                    // Auto-join mosque (continue to existing join logic below)
-                    obJoinAndReload(regData);
-                } else {
-                    errEl.textContent = regData.error || 'Registration failed. Try again.';
-                    btn.disabled = false; btn.textContent = 'Create Account';
-                }
-            } catch(e) { errEl.textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Create Account'; }
+                } catch(e) { errEl.textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Set PIN & Sign In'; }
+            } else {
+                // New user registration
+                btn.textContent = 'Creating your account...';
+                var name = email.split('@')[0].replace(/[._]/g, ' ');
+                try {
+                    var regResp = await fetch(API + 'auth/register', {
+                        method: 'POST', headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({name: name, email: email, pin: newpin, mosque_slug: obSelectedSlug})
+                    });
+                    var regData = await regResp.json();
+                    if (regData.ok && regData.token) {
+                        localStorage.setItem('ynj_user_token', regData.token);
+                        localStorage.setItem('ynj_onboard_seen', '1');
+                        if (regData.wp_user_id) {
+                            await fetch('<?php echo admin_url("admin-ajax.php"); ?>', {
+                                method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                                body: 'action=ynj_set_session&wp_user_id=' + regData.wp_user_id, credentials: 'same-origin'
+                            });
+                        }
+                        obJoinAndReload(regData);
+                    } else {
+                        errEl.textContent = regData.error || 'Registration failed. Try again.';
+                        btn.disabled = false; btn.textContent = 'Create Account';
+                    }
+                } catch(e) { errEl.textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Create Account'; }
+            }
             return;
         }
 
@@ -491,15 +519,24 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
             var checkData = await checkResp.json();
 
             if (checkData.exists) {
-                // Existing user → show PIN field
-                document.getElementById('ob-pin-row').style.display = '';
-                document.getElementById('ob-pin').focus();
-                btn.textContent = 'Sign In';
+                if (checkData.has_pin) {
+                    // Has PIN → enter it
+                    document.getElementById('ob-pin-row').style.display = '';
+                    document.getElementById('ob-pin').focus();
+                    btn.textContent = 'Sign In';
+                } else {
+                    // Old password account → set a new PIN
+                    document.getElementById('ob-newpin-row').style.display = '';
+                    document.getElementById('ob-newpin').focus();
+                    btn.textContent = 'Set PIN & Sign In';
+                    window._obSetPinForExisting = true;
+                }
                 btn.disabled = false;
                 return;
             }
 
             // New user → show create PIN fields
+            window._obSetPinForExisting = false;
             document.getElementById('ob-newpin-row').style.display = '';
             document.getElementById('ob-newpin').focus();
             btn.textContent = 'Create Account';
