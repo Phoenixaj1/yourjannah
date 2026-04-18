@@ -98,8 +98,8 @@ if ( is_user_logged_in() ) {
     <!-- Step 1: Account Details -->
     <div class="ynj-step-panel active" id="step-1">
         <div class="ynj-reg-card">
-            <h3><?php esc_html_e( 'Enter your email', 'yourjannah' ); ?></h3>
-            <p class="ynj-subtitle"><?php esc_html_e( 'We\'ll email you your password. No hassle.', 'yourjannah' ); ?></p>
+            <h3><?php esc_html_e( 'Create your account', 'yourjannah' ); ?></h3>
+            <p class="ynj-subtitle"><?php esc_html_e( 'Enter your email and choose a 4-digit PIN. Simple.', 'yourjannah' ); ?></p>
 
             <?php
             $return_to    = isset( $_GET['redirect'] ) ? wp_validate_redirect( sanitize_text_field( $_GET['redirect'] ), '/' ) : '/';
@@ -140,6 +140,15 @@ if ( is_user_logged_in() ) {
                 <div class="ynj-reg-field">
                     <label for="reg-email"><?php esc_html_e( 'Email Address', 'yourjannah' ); ?></label>
                     <input type="email" id="reg-email" name="email" required autocomplete="email" placeholder="you@example.com" style="font-size:17px;padding:14px 16px;">
+                </div>
+                <div class="ynj-reg-field">
+                    <label for="reg-pin"><?php esc_html_e( 'Choose a PIN', 'yourjannah' ); ?></label>
+                    <input type="tel" id="reg-pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" required placeholder="<?php esc_attr_e( 'e.g. 1234', 'yourjannah' ); ?>" autocomplete="off" style="font-size:28px;letter-spacing:12px;text-align:center;font-weight:900;padding:16px;">
+                    <div style="font-size:11px;color:#6b8fa3;margin-top:4px;text-align:center;"><?php esc_html_e( '4-6 digits — like a bank PIN', 'yourjannah' ); ?></div>
+                </div>
+                <div class="ynj-reg-field">
+                    <label for="reg-pin-confirm"><?php esc_html_e( 'Confirm PIN', 'yourjannah' ); ?></label>
+                    <input type="tel" id="reg-pin-confirm" inputmode="numeric" pattern="[0-9]*" maxlength="6" required placeholder="<?php esc_attr_e( 'Type it again', 'yourjannah' ); ?>" autocomplete="off" style="font-size:28px;letter-spacing:12px;text-align:center;font-weight:900;padding:16px;">
                 </div>
             </form>
 
@@ -248,21 +257,38 @@ if ( is_user_logged_in() ) {
 
     // --- Step 1: Continue ---
     document.getElementById('btn-continue').addEventListener('click', function() {
-        var email    = document.getElementById('reg-email').value.trim();
-        var errEl    = document.getElementById('step1-error');
+        var email      = document.getElementById('reg-email').value.trim();
+        var pin        = document.getElementById('reg-pin').value.trim();
+        var pinConfirm = document.getElementById('reg-pin-confirm').value.trim();
+        var errEl      = document.getElementById('step1-error');
         errEl.textContent = '';
 
         if (!email) {
             errEl.textContent = <?php echo wp_json_encode( __( 'Email is required.', 'yourjannah' ) ); ?>;
             return;
         }
-        // Use email prefix as display name
-        document.getElementById('reg-name').value = email.split('@')[0];
-        // Basic email check
         if (email.indexOf('@') < 1 || email.indexOf('.') < 3) {
             errEl.textContent = <?php echo wp_json_encode( __( 'Please enter a valid email address.', 'yourjannah' ) ); ?>;
             return;
         }
+        if (!pin || pin.length < 4) {
+            errEl.textContent = <?php echo wp_json_encode( __( 'PIN must be at least 4 digits.', 'yourjannah' ) ); ?>;
+            document.getElementById('reg-pin').focus();
+            return;
+        }
+        if (!/^\d+$/.test(pin)) {
+            errEl.textContent = <?php echo wp_json_encode( __( 'PIN must be numbers only.', 'yourjannah' ) ); ?>;
+            document.getElementById('reg-pin').focus();
+            return;
+        }
+        if (pin !== pinConfirm) {
+            errEl.textContent = <?php echo wp_json_encode( __( 'PINs don\'t match. Please try again.', 'yourjannah' ) ); ?>;
+            document.getElementById('reg-pin-confirm').value = '';
+            document.getElementById('reg-pin-confirm').focus();
+            return;
+        }
+        // Use email prefix as display name
+        document.getElementById('reg-name').value = email.split('@')[0];
         showStep(2);
         updateCreateBtn();
     });
@@ -299,7 +325,7 @@ if ( is_user_logged_in() ) {
 
         var name     = document.getElementById('reg-name').value.trim();
         var email    = document.getElementById('reg-email').value.trim();
-        var password = 'YJ_' + Math.random().toString(36).slice(2, 10) + '!'; // auto-generated
+        var pin      = document.getElementById('reg-pin').value.trim();
         var phone    = document.getElementById('reg-phone').value.trim();
         var slug     = localStorage.getItem('ynj_mosque_slug') || '';
 
@@ -307,11 +333,11 @@ if ( is_user_logged_in() ) {
         btn.textContent = <?php echo wp_json_encode( __( 'Creating account...', 'yourjannah' ) ); ?>;
 
         try {
-            // 1. Register
+            // 1. Register with PIN
             var resp = await fetch(API + 'auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': ynjData.nonce },
-                body: JSON.stringify({ name: name, email: email, password: password, phone: phone, mosque_slug: slug })
+                body: JSON.stringify({ name: name, email: email, pin: pin, phone: phone, mosque_slug: slug })
             });
             var data = await resp.json();
 
@@ -336,7 +362,7 @@ if ( is_user_logged_in() ) {
             // 4. Show check-email message then redirect
             var emailMsg = document.getElementById('step2-error');
             emailMsg.style.color = '#166534';
-            emailMsg.innerHTML = '<?php echo esc_js( __( '✅ Account created! We\'ve emailed your password to', 'yourjannah' ) ); ?> <strong>' + email + '</strong>. <?php echo esc_js( __( 'Check your spam folder and mark as Not Spam.', 'yourjannah' ) ); ?>';
+            emailMsg.innerHTML = '<?php echo esc_js( __( '✅ Account created! Your PIN is set. Use it with', 'yourjannah' ) ); ?> <strong>' + email + '</strong> <?php echo esc_js( __( 'to sign in anytime.', 'yourjannah' ) ); ?>';
             btn.textContent = '<?php echo esc_js( __( 'Account Created ✓', 'yourjannah' ) ); ?>';
             btn.style.background = '#166534';
 

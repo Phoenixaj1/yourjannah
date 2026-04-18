@@ -20,7 +20,7 @@ if ( is_user_logged_in() ) {
     <section class="ynj-card" style="text-align:center;padding:32px 20px 20px;">
         <div style="font-size:36px;margin-bottom:8px;">🕌</div>
         <h2 style="font-size:20px;font-weight:700;margin-bottom:4px;"><?php esc_html_e( 'Welcome Back', 'yourjannah' ); ?></h2>
-        <p class="ynj-text-muted" style="margin-bottom:24px;"><?php esc_html_e( 'Sign in to see your bookings and get personalised prayer reminders.', 'yourjannah' ); ?></p>
+        <p class="ynj-text-muted" style="margin-bottom:24px;"><?php esc_html_e( 'Sign in with your email and PIN to continue.', 'yourjannah' ); ?></p>
     </section>
     <section class="ynj-card">
         <?php
@@ -58,11 +58,14 @@ if ( is_user_logged_in() ) {
 
         <form id="login-form" class="ynj-form">
             <div class="ynj-field"><label><?php esc_html_e( 'Email', 'yourjannah' ); ?></label><input type="email" name="email" required placeholder="your@email.com"></div>
-            <div class="ynj-field"><label><?php esc_html_e( 'Password', 'yourjannah' ); ?></label><input type="password" name="password" required placeholder="<?php esc_attr_e( 'Min 6 characters', 'yourjannah' ); ?>"></div>
+            <div class="ynj-field">
+                <label><?php esc_html_e( 'PIN', 'yourjannah' ); ?></label>
+                <input type="tel" name="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" required placeholder="<?php esc_attr_e( 'Enter your 4-6 digit PIN', 'yourjannah' ); ?>" style="font-size:24px;letter-spacing:8px;text-align:center;font-weight:800;" autocomplete="off">
+            </div>
         </form>
         <button class="ynj-btn" id="login-btn" type="button" style="width:100%;justify-content:center;margin-top:16px;"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></button>
         <p class="ynj-text-muted" id="login-error" style="margin-top:8px;text-align:center;"></p>
-        <p style="text-align:center;margin-top:12px;font-size:13px;"><a href="<?php echo esc_url( home_url( '/forgot-password' ) ); ?>"><?php esc_html_e( 'Forgot password?', 'yourjannah' ); ?></a></p>
+        <p style="text-align:center;margin-top:12px;font-size:13px;"><a href="<?php echo esc_url( home_url( '/forgot-password' ) ); ?>"><?php esc_html_e( 'Forgot PIN?', 'yourjannah' ); ?></a></p>
         <p style="text-align:center;margin-top:8px;font-size:13px;"><?php esc_html_e( "Don't have an account?", 'yourjannah' ); ?> <a href="<?php echo esc_url( home_url( '/register' ) ); ?>" style="font-weight:700;"><?php esc_html_e( 'Create one', 'yourjannah' ); ?></a></p>
         <div style="border-top:1px solid #eee;margin-top:16px;padding-top:16px;text-align:center;">
             <p style="font-size:12px;color:#6b8fa3;margin-bottom:8px;"><?php esc_html_e( 'Are you a mosque admin?', 'yourjannah' ); ?></p>
@@ -76,9 +79,13 @@ document.getElementById('login-btn').addEventListener('click', async function() 
     const btn = this;
     const form = document.getElementById('login-form');
     const email = form.querySelector('[name="email"]').value.trim();
-    const password = form.querySelector('[name="password"]').value;
-    if (!email || !password) {
-        document.getElementById('login-error').textContent = '<?php echo esc_js( __( 'Email and password required.', 'yourjannah' ) ); ?>';
+    const pin = form.querySelector('[name="pin"]').value.trim();
+    if (!email || !pin) {
+        document.getElementById('login-error').textContent = '<?php echo esc_js( __( 'Email and PIN required.', 'yourjannah' ) ); ?>';
+        return;
+    }
+    if (pin.length < 4) {
+        document.getElementById('login-error').textContent = '<?php echo esc_js( __( 'PIN must be at least 4 digits.', 'yourjannah' ) ); ?>';
         return;
     }
     btn.disabled = true;
@@ -87,7 +94,7 @@ document.getElementById('login-btn').addEventListener('click', async function() 
         const resp = await fetch(ynjData.restUrl + 'auth/login', {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'X-WP-Nonce': ynjData.nonce},
-            body: JSON.stringify({email, password})
+            body: JSON.stringify({email, pin})
         });
         const data = await resp.json();
         if (data.ok && data.token) {

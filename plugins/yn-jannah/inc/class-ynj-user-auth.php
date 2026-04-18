@@ -13,19 +13,28 @@ class YNJ_User_Auth {
 
     /**
      * Register a new congregation member.
+     * Accepts either PIN (4-6 digits, preferred) or legacy password.
      */
     public static function register( $data ) {
         $name     = sanitize_text_field( $data['name'] ?? '' );
         $email    = sanitize_email( $data['email'] ?? '' );
-        $password = $data['password'] ?? '';
+        $pin      = $data['pin'] ?? '';
+        $password = $data['password'] ?? ''; // Legacy fallback
         $phone    = sanitize_text_field( $data['phone'] ?? '' );
 
         if ( empty( $name ) || ! is_email( $email ) ) {
             return [ 'ok' => false, 'error' => 'Name and valid email are required.' ];
         }
 
-        if ( strlen( $password ) < 6 ) {
-            return [ 'ok' => false, 'error' => 'Password must be at least 6 characters.' ];
+        // PIN-based auth (preferred)
+        if ( $pin ) {
+            $pin = preg_replace( '/\D/', '', $pin ); // Strip non-digits
+            if ( strlen( $pin ) < 4 || strlen( $pin ) > 6 ) {
+                return [ 'ok' => false, 'error' => 'PIN must be 4-6 digits.' ];
+            }
+            $password = $pin; // Store PIN hash in password_hash column
+        } elseif ( strlen( $password ) < 4 ) {
+            return [ 'ok' => false, 'error' => 'PIN must be at least 4 digits.' ];
         }
 
         global $wpdb;
@@ -68,13 +77,18 @@ class YNJ_User_Auth {
 
     /**
      * Login an existing user.
+     * Accepts PIN (preferred) or legacy password.
      */
     public static function login( $data ) {
         $email    = sanitize_email( $data['email'] ?? '' );
-        $password = $data['password'] ?? '';
+        $pin      = $data['pin'] ?? '';
+        $password = $data['password'] ?? ''; // Legacy fallback
 
-        if ( ! is_email( $email ) || empty( $password ) ) {
-            return [ 'ok' => false, 'error' => 'Email and password are required.' ];
+        // Accept either PIN or password
+        $credential = $pin ?: $password;
+
+        if ( ! is_email( $email ) || empty( $credential ) ) {
+            return [ 'ok' => false, 'error' => 'Email and PIN are required.' ];
         }
 
         global $wpdb;
@@ -84,8 +98,8 @@ class YNJ_User_Auth {
             "SELECT * FROM $table WHERE email = %s AND status = 'active' LIMIT 1", $email
         ) );
 
-        if ( ! $user || ! password_verify( $password, $user->password_hash ) ) {
-            return [ 'ok' => false, 'error' => 'Invalid email or password.' ];
+        if ( ! $user || ! password_verify( $credential, $user->password_hash ) ) {
+            return [ 'ok' => false, 'error' => 'Invalid email or PIN.' ];
         }
 
         // Generate new token
