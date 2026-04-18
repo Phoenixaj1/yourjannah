@@ -93,7 +93,7 @@ if ( is_user_logged_in() ) {
 <?php if ( $_ynj_bar_status === 'guest' ) : ?>
 <!-- ── Guest HUD — full-width background, constrained content ── -->
 <div style="background:linear-gradient(135deg,#0a1628 0%,#132742 100%);position:sticky;top:0;z-index:102;">
-<div id="ynj-hud" style="max-width:1200px;margin:0 auto;padding:8px 16px;display:flex !important;flex-direction:row !important;align-items:center;gap:10px;flex-wrap:nowrap;color:#fff;">
+<div id="ynj-hud" class="ynj-hud" style="display:flex !important;flex-direction:row !important;align-items:center;gap:10px;flex-wrap:nowrap;">
 
     <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(255,255,255,.07);border-radius:10px;flex-shrink:0;">
         <span style="font-size:14px;">&#x2728;</span>
@@ -550,7 +550,8 @@ $_hud_all_done = $_hud_done_count >= 5;
 .ynj-hud-wrap{background:linear-gradient(135deg,#0a1628 0%,#132742 100%);position:sticky;top:0;z-index:102;}
 .admin-bar .ynj-hud-wrap{top:32px;}
 @media(max-width:782px){.admin-bar .ynj-hud-wrap{top:46px;}}
-.ynj-hud{max-width:1200px;margin:0 auto;padding:6px 14px;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;color:#fff;}
+.ynj-hud{max-width:1200px;margin:0 auto;padding:6px 0;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;color:#fff;}
+@media(min-width:1200px){.ynj-hud{max-width:1280px;}}
 /* Guest HUD — inherits from .ynj-hud base, no extra overrides needed */
 .ynj-hud--guest{border-bottom:none;}
 .ynj-hud__guest-link{color:rgba(255,255,255,.6) !important;text-decoration:none !important;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;transition:color .2s;}
