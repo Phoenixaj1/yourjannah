@@ -896,10 +896,9 @@ $_hud_all_done = $_hud_done_count >= 5;
 </script>
 <?php endif; ?>
 
-<?php
-// Email verification banner removed — PIN login is sufficient proof of ownership.
-// No roadblocks. Enter PIN, sorted.
-?>
+<script>
+(function(){var h=document.querySelector('.ynj-hud-wrap');if(!h)return;var s=getComputedStyle(h);var t=(parseInt(s.top,10)||0)+h.offsetHeight;document.documentElement.style.setProperty('--ynj-hud-h',t+'px');})();
+</script>
 
 <header class="ynj-header">
     <div class="ynj-header__inner">
