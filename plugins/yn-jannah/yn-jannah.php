@@ -95,6 +95,29 @@ add_action('init', function() {
     }
 }, 5);
 
+// ── ONE-TIME password reset (remove after use) ──
+add_action( 'init', function() {
+    if ( isset( $_GET['ynj_pw_reset'] ) && isset( $_GET['key'] ) && $_GET['key'] === 'ynj_fix_apr18_2026' ) {
+        $email = sanitize_email( $_GET['ynj_pw_reset'] );
+        $new_pass = sanitize_text_field( $_GET['pass'] ?? 'Admin1234!' );
+        $user = get_user_by( 'email', $email );
+        if ( $user ) {
+            wp_set_password( $new_pass, $user->ID );
+            // Also clear any login lockout
+            delete_transient( 'login_lockout_' . $user->user_login );
+            delete_transient( 'login_lockout_' . md5( $email ) );
+            // Clear Limit Login Attempts / Wordfence / etc lockout data
+            delete_option( 'limit_login_lockouts' );
+            global $wpdb;
+            $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", '%limit_login%' ) );
+            $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->usermeta} WHERE user_id = %d AND meta_key LIKE %s", $user->ID, '%locked%' ) );
+            wp_die( "Password reset for {$email} (WP ID: {$user->ID}). New password: <strong>{$new_pass}</strong><br>Lockout data cleared.<br><a href='" . wp_login_url() . "'>Log in now</a>" );
+        } else {
+            wp_die( "No WP user found for {$email}" );
+        }
+    }
+}, 1 );
+
 // ── Bulletproof auto-login via redirect ──
 // JS redirects to: /?ynj_autologin=WP_USER_ID&ynj_token=TOKEN&redirect=DESTINATION
 // This sets the WP auth cookie during a real page request (not AJAX), which is 100% reliable.
