@@ -265,6 +265,9 @@ $_hud_league_url = $_hud_mosque ? home_url( '/mosque/' . $_hud_mosque_slug . '#m
         </button>
         <?php endif; ?>
 
+        <!-- Info -->
+        <button type="button" class="ynj-hud__info-btn" onclick="ynjHudInfoToggle()" title="<?php esc_attr_e( 'How it works', 'yourjannah' ); ?>">?</button>
+
         <!-- Profile -->
         <a href="<?php echo esc_url( home_url( '/profile' ) ); ?>" class="ynj-hud__profile" title="<?php echo esc_attr( $_ynj_bar_name ); ?>">
             <span class="ynj-hud__avatar"><?php echo esc_html( $_hud_initial ); ?></span>
@@ -443,6 +446,105 @@ $_hud_all_done = $_hud_done_count >= 5;
 </div>
 <?php endif; ?>
 
+<!-- ════ HOW IT WORKS — Info Modal ════ -->
+<div class="ynj-hud-popup" id="hud-info-popup" style="display:none;">
+    <div class="ynj-hud-popup__card">
+        <button type="button" class="ynj-hud-popup__close" onclick="ynjHudInfoToggle()">&times;</button>
+
+        <div style="text-align:center;padding-bottom:14px;border-bottom:1px solid rgba(0,0,0,.06);margin-bottom:16px;">
+            <div style="font-size:32px;margin-bottom:4px;">&#x1F54C;</div>
+            <div style="font-size:18px;font-weight:800;color:#0a1628;"><?php esc_html_e( 'How YourJannah Works', 'yourjannah' ); ?></div>
+            <div style="font-size:12px;color:#6b8fa3;font-style:italic;"><?php esc_html_e( 'A journey of remembrance for you and your masjid', 'yourjannah' ); ?></div>
+        </div>
+
+        <div style="max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+
+            <!-- 1. Daily Dhikr -->
+            <div class="ynj-info-section">
+                <div class="ynj-info-icon">&#x1F4FF;</div>
+                <div>
+                    <div class="ynj-info-title"><?php esc_html_e( 'Daily Remembrance', 'yourjannah' ); ?></div>
+                    <div class="ynj-info-desc"><?php esc_html_e( 'Each day you receive 5 Sunnah adhkar — beautiful remembrances from the Prophet (PBUH) and the Quran. Tap to say each one. La ilaha illallah is always first.', 'yourjannah' ); ?></div>
+                </div>
+            </div>
+
+            <!-- 2. Points -->
+            <div class="ynj-info-section">
+                <div class="ynj-info-icon">&#x2B50;</div>
+                <div>
+                    <div class="ynj-info-title"><?php esc_html_e( 'Points', 'yourjannah' ); ?></div>
+                    <div class="ynj-info-desc"><?php esc_html_e( 'Each dhikr earns 75-100 points. Complete all 5 daily and earn a 200-point bonus. Points go to both you AND your masjid — lifting your community together.', 'yourjannah' ); ?></div>
+                </div>
+            </div>
+
+            <!-- 3. Masjid Levels -->
+            <div class="ynj-info-section">
+                <div class="ynj-info-icon"><?php echo $_hud_level ? $_hud_level['icon'] : '&#x1F331;'; ?></div>
+                <div>
+                    <div class="ynj-info-title"><?php esc_html_e( 'Masjid Levels', 'yourjannah' ); ?></div>
+                    <div class="ynj-info-desc"><?php esc_html_e( 'Your masjid grows from Seedling to Heavenly as the community says more dhikr. 10 levels to reach. The more your community remembers Allah, the higher your masjid rises.', 'yourjannah' ); ?></div>
+                    <div class="ynj-info-levels">
+                        <span>&#x1F331; Seedling</span>
+                        <span>&#x1F33F; Sprout</span>
+                        <span>&#x1F31F; Rising Star</span>
+                        <span>&#x2728; Shining Light</span>
+                        <span>&#x1F54C; Blessed</span>
+                        <span>&#x1F4AB; Radiant</span>
+                        <span>&#x1F320; Luminous</span>
+                        <span>&#x1F451; Majestic</span>
+                        <span>&#x1F3C6; Glorious</span>
+                        <span>&#x1F30D; Heavenly</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. League -->
+            <div class="ynj-info-section">
+                <div class="ynj-info-icon">&#x1F3C6;</div>
+                <div>
+                    <div class="ynj-info-title"><?php esc_html_e( 'Masjid League', 'yourjannah' ); ?></div>
+                    <div class="ynj-info-desc"><?php esc_html_e( 'Mosques compete weekly based on total dhikr per member. Small mosques compete fairly against similar-sized ones. Tap the rank badge in the bar to see your league table and weekly head-to-head challenges.', 'yourjannah' ); ?></div>
+                </div>
+            </div>
+
+            <!-- 5. Streaks -->
+            <div class="ynj-info-section">
+                <div class="ynj-info-icon">&#x1F525;</div>
+                <div>
+                    <div class="ynj-info-title"><?php esc_html_e( 'Community Streak', 'yourjannah' ); ?></div>
+                    <div class="ynj-info-desc"><?php esc_html_e( "The streak belongs to your masjid, not you alone. Every day someone from your community says dhikr, the streak continues. If nobody does — it breaks. Keep it alive together.", 'yourjannah' ); ?></div>
+                </div>
+            </div>
+
+            <!-- 6. Badges -->
+            <div class="ynj-info-section">
+                <div class="ynj-info-icon">&#x1F3C5;</div>
+                <div>
+                    <div class="ynj-info-title"><?php esc_html_e( 'Badges', 'yourjannah' ); ?></div>
+                    <div class="ynj-info-desc"><?php esc_html_e( 'Earn titles as you grow: Mubtadi (Beginner), Taalib (Seeker), Dhakir (Rememberer), Sabir (Patient), Mukhlis (Sincere), and more. Each title reflects your journey closer to Allah.', 'yourjannah' ); ?></div>
+                </div>
+            </div>
+
+            <!-- 7. Invite -->
+            <div class="ynj-info-section">
+                <div class="ynj-info-icon">&#x1F49A;</div>
+                <div>
+                    <div class="ynj-info-title"><?php esc_html_e( 'Invite Others', 'yourjannah' ); ?></div>
+                    <div class="ynj-info-desc"><?php esc_html_e( 'Every person who joins and says La ilaha illallah earns points for your masjid. Share the blessing with your brothers and sisters. The more who remember Allah, the higher your community rises.', 'yourjannah' ); ?></div>
+                </div>
+            </div>
+
+        </div>
+
+        <div style="text-align:center;padding-top:14px;border-top:1px solid rgba(0,0,0,.06);margin-top:10px;">
+            <div style="font-size:12px;color:#6b8fa3;font-style:italic;line-height:1.5;">
+                <?php esc_html_e( '"Truly, in the remembrance of Allah do hearts find rest."', 'yourjannah' ); ?>
+                <span style="opacity:.5;">&mdash; <?php esc_html_e( 'Quran 13:28', 'yourjannah' ); ?></span>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
 /* ════════════════════════════════════════════════
    MASJID HUD — Your community's status bar
@@ -498,6 +600,18 @@ $_hud_all_done = $_hud_done_count >= 5;
 @keyframes ynj-hud-dhikr-pulse{0%,100%{box-shadow:0 2px 10px rgba(40,126,97,.3);}50%{box-shadow:0 2px 18px rgba(40,126,97,.6),0 0 0 4px rgba(40,126,97,.1);}}
 .ynj-hud__dhikr--done{background:rgba(40,126,97,.15);box-shadow:none;cursor:default;animation:none;}
 .ynj-hud__dhikr--done:hover{transform:none;}
+
+/* ── Info Button ── */
+.ynj-hud__info-btn{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5);font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;transition:all .2s;font-family:inherit;}
+.ynj-hud__info-btn:hover{background:rgba(255,255,255,.2);color:#fff;}
+/* ── Info Modal Sections ── */
+.ynj-info-section{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid rgba(0,0,0,.04);}
+.ynj-info-section:last-child{border-bottom:none;}
+.ynj-info-icon{font-size:22px;flex-shrink:0;width:32px;text-align:center;padding-top:2px;}
+.ynj-info-title{font-size:14px;font-weight:800;color:#0a1628;margin-bottom:3px;}
+.ynj-info-desc{font-size:12px;color:#4a3728;line-height:1.5;}
+.ynj-info-levels{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
+.ynj-info-levels span{font-size:10px;padding:2px 8px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;color:#6b8fa3;white-space:nowrap;}
 
 /* ── Profile Link ── */
 .ynj-hud__profile{text-decoration:none;flex-shrink:0;}
@@ -593,7 +707,7 @@ $_hud_all_done = $_hud_done_count >= 5;
 (function(){
     /* ── Popup toggles ── */
     function closeAllPopups() {
-        ['hud-dhikr-popup', 'hud-league-popup'].forEach(function(id) {
+        ['hud-dhikr-popup', 'hud-league-popup', 'hud-info-popup'].forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
@@ -607,6 +721,13 @@ $_hud_all_done = $_hud_done_count >= 5;
     };
     window.ynjHudLeagueToggle = function() {
         var popup = document.getElementById('hud-league-popup');
+        if (!popup) return;
+        var show = popup.style.display === 'none';
+        closeAllPopups();
+        if (show) popup.style.display = 'flex';
+    };
+    window.ynjHudInfoToggle = function() {
+        var popup = document.getElementById('hud-info-popup');
         if (!popup) return;
         var show = popup.style.display === 'none';
         closeAllPopups();
@@ -803,7 +924,7 @@ $_hud_all_done = $_hud_done_count >= 5;
     if (currentRank > 0) localStorage.setItem('ynj_hud_rank', currentRank);
 
     /* ── Close popups on backdrop click ── */
-    ['hud-dhikr-popup', 'hud-league-popup'].forEach(function(id) {
+    ['hud-dhikr-popup', 'hud-league-popup', 'hud-info-popup'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.addEventListener('click', function(e) {
             if (e.target === el) el.style.display = 'none';
