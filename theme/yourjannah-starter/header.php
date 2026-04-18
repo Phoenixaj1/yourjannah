@@ -496,7 +496,7 @@ $_hud_all_done = $_hud_done_count >= 5;
    MASJID HUD — Your community's status bar
    Responsive: Desktop (2-row inline) → Mobile (stacked)
    ════════════════════════════════════════════════ */
-.ynj-hud-wrap{background:linear-gradient(135deg,#0a1628 0%,#132742 100%);position:sticky;top:0;z-index:102;}
+.ynj-hud-wrap{background:linear-gradient(135deg,#0a1628 0%,#132742 100%);position:sticky;top:0;z-index:102;margin-bottom:-1px;padding-bottom:1px;}
 .admin-bar .ynj-hud-wrap{top:32px;}
 @media(max-width:782px){.admin-bar .ynj-hud-wrap{top:46px;}}
 .ynj-hud{max-width:1200px;margin:0 auto;padding:6px 0;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;color:#fff;}
