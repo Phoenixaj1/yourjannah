@@ -935,21 +935,8 @@ $_hud_all_done = $_hud_done_count >= 5;
 <?php endif; ?>
 
 <?php
-// Email verification reminder banner
-if ( is_user_logged_in() ) {
-    $ynj_uid_verify = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
-    if ( $ynj_uid_verify ) {
-        global $wpdb;
-        $verified = (int) $wpdb->get_var( $wpdb->prepare(
-            "SELECT email_verified FROM " . YNJ_DB::table( 'users' ) . " WHERE id = %d", $ynj_uid_verify
-        ) );
-        if ( ! $verified ) : ?>
-        <div style="background:#fef3c7;color:#92400e;padding:6px 16px;font-size:12px;text-align:center;">
-            Please verify your email address. <a href="#" onclick="ynjResendVerify();return false;" style="color:#92400e;font-weight:700;text-decoration:underline;">Resend verification email</a>
-        </div>
-        <?php endif;
-    }
-}
+// Email verification banner removed — PIN login is sufficient proof of ownership.
+// No roadblocks. Enter PIN, sorted.
 ?>
 
 <header class="ynj-header">
