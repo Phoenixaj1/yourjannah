@@ -100,50 +100,115 @@ if ( is_user_logged_in() ) {
     </div>
 </div>
 <?php else : ?>
-<!-- ════ RPG HUD — Gamified Status Bar ════ -->
+<?php
+// ── Masjid XP data for progress bar ──
+$_hud_dhikr_total = 0;
+$_hud_members = 0;
+$_hud_next_tier = null;
+$_hud_xp_pct = 0;
+if ( $_hud_mosque && class_exists( 'YNJ_DB' ) ) {
+    global $wpdb;
+    // Total dhikr for this masjid (all time — the XP)
+    $_hud_dhikr_total = (int) $wpdb->get_var( $wpdb->prepare(
+        "SELECT COUNT(*) FROM " . YNJ_DB::table( 'ibadah_logs' ) . " WHERE mosque_id = %d AND dhikr = 1",
+        (int) $_hud_mosque->id
+    ) );
+    $_hud_members = (int) $wpdb->get_var( $wpdb->prepare(
+        "SELECT COUNT(*) FROM " . YNJ_DB::table( 'user_subscriptions' ) . " WHERE mosque_id = %d AND status = 'active'",
+        (int) $_hud_mosque->id
+    ) );
+    // Next tier thresholds (based on member count)
+    $all_tiers = [
+        [ 'name' => 'Rising Star', 'icon' => '&#x1F31F;', 'max' => 25 ],
+        [ 'name' => 'Growing',     'icon' => '&#x1F33F;', 'max' => 100 ],
+        [ 'name' => 'Established', 'icon' => '&#x1F333;', 'max' => 500 ],
+        [ 'name' => 'Flagship',    'icon' => '&#x1F3C6;', 'max' => 999999 ],
+    ];
+    foreach ( $all_tiers as $i => $t ) {
+        if ( $_hud_members <= $t['max'] ) {
+            if ( isset( $all_tiers[ $i + 1 ] ) ) {
+                $_hud_next_tier = $all_tiers[ $i + 1 ];
+                $_hud_xp_pct = min( 100, round( $_hud_members / $t['max'] * 100 ) );
+            } else {
+                $_hud_xp_pct = 100;
+            }
+            break;
+        }
+    }
+}
+$_hud_mosque_url = $_hud_mosque ? home_url( '/mosque/' . $_hud_mosque_slug ) : home_url( '/' );
+$_hud_league_url = $_hud_mosque ? home_url( '/mosque/' . $_hud_mosque_slug . '#mosque-league-table' ) : '#';
+?>
+<!-- ════ MASJID HUD — Your community's status bar ════ -->
 <div class="ynj-hud" id="ynj-hud">
-    <!-- 1. Masjid badge -->
-    <?php if ( $_hud_mosque ) : ?>
-    <a href="<?php echo esc_url( home_url( '/mosque/' . $_hud_mosque_slug ) ); ?>" class="ynj-hud__masjid" title="<?php echo esc_attr( $_hud_mosque->name ); ?>">
-        <span class="ynj-hud__tier-icon"><?php echo $_hud_tier['icon']; ?></span>
-        <span class="ynj-hud__masjid-name"><?php echo esc_html( mb_strimwidth( $_hud_mosque->name, 0, 14, '..' ) ); ?></span>
-    </a>
-    <?php endif; ?>
 
-    <!-- 2. Points -->
-    <div class="ynj-hud__pts" id="hud-pts">
-        <span class="ynj-hud__pts-icon">&#x2B50;</span>
-        <span class="ynj-hud__pts-num" id="hud-pts-num"><?php echo number_format( $_hud_points ); ?></span>
-    </div>
+    <!-- Row 1: Masjid identity + XP bar -->
+    <div class="ynj-hud__row1">
+        <a href="<?php echo esc_url( $_hud_mosque_url ); ?>" class="ynj-hud__masjid">
+            <span class="ynj-hud__tier-icon"><?php echo $_hud_mosque ? $_hud_tier['icon'] : '&#x1F54C;'; ?></span>
+            <span class="ynj-hud__masjid-name"><?php echo $_hud_mosque ? esc_html( $_hud_mosque->name ) : esc_html__( 'Select Masjid', 'yourjannah' ); ?></span>
+            <?php if ( $_hud_mosque ) : ?>
+            <span class="ynj-hud__tier-name"><?php echo esc_html( $_hud_tier['name'] ); ?></span>
+            <?php if ( $_hud_rank > 0 ) : ?>
+            <span class="ynj-hud__rank-badge" id="hud-rank" data-rank="<?php echo (int) $_hud_rank; ?>">#<?php echo (int) $_hud_rank; ?></span>
+            <?php endif; ?>
+            <?php endif; ?>
+        </a>
 
-    <!-- 3. League rank -->
-    <?php if ( $_hud_rank > 0 ) : ?>
-    <a href="<?php echo esc_url( home_url( '/mosque/' . $_hud_mosque_slug . '#mosque-league-table' ) ); ?>" class="ynj-hud__rank" id="hud-rank" data-rank="<?php echo (int) $_hud_rank; ?>">
-        <span class="ynj-hud__rank-pos">#<?php echo (int) $_hud_rank; ?></span>
-        <span class="ynj-hud__rank-tier"><?php echo esc_html( $_hud_tier['name'] ); ?></span>
-    </a>
-    <?php endif; ?>
-
-    <!-- 4. Streak flame -->
-    <div class="ynj-hud__streak<?php echo $_hud_streak >= 7 ? ' ynj-hud__streak--hot' : ''; ?>">
-        <span>&#x1F525;</span><span id="hud-streak"><?php echo (int) $_hud_streak; ?></span>
-    </div>
-
-    <!-- 5. Quick Dhikr button -->
-    <?php if ( $_hud_dhikr ) : ?>
-    <button type="button" class="ynj-hud__dhikr<?php echo $_hud_dhikr_done ? ' ynj-hud__dhikr--done' : ''; ?>" id="hud-dhikr-btn" onclick="ynjHudDhikrToggle()">
-        <?php if ( $_hud_dhikr_done ) : ?>
-            &#x2705;
-        <?php else : ?>
-            &#x1F4FF; <span class="ynj-hud__dhikr-label"><?php esc_html_e( 'Dhikr', 'yourjannah' ); ?></span>
+        <?php if ( $_hud_mosque ) : ?>
+        <div class="ynj-hud__xp">
+            <div class="ynj-hud__xp-bar">
+                <div class="ynj-hud__xp-fill" style="width:<?php echo (int) $_hud_xp_pct; ?>%"></div>
+            </div>
+            <span class="ynj-hud__xp-text"><?php echo number_format( $_hud_dhikr_total ); ?> <?php esc_html_e( 'dhikr', 'yourjannah' ); ?></span>
+            <?php if ( $_hud_next_tier ) : ?>
+            <span class="ynj-hud__xp-next"><?php echo $_hud_next_tier['icon']; ?></span>
+            <?php endif; ?>
+        </div>
         <?php endif; ?>
-    </button>
-    <?php endif; ?>
+    </div>
 
-    <!-- 6. Profile avatar -->
-    <a href="<?php echo esc_url( home_url( '/profile' ) ); ?>" class="ynj-hud__avatar" title="<?php echo esc_attr( $_ynj_bar_name ); ?>">
-        <?php echo esc_html( $_hud_initial ); ?>
-    </a>
+    <!-- Row 2: Actions -->
+    <div class="ynj-hud__row2">
+        <!-- Streak -->
+        <div class="ynj-hud__stat<?php echo $_hud_streak >= 7 ? ' ynj-hud__stat--glow' : ''; ?>">
+            <span class="ynj-hud__stat-icon">&#x1F525;</span>
+            <span class="ynj-hud__stat-num" id="hud-streak"><?php echo (int) $_hud_streak; ?></span>
+            <span class="ynj-hud__stat-label"><?php esc_html_e( 'streak', 'yourjannah' ); ?></span>
+        </div>
+
+        <!-- Points -->
+        <div class="ynj-hud__stat">
+            <span class="ynj-hud__stat-icon">&#x2B50;</span>
+            <span class="ynj-hud__stat-num" id="hud-pts-num"><?php echo number_format( $_hud_points ); ?></span>
+            <span class="ynj-hud__stat-label"><?php esc_html_e( 'pts', 'yourjannah' ); ?></span>
+        </div>
+
+        <!-- Members -->
+        <?php if ( $_hud_mosque ) : ?>
+        <div class="ynj-hud__stat">
+            <span class="ynj-hud__stat-icon">&#x1F465;</span>
+            <span class="ynj-hud__stat-num"><?php echo (int) $_hud_members; ?></span>
+            <span class="ynj-hud__stat-label"><?php esc_html_e( 'members', 'yourjannah' ); ?></span>
+        </div>
+        <?php endif; ?>
+
+        <!-- Quick Dhikr -->
+        <?php if ( $_hud_dhikr ) : ?>
+        <button type="button" class="ynj-hud__dhikr<?php echo $_hud_dhikr_done ? ' ynj-hud__dhikr--done' : ''; ?>" id="hud-dhikr-btn" onclick="ynjHudDhikrToggle()">
+            <?php if ( $_hud_dhikr_done ) : ?>
+                &#x2705; <span><?php esc_html_e( 'Done', 'yourjannah' ); ?></span>
+            <?php else : ?>
+                &#x1F4FF; <span><?php esc_html_e( 'Say Dhikr', 'yourjannah' ); ?></span>
+            <?php endif; ?>
+        </button>
+        <?php endif; ?>
+
+        <!-- Profile -->
+        <a href="<?php echo esc_url( home_url( '/profile' ) ); ?>" class="ynj-hud__profile" title="<?php echo esc_attr( $_ynj_bar_name ); ?>">
+            <span class="ynj-hud__avatar"><?php echo esc_html( $_hud_initial ); ?></span>
+        </a>
+    </div>
 </div>
 
 <!-- ════ Quick Dhikr Popup (opens from HUD) ════ -->
@@ -172,68 +237,102 @@ if ( is_user_logged_in() ) {
 
 <style>
 /* ════════════════════════════════════════════════
-   RPG HUD — Persistent gamified status bar
+   MASJID HUD — Your community's status bar
+   Responsive: Desktop (2-row inline) → Mobile (stacked)
    ════════════════════════════════════════════════ */
-.ynj-hud{display:flex;align-items:center;gap:6px;padding:5px 12px;background:linear-gradient(135deg,#0a1628,#1a2a44);color:#fff;font-size:11px;font-weight:600;z-index:102;position:sticky;top:0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
-.ynj-hud::-webkit-scrollbar{display:none;}
-.ynj-hud--guest{justify-content:space-between;background:#111827;border-bottom:2px solid #00ADEF;}
-.ynj-hud__msg{white-space:nowrap;font-size:11px;}
+.ynj-hud{background:linear-gradient(135deg,#0a1628 0%,#132742 100%);color:#fff;z-index:102;position:sticky;top:0;padding:6px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.ynj-hud--guest{display:flex;flex-wrap:nowrap;justify-content:space-between;background:#111827;border-bottom:2px solid #00ADEF;padding:8px 16px;}
+.ynj-hud__msg{white-space:nowrap;font-size:12px;font-weight:600;}
 .ynj-hud__actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.ynj-hud__link{color:rgba(255,255,255,.8);text-decoration:none;font-size:11px;}
-.ynj-hud__cta{padding:4px 12px;border-radius:8px;background:linear-gradient(135deg,#287e61,#1a5c43);font-weight:700;font-size:11px;text-decoration:none;color:#fff !important;white-space:nowrap;}
+.ynj-hud__link{color:rgba(255,255,255,.8);text-decoration:none;font-size:12px;}
+.ynj-hud__cta{padding:5px 14px;border-radius:8px;background:linear-gradient(135deg,#287e61,#1a5c43);font-weight:700;font-size:12px;text-decoration:none;color:#fff !important;white-space:nowrap;}
 
-/* Masjid badge */
-.ynj-hud__masjid{display:flex;align-items:center;gap:4px;padding:3px 8px;background:rgba(255,255,255,.08);border-radius:8px;text-decoration:none;color:#fff;flex-shrink:0;transition:background .2s;max-width:120px;}
-.ynj-hud__masjid:hover{background:rgba(255,255,255,.15);}
-.ynj-hud__tier-icon{font-size:14px;flex-shrink:0;}
-.ynj-hud__masjid-name{font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* Layout: Row 1 (masjid + xp) | Row 2 (stats + actions) */
+.ynj-hud__row1{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
+.ynj-hud__row2{display:flex;align-items:center;gap:6px;flex-shrink:0;}
 
-/* Points */
-.ynj-hud__pts{display:flex;align-items:center;gap:3px;padding:3px 8px;background:rgba(245,158,11,.12);border-radius:8px;flex-shrink:0;}
-.ynj-hud__pts-icon{font-size:12px;}
-.ynj-hud__pts-num{font-size:12px;font-weight:800;color:#fbbf24;min-width:24px;}
+/* ── Masjid Identity ── */
+.ynj-hud__masjid{display:flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(255,255,255,.07);border-radius:10px;text-decoration:none;color:#fff;flex-shrink:0;transition:background .2s;max-width:280px;}
+.ynj-hud__masjid:hover{background:rgba(255,255,255,.12);}
+.ynj-hud__tier-icon{font-size:16px;flex-shrink:0;}
+.ynj-hud__masjid-name{font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ynj-hud__tier-name{font-size:10px;color:rgba(255,255,255,.45);white-space:nowrap;flex-shrink:0;}
+.ynj-hud__rank-badge{font-size:11px;font-weight:900;color:#a78bfa;background:rgba(124,58,237,.2);padding:1px 6px;border-radius:6px;flex-shrink:0;}
+.ynj-hud__rank-badge--up{animation:ynj-hud-rankup 1.2s ease-out;}
+@keyframes ynj-hud-rankup{0%{transform:scale(1);}30%{transform:scale(1.5);background:rgba(245,158,11,.4);}100%{transform:scale(1);}}
 
-/* League rank */
-.ynj-hud__rank{display:flex;align-items:center;gap:3px;padding:3px 8px;background:rgba(124,58,237,.15);border-radius:8px;text-decoration:none;color:#fff;flex-shrink:0;transition:all .3s;}
-.ynj-hud__rank:hover{background:rgba(124,58,237,.25);}
-.ynj-hud__rank-pos{font-size:12px;font-weight:900;color:#a78bfa;}
-.ynj-hud__rank-tier{font-size:9px;color:rgba(255,255,255,.5);display:none;}
-@media(min-width:500px){.ynj-hud__rank-tier{display:inline;}}
-.ynj-hud__rank--up{animation:ynj-hud-rankup 1s ease-out;}
-@keyframes ynj-hud-rankup{0%{transform:scale(1);}30%{transform:scale(1.4);background:rgba(245,158,11,.3);}100%{transform:scale(1);}}
+/* ── XP Progress Bar ── */
+.ynj-hud__xp{display:flex;align-items:center;gap:6px;flex:1;min-width:80px;max-width:200px;}
+.ynj-hud__xp-bar{flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;min-width:40px;}
+.ynj-hud__xp-fill{height:100%;background:linear-gradient(90deg,#287e61,#34d399);border-radius:3px;transition:width 1s ease-out;box-shadow:0 0 6px rgba(40,126,97,.4);}
+.ynj-hud__xp-text{font-size:10px;font-weight:700;color:#34d399;white-space:nowrap;}
+.ynj-hud__xp-next{font-size:12px;flex-shrink:0;opacity:.5;}
 
-/* Streak */
-.ynj-hud__streak{display:flex;align-items:center;gap:2px;font-size:12px;font-weight:800;color:#f59e0b;flex-shrink:0;padding:3px 6px;border-radius:8px;}
-.ynj-hud__streak--hot{background:rgba(245,158,11,.12);animation:ynj-hud-flame 2s ease-in-out infinite;}
-@keyframes ynj-hud-flame{0%,100%{text-shadow:0 0 4px rgba(245,158,11,.3);}50%{text-shadow:0 0 12px rgba(245,158,11,.6);}}
+/* ── Stats (streak, points, members) ── */
+.ynj-hud__stat{display:flex;align-items:center;gap:3px;padding:3px 7px;border-radius:8px;background:rgba(255,255,255,.06);flex-shrink:0;}
+.ynj-hud__stat--glow{background:rgba(245,158,11,.1);animation:ynj-hud-flame 2s ease-in-out infinite;}
+@keyframes ynj-hud-flame{0%,100%{box-shadow:none;}50%{box-shadow:0 0 10px rgba(245,158,11,.25);}}
+.ynj-hud__stat-icon{font-size:12px;flex-shrink:0;}
+.ynj-hud__stat-num{font-size:12px;font-weight:800;color:#fbbf24;}
+.ynj-hud__stat-label{font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.3px;}
 
-/* Quick Dhikr button */
-.ynj-hud__dhikr{display:flex;align-items:center;gap:3px;padding:4px 10px;background:linear-gradient(135deg,#287e61,#1a5c43);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .2s;box-shadow:0 2px 8px rgba(40,126,97,.3);}
-.ynj-hud__dhikr:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(40,126,97,.4);}
+/* ── Quick Dhikr Button ── */
+.ynj-hud__dhikr{display:flex;align-items:center;gap:4px;padding:5px 12px;background:linear-gradient(135deg,#287e61,#1a5c43);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .2s;box-shadow:0 2px 10px rgba(40,126,97,.3);}
+.ynj-hud__dhikr:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(40,126,97,.4);}
 .ynj-hud__dhikr:active{transform:scale(.95);}
 .ynj-hud__dhikr--done{background:rgba(40,126,97,.15);box-shadow:none;cursor:default;}
 .ynj-hud__dhikr--done:hover{transform:none;}
-.ynj-hud__dhikr-label{display:none;}
-@media(min-width:400px){.ynj-hud__dhikr-label{display:inline;}}
 
-/* Profile avatar */
-.ynj-hud__avatar{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;text-decoration:none;flex-shrink:0;font-size:11px;font-weight:800;transition:background .2s;}
-.ynj-hud__avatar:hover{background:rgba(255,255,255,.25);}
+/* ── Profile Link ── */
+.ynj-hud__profile{text-decoration:none;flex-shrink:0;}
+.ynj-hud__avatar{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:12px;font-weight:800;transition:background .2s;}
+.ynj-hud__profile:hover .ynj-hud__avatar{background:rgba(255,255,255,.22);}
+
+/* ── Responsive ── */
+/* Tablet (768px) */
+@media(max-width:768px){
+    .ynj-hud{padding:5px 10px;gap:6px;}
+    .ynj-hud__masjid{max-width:200px;padding:3px 8px;}
+    .ynj-hud__masjid-name{font-size:11px;}
+    .ynj-hud__tier-name{display:none;}
+    .ynj-hud__xp{max-width:140px;}
+    .ynj-hud__stat-label{display:none;}
+}
+/* Mobile (480px) */
+@media(max-width:480px){
+    .ynj-hud{padding:4px 8px;gap:4px;}
+    .ynj-hud__row1{flex:1 1 100%;order:1;}
+    .ynj-hud__row2{flex:1 1 100%;order:2;justify-content:space-between;}
+    .ynj-hud__masjid{max-width:none;flex:1;}
+    .ynj-hud__masjid-name{font-size:11px;}
+    .ynj-hud__xp{flex:0 0 auto;min-width:60px;max-width:90px;}
+    .ynj-hud__xp-text{font-size:9px;}
+    .ynj-hud__stat{padding:2px 5px;}
+    .ynj-hud__stat-num{font-size:11px;}
+    .ynj-hud__dhikr{padding:4px 8px;font-size:11px;}
+    .ynj-hud__avatar{width:24px;height:24px;font-size:10px;}
+}
 
 /* ── Quick Dhikr Popup ── */
-.ynj-hud-popup{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10003;display:flex;align-items:flex-start;justify-content:center;padding-top:44px;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);}
-.ynj-hud-popup__card{background:#fff;border-radius:20px;padding:24px 20px;max-width:380px;width:calc(100% - 32px);box-shadow:0 20px 60px rgba(0,0,0,.3);animation:ynj-popup-in .3s ease-out;position:relative;}
+.ynj-hud-popup{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10003;display:flex;align-items:flex-start;justify-content:center;padding-top:60px;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);}
+.ynj-hud-popup__card{background:#fff;border-radius:20px;padding:28px 24px;max-width:400px;width:calc(100% - 32px);box-shadow:0 20px 60px rgba(0,0,0,.3);animation:ynj-popup-in .3s ease-out;position:relative;}
 @keyframes ynj-popup-in{from{opacity:0;transform:translateY(-20px) scale(.95);}to{opacity:1;transform:translateY(0) scale(1);}}
-.ynj-hud-popup__close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:22px;color:#999;cursor:pointer;padding:4px;line-height:1;}
-.ynj-hud-popup__label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#92400e;margin-bottom:12px;text-align:center;}
-.ynj-hud-popup__arabic{font-size:20px;line-height:1.8;color:#1a1a1a;margin-bottom:8px;text-align:center;font-family:'Amiri','Traditional Arabic',serif;}
-.ynj-hud-popup__english{font-size:13px;color:#4a3728;line-height:1.5;margin-bottom:10px;text-align:center;font-style:italic;}
-.ynj-hud-popup__reward{font-size:11px;color:#78350f;background:rgba(120,53,15,.05);border-radius:8px;padding:8px 12px;margin-bottom:14px;text-align:center;line-height:1.4;}
-.ynj-hud-popup__ameen{display:block;width:100%;padding:16px;border:none;border-radius:14px;background:linear-gradient(135deg,#287e61,#1a5c43);color:#fff;font-size:18px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 16px rgba(40,126,97,.3);transition:all .2s;}
-.ynj-hud-popup__ameen:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(40,126,97,.4);}
+.ynj-hud-popup__close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:24px;color:#999;cursor:pointer;padding:4px;line-height:1;}
+.ynj-hud-popup__label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#92400e;margin-bottom:14px;text-align:center;}
+.ynj-hud-popup__arabic{font-size:22px;line-height:1.8;color:#1a1a1a;margin-bottom:10px;text-align:center;font-family:'Amiri','Traditional Arabic',serif;}
+.ynj-hud-popup__english{font-size:14px;color:#4a3728;line-height:1.5;margin-bottom:12px;text-align:center;font-style:italic;}
+.ynj-hud-popup__reward{font-size:12px;color:#78350f;background:rgba(120,53,15,.05);border-radius:10px;padding:10px 14px;margin-bottom:16px;text-align:center;line-height:1.4;}
+.ynj-hud-popup__ameen{display:block;width:100%;padding:18px;border:none;border-radius:14px;background:linear-gradient(135deg,#287e61,#1a5c43);color:#fff;font-size:20px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px rgba(40,126,97,.3);transition:all .2s;}
+.ynj-hud-popup__ameen:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(40,126,97,.4);}
 .ynj-hud-popup__ameen:active{transform:scale(.97);}
-.ynj-hud-popup__ameen span{display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,.7);margin-top:2px;}
-.ynj-hud-popup__masjid{font-size:11px;color:#6b8fa3;text-align:center;margin-top:10px;}
+.ynj-hud-popup__ameen span{display:block;font-size:13px;font-weight:600;color:rgba(255,255,255,.7);margin-top:3px;}
+.ynj-hud-popup__masjid{font-size:12px;color:#6b8fa3;text-align:center;margin-top:12px;}
+@media(max-width:480px){
+    .ynj-hud-popup{padding-top:40px;}
+    .ynj-hud-popup__card{padding:20px 16px;}
+    .ynj-hud-popup__arabic{font-size:18px;}
+    .ynj-hud-popup__ameen{font-size:17px;padding:16px;}
+}
 </style>
 
 <script>
