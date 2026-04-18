@@ -336,11 +336,11 @@ class YNJ_WP_Auth {
     public static function register_congregation( $data ) {
         $name     = sanitize_text_field( $data['name'] ?? '' );
         $email    = sanitize_email( $data['email'] ?? '' );
-        $password = $data['password'] ?? '';
+        $password = $data['password'] ?? $data['pin'] ?? '';
         $phone    = sanitize_text_field( $data['phone'] ?? '' );
 
-        if ( empty( $name ) || ! is_email( $email ) || strlen( $password ) < 6 ) {
-            return new WP_Error( 'invalid_input', 'Name, valid email, and password (6+ chars) required.', [ 'status' => 400 ] );
+        if ( empty( $name ) || ! is_email( $email ) || strlen( $password ) < 4 ) {
+            return new WP_Error( 'invalid_input', 'Name, valid email, and password/PIN (4+ chars) required.', [ 'status' => 400 ] );
         }
 
         if ( email_exists( $email ) ) {

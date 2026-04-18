@@ -234,9 +234,10 @@ class YNJ_API_User {
         }
 
         return new \WP_REST_Response( [
-            'ok'    => true,
-            'token' => $result['token'],
-            'user'  => $result['user'],
+            'ok'         => true,
+            'token'      => $result['token'],
+            'user'       => $result['user'],
+            'wp_user_id' => $result['wp_user_id'] ?? 0,
         ] );
     }
 
