@@ -10,9 +10,7 @@ if (!defined('ABSPATH')) exit;
 define('YNJ_VERSION', '2.4.0');
 define('YNJ_DIR', plugin_dir_path(__FILE__));
 define('YNJ_URL', plugin_dir_url(__FILE__));
-if ( ! defined( 'YNJ_TABLE_PREFIX' ) ) {
-    define('YNJ_TABLE_PREFIX', 'ynj_');
-}
+define('YNJ_TABLE_PREFIX', 'ynj_');
 
 // One-time demo seeder (run via /wp-admin/admin.php?ynj_seed_extra=1)
 if ( is_admin() && file_exists( YNJ_DIR . 'seed-demo-extra.php' ) ) {
