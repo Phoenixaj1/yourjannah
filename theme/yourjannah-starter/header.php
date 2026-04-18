@@ -564,7 +564,7 @@ $_hud_all_done = $_hud_done_count >= 5;
 .ynj-hud__row2{display:flex;align-items:center;gap:6px;flex:0 0 auto;margin-left:auto;}
 
 /* ── Masjid Identity ── */
-.ynj-hud__masjid{display:flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(255,255,255,.07);border-radius:10px;text-decoration:none;color:#fff;flex-shrink:0;transition:background .2s;max-width:280px;}
+.ynj-hud__masjid{display:flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(255,255,255,.07);border-radius:10px;text-decoration:none;color:#fff;transition:background .2s;max-width:220px;min-width:0;overflow:hidden;flex-shrink:1;}
 .ynj-hud__masjid:hover{background:rgba(255,255,255,.12);}
 .ynj-hud__tier-icon{font-size:16px;flex-shrink:0;}
 .ynj-hud__masjid-name{font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -622,7 +622,7 @@ $_hud_all_done = $_hud_done_count >= 5;
 /* Tablet (768px) */
 @media(max-width:768px){
     .ynj-hud{padding:5px 10px;gap:6px;}
-    .ynj-hud__masjid{max-width:200px;padding:3px 8px;}
+    .ynj-hud__masjid{max-width:160px;padding:3px 8px;}
     .ynj-hud__masjid-name{font-size:11px;}
     .ynj-hud__tier-name{display:none;}
     .ynj-hud__xp{max-width:140px;}
@@ -633,8 +633,8 @@ $_hud_all_done = $_hud_done_count >= 5;
     .ynj-hud{padding:4px 8px;gap:4px;}
     .ynj-hud__row1{flex:1 1 100%;order:1;}
     .ynj-hud__row2{flex:1 1 100%;order:2;justify-content:space-between;}
-    .ynj-hud__masjid{max-width:none;flex:1;}
-    .ynj-hud__masjid-name{font-size:11px;}
+    .ynj-hud__masjid{max-width:140px;flex:0 1 auto;}
+    .ynj-hud__masjid-name{font-size:10px;}
     .ynj-hud__xp{flex:0 0 auto;min-width:60px;max-width:90px;}
     .ynj-hud__xp-text{font-size:9px;}
     .ynj-hud__stat{padding:2px 5px;}
