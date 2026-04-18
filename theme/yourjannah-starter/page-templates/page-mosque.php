@@ -736,107 +736,75 @@ if ( $mosque && is_user_logged_in() ) {
     </script>
     <?php endif; ?>
 
-    <!-- ═══ COMMUNITY STATS (visible to everyone) ═══ -->
-    <?php if ( $mosque ) : ?>
-    <section class="ynj-card" id="community-stats" style="padding:16px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #93c5fd;">
-        <h3 style="font-size:14px;font-weight:800;color:#1e40af;margin:0 0 10px;">🕌 <?php esc_html_e( 'Our Community This Week', 'yourjannah' ); ?></h3>
-        <div id="community-stats-data" style="font-size:13px;color:#1e40af;">
-            <p style="color:#6b8fa3;font-size:12px;"><?php esc_html_e( 'Loading...', 'yourjannah' ); ?></p>
+    <!-- ═══ UNIFIED COMMUNITY CARD — All stats in one place ═══ -->
+    <?php if ( $mosque ) :
+        $cp = function_exists( 'ynj_get_congregation_points' ) ? ynj_get_congregation_points( (int) $mosque->id, 7 ) : null;
+        $whos = function_exists( 'ynj_whos_at_masjid' ) ? ynj_whos_at_masjid( (int) $mosque->id, 2 ) : [ 'count' => 0 ];
+    ?>
+    <section class="ynj-card" id="community-stats" style="padding:0;overflow:hidden;border:1px solid #e5e7eb;">
+        <!-- Header -->
+        <div style="padding:14px 16px;background:linear-gradient(135deg,#1e3a5f,#0a1628);color:#fff;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="font-size:14px;font-weight:800;color:#fff;margin:0;">🕌 <?php esc_html_e( 'Our Community', 'yourjannah' ); ?></h3>
+                <?php if ( $whos['count'] > 0 ) : ?>
+                <span style="font-size:12px;background:rgba(34,197,94,.2);color:#4ade80;padding:3px 10px;border-radius:12px;font-weight:700;">
+                    <?php echo $whos['count']; ?> <?php esc_html_e( 'here now', 'yourjannah' ); ?>
+                </span>
+                <?php endif; ?>
+            </div>
         </div>
+
+        <!-- Stats Grid -->
+        <?php if ( $cp && ( $cp['prayers']['total'] > 0 || $cp['quran_pages'] > 0 ) ) : ?>
+        <div style="padding:12px 16px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;background:#f8fafc;">
+            <div>
+                <div style="font-size:20px;font-weight:800;color:#1e3a5f;"><?php echo number_format( $cp['prayers']['total'] ); ?></div>
+                <div style="font-size:10px;color:#64748b;font-weight:600;">🤲 <?php esc_html_e( 'prayers', 'yourjannah' ); ?></div>
+            </div>
+            <div>
+                <div style="font-size:20px;font-weight:800;color:#1e3a5f;"><?php echo number_format( $cp['quran_pages'] ); ?></div>
+                <div style="font-size:10px;color:#64748b;font-weight:600;">📖 <?php esc_html_e( 'pages', 'yourjannah' ); ?></div>
+            </div>
+            <div>
+                <div style="font-size:20px;font-weight:800;color:#1e3a5f;"><?php echo $cp['active_members']; ?></div>
+                <div style="font-size:10px;color:#64748b;font-weight:600;">👥 <?php esc_html_e( 'active', 'yourjannah' ); ?></div>
+            </div>
+        </div>
+        <?php if ( $cp['dhikr_days'] > 0 || $cp['fasting_days'] > 0 || $cp['good_deeds'] > 0 ) : ?>
+        <div style="padding:0 16px 10px;display:flex;justify-content:center;gap:12px;font-size:11px;color:#64748b;background:#f8fafc;">
+            <?php if ( $cp['dhikr_days'] > 0 ) : ?><span>📿 <?php echo $cp['dhikr_days']; ?> dhikr</span><?php endif; ?>
+            <?php if ( $cp['fasting_days'] > 0 ) : ?><span>🌙 <?php echo $cp['fasting_days']; ?> fasting</span><?php endif; ?>
+            <?php if ( $cp['good_deeds'] > 0 ) : ?><span>⭐ <?php echo $cp['good_deeds']; ?> deeds</span><?php endif; ?>
+        </div>
+        <?php endif; ?>
+        <?php else : ?>
+        <div style="padding:16px;text-align:center;background:#f8fafc;">
+            <p style="font-size:13px;color:#64748b;margin:0;"><?php esc_html_e( 'Be the first to log your ibadah today!', 'yourjannah' ); ?></p>
+        </div>
+        <?php endif; ?>
+
+        <!-- Challenge Progress (loaded via JS) -->
+        <div id="community-challenge-bar" style="display:none;padding:10px 16px;border-top:1px solid #e5e7eb;"></div>
     </section>
 
     <script>
     (function(){
         fetch('/wp-json/ynj/v1/ibadah/community/<?php echo (int) $mosque->id; ?>')
-            .then(function(r){ return r.json(); })
-            .then(function(d){
-                if (!d.ok) return;
-                var el = document.getElementById('community-stats-data');
-                var w = d.week || {};
-                var html = '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:8px;">';
-                if (w.prayers > 0) html += '<span>🤲 <strong>' + w.prayers.toLocaleString() + '</strong> prayers</span>';
-                if (w.pages > 0) html += '<span>📖 <strong>' + w.pages.toLocaleString() + '</strong> pages</span>';
-                if (w.fasting > 0) html += '<span>🌙 <strong>' + w.fasting + '</strong> fasting</span>';
-                if (w.good_deeds > 0) html += '<span>💝 <strong>' + w.good_deeds + '</strong> good deeds</span>';
-                html += '</div>';
-                if (d.active_today > 0) html += '<p style="font-size:12px;color:#3b82f6;margin-bottom:8px;">' + d.active_today + ' member' + (d.active_today > 1 ? 's' : '') + ' active today</p>';
-
-                if (d.challenge) {
-                    var ch = d.challenge;
-                    var pct = Math.min(100, ch.pct);
-                    html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #93c5fd;">';
-                    html += '<p style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:6px;">🏆 ' + ch.title + '</p>';
-                    html += '<div style="background:#bfdbfe;border-radius:6px;height:8px;overflow:hidden;margin-bottom:4px;">';
-                    html += '<div style="background:#2563eb;height:100%;width:' + pct + '%;border-radius:6px;transition:width .5s;"></div></div>';
-                    html += '<div style="display:flex;justify-content:space-between;font-size:11px;color:#3b82f6;">';
-                    html += '<span>' + ch.current.toLocaleString() + '/' + ch.target.toLocaleString() + ' (' + pct + '%)</span>';
-                    if (ch.status === 'completed') { html += '<span style="color:#16a34a;font-weight:700;">Completed! 🎉</span>'; }
-                    else if (ch.days_left > 0) { html += '<span>' + ch.days_left + ' day' + (ch.days_left > 1 ? 's' : '') + ' left</span>'; }
-                    html += '</div></div>';
-                }
-
-                if (w.prayers === 0 && w.pages === 0 && !d.challenge) {
-                    html = '<p style="font-size:12px;color:#6b8fa3;text-align:center;">Be the first to log your ibadah today!</p>';
-                }
-
-                el.innerHTML = html;
-            }).catch(function(){
-                document.getElementById('community-stats-data').innerHTML = '<p style="font-size:12px;color:#6b8fa3;">Community stats coming soon</p>';
-            });
+            .then(function(r){ return r.json(); }).then(function(d){
+                if (!d.ok || !d.challenge) return;
+                var ch = d.challenge, pct = Math.min(100, ch.pct);
+                var el = document.getElementById('community-challenge-bar');
+                el.style.display = '';
+                el.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
+                    + '<span style="font-size:12px;font-weight:700;color:#1e3a5f;">🏆 ' + ch.title + '</span>'
+                    + '<span style="font-size:11px;color:#64748b;">' + (ch.status === 'completed' ? '🎉 Done!' : ch.days_left + 'd left') + '</span></div>'
+                    + '<div style="background:#e2e8f0;border-radius:4px;height:6px;overflow:hidden;">'
+                    + '<div style="background:' + (ch.status === 'completed' ? '#16a34a' : '#287e61') + ';height:100%;width:' + pct + '%;border-radius:4px;transition:width .5s;"></div></div>'
+                    + '<div style="font-size:10px;color:#94a3b8;margin-top:2px;">' + ch.current.toLocaleString() + '/' + ch.target.toLocaleString() + '</div>';
+            }).catch(function(){});
     })();
     </script>
     <?php endif; ?>
-
-    <!-- ═══ CONGREGATION POINTS — Detailed ibadah breakdown ═══ -->
-    <?php if ( $mosque && function_exists( 'ynj_get_congregation_points' ) ) :
-        $cp = ynj_get_congregation_points( (int) $mosque->id, 7 );
-        if ( $cp['total_points'] > 0 ) :
-    ?>
-    <section class="ynj-card" style="padding:16px;background:linear-gradient(135deg,#faf5ff,#ede9fe);border:1px solid #c4b5fd;">
-        <h3 style="font-size:14px;font-weight:800;color:#5b21b6;margin:0 0 10px;">🏅 <?php esc_html_e( 'Congregation Points', 'yourjannah' ); ?></h3>
-        <div style="text-align:center;margin-bottom:10px;">
-            <span style="font-size:28px;font-weight:800;color:#7c3aed;"><?php echo number_format( $cp['total_points'] ); ?></span>
-            <span style="font-size:12px;color:#7c3aed;display:block;"><?php esc_html_e( 'collective points this week', 'yourjannah' ); ?></span>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:11px;text-align:center;">
-            <div style="padding:8px 4px;background:rgba(255,255,255,.7);border-radius:8px;">
-                <div style="font-size:16px;">🤲</div>
-                <strong style="font-size:14px;color:#5b21b6;"><?php echo number_format( $cp['prayers']['total'] ); ?></strong>
-                <div style="color:#7c3aed;"><?php esc_html_e( 'prayers', 'yourjannah' ); ?></div>
-            </div>
-            <div style="padding:8px 4px;background:rgba(255,255,255,.7);border-radius:8px;">
-                <div style="font-size:16px;">📖</div>
-                <strong style="font-size:14px;color:#5b21b6;"><?php echo number_format( $cp['quran_pages'] ); ?></strong>
-                <div style="color:#7c3aed;"><?php esc_html_e( 'Quran pages', 'yourjannah' ); ?></div>
-            </div>
-            <div style="padding:8px 4px;background:rgba(255,255,255,.7);border-radius:8px;">
-                <div style="font-size:16px;">📿</div>
-                <strong style="font-size:14px;color:#5b21b6;"><?php echo number_format( $cp['dhikr_days'] ); ?></strong>
-                <div style="color:#7c3aed;"><?php esc_html_e( 'dhikr', 'yourjannah' ); ?></div>
-            </div>
-        </div>
-        <div style="display:flex;justify-content:center;gap:12px;margin-top:8px;font-size:11px;color:#7c3aed;">
-            <?php if ( $cp['fasting_days'] > 0 ) : ?><span>🌙 <?php echo $cp['fasting_days']; ?> <?php esc_html_e( 'fasting', 'yourjannah' ); ?></span><?php endif; ?>
-            <?php if ( $cp['charity_days'] > 0 ) : ?><span>💝 <?php echo $cp['charity_days']; ?> <?php esc_html_e( 'charity', 'yourjannah' ); ?></span><?php endif; ?>
-            <?php if ( $cp['good_deeds'] > 0 ) : ?><span>⭐ <?php echo $cp['good_deeds']; ?> <?php esc_html_e( 'good deeds', 'yourjannah' ); ?></span><?php endif; ?>
-        </div>
-        <p style="text-align:center;font-size:11px;color:#a78bfa;margin-top:6px;"><?php echo $cp['active_members']; ?> <?php esc_html_e( 'members contributing', 'yourjannah' ); ?></p>
-    </section>
-    <?php endif; endif; ?>
-
-    <!-- ═══ WHO'S AT THE MASJID — Anonymous check-in counter ═══ -->
-    <?php if ( $mosque && function_exists( 'ynj_whos_at_masjid' ) ) :
-        $whos = ynj_whos_at_masjid( (int) $mosque->id, 2 );
-        if ( $whos['count'] > 0 ) :
-    ?>
-    <section class="ynj-card" style="padding:14px 16px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;text-align:center;">
-        <div style="font-size:28px;font-weight:800;color:#16a34a;"><?php echo $whos['count']; ?></div>
-        <p style="font-size:13px;color:#15803d;font-weight:600;margin:2px 0 0;">
-            <?php printf( esc_html__( 'people at %s right now', 'yourjannah' ), esc_html( $mosque->name ) ); ?>
-        </p>
-        <p style="font-size:11px;color:#22c55e;margin-top:2px;"><?php esc_html_e( 'Based on recent check-ins', 'yourjannah' ); ?></p>
-    </section>
-    <?php endif; endif; ?>
 
     <!-- ═══ HEAD-TO-HEAD CHALLENGE ═══ -->
     <?php if ( $mosque && function_exists( 'ynj_get_h2h_challenge' ) ) :
@@ -870,12 +838,13 @@ if ( $mosque && is_user_logged_in() ) {
     </section>
     <?php endif; endif; ?>
 
-    <!-- ═══ PERSONAL IMPACT SCORE ═══ -->
+    <!-- ═══ PERSONAL IMPACT SCORE (only show when 3+ members active) ═══ -->
     <?php if ( is_user_logged_in() && $mosque && function_exists( 'ynj_personal_impact' ) ) :
         $ynj_uid_impact = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
         if ( $ynj_uid_impact ) :
             $impact = ynj_personal_impact( $ynj_uid_impact, (int) $mosque->id, 7 );
-            if ( $impact['total_points'] > 0 ) :
+            $_impact_members = isset( $cp ) && $cp ? $cp['active_members'] : 0;
+            if ( $impact['total_points'] > 0 && $_impact_members >= 3 ) :
     ?>
     <section class="ynj-card" style="padding:14px 16px;text-align:center;">
         <p style="font-size:11px;color:#6b8fa3;margin:0 0 4px;font-weight:600;"><?php esc_html_e( 'Your Impact This Week', 'yourjannah' ); ?></p>
