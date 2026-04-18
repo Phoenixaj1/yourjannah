@@ -876,18 +876,30 @@ class YNJ_API_Points {
 
     /**
      * Get today's 5 dhikr for the user.
-     * Picks 5 from the pool using day-of-year rotation, each independently completable.
+     * La ilaha illallah is ALWAYS #1 (the greatest words).
+     * The other 4 rotate daily from the pool.
      */
     public static function get_todays_five() {
         $adhkar = self::get_weekly_adhkar();
         $day_num = (int) date( 'z' );
-        $count = count( $adhkar );
+
+        // #1 is ALWAYS La ilaha illallah (index 0 in pool)
         $five = [];
-        for ( $i = 0; $i < 5; $i++ ) {
-            $idx = ( $day_num + $i * 3 ) % $count; // Spread across the pool
-            $d = $adhkar[ $idx ];
+        $five[0] = $adhkar[0]; // Tawheed — always first
+        $five[0]['index'] = 0;
+
+        // #2-5 rotate from the rest of the pool (skip index 0)
+        $rest = array_slice( $adhkar, 1 );
+        $rest_count = count( $rest );
+        $used = [];
+        for ( $i = 1; $i < 5; $i++ ) {
+            $idx = ( $day_num + $i * 3 ) % $rest_count;
+            // Avoid duplicates
+            while ( in_array( $idx, $used, true ) ) $idx = ( $idx + 1 ) % $rest_count;
+            $used[] = $idx;
+            $d = $rest[ $idx ];
             $d['index'] = $i;
-            $five[] = $d;
+            $five[ $i ] = $d;
         }
         return $five;
     }
