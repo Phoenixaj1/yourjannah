@@ -183,26 +183,26 @@ function ynj_get_league_standings( $mosque_id, $city = null, $days = 7 ) {
  */
 function ynj_get_badge_definitions() {
     return [
-        // ── Quick wins (unlock in days, not months) ──
-        [ 'key' => 'first_dhikr',     'name' => 'First Light',      'icon' => '🌟', 'desc' => 'Say your first dhikr',                'check' => 'dhikr_days >= 1' ],
-        [ 'key' => 'dhikr_3',         'name' => 'Sparkling',        'icon' => '✨', 'desc' => 'Say dhikr 3 days',                    'check' => 'dhikr_days >= 3' ],
-        [ 'key' => 'all_five',        'name' => 'Perfect Day',      'icon' => '🎯', 'desc' => 'Complete all 5 dhikr in one day',     'check' => 'all_five >= 1' ],
-        [ 'key' => 'dhikr_7',         'name' => 'Devoted Week',     'icon' => '📿', 'desc' => 'Say dhikr 7 days',                    'check' => 'dhikr_days >= 7' ],
+        // ── First steps — the door opens ──
+        [ 'key' => 'first_dhikr',     'name' => 'Mubtadi (Beginner)',     'icon' => '🌟', 'desc' => 'Say your first remembrance',           'check' => 'dhikr_days >= 1' ],
+        [ 'key' => 'dhikr_3',         'name' => 'Taalib (Seeker)',        'icon' => '✨', 'desc' => 'Remember Allah 3 days',                'check' => 'dhikr_days >= 3' ],
+        [ 'key' => 'all_five',        'name' => 'Mukhlif (Devoted)',      'icon' => '🤲', 'desc' => 'Complete all 5 in one day',            'check' => 'all_five >= 1' ],
+        [ 'key' => 'dhikr_7',         'name' => 'Dhakir (Rememberer)',    'icon' => '📿', 'desc' => 'Remember Allah 7 days',                'check' => 'dhikr_days >= 7' ],
 
-        // ── Streak badges ──
-        [ 'key' => 'streak_3',        'name' => 'On Fire',          'icon' => '🔥', 'desc' => '3-day streak',                        'check' => 'streak >= 3' ],
-        [ 'key' => 'streak_7',        'name' => 'Unstoppable',      'icon' => '💪', 'desc' => '7-day streak',                        'check' => 'streak >= 7' ],
-        [ 'key' => 'streak_14',       'name' => 'Warrior',          'icon' => '⚔️', 'desc' => '14-day streak',                       'check' => 'streak >= 14' ],
-        [ 'key' => 'streak_30',       'name' => 'Steadfast',        'icon' => '💎', 'desc' => '30-day streak',                       'check' => 'streak >= 30' ],
+        // ── Consistency — the path deepens ──
+        [ 'key' => 'streak_3',        'name' => 'Murid (Aspirant)',       'icon' => '🕯️', 'desc' => '3 consecutive days',                   'check' => 'streak >= 3' ],
+        [ 'key' => 'streak_7',        'name' => 'Sabir (Patient)',        'icon' => '🌿', 'desc' => '7 consecutive days',                   'check' => 'streak >= 7' ],
+        [ 'key' => 'streak_14',       'name' => 'Mukhlis (Sincere)',      'icon' => '💎', 'desc' => '14 consecutive days',                  'check' => 'streak >= 14' ],
+        [ 'key' => 'streak_30',       'name' => 'Mustaqim (Steadfast)',   'icon' => '🏔️', 'desc' => '30 consecutive days',                  'check' => 'streak >= 30' ],
 
-        // ── Dhikr milestones ──
-        [ 'key' => 'dhikr_14',        'name' => 'Remembrance',      'icon' => '🤲', 'desc' => 'Say dhikr 14 days',                   'check' => 'dhikr_days >= 14' ],
-        [ 'key' => 'dhikr_30',        'name' => 'Luminous',         'icon' => '🌙', 'desc' => 'Say dhikr 30 days',                   'check' => 'dhikr_days >= 30' ],
-        [ 'key' => 'dhikr_100',       'name' => 'Century',          'icon' => '💯', 'desc' => 'Say dhikr 100 days',                  'check' => 'dhikr_days >= 100' ],
+        // ── Depth — drawing ever closer ──
+        [ 'key' => 'dhikr_14',        'name' => 'Qarib (Near)',           'icon' => '🌙', 'desc' => 'Remember Allah 14 days',               'check' => 'dhikr_days >= 14' ],
+        [ 'key' => 'dhikr_30',        'name' => 'Wali (Friend of Allah)','icon' => '☀️', 'desc' => 'Remember Allah 30 days',               'check' => 'dhikr_days >= 30' ],
+        [ 'key' => 'dhikr_100',       'name' => 'Arif (Knower)',          'icon' => '🌕', 'desc' => 'Remember Allah 100 days',              'check' => 'dhikr_days >= 100' ],
 
-        // ── Gratitude badges ──
-        [ 'key' => 'charity_3',       'name' => 'Grateful Heart',   'icon' => '💝', 'desc' => 'Log shukr 3 times',                   'check' => 'charity_days >= 3' ],
-        [ 'key' => 'charity_10',      'name' => 'Overflowing',      'icon' => '🌊', 'desc' => 'Log shukr 10 times',                  'check' => 'charity_days >= 10' ],
+        // ── Gratitude — the overflowing heart ──
+        [ 'key' => 'charity_3',       'name' => 'Shakir (Grateful)',      'icon' => '💝', 'desc' => 'Express gratitude 3 times',            'check' => 'charity_days >= 3' ],
+        [ 'key' => 'charity_10',      'name' => 'Shakur (Ever-Grateful)', 'icon' => '🌊', 'desc' => 'Express gratitude 10 times',           'check' => 'charity_days >= 10' ],
 
         // ── Community badges ──
         [ 'key' => 'checkin_first',   'name' => 'First Visit',      'icon' => '📍', 'desc' => 'Check in at your mosque',             'check' => 'checkins >= 1' ],

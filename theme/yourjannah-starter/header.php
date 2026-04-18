@@ -285,52 +285,65 @@ $_hud_all_done = $_hud_done_count >= 5;
 ?>
 <?php if ( ! empty( $_hud_five ) ) : ?>
 <div class="ynj-hud-popup" id="hud-dhikr-popup" style="display:none;">
-    <div class="ynj-hud-popup__card">
+    <div class="ynj-hud-popup__card" id="hud-popup-card">
         <button type="button" class="ynj-hud-popup__close" onclick="ynjHudDhikrToggle()">&times;</button>
 
-        <!-- Bonus banner -->
-        <?php if ( ! $_hud_all_done ) : ?>
-        <div style="text-align:center;padding:8px 0 12px;border-bottom:1px solid #eee;margin-bottom:12px;">
-            <div style="font-size:13px;font-weight:800;color:#92400e;">&#x1F3AF; <?php printf( esc_html__( 'Complete all 5 = +200 BONUS', 'yourjannah' ) ); ?></div>
-            <div style="font-size:11px;color:#a16207;"><?php echo $_hud_done_count; ?>/5 <?php esc_html_e( 'done', 'yourjannah' ); ?> &middot; <?php echo 24 - (int) date( 'G' ); ?>h <?php esc_html_e( 'left', 'yourjannah' ); ?></div>
-            <div style="height:4px;background:#e5e7eb;border-radius:2px;margin-top:6px;overflow:hidden;">
-                <div style="height:100%;width:<?php echo $_hud_done_count * 20; ?>%;background:linear-gradient(90deg,#287e61,#34d399);border-radius:2px;transition:width .3s;"></div>
-            </div>
+        <!-- Header: gentle progress, not arcade banner -->
+        <div class="ynj-popup-header">
+            <?php if ( $_hud_all_done ) : ?>
+                <div class="ynj-popup-header__complete">
+                    <div style="font-size:14px;font-weight:700;color:#166534;margin-bottom:4px;"><?php esc_html_e( 'Alhamdulillah', 'yourjannah' ); ?></div>
+                    <div style="font-size:12px;color:#15803d;font-style:italic;"><?php esc_html_e( 'Truly, in the remembrance of Allah do hearts find rest.', 'yourjannah' ); ?> <span style="opacity:.6;">&mdash; 13:28</span></div>
+                </div>
+            <?php else : ?>
+                <div style="font-size:12px;color:#6b8fa3;text-align:center;margin-bottom:6px;">
+                    <?php if ( $_hud_done_count === 0 ) : ?>
+                        <?php esc_html_e( "Today's remembrances are waiting for you", 'yourjannah' ); ?>
+                    <?php else : ?>
+                        <?php printf( esc_html__( '%d of 5 remembrances offered today', 'yourjannah' ), $_hud_done_count ); ?>
+                    <?php endif; ?>
+                </div>
+                <div class="ynj-popup-progress">
+                    <div class="ynj-popup-progress__fill" id="hud-popup-progress" style="width:<?php echo $_hud_done_count * 20; ?>%"></div>
+                </div>
+            <?php endif; ?>
         </div>
-        <?php else : ?>
-        <div style="text-align:center;padding:12px 0;border-bottom:1px solid #eee;margin-bottom:12px;">
-            <div style="font-size:16px;font-weight:800;color:#166534;">&#x1F31F; <?php esc_html_e( 'ALL 5 COMPLETE!', 'yourjannah' ); ?></div>
-            <div style="font-size:12px;color:#15803d;"><?php esc_html_e( 'MashaAllah! +200 bonus earned.', 'yourjannah' ); ?></div>
-        </div>
-        <?php endif; ?>
 
-        <!-- Scrollable list of 5 dhikr -->
-        <div style="max-height:55vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+        <!-- Scrollable list of 5 dhikr — sacred space -->
+        <div class="ynj-popup-scroll" id="hud-popup-scroll">
         <?php foreach ( $_hud_five as $i => $hd ) :
             $hd_done = $_hud_done_flags[ $i ] ?? false;
             $hd_legendary = ( $hd['tier'] ?? '' ) === 'legendary';
         ?>
-            <div class="ynj-hud-popup__item<?php echo $hd_done ? ' ynj-hud-popup__item--done' : ''; ?><?php echo $hd_legendary ? ' ynj-hud-popup__item--legendary' : ''; ?>" id="hud-dhikr-item-<?php echo $i; ?>">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#92400e;background:rgba(146,64,14,.08);padding:1px 6px;border-radius:4px;"><?php echo esc_html( ucfirst( $hd['category'] ) ); ?></span>
-                    <span style="font-size:12px;font-weight:900;color:<?php echo $hd_done ? '#166534' : '#287e61'; ?>;"><?php echo $hd_done ? '&#x2705;' : '+' . (int) $hd['points']; ?></span>
-                </div>
-                <div style="font-size:16px;line-height:1.7;text-align:center;margin-bottom:4px;<?php echo $hd_done ? 'opacity:.5;font-size:13px;' : ''; ?>" dir="rtl"><?php echo esc_html( $hd['arabic'] ); ?></div>
-                <div style="font-size:11px;color:#4a3728;text-align:center;font-style:italic;margin-bottom:6px;<?php echo $hd_done ? 'opacity:.5;' : ''; ?>"><?php echo esc_html( $hd['english'] ); ?></div>
+            <div class="ynj-dhikr-item<?php echo $hd_done ? ' ynj-dhikr-item--done' : ''; ?><?php echo $hd_legendary ? ' ynj-dhikr-item--legendary' : ''; ?>" id="hud-dhikr-item-<?php echo $i; ?>">
                 <?php if ( ! $hd_done ) : ?>
-                <button type="button" class="ynj-hud-popup__ameen<?php echo $hd_legendary ? ' ynj-hud-popup__ameen--legendary' : ''; ?>" data-index="<?php echo $i; ?>" onclick="ynjHudAmeen(this, <?php echo $i; ?>)">
-                    <?php echo esc_html( $hd['action_text'] ); ?>
-                    <span>+<?php echo (int) $hd['points']; ?></span>
-                </button>
+                    <!-- Sacred reading space — no points on the card -->
+                    <div class="ynj-dhikr-item__arabic" dir="rtl"><?php echo esc_html( $hd['arabic'] ); ?></div>
+                    <div class="ynj-dhikr-item__english"><?php echo esc_html( $hd['english'] ); ?></div>
+                    <div class="ynj-dhikr-item__reward"><?php echo esc_html( $hd['reward'] ); ?></div>
+                    <div class="ynj-dhikr-item__source"><?php echo esc_html( $hd['source'] ); ?></div>
+                    <!-- Button says the dhikr phrase only — no points on the sacred moment -->
+                    <button type="button" class="ynj-dhikr-item__btn<?php echo $hd_legendary ? ' ynj-dhikr-item__btn--legendary' : ''; ?>" data-index="<?php echo $i; ?>" data-reward="<?php echo esc_attr( $hd['reward'] ); ?>" onclick="ynjHudAmeen(this, <?php echo $i; ?>)">
+                        <?php echo esc_html( $hd['action_text'] ); ?>
+                    </button>
                 <?php else : ?>
-                <div style="text-align:center;font-size:11px;color:#166534;font-weight:600;padding:6px 0;">&#x2705; <?php esc_html_e( 'Done', 'yourjannah' ); ?></div>
+                    <!-- Completed: show the words in peace -->
+                    <div class="ynj-dhikr-item__arabic" dir="rtl" style="opacity:.45;font-size:16px;"><?php echo esc_html( $hd['arabic'] ); ?></div>
+                    <div style="text-align:center;font-size:11px;color:#287e61;font-weight:600;padding:4px 0;">&#x2714; <?php esc_html_e( 'Said', 'yourjannah' ); ?></div>
                 <?php endif; ?>
             </div>
         <?php endforeach; ?>
         </div>
 
-        <?php if ( $_hud_mosque ) : ?>
-        <div class="ynj-hud-popup__masjid">&#x1F54C; <?php printf( esc_html__( 'Every dhikr elevates %s', 'yourjannah' ), esc_html( $_hud_mosque->name ) ); ?></div>
+        <!-- Footer: community connection -->
+        <?php if ( $_hud_mosque && $_hud_streak > 0 ) : ?>
+        <div class="ynj-popup-footer">
+            <?php printf( esc_html__( '%d days your community has remembered Allah together', 'yourjannah' ), $_hud_streak ); ?>
+        </div>
+        <?php elseif ( $_hud_mosque ) : ?>
+        <div class="ynj-popup-footer">
+            <?php printf( esc_html__( 'Be the one who starts the remembrance at %s today', 'yourjannah' ), esc_html( $_hud_mosque->name ) ); ?>
+        </div>
         <?php endif; ?>
     </div>
 </div>
@@ -418,30 +431,63 @@ $_hud_all_done = $_hud_done_count >= 5;
     .ynj-hud__avatar{width:24px;height:24px;font-size:10px;}
 }
 
-/* ── Quick Dhikr Popup ── */
-.ynj-hud-popup{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10003;display:flex;align-items:flex-start;justify-content:center;padding-top:60px;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);}
-.ynj-hud-popup__card{background:#fff;border-radius:20px;padding:28px 24px;max-width:400px;width:calc(100% - 32px);box-shadow:0 20px 60px rgba(0,0,0,.3);animation:ynj-popup-in .3s ease-out;position:relative;}
-@keyframes ynj-popup-in{from{opacity:0;transform:translateY(-20px) scale(.95);}to{opacity:1;transform:translateY(0) scale(1);}}
-.ynj-hud-popup__close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:24px;color:#999;cursor:pointer;padding:4px;line-height:1;}
-.ynj-hud-popup__label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#92400e;margin-bottom:14px;text-align:center;}
-.ynj-hud-popup__arabic{font-size:22px;line-height:1.8;color:#1a1a1a;margin-bottom:10px;text-align:center;font-family:'Amiri','Traditional Arabic',serif;}
-.ynj-hud-popup__english{font-size:14px;color:#4a3728;line-height:1.5;margin-bottom:12px;text-align:center;font-style:italic;}
-.ynj-hud-popup__reward{font-size:12px;color:#78350f;background:rgba(120,53,15,.05);border-radius:10px;padding:10px 14px;margin-bottom:16px;text-align:center;line-height:1.4;}
-.ynj-hud-popup__ameen{display:block;width:100%;padding:18px;border:none;border-radius:14px;background:linear-gradient(135deg,#287e61,#1a5c43);color:#fff;font-size:20px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px rgba(40,126,97,.3);transition:all .2s;}
-.ynj-hud-popup__ameen:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(40,126,97,.4);}
-.ynj-hud-popup__ameen:active{transform:scale(.97);}
-.ynj-hud-popup__ameen span{display:block;font-size:13px;font-weight:600;color:rgba(255,255,255,.7);margin-top:3px;}
-.ynj-hud-popup__masjid{font-size:12px;color:#6b8fa3;text-align:center;margin-top:12px;}
-/* Popup items (5 dhikr list) */
-.ynj-hud-popup__item{padding:12px;margin-bottom:8px;border-radius:12px;background:#fefce8;border:1px solid #fde68a;}
-.ynj-hud-popup__item--done{opacity:.6;background:#f9fafb;border-color:#e5e7eb;}
-.ynj-hud-popup__item--legendary{background:#fffbeb;border:2px solid #f59e0b;box-shadow:0 0 8px rgba(245,158,11,.1);}
-.ynj-hud-popup__ameen--legendary{background:linear-gradient(135deg,#d97706,#b45309) !important;}
+/* ════════════════════════════════════════════
+   SACRED DHIKR POPUP — The doorway to the Divine
+   ════════════════════════════════════════════ */
+.ynj-hud-popup{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10003;display:flex;align-items:flex-start;justify-content:center;padding-top:50px;background:rgba(10,22,40,.7);backdrop-filter:blur(6px);}
+.ynj-hud-popup__card{background:linear-gradient(180deg,#faf9f6 0%,#f5f0e8 100%);border-radius:24px;padding:24px 20px;max-width:420px;width:calc(100% - 24px);box-shadow:0 24px 80px rgba(0,0,0,.3);animation:ynj-popup-in .4s ease-out;position:relative;max-height:90vh;display:flex;flex-direction:column;}
+@keyframes ynj-popup-in{from{opacity:0;transform:translateY(-16px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);}}
+.ynj-hud-popup__close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:22px;color:#999;cursor:pointer;padding:6px;line-height:1;z-index:1;}
+
+/* Header */
+.ynj-popup-header{padding-bottom:12px;border-bottom:1px solid rgba(0,0,0,.06);margin-bottom:12px;flex-shrink:0;}
+.ynj-popup-header__complete{text-align:center;padding:8px 0;}
+.ynj-popup-progress{height:4px;background:rgba(0,0,0,.06);border-radius:2px;overflow:hidden;}
+.ynj-popup-progress__fill{height:100%;background:linear-gradient(90deg,#287e61,#34d399);border-radius:2px;transition:width .6s ease-out;}
+
+/* Scrollable content */
+.ynj-popup-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:4px;}
+.ynj-popup-scroll::-webkit-scrollbar{width:3px;}
+.ynj-popup-scroll::-webkit-scrollbar-thumb{background:rgba(0,0,0,.1);border-radius:2px;}
+
+/* Individual dhikr item — sacred space */
+.ynj-dhikr-item{padding:20px 16px;margin-bottom:10px;border-radius:16px;background:#fff;border:1px solid rgba(0,0,0,.04);box-shadow:0 1px 4px rgba(0,0,0,.03);transition:all .4s;}
+.ynj-dhikr-item--done{opacity:.5;padding:12px 16px;background:rgba(40,126,97,.03);border-color:rgba(40,126,97,.1);}
+.ynj-dhikr-item--legendary{background:linear-gradient(180deg,#fffef5 0%,#fef9e7 100%);border:1.5px solid rgba(245,158,11,.25);box-shadow:0 2px 12px rgba(245,158,11,.06);}
+
+/* Arabic — let it BREATHE */
+.ynj-dhikr-item__arabic{font-size:22px;line-height:2;text-align:center;color:#1a1a1a;margin:8px 0 12px;font-family:'Amiri','Traditional Arabic','Scheherazade New',serif;}
+.ynj-dhikr-item--legendary .ynj-dhikr-item__arabic{font-size:26px;}
+
+/* English translation */
+.ynj-dhikr-item__english{font-size:13px;color:#5a4a3a;text-align:center;font-style:italic;line-height:1.6;margin-bottom:10px;}
+
+/* Hadith reward — the spiritual motivation */
+.ynj-dhikr-item__reward{font-size:11px;color:#78350f;text-align:center;line-height:1.5;margin-bottom:4px;padding:6px 10px;background:rgba(120,53,15,.03);border-radius:8px;}
+
+/* Source */
+.ynj-dhikr-item__source{font-size:9px;color:rgba(0,0,0,.3);text-align:center;margin-bottom:12px;}
+
+/* Action button — says the dhikr phrase ONLY, no points */
+.ynj-dhikr-item__btn{display:block;width:100%;padding:16px;border:none;border-radius:14px;background:linear-gradient(135deg,#1a3a2a,#0a2418);color:#fff;font-size:18px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .25s;letter-spacing:.5px;}
+.ynj-dhikr-item__btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(10,36,24,.3);}
+.ynj-dhikr-item__btn:active{transform:scale(.97);}
+.ynj-dhikr-item__btn--legendary{background:linear-gradient(135deg,#78350f,#5a2d0c);font-size:20px;}
+
+/* Reflecting state — the breath after the button */
+.ynj-dhikr-item--reflecting{background:linear-gradient(180deg,#f0fdf4,#e8f5e0);border-color:rgba(40,126,97,.15);}
+.ynj-dhikr-item--reflecting .ynj-dhikr-item__arabic{animation:ynj-arabic-glow 3s ease-in-out infinite;}
+@keyframes ynj-arabic-glow{0%,100%{text-shadow:0 0 0 transparent;}50%{text-shadow:0 0 20px rgba(40,126,97,.15);}}
+
+/* Footer */
+.ynj-popup-footer{flex-shrink:0;padding-top:12px;border-top:1px solid rgba(0,0,0,.06);margin-top:8px;text-align:center;font-size:11px;color:#6b8fa3;font-style:italic;line-height:1.4;}
+
 @media(max-width:480px){
-    .ynj-hud-popup{padding-top:40px;}
-    .ynj-hud-popup__card{padding:20px 16px;}
-    .ynj-hud-popup__arabic{font-size:18px;}
-    .ynj-hud-popup__ameen{font-size:17px;padding:16px;}
+    .ynj-hud-popup{padding-top:8px;}
+    .ynj-hud-popup__card{padding:18px 14px;border-radius:20px;max-height:95vh;}
+    .ynj-dhikr-item__arabic{font-size:20px;}
+    .ynj-dhikr-item--legendary .ynj-dhikr-item__arabic{font-size:24px;}
+    .ynj-dhikr-item__btn{font-size:16px;padding:14px;}
 }
 </style>
 
@@ -529,12 +575,17 @@ $_hud_all_done = $_hud_done_count >= 5;
         setTimeout(function(){t.style.transform='translateX(-50%) translateY(20px) scale(.9)';t.style.opacity='0';setTimeout(function(){t.remove();},400);},4000);
     }
 
-    /* ── Say Ameen from HUD popup (supports per-dhikr index) ── */
+    /* ════════════════════════════════════════════════
+       SACRED AMEEN — The breath, the reflection, the peace
+       ════════════════════════════════════════════════ */
     window.ynjHudAmeen = function(btn, index) {
         if (typeof index === 'undefined') index = parseInt(btn.getAttribute('data-index') || '0');
         btn.disabled = true;
-        btn.innerHTML = '<span style="display:inline-block;animation:ynj-hud-flame .6s infinite;">\uD83D\uDE4F</span>';
-        if (navigator.vibrate) navigator.vibrate(50);
+        btn.style.opacity = '.6';
+        var reward = btn.getAttribute('data-reward') || '';
+
+        // Warm haptic — long, gentle (not sharp buzz)
+        if (navigator.vibrate) navigator.vibrate(200);
 
         var nonce = typeof ynjData !== 'undefined' ? ynjData.nonce : '';
         fetch('/wp-json/ynj/v1/ibadah/dhikr', {
@@ -544,53 +595,82 @@ $_hud_all_done = $_hud_done_count >= 5;
             body: JSON.stringify({ index: index })
         }).then(function(r){return r.json();}).then(function(d){
             if (d.ok && d.points > 0) {
-                // 1. Confetti from the button
-                hudConfetti(btn);
+                var item = document.getElementById('hud-dhikr-item-' + index);
 
-                // 2. Float points
-                hudFloatPts('+' + d.points + ' pts', btn);
+                // ── THE BREATH: 2s of stillness ──
+                // Card transitions to reflecting state — Arabic glows softly
+                if (item) item.classList.add('ynj-dhikr-item--reflecting');
 
-                // 3. Animate HUD points counter
-                hudAnimateCounter(document.getElementById('hud-pts-num'), d.total);
-                var heroPts = document.getElementById('hero-pts');
-                if (heroPts) hudAnimateCounter(heroPts, d.total);
+                // Remove the button, show the hadith reward as the reflection
+                btn.outerHTML = '<div style="text-align:center;padding:12px 0;animation:ynj-popup-in .5s;">'
+                    + '<div style="font-size:12px;color:#287e61;font-style:italic;line-height:1.5;">' + (reward || 'May Allah accept') + '</div>'
+                    + '</div>';
 
-                // 4. Mark THIS card as done (don't close popup — let them do more!)
-                setTimeout(function(){
-                    var item = document.getElementById('hud-dhikr-item-' + index);
-                    if (item) {
-                        item.classList.add('ynj-hud-popup__item--done');
-                        btn.outerHTML = '<div style="text-align:center;font-size:12px;color:#166534;font-weight:700;padding:6px 0;animation:ynj-popup-in .3s;">\u2705 Done \u00B7 +' + d.points + '</div>';
-                    }
-                    // Update progress bar in popup
-                    var progBars = document.querySelectorAll('.ynj-hud-popup__card div[style*="width:"]');
-                    // Simple: just update via done_count from response
-                    if (d.done_count) {
-                        var fills = document.querySelectorAll('.ynj-hud-popup__card [style*="background:linear-gradient(90deg,#287e61"]');
-                        fills.forEach(function(f){ f.style.width = (d.done_count * 20) + '%'; });
-                    }
-                }, 400);
-
-                // 5. Cascade toast: how many more to bonus?
-                var remaining = 5 - (d.done_count || 0);
-                if (d.all_five_bonus && d.all_five_bonus > 0) {
-                    // ALL 5 COMPLETE!
-                    setTimeout(function(){
-                        hudConfetti(btn); setTimeout(function(){ hudConfetti(btn); }, 300);
-                        hudToast('\uD83C\uDF1F ALL 5 COMPLETE! +200 bonus!', 'linear-gradient(135deg,#d97706,#b45309)');
-                        if (navigator.vibrate) navigator.vibrate([50,100,50,100,50]);
-                        // Mark HUD button as done
-                        var hudBtn = document.getElementById('hud-dhikr-btn');
-                        if (hudBtn) { hudBtn.innerHTML = '\u2705 <span>Done</span>'; hudBtn.classList.add('ynj-hud__dhikr--done'); }
-                    }, 800);
-                } else if (remaining === 1) {
-                    hudToast('\uD83C\uDFAF ONE MORE for +200 bonus! Go!', 'linear-gradient(135deg,#d97706,#b45309)');
-                } else if (remaining <= 3) {
-                    hudToast('\u2728 ' + remaining + ' more to unlock +200 bonus!', 'linear-gradient(135deg,#287e61,#1a5c43)');
-                } else {
-                    hudToast('\u2728 Your remembrance elevates your masjid!', 'linear-gradient(135deg,#287e61,#1a5c43)');
+                // Points update SILENTLY in the HUD — no golden flash during sacred moment
+                var ptsEl = document.getElementById('hud-pts-num');
+                if (ptsEl) {
+                    var oldPts = parseInt(ptsEl.textContent.replace(/,/g,'')) || 0;
+                    ptsEl.textContent = d.total.toLocaleString();
                 }
-                if (navigator.vibrate) navigator.vibrate(50);
+                var heroPts = document.getElementById('hero-pts');
+                if (heroPts) heroPts.textContent = d.total.toLocaleString();
+
+                // ── AFTER THE BREATH (2.5s): gentle transition to done ──
+                setTimeout(function(){
+                    if (item) {
+                        item.classList.remove('ynj-dhikr-item--reflecting');
+                        item.classList.add('ynj-dhikr-item--done');
+                        // Simplify to just the Arabic + "Said"
+                        var arabic = item.querySelector('.ynj-dhikr-item__arabic');
+                        if (arabic) arabic.style.opacity = '.45';
+                        // Remove reward/source text, replace with quiet confirmation
+                        var extras = item.querySelectorAll('.ynj-dhikr-item__reward, .ynj-dhikr-item__source, .ynj-dhikr-item__english');
+                        extras.forEach(function(el){ el.remove(); });
+                        // Add the "Said" marker
+                        var doneDiv = item.querySelector('div[style*="animation"]');
+                        if (doneDiv) doneDiv.innerHTML = '<span style="color:#287e61;font-size:11px;font-weight:600;">\u2714 Said</span>';
+                    }
+
+                    // Update progress bar
+                    var prog = document.getElementById('hud-popup-progress');
+                    if (prog && d.done_count) prog.style.width = (d.done_count * 20) + '%';
+
+                    // Update HUD button count
+                    var hudBtn = document.getElementById('hud-dhikr-btn');
+                    if (hudBtn && d.done_count < 5) {
+                        hudBtn.innerHTML = '\uD83D\uDCFF <span>' + d.done_count + '/5</span>';
+                    }
+
+                    // Subtle XP bar pulse
+                    var xpFill = document.querySelector('.ynj-hud__xp-fill');
+                    if (xpFill) { xpFill.style.boxShadow='0 0 12px rgba(40,126,97,.5)'; setTimeout(function(){xpFill.style.boxShadow='';},1000); }
+                }, 2500);
+
+                // ── ALL 5 COMPLETE: moment of peace, not victory ──
+                if (d.all_five_bonus && d.all_five_bonus > 0) {
+                    setTimeout(function(){
+                        // Transform the popup into a state of peace
+                        var card = document.getElementById('hud-popup-card');
+                        if (card) {
+                            var header = card.querySelector('.ynj-popup-header');
+                            if (header) {
+                                header.innerHTML = '<div style="text-align:center;padding:16px 0;animation:ynj-popup-in .6s;">'
+                                    + '<div style="font-size:13px;color:#287e61;font-weight:700;margin-bottom:8px;">Alhamdulillah</div>'
+                                    + '<div style="font-size:14px;color:#4a3728;font-style:italic;line-height:1.6;">'
+                                    + '<?php echo esc_js( __( 'Truly, in the remembrance of Allah do hearts find rest.', 'yourjannah' ) ); ?>'
+                                    + '</div>'
+                                    + '<div style="font-size:10px;color:rgba(0,0,0,.3);margin-top:4px;"><?php echo esc_js( __( 'Quran 13:28', 'yourjannah' ) ); ?></div>'
+                                    + '</div>';
+                            }
+                        }
+                        // Single warm haptic
+                        if (navigator.vibrate) navigator.vibrate(300);
+                        // Mark HUD button
+                        if (hudBtn) { hudBtn.innerHTML = '\u2705 <span>5/5</span>'; hudBtn.classList.add('ynj-hud__dhikr--done'); }
+                        // Update points with the bonus silently
+                        if (ptsEl) ptsEl.textContent = d.total.toLocaleString();
+                    }, 4000);
+                }
             }
         }).catch(function(){ btn.disabled=false; btn.innerHTML='<?php echo esc_js( $_hud_dhikr ? $_hud_dhikr['action_text'] : 'Ameen' ); ?><span>+<?php echo (int) ( $_hud_dhikr ? $_hud_dhikr['points'] : 0 ); ?> pts</span>'; });
     };

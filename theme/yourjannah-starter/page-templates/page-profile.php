@@ -1026,11 +1026,11 @@ if ( $fav_mosque_id && $ynj_uid && class_exists( 'YNJ_DB' ) ) {
     <?php
     // Group badges by category
     $badge_cats = [
-        'Quick Wins'  => [ 'first_dhikr', 'dhikr_3', 'all_five', 'dhikr_7' ],
-        'Streaks'     => [ 'streak_3', 'streak_7', 'streak_14', 'streak_30' ],
-        'Dhikr'       => [ 'dhikr_14', 'dhikr_30', 'dhikr_100' ],
-        'Gratitude'   => [ 'charity_3', 'charity_10' ],
-        'Community'   => [ 'checkin_first', 'checkin_10', 'checkin_50' ],
+        'The Door Opens'          => [ 'first_dhikr', 'dhikr_3', 'all_five', 'dhikr_7' ],
+        'The Path Deepens'        => [ 'streak_3', 'streak_7', 'streak_14', 'streak_30' ],
+        'Drawing Ever Closer'     => [ 'dhikr_14', 'dhikr_30', 'dhikr_100' ],
+        'The Overflowing Heart'   => [ 'charity_3', 'charity_10' ],
+        'Community'               => [ 'checkin_first', 'checkin_10', 'checkin_50' ],
     ];
     $badge_defs_map = [];
     foreach ( $all_badge_defs as $bd ) $badge_defs_map[ $bd['key'] ] = $bd;
