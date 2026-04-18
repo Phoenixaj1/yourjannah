@@ -91,8 +91,9 @@ if ( is_user_logged_in() ) {
 ?>
 
 <?php if ( $_ynj_bar_status === 'guest' ) : ?>
-<!-- ── Guest HUD — fully inline styles so nothing can override ── -->
-<div id="ynj-hud" style="background:linear-gradient(135deg,#0a1628 0%,#132742 100%);color:#fff;z-index:102;position:sticky;top:0;padding:8px 16px;display:flex !important;flex-direction:row !important;align-items:center;gap:10px;flex-wrap:nowrap;max-width:1200px;margin:0 auto;">
+<!-- ── Guest HUD — full-width background, constrained content ── -->
+<div style="background:linear-gradient(135deg,#0a1628 0%,#132742 100%);position:sticky;top:0;z-index:102;">
+<div id="ynj-hud" style="max-width:1200px;margin:0 auto;padding:8px 16px;display:flex !important;flex-direction:row !important;align-items:center;gap:10px;flex-wrap:nowrap;color:#fff;">
 
     <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(255,255,255,.07);border-radius:10px;flex-shrink:0;">
         <span style="font-size:14px;">&#x2728;</span>
@@ -118,6 +119,7 @@ if ( is_user_logged_in() ) {
     <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" style="display:inline-flex;align-items:center;gap:4px;padding:5px 14px;background:linear-gradient(135deg,#287e61,#1a5c43);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;box-shadow:0 2px 10px rgba(40,126,97,.3);">&#x1F4FF; <?php esc_html_e( 'Join', 'yourjannah' ); ?></a>
 
 </div>
+</div><!-- end guest hud wrap -->
 <script>
 (function(){
     /* Detect guest location: GPS first, then IP fallback */
@@ -186,6 +188,7 @@ $_hud_mosque_url = $_hud_mosque ? home_url( '/mosque/' . $_hud_mosque_slug ) : h
 $_hud_league_url = $_hud_mosque ? home_url( '/mosque/' . $_hud_mosque_slug . '#mosque-league-table' ) : '#';
 ?>
 <!-- ════ MASJID HUD — Your community's status bar ════ -->
+<div class="ynj-hud-wrap">
 <div class="ynj-hud" id="ynj-hud">
 
     <!-- Row 1: Masjid identity + XP bar -->
@@ -267,6 +270,7 @@ $_hud_league_url = $_hud_mosque ? home_url( '/mosque/' . $_hud_mosque_slug . '#m
         </a>
     </div>
 </div>
+</div><!-- end ynj-hud-wrap -->
 
 <!-- ════ Quick Dhikr Popup — ALL 5 ════ -->
 <?php
@@ -543,9 +547,10 @@ $_hud_all_done = $_hud_done_count >= 5;
    MASJID HUD — Your community's status bar
    Responsive: Desktop (2-row inline) → Mobile (stacked)
    ════════════════════════════════════════════════ */
-.ynj-hud{background:linear-gradient(135deg,#0a1628 0%,#132742 100%);color:#fff;z-index:102;position:sticky;top:0;padding:6px 14px;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;max-width:1200px;margin:0 auto;}
-.admin-bar .ynj-hud{top:32px;}
-@media(max-width:782px){.admin-bar .ynj-hud{top:46px;}}
+.ynj-hud-wrap{background:linear-gradient(135deg,#0a1628 0%,#132742 100%);position:sticky;top:0;z-index:102;}
+.admin-bar .ynj-hud-wrap{top:32px;}
+@media(max-width:782px){.admin-bar .ynj-hud-wrap{top:46px;}}
+.ynj-hud{max-width:1200px;margin:0 auto;padding:6px 14px;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;color:#fff;}
 /* Guest HUD — inherits from .ynj-hud base, no extra overrides needed */
 .ynj-hud--guest{border-bottom:none;}
 .ynj-hud__guest-link{color:rgba(255,255,255,.6) !important;text-decoration:none !important;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;transition:color .2s;}
