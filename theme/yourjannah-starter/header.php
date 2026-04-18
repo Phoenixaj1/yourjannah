@@ -100,6 +100,15 @@ if ( is_user_logged_in() ) {
 }
 ?>
 
+<!-- HUD base styles — shared by guest + logged-in -->
+<style>
+.ynj-hud-wrap{background:linear-gradient(135deg,#0a1628 0%,#132742 100%);position:sticky;top:0;z-index:102;margin-bottom:-1px;padding-bottom:1px;}
+.admin-bar .ynj-hud-wrap{top:32px;}
+@media(max-width:782px){.admin-bar .ynj-hud-wrap{top:46px;}}
+.ynj-hud{max-width:1200px;margin:0 auto;padding:6px 16px;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;color:#fff;}
+@media(min-width:1200px){.ynj-hud{max-width:1280px;}}
+</style>
+
 <?php if ( $_ynj_bar_status === 'guest' ) : ?>
 <!-- ── Guest HUD — clean, simple: Sign In + Join ── -->
 <div class="ynj-hud-wrap">
