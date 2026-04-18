@@ -1,0 +1,1298 @@
+<?php
+/**
+ * YourJannah Database Schema
+ *
+ * Creates and manages all plugin database tables.
+ *
+ * @package YourJannah
+ * @since   1.0.0
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+class YNJ_DB {
+
+    /**
+     * Current schema version.
+     */
+    const SCHEMA_VERSION = '3.7.0';
+
+    /**
+     * Return the full table name for a given short name.
+     *
+     * @param  string $name  Short table name (e.g. 'mosques').
+     * @return string        Full prefixed table name.
+     */
+    public static function table( $name ) {
+        global $wpdb;
+        return $wpdb->prefix . YNJ_TABLE_PREFIX . $name;
+    }
+
+    /**
+     * Create or update all plugin tables.
+     *
+     * Uses WordPress dbDelta() for safe, idempotent schema changes.
+     */
+    public static function install() {
+        global $wpdb;
+
+        $charset_collate = $wpdb->get_charset_collate();
+
+        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+        $tables = self::get_schema( $charset_collate );
+
+        foreach ( $tables as $sql ) {
+            dbDelta( $sql );
+        }
+
+        update_option( 'ynj_db_version', self::SCHEMA_VERSION );
+
+        // Add composite indexes for production performance
+        self::add_performance_indexes();
+
+        // Seed default funds for all mosques that don't have any
+        self::seed_default_funds();
+    }
+
+    /**
+     * Add composite indexes for common query patterns.
+     * Safe to call multiple times — checks existence first.
+     */
+    public static function add_performance_indexes() {
+        global $wpdb;
+
+        $indexes = [
+            [ self::table( 'events' ),               'idx_events_mosque_status_date',  'mosque_id, status, event_date' ],
+            [ self::table( 'announcements' ),         'idx_ann_mosque_status',          'mosque_id, status, published_at' ],
+            [ self::table( 'classes' ),               'idx_classes_mosque_status_cat',  'mosque_id, status, category' ],
+            [ self::table( 'masjid_services' ),       'idx_msvc_mosque_status',         'mosque_id, status' ],
+            [ self::table( 'madrassah_attendance' ),  'idx_att_student_date',           'student_id, attendance_date' ],
+            [ self::table( 'madrassah_fees' ),        'idx_fees_mosque_status',         'mosque_id, status' ],
+            [ self::table( 'user_subscriptions' ),    'idx_usub_user_status',           'user_id, status' ],
+            [ self::table( 'user_subscriptions' ),    'idx_usub_mosque',                'mosque_id' ],
+            [ self::table( 'patrons' ),               'idx_patrons_mosque_status',      'mosque_id, status' ],
+            [ self::table( 'pool_ledger' ),           'idx_pool_mosque_payout',         'mosque_id, payout_id' ],
+            [ self::table( 'user_subscriptions' ),    'idx_usub_member',                'mosque_id, is_member, status' ],
+            [ self::table( 'appeal_requests' ),       'idx_appeal_status',              'status, created_at' ],
+            [ self::table( 'appeal_responses' ),      'idx_apresp_mosque_status',       'mosque_id, status' ],
+        ];
+
+        foreach ( $indexes as $idx ) {
+            $table = $idx[0];
+            $name  = $idx[1];
+            $cols  = $idx[2];
+            $exists = $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND INDEX_NAME = %s",
+                $table, $name
+            ) );
+            if ( ! $exists ) {
+                $wpdb->query( "ALTER TABLE `$table` ADD INDEX `$name` ($cols)" ); // phpcs:ignore
+            }
+        }
+    }
+
+    /**
+     * Default fund types every mosque gets.
+     */
+    public static function default_fund_types() {
+        return [
+            [ 'slug' => 'general',        'label' => 'General Donation',        'is_default' => 1, 'sort_order' => 0 ],
+            [ 'slug' => 'welfare',        'label' => 'Community Welfare Fund',  'is_default' => 0, 'sort_order' => 1 ],
+            [ 'slug' => 'maintenance',    'label' => 'Maintenance & Repairs',   'is_default' => 0, 'sort_order' => 2 ],
+            [ 'slug' => 'extension',      'label' => 'Masjid Extension',        'is_default' => 0, 'sort_order' => 3 ],
+            [ 'slug' => 'sustainability', 'label' => 'Masjid Sustainability',   'is_default' => 0, 'sort_order' => 4 ],
+            [ 'slug' => 'imam',           'label' => 'Imam & Staff Fund',       'is_default' => 0, 'sort_order' => 5 ],
+            [ 'slug' => 'education',      'label' => 'Quran & Education',       'is_default' => 0, 'sort_order' => 6 ],
+            [ 'slug' => 'youth',          'label' => 'Youth & Family',          'is_default' => 0, 'sort_order' => 7 ],
+            [ 'slug' => 'sadaqah',        'label' => 'Sadaqah Jariyah',         'is_default' => 0, 'sort_order' => 8 ],
+            [ 'slug' => 'ramadan',        'label' => 'Ramadan & Events',        'is_default' => 0, 'sort_order' => 9 ],
+            [ 'slug' => 'utility',        'label' => 'Utility & Running Costs', 'is_default' => 0, 'sort_order' => 10 ],
+            [ 'slug' => 'new-mosque',     'label' => 'New Mosque Fund',         'is_default' => 0, 'sort_order' => 11 ],
+        ];
+    }
+
+    /**
+     * Seed default funds for all mosques that have none.
+     */
+    public static function seed_default_funds() {
+        global $wpdb;
+        $ft = self::table( 'mosque_funds' );
+        $mt = self::table( 'mosques' );
+
+        // Get all mosque IDs that have zero funds
+        $all_ids = $wpdb->get_col( "SELECT id FROM $mt" );
+        $has_funds = $wpdb->get_col( "SELECT DISTINCT mosque_id FROM $ft" );
+        $missing = array_diff( $all_ids, $has_funds );
+
+        if ( empty( $missing ) ) return;
+
+        $defaults = self::default_fund_types();
+        foreach ( $missing as $mid ) {
+            foreach ( $defaults as $fund ) {
+                $wpdb->insert( $ft, array_merge( $fund, [ 'mosque_id' => (int) $mid ] ) );
+            }
+        }
+    }
+
+    /**
+     * Return array of CREATE TABLE statements.
+     *
+     * @param  string $charset_collate  WordPress charset collate string.
+     * @return array
+     */
+    private static function get_schema( $charset_collate ) {
+        $t = function ( $name ) {
+            return self::table( $name );
+        };
+
+        $tables = [];
+
+        // 1. Mosques
+        $tables[] = "CREATE TABLE {$t('mosques')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            name varchar(255) NOT NULL DEFAULT '',
+            slug varchar(255) NOT NULL DEFAULT '',
+            address varchar(500) NOT NULL DEFAULT '',
+            city varchar(100) NOT NULL DEFAULT '',
+            postcode varchar(20) NOT NULL DEFAULT '',
+            country varchar(100) NOT NULL DEFAULT '',
+            latitude decimal(10,7) DEFAULT NULL,
+            longitude decimal(10,7) DEFAULT NULL,
+            timezone varchar(50) NOT NULL DEFAULT '',
+            phone varchar(50) NOT NULL DEFAULT '',
+            email varchar(255) NOT NULL DEFAULT '',
+            website varchar(500) NOT NULL DEFAULT '',
+            logo_url varchar(500) NOT NULL DEFAULT '',
+            photo_url varchar(500) NOT NULL DEFAULT '',
+            description text NOT NULL,
+            has_women_section tinyint(1) NOT NULL DEFAULT 0,
+            has_wudu tinyint(1) NOT NULL DEFAULT 0,
+            has_parking tinyint(1) NOT NULL DEFAULT 0,
+            capacity int(11) NOT NULL DEFAULT 0,
+            admin_email varchar(255) NOT NULL DEFAULT '',
+            admin_password_hash varchar(255) NOT NULL DEFAULT '',
+            admin_token_hash varchar(64) NOT NULL DEFAULT '',
+            admin_token_last_used datetime DEFAULT NULL,
+            member_count int(11) NOT NULL DEFAULT 0,
+            imam_user_id bigint(20) unsigned DEFAULT NULL,
+            imam_auto_publish tinyint(1) NOT NULL DEFAULT 0,
+            accept_appeals tinyint(1) NOT NULL DEFAULT 0,
+            appeal_fee_inperson_pence int(11) NOT NULL DEFAULT 0,
+            appeal_fee_recorded_pence int(11) NOT NULL DEFAULT 0,
+            theme varchar(20) NOT NULL DEFAULT 'minimal',
+            dfm_slug varchar(100) NOT NULL DEFAULT '',
+            dfm_mosque_id bigint(20) unsigned DEFAULT NULL,
+            setup_complete tinyint(1) NOT NULL DEFAULT 0,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY slug (slug),
+            KEY mosque_id (id),
+            KEY status (status),
+            KEY city (city),
+            KEY postcode (postcode),
+            KEY admin_email (admin_email),
+            KEY admin_token_hash (admin_token_hash)
+        ) $charset_collate;";
+
+        // 2. Prayer Times
+        $tables[] = "CREATE TABLE {$t('prayer_times')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            date date NOT NULL,
+            fajr time DEFAULT NULL,
+            sunrise time DEFAULT NULL,
+            dhuhr time DEFAULT NULL,
+            asr time DEFAULT NULL,
+            maghrib time DEFAULT NULL,
+            isha time DEFAULT NULL,
+            fajr_jamat time DEFAULT NULL,
+            dhuhr_jamat time DEFAULT NULL,
+            asr_jamat time DEFAULT NULL,
+            maghrib_jamat time DEFAULT NULL,
+            isha_jamat time DEFAULT NULL,
+            taraweeh time DEFAULT NULL,
+            suhoor time DEFAULT NULL,
+            source varchar(20) NOT NULL DEFAULT 'api',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY mosque_date (mosque_id, date),
+            KEY mosque_id (mosque_id),
+            KEY status (source)
+        ) $charset_collate;";
+
+        // 3. Jumuah Times
+        $tables[] = "CREATE TABLE {$t('jumuah_times')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            slot_name varchar(50) NOT NULL DEFAULT '',
+            khutbah_time time DEFAULT NULL,
+            salah_time time DEFAULT NULL,
+            language varchar(30) NOT NULL DEFAULT '',
+            enabled tinyint(1) NOT NULL DEFAULT 1,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (enabled)
+        ) $charset_collate;";
+
+        // 4. Eid Times
+        $tables[] = "CREATE TABLE {$t('eid_times')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            eid_type varchar(20) NOT NULL DEFAULT '',
+            year smallint(6) NOT NULL DEFAULT 0,
+            slot_name varchar(50) NOT NULL DEFAULT '',
+            salah_time time DEFAULT NULL,
+            location_notes text NOT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (eid_type)
+        ) $charset_collate;";
+
+        // 5. Announcements
+        $tables[] = "CREATE TABLE {$t('announcements')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            title varchar(255) NOT NULL DEFAULT '',
+            body text NOT NULL,
+            image_url varchar(500) NOT NULL DEFAULT '',
+            type varchar(30) NOT NULL DEFAULT 'general',
+            push_sent tinyint(1) NOT NULL DEFAULT 0,
+            push_sent_at datetime DEFAULT NULL,
+            pinned tinyint(1) NOT NULL DEFAULT 0,
+            expires_at datetime DEFAULT NULL,
+            author_user_id bigint(20) unsigned DEFAULT NULL,
+            author_role varchar(20) NOT NULL DEFAULT 'admin',
+            approval_status varchar(20) NOT NULL DEFAULT 'approved',
+            approved_by bigint(20) unsigned DEFAULT NULL,
+            approved_at datetime DEFAULT NULL,
+            status varchar(20) NOT NULL DEFAULT 'draft',
+            scheduled_at datetime DEFAULT NULL,
+            published_at datetime DEFAULT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY type (type),
+            KEY author_role (author_role),
+            KEY approval_status (approval_status)
+        ) $charset_collate;";
+
+        // 6. Events
+        $tables[] = "CREATE TABLE {$t('events')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            title varchar(255) NOT NULL DEFAULT '',
+            description text NOT NULL,
+            image_url varchar(500) NOT NULL DEFAULT '',
+            event_date date DEFAULT NULL,
+            start_time time DEFAULT NULL,
+            end_time time DEFAULT NULL,
+            location varchar(255) NOT NULL DEFAULT '',
+            event_type varchar(30) NOT NULL DEFAULT '',
+            max_capacity int(11) NOT NULL DEFAULT 0,
+            registered_count int(11) NOT NULL DEFAULT 0,
+            requires_booking tinyint(1) NOT NULL DEFAULT 0,
+            ticket_price_pence int(11) NOT NULL DEFAULT 0,
+            is_online tinyint(1) NOT NULL DEFAULT 0,
+            is_live tinyint(1) NOT NULL DEFAULT 0,
+            live_url varchar(500) NOT NULL DEFAULT '',
+            live_started_at datetime DEFAULT NULL,
+            live_ended_at datetime DEFAULT NULL,
+            donation_target_pence bigint(20) NOT NULL DEFAULT 0,
+            donation_raised_pence bigint(20) NOT NULL DEFAULT 0,
+            donation_count int(11) NOT NULL DEFAULT 0,
+            needs_volunteers tinyint(1) NOT NULL DEFAULT 0,
+            volunteer_roles varchar(500) NOT NULL DEFAULT '',
+            volunteer_count int(11) NOT NULL DEFAULT 0,
+            status varchar(20) NOT NULL DEFAULT 'draft',
+            scheduled_at datetime DEFAULT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY event_date (event_date),
+            KEY is_live (is_live)
+        ) $charset_collate;";
+
+        // 7. Bookings
+        $tables[] = "CREATE TABLE {$t('bookings')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            event_id bigint(20) unsigned DEFAULT NULL,
+            room_id bigint(20) unsigned DEFAULT NULL,
+            user_name varchar(255) NOT NULL DEFAULT '',
+            user_email varchar(255) NOT NULL DEFAULT '',
+            user_phone varchar(50) NOT NULL DEFAULT '',
+            booking_date date DEFAULT NULL,
+            start_time time DEFAULT NULL,
+            end_time time DEFAULT NULL,
+            notes text NOT NULL,
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY event_id (event_id),
+            KEY room_id (room_id),
+            KEY booking_date (booking_date)
+        ) $charset_collate;";
+
+        // 8. Rooms
+        $tables[] = "CREATE TABLE {$t('rooms')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            name varchar(255) NOT NULL DEFAULT '',
+            description text NOT NULL,
+            capacity int(11) NOT NULL DEFAULT 0,
+            hourly_rate_pence int(11) NOT NULL DEFAULT 0,
+            daily_rate_pence int(11) NOT NULL DEFAULT 0,
+            photo_url varchar(500) NOT NULL DEFAULT '',
+            availability_notes text NOT NULL,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 9. Enquiries
+        $tables[] = "CREATE TABLE {$t('enquiries')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            name varchar(255) NOT NULL DEFAULT '',
+            email varchar(255) NOT NULL DEFAULT '',
+            phone varchar(50) NOT NULL DEFAULT '',
+            subject varchar(255) NOT NULL DEFAULT '',
+            message text NOT NULL,
+            type varchar(30) NOT NULL DEFAULT 'general',
+            status varchar(20) NOT NULL DEFAULT 'new',
+            replied_at datetime DEFAULT NULL,
+            admin_notes text NOT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY type (type)
+        ) $charset_collate;";
+
+        // 10. Businesses
+        $tables[] = "CREATE TABLE {$t('businesses')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            business_name varchar(255) NOT NULL DEFAULT '',
+            owner_name varchar(255) NOT NULL DEFAULT '',
+            category varchar(50) NOT NULL DEFAULT '',
+            description text NOT NULL,
+            phone varchar(50) NOT NULL DEFAULT '',
+            email varchar(255) NOT NULL DEFAULT '',
+            website varchar(500) NOT NULL DEFAULT '',
+            logo_url varchar(500) NOT NULL DEFAULT '',
+            address varchar(500) NOT NULL DEFAULT '',
+            postcode varchar(20) NOT NULL DEFAULT '',
+            monthly_fee_pence int(11) NOT NULL DEFAULT 3000,
+            featured_position int(11) NOT NULL DEFAULT 0,
+            stripe_customer_id varchar(100) NOT NULL DEFAULT '',
+            stripe_subscription_id varchar(100) NOT NULL DEFAULT '',
+            show_phone tinyint(1) NOT NULL DEFAULT 1,
+            show_whatsapp tinyint(1) NOT NULL DEFAULT 1,
+            show_email tinyint(1) NOT NULL DEFAULT 1,
+            show_website tinyint(1) NOT NULL DEFAULT 1,
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            verified tinyint(1) NOT NULL DEFAULT 0,
+            expires_at datetime DEFAULT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY user_id (user_id),
+            KEY status (status),
+            KEY category (category)
+        ) $charset_collate;";
+
+        // 11. Services
+        $tables[] = "CREATE TABLE {$t('services')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            provider_name varchar(255) NOT NULL DEFAULT '',
+            phone varchar(50) NOT NULL DEFAULT '',
+            email varchar(255) NOT NULL DEFAULT '',
+            service_type varchar(50) NOT NULL DEFAULT '',
+            description text NOT NULL,
+            hourly_rate_pence int(11) NOT NULL DEFAULT 0,
+            area_covered varchar(255) NOT NULL DEFAULT '',
+            monthly_fee_pence int(11) NOT NULL DEFAULT 1000,
+            show_phone tinyint(1) NOT NULL DEFAULT 1,
+            show_whatsapp tinyint(1) NOT NULL DEFAULT 1,
+            show_email tinyint(1) NOT NULL DEFAULT 1,
+            stripe_subscription_id varchar(100) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY user_id (user_id),
+            KEY status (status),
+            KEY service_type (service_type)
+        ) $charset_collate;";
+
+        // 12. Classes
+        $tables[] = "CREATE TABLE {$t('classes')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            title varchar(255) NOT NULL DEFAULT '',
+            description text NOT NULL,
+            instructor_name varchar(255) NOT NULL DEFAULT '',
+            instructor_bio text NOT NULL,
+            category varchar(50) NOT NULL DEFAULT '',
+            class_type varchar(20) NOT NULL DEFAULT 'course',
+            schedule_text varchar(500) NOT NULL DEFAULT '',
+            start_date date DEFAULT NULL,
+            end_date date DEFAULT NULL,
+            day_of_week varchar(20) NOT NULL DEFAULT '',
+            start_time time DEFAULT NULL,
+            end_time time DEFAULT NULL,
+            total_sessions int(11) NOT NULL DEFAULT 1,
+            is_online tinyint(1) NOT NULL DEFAULT 0,
+            live_url varchar(500) NOT NULL DEFAULT '',
+            location varchar(255) NOT NULL DEFAULT '',
+            max_capacity int(11) NOT NULL DEFAULT 0,
+            enrolled_count int(11) NOT NULL DEFAULT 0,
+            price_pence int(11) NOT NULL DEFAULT 0,
+            price_type varchar(20) NOT NULL DEFAULT 'one_off',
+            image_url varchar(500) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'active',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY category (category),
+            KEY is_online (is_online)
+        ) $charset_collate;";
+
+        // 12b. Class Sessions (curriculum)
+        $tables[] = "CREATE TABLE {$t('class_sessions')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            class_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            session_number int(11) NOT NULL DEFAULT 1,
+            title varchar(255) NOT NULL DEFAULT '',
+            description text NOT NULL,
+            session_date date DEFAULT NULL,
+            start_time time DEFAULT NULL,
+            end_time time DEFAULT NULL,
+            is_online tinyint(1) NOT NULL DEFAULT 0,
+            live_url varchar(500) NOT NULL DEFAULT '',
+            recording_url varchar(500) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'scheduled',
+            PRIMARY KEY  (id),
+            KEY class_id (class_id),
+            KEY session_date (session_date)
+        ) $charset_collate;";
+
+        // 12c. Class Enrolments
+        $tables[] = "CREATE TABLE {$t('enrolments')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            class_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_name varchar(255) NOT NULL DEFAULT '',
+            user_email varchar(255) NOT NULL DEFAULT '',
+            user_phone varchar(50) NOT NULL DEFAULT '',
+            amount_paid_pence int(11) NOT NULL DEFAULT 0,
+            stripe_session_id varchar(255) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            enrolled_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY class_id (class_id),
+            KEY mosque_id (mosque_id),
+            KEY user_email (user_email),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 13. Fundraising Campaigns
+        $tables[] = "CREATE TABLE {$t('campaigns')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            title varchar(255) NOT NULL DEFAULT '',
+            description text NOT NULL,
+            image_url varchar(500) NOT NULL DEFAULT '',
+            target_pence bigint(20) NOT NULL DEFAULT 0,
+            raised_pence bigint(20) NOT NULL DEFAULT 0,
+            donor_count int(11) NOT NULL DEFAULT 0,
+            category varchar(50) NOT NULL DEFAULT 'general',
+            dfm_link varchar(500) NOT NULL DEFAULT '',
+            recurring tinyint(1) NOT NULL DEFAULT 0,
+            recurring_interval varchar(20) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'active',
+            start_date date DEFAULT NULL,
+            end_date date DEFAULT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY category (category)
+        ) $charset_collate;";
+
+        // 13. Users (congregation members)
+        $tables[] = "CREATE TABLE {$t('users')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            name varchar(255) NOT NULL DEFAULT '',
+            email varchar(255) NOT NULL DEFAULT '',
+            email_verified tinyint(1) NOT NULL DEFAULT 0,
+            email_verify_token varchar(64) NOT NULL DEFAULT '',
+            phone varchar(50) NOT NULL DEFAULT '',
+            password_hash varchar(255) NOT NULL DEFAULT '',
+            favourite_mosque_id bigint(20) unsigned DEFAULT NULL,
+            verified_congregation tinyint(1) NOT NULL DEFAULT 0,
+            verified_at datetime DEFAULT NULL,
+            verified_lat decimal(10,7) DEFAULT NULL,
+            verified_lng decimal(10,7) DEFAULT NULL,
+            travel_mode varchar(10) NOT NULL DEFAULT 'walk',
+            travel_minutes int(11) NOT NULL DEFAULT 0,
+            push_endpoint text NOT NULL,
+            push_p256dh text NOT NULL,
+            push_auth varchar(100) NOT NULL DEFAULT '',
+            alert_before_minutes int(11) NOT NULL DEFAULT 20,
+            auth_provider varchar(20) NOT NULL DEFAULT 'email',
+            auth_provider_id varchar(100) NOT NULL DEFAULT '',
+            avatar_url varchar(500) NOT NULL DEFAULT '',
+            interest_categories text NOT NULL,
+            interest_radius_miles int(11) NOT NULL DEFAULT 5,
+            total_points int(11) NOT NULL DEFAULT 0,
+            token_hash varchar(64) NOT NULL DEFAULT '',
+            token_last_used datetime DEFAULT NULL,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY email (email),
+            KEY favourite_mosque_id (favourite_mosque_id),
+            KEY token_hash (token_hash),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 14. Madrassah Terms
+        $tables[] = "CREATE TABLE {$t('madrassah_terms')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            name varchar(255) NOT NULL DEFAULT '',
+            start_date date NOT NULL,
+            end_date date NOT NULL,
+            fee_pence int(11) NOT NULL DEFAULT 0,
+            fee_frequency varchar(20) NOT NULL DEFAULT 'termly',
+            enrolment_open tinyint(1) NOT NULL DEFAULT 1,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 15. Madrassah Students (children linked to parent user)
+        $tables[] = "CREATE TABLE {$t('madrassah_students')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            parent_user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            parent_name varchar(255) NOT NULL DEFAULT '',
+            parent_email varchar(255) NOT NULL DEFAULT '',
+            parent_phone varchar(50) NOT NULL DEFAULT '',
+            child_name varchar(255) NOT NULL DEFAULT '',
+            child_dob date DEFAULT NULL,
+            year_group varchar(30) NOT NULL DEFAULT '',
+            class_id bigint(20) unsigned DEFAULT NULL,
+            medical_notes text NOT NULL,
+            emergency_contact varchar(255) NOT NULL DEFAULT '',
+            emergency_phone varchar(50) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'active',
+            enrolled_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY parent_user_id (parent_user_id),
+            KEY class_id (class_id),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 16. Madrassah Attendance
+        $tables[] = "CREATE TABLE {$t('madrassah_attendance')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            student_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            class_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            session_id bigint(20) unsigned DEFAULT NULL,
+            attendance_date date NOT NULL,
+            status varchar(20) NOT NULL DEFAULT 'present',
+            notes varchar(255) NOT NULL DEFAULT '',
+            marked_by varchar(255) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY student_date (student_id, attendance_date, class_id),
+            KEY student_id (student_id),
+            KEY class_id (class_id),
+            KEY attendance_date (attendance_date),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 17. Madrassah Fee Payments
+        $tables[] = "CREATE TABLE {$t('madrassah_fees')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            student_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            term_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            parent_user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            amount_pence int(11) NOT NULL DEFAULT 0,
+            stripe_session_id varchar(255) NOT NULL DEFAULT '',
+            stripe_payment_intent varchar(255) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'unpaid',
+            paid_at datetime DEFAULT NULL,
+            due_date date DEFAULT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY student_id (student_id),
+            KEY term_id (term_id),
+            KEY parent_user_id (parent_user_id),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 18. Madrassah Reports (teacher notes / progress)
+        $tables[] = "CREATE TABLE {$t('madrassah_reports')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            student_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            term_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            class_id bigint(20) unsigned DEFAULT NULL,
+            subject varchar(100) NOT NULL DEFAULT '',
+            grade varchar(20) NOT NULL DEFAULT '',
+            teacher_notes text NOT NULL,
+            quran_progress varchar(255) NOT NULL DEFAULT '',
+            behaviour varchar(20) NOT NULL DEFAULT 'good',
+            created_by varchar(255) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY student_id (student_id),
+            KEY term_id (term_id),
+            KEY class_id (class_id)
+        ) $charset_collate;";
+
+        // 19. Patrons (mosque memberships)
+        $tables[] = "CREATE TABLE {$t('patrons')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_name varchar(255) NOT NULL DEFAULT '',
+            user_email varchar(255) NOT NULL DEFAULT '',
+            tier varchar(20) NOT NULL DEFAULT 'supporter',
+            amount_pence int(11) NOT NULL DEFAULT 500,
+            stripe_customer_id varchar(100) NOT NULL DEFAULT '',
+            stripe_subscription_id varchar(100) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            started_at datetime DEFAULT NULL,
+            cancelled_at datetime DEFAULT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY mosque_user (mosque_id, user_id),
+            KEY mosque_id (mosque_id),
+            KEY user_id (user_id),
+            KEY status (status),
+            KEY stripe_subscription_id (stripe_subscription_id)
+        ) $charset_collate;";
+
+        // 20. Patron Intentions (pledge/waitlist for unclaimed mosques)
+        $tables[] = "CREATE TABLE {$t('patron_intentions')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            name varchar(255) NOT NULL DEFAULT '',
+            email varchar(255) NOT NULL DEFAULT '',
+            phone varchar(50) NOT NULL DEFAULT '',
+            tier varchar(30) NOT NULL DEFAULT 'supporter',
+            amount_pence int(11) NOT NULL DEFAULT 500,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            notified_at datetime DEFAULT NULL,
+            converted_at datetime DEFAULT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY email (email),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 21. Mosque Page Views (lightweight analytics for demand tracking)
+        $tables[] = "CREATE TABLE {$t('mosque_views')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            view_date date NOT NULL,
+            view_count int NOT NULL DEFAULT 1,
+            source varchar(30) NOT NULL DEFAULT 'page',
+            PRIMARY KEY  (id),
+            UNIQUE KEY mosque_date_source (mosque_id, view_date, source),
+            KEY mosque_id (mosque_id),
+            KEY view_date (view_date)
+        ) $charset_collate;";
+
+        // 15. Masjid Services (mosque-offered bookable services: nikkah, funeral, etc.)
+        $tables[] = "CREATE TABLE {$t('masjid_services')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            title varchar(255) NOT NULL DEFAULT '',
+            category varchar(50) NOT NULL DEFAULT 'general',
+            description text NOT NULL,
+            price_pence int(11) NOT NULL DEFAULT 0,
+            price_label varchar(100) NOT NULL DEFAULT '',
+            contact_phone varchar(50) NOT NULL DEFAULT '',
+            contact_email varchar(255) NOT NULL DEFAULT '',
+            availability varchar(500) NOT NULL DEFAULT '',
+            requires_approval tinyint(1) NOT NULL DEFAULT 1,
+            image_url varchar(500) NOT NULL DEFAULT '',
+            sort_order int(11) NOT NULL DEFAULT 0,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY category (category),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 15b. Masjid Service Enquiries (booking requests for masjid services)
+        $tables[] = "CREATE TABLE {$t('masjid_service_enquiries')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            service_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_name varchar(255) NOT NULL DEFAULT '',
+            user_email varchar(255) NOT NULL DEFAULT '',
+            user_phone varchar(50) NOT NULL DEFAULT '',
+            preferred_date date DEFAULT NULL,
+            message text NOT NULL,
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            admin_notes text NOT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY service_id (service_id),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 15c. User Subscriptions (multi-mosque + notification preferences)
+        $tables[] = "CREATE TABLE {$t('user_subscriptions')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            notify_events tinyint(1) NOT NULL DEFAULT 1,
+            notify_classes tinyint(1) NOT NULL DEFAULT 1,
+            notify_announcements tinyint(1) NOT NULL DEFAULT 1,
+            notify_fundraising tinyint(1) NOT NULL DEFAULT 0,
+            notify_live tinyint(1) NOT NULL DEFAULT 1,
+            is_member tinyint(1) NOT NULL DEFAULT 0,
+            is_primary tinyint(1) NOT NULL DEFAULT 0,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            subscribed_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY user_mosque (user_id, mosque_id),
+            KEY user_id (user_id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY is_member (is_member)
+        ) $charset_collate;";
+
+        // 15b. Subscribers (anonymous push — legacy)
+        $tables[] = "CREATE TABLE {$t('subscribers')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            email varchar(255) NOT NULL DEFAULT '',
+            name varchar(255) NOT NULL DEFAULT '',
+            phone varchar(50) NOT NULL DEFAULT '',
+            push_endpoint text NOT NULL,
+            push_p256dh text NOT NULL,
+            push_auth varchar(100) NOT NULL DEFAULT '',
+            device_type varchar(20) NOT NULL DEFAULT '',
+            subscribed_at datetime DEFAULT NULL,
+            last_active_at datetime DEFAULT NULL,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            PRIMARY KEY  (id),
+            UNIQUE KEY mosque_email (mosque_id, email),
+            KEY mosque_id (mosque_id),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 17. Points Ledger
+        $tables[] = "CREATE TABLE {$t('points')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            action varchar(30) NOT NULL DEFAULT '',
+            points int(11) NOT NULL DEFAULT 0,
+            ref_id bigint(20) unsigned DEFAULT NULL,
+            description varchar(255) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY user_id (user_id),
+            KEY mosque_id (mosque_id),
+            KEY action (action),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+
+        // 18. Event Volunteers
+        $tables[] = "CREATE TABLE {$t('event_volunteers')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            event_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_name varchar(255) NOT NULL DEFAULT '',
+            user_email varchar(255) NOT NULL DEFAULT '',
+            user_phone varchar(50) NOT NULL DEFAULT '',
+            role varchar(100) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'confirmed',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY event_id (event_id),
+            KEY mosque_id (mosque_id)
+        ) $charset_collate;";
+
+        // 19. Mosque Funds — configurable per-mosque donation funds
+        $tables[] = "CREATE TABLE {$t('mosque_funds')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            slug varchar(50) NOT NULL DEFAULT '',
+            label varchar(100) NOT NULL DEFAULT '',
+            description varchar(500) NOT NULL DEFAULT '',
+            target_pence int(11) NOT NULL DEFAULT 0,
+            raised_pence int(11) NOT NULL DEFAULT 0,
+            is_default tinyint(1) NOT NULL DEFAULT 0,
+            is_active tinyint(1) NOT NULL DEFAULT 1,
+            sort_order int(11) NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            UNIQUE KEY mosque_fund (mosque_id, slug)
+        ) $charset_collate;";
+
+        // 20. Donations — individual donor gifts to mosques
+        $tables[] = "CREATE TABLE {$t('donations')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            donor_name varchar(255) NOT NULL DEFAULT '',
+            donor_email varchar(255) NOT NULL DEFAULT '',
+            amount_pence int(11) NOT NULL DEFAULT 0,
+            currency varchar(5) NOT NULL DEFAULT 'gbp',
+            fund_type varchar(30) NOT NULL DEFAULT 'welfare',
+            frequency varchar(10) NOT NULL DEFAULT 'once',
+            is_recurring tinyint(1) NOT NULL DEFAULT 0,
+            stripe_payment_intent varchar(100) NOT NULL DEFAULT '',
+            stripe_customer_id varchar(100) NOT NULL DEFAULT '',
+            stripe_subscription_id varchar(100) NOT NULL DEFAULT '',
+            pool_allocation tinyint(1) NOT NULL DEFAULT 0,
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY donor_email (donor_email),
+            KEY stripe_payment_intent (stripe_payment_intent)
+        ) $charset_collate;";
+
+        // 20. Support Tickets — mosque help requests
+        $tables[] = "CREATE TABLE {$t('support_tickets')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            subject varchar(255) NOT NULL DEFAULT '',
+            body text,
+            category varchar(50) NOT NULL DEFAULT 'general',
+            priority varchar(20) NOT NULL DEFAULT 'normal',
+            status varchar(20) NOT NULL DEFAULT 'open',
+            admin_reply text,
+            replied_at datetime DEFAULT NULL,
+            resolved_at datetime DEFAULT NULL,
+            created_by varchar(255) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY priority (priority)
+        ) $charset_collate;";
+
+        // 21. Email Imports — tracks CSV list uploads by mosque admins
+        $tables[] = "CREATE TABLE {$t('email_imports')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            filename varchar(255) NOT NULL DEFAULT '',
+            total_rows int(11) NOT NULL DEFAULT 0,
+            imported int(11) NOT NULL DEFAULT 0,
+            skipped int(11) NOT NULL DEFAULT 0,
+            duplicates int(11) NOT NULL DEFAULT 0,
+            status varchar(20) NOT NULL DEFAULT 'completed',
+            created_by bigint(20) unsigned NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id)
+        ) $charset_collate;";
+
+        // 21. Pool Ledger — immutable financial record of all payments
+        $tables[] = "CREATE TABLE {$t('pool_ledger')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            entry_ref varchar(30) NOT NULL DEFAULT '',
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            entry_type varchar(30) NOT NULL DEFAULT 'payment',
+            payment_type varchar(30) NOT NULL DEFAULT '',
+            item_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            gross_pence int(11) NOT NULL DEFAULT 0,
+            platform_fee_pence int(11) NOT NULL DEFAULT 0,
+            net_to_mosque_pence int(11) NOT NULL DEFAULT 0,
+            currency varchar(5) NOT NULL DEFAULT 'gbp',
+            stripe_payment_id varchar(100) NOT NULL DEFAULT '',
+            stripe_subscription_id varchar(100) NOT NULL DEFAULT '',
+            payer_name varchar(255) NOT NULL DEFAULT '',
+            payer_email varchar(255) NOT NULL DEFAULT '',
+            description varchar(500) NOT NULL DEFAULT '',
+            payout_id bigint(20) unsigned DEFAULT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY entry_type (entry_type),
+            KEY payout_id (payout_id),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+
+        // 20. Pool Payouts — record of distributions to mosques
+        $tables[] = "CREATE TABLE {$t('pool_payouts')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            payout_ref varchar(30) NOT NULL DEFAULT '',
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            amount_pence int(11) NOT NULL DEFAULT 0,
+            currency varchar(5) NOT NULL DEFAULT 'gbp',
+            method varchar(30) NOT NULL DEFAULT 'bank_transfer',
+            bank_reference varchar(100) NOT NULL DEFAULT '',
+            entries_count int(11) NOT NULL DEFAULT 0,
+            covers_from datetime DEFAULT NULL,
+            covers_to datetime DEFAULT NULL,
+            status varchar(20) NOT NULL DEFAULT 'sent',
+            notes text,
+            sent_at datetime DEFAULT NULL,
+            created_by bigint(20) unsigned NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // --- User Notifications (in-app, Facebook-style) ---
+        $tables[] = "CREATE TABLE {$t('notifications')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            type varchar(30) NOT NULL DEFAULT 'event',
+            ref_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            title varchar(255) NOT NULL DEFAULT '',
+            body varchar(500) NOT NULL DEFAULT '',
+            url varchar(500) NOT NULL DEFAULT '',
+            is_read tinyint(1) NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY user_id (user_id),
+            KEY user_read (user_id, is_read),
+            KEY mosque_id (mosque_id),
+            KEY type (type),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+
+        // --- Charity Appeals ---
+
+        // Appeal Requests (from charities)
+        $tables[] = "CREATE TABLE {$t('appeal_requests')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            charity_name varchar(255) NOT NULL DEFAULT '',
+            charity_email varchar(255) NOT NULL DEFAULT '',
+            charity_phone varchar(50) NOT NULL DEFAULT '',
+            charity_website varchar(500) NOT NULL DEFAULT '',
+            charity_logo_url varchar(500) NOT NULL DEFAULT '',
+            charity_reg_number varchar(50) NOT NULL DEFAULT '',
+            cause_title varchar(255) NOT NULL DEFAULT '',
+            cause_description text NOT NULL,
+            cause_category varchar(50) NOT NULL DEFAULT 'general',
+            appeal_type varchar(30) NOT NULL DEFAULT 'in_person',
+            preferred_dates text NOT NULL,
+            budget_note varchar(500) NOT NULL DEFAULT '',
+            stripe_payment_id varchar(100) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'pending_payment',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY charity_email (charity_email),
+            KEY status (status),
+            KEY appeal_type (appeal_type)
+        ) $charset_collate;";
+
+        // Appeal Responses (mosque responses to appeals)
+        $tables[] = "CREATE TABLE {$t('appeal_responses')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            appeal_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            response varchar(20) NOT NULL DEFAULT 'pending',
+            mosque_fee_pence int(11) NOT NULL DEFAULT 0,
+            message text NOT NULL,
+            scheduled_date date DEFAULT NULL,
+            appeal_format varchar(30) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY appeal_mosque (appeal_id, mosque_id),
+            KEY appeal_id (appeal_id),
+            KEY mosque_id (mosque_id),
+            KEY response (response),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // Appeal Donations (donations made via appeals)
+        $tables[] = "CREATE TABLE {$t('appeal_donations')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            appeal_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            donor_name varchar(255) NOT NULL DEFAULT '',
+            donor_email varchar(255) NOT NULL DEFAULT '',
+            amount_pence int(11) NOT NULL DEFAULT 0,
+            currency varchar(5) NOT NULL DEFAULT 'gbp',
+            stripe_payment_intent varchar(100) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY appeal_id (appeal_id),
+            KEY mosque_id (mosque_id),
+            KEY donor_email (donor_email),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // Appeal Messages (messaging between charity and mosque)
+        $tables[] = "CREATE TABLE {$t('appeal_messages')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            appeal_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            response_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            sender_type varchar(20) NOT NULL DEFAULT 'charity',
+            sender_name varchar(255) NOT NULL DEFAULT '',
+            sender_email varchar(255) NOT NULL DEFAULT '',
+            message text NOT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY appeal_id (appeal_id),
+            KEY response_id (response_id)
+        ) $charset_collate;";
+
+        // Ibadah (worship) logs — personal daily tracking
+        $tables[] = "CREATE TABLE {$t('ibadah_logs')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            log_date date NOT NULL,
+            fajr tinyint(1) NOT NULL DEFAULT 0,
+            dhuhr tinyint(1) NOT NULL DEFAULT 0,
+            asr tinyint(1) NOT NULL DEFAULT 0,
+            maghrib tinyint(1) NOT NULL DEFAULT 0,
+            isha tinyint(1) NOT NULL DEFAULT 0,
+            quran_pages int(11) NOT NULL DEFAULT 0,
+            dhikr tinyint(1) NOT NULL DEFAULT 0,
+            fasting tinyint(1) NOT NULL DEFAULT 0,
+            charity tinyint(1) NOT NULL DEFAULT 0,
+            good_deed varchar(255) NOT NULL DEFAULT '',
+            prayed_at_mosque tinyint(1) NOT NULL DEFAULT 0,
+            points_earned int(11) NOT NULL DEFAULT 0,
+            PRIMARY KEY  (id),
+            UNIQUE KEY user_date (user_id, log_date),
+            KEY mosque_id (mosque_id),
+            KEY log_date (log_date)
+        ) $charset_collate;";
+
+        // Community challenges — auto-generated weekly goals
+        $tables[] = "CREATE TABLE {$t('community_challenges')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            challenge_type varchar(30) NOT NULL DEFAULT 'prayers',
+            title varchar(255) NOT NULL DEFAULT '',
+            target_value int(11) NOT NULL DEFAULT 0,
+            current_value int(11) NOT NULL DEFAULT 0,
+            start_date date NOT NULL,
+            end_date date NOT NULL,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY end_date (end_date)
+        ) $charset_collate;";
+
+        // Head-to-head mosque challenges
+        $tables[] = "CREATE TABLE {$t('h2h_challenges')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_a_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_b_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            challenge_type varchar(30) NOT NULL DEFAULT 'engagement',
+            mosque_a_score int(11) NOT NULL DEFAULT 0,
+            mosque_b_score int(11) NOT NULL DEFAULT 0,
+            start_date date NOT NULL,
+            end_date date NOT NULL,
+            winner_mosque_id bigint(20) unsigned DEFAULT NULL,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            PRIMARY KEY  (id),
+            KEY mosque_a_id (mosque_a_id),
+            KEY mosque_b_id (mosque_b_id),
+            KEY status (status),
+            KEY end_date (end_date)
+        ) $charset_collate;";
+
+        // User badges / achievements
+        $tables[] = "CREATE TABLE {$t('user_badges')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            badge_key varchar(50) NOT NULL DEFAULT '',
+            badge_name varchar(100) NOT NULL DEFAULT '',
+            badge_icon varchar(10) NOT NULL DEFAULT '',
+            earned_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY user_badge (user_id, badge_key),
+            KEY mosque_id (mosque_id)
+        ) $charset_collate;";
+
+        // Dua wall — anonymous prayer requests
+        $tables[] = "CREATE TABLE {$t('dua_requests')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            request_text varchar(500) NOT NULL DEFAULT '',
+            dua_count int(11) NOT NULL DEFAULT 0,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+
+        // Dua responses (who made dua — for counting, anonymous display)
+        $tables[] = "CREATE TABLE {$t('dua_responses')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            dua_request_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY user_dua (user_id, dua_request_id),
+            KEY dua_request_id (dua_request_id)
+        ) $charset_collate;";
+
+        // Gratitude posts — thank your mosque (anonymous)
+        $tables[] = "CREATE TABLE {$t('gratitude_posts')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            message varchar(300) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+
+        // Milestone celebrations — track which milestones have been reached
+        $tables[] = "CREATE TABLE {$t('milestones')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            milestone_key varchar(50) NOT NULL DEFAULT '',
+            milestone_value int(11) NOT NULL DEFAULT 0,
+            reached_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY mosque_milestone (mosque_id, milestone_key)
+        ) $charset_collate;";
+
+        // Content view tracking (dopamine metrics for admins)
+        $tables[] = "CREATE TABLE {$t('content_views')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            content_type varchar(20) NOT NULL DEFAULT 'announcement',
+            content_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            view_count int(11) NOT NULL DEFAULT 0,
+            unique_views int(11) NOT NULL DEFAULT 0,
+            interested_count int(11) NOT NULL DEFAULT 0,
+            share_count int(11) NOT NULL DEFAULT 0,
+            view_date date NOT NULL,
+            PRIMARY KEY  (id),
+            UNIQUE KEY content_date (content_type, content_id, view_date),
+            KEY mosque_id (mosque_id),
+            KEY view_date (view_date)
+        ) $charset_collate;";
+
+        // Reactions on announcements/events (like, dua, share)
+        $tables[] = "CREATE TABLE {$t('reactions')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            content_type varchar(20) NOT NULL DEFAULT 'announcement',
+            content_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            reaction varchar(20) NOT NULL DEFAULT 'like',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY user_content_reaction (user_id, content_type, content_id, reaction),
+            KEY content_type_id (content_type, content_id)
+        ) $charset_collate;";
+
+        return $tables;
+    }
+
+    /**
+     * Resolve a mosque slug to its ID.
+     *
+     * @param  string   $slug  Mosque slug.
+     * @return int|null         Mosque ID or null if not found.
+     */
+    public static function resolve_slug( $slug ) {
+        global $wpdb;
+        $table = self::table( 'mosques' );
+
+        return $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM $table WHERE slug = %s AND status IN ('active','unclaimed') LIMIT 1",
+            sanitize_text_field( $slug )
+        ) );
+    }
+
+    /**
+     * Drop all plugin tables.
+     *
+     * Only used during full uninstall.
+     */
+    public static function uninstall() {
+        global $wpdb;
+
+        $table_names = [
+            'mosques',
+            'prayer_times',
+            'jumuah_times',
+            'eid_times',
+            'announcements',
+            'events',
+            'bookings',
+            'rooms',
+            'enquiries',
+            'businesses',
+            'services',
+            'classes',
+            'class_sessions',
+            'enrolments',
+            'campaigns',
+            'madrassah_terms',
+            'madrassah_students',
+            'madrassah_attendance',
+            'madrassah_fees',
+            'madrassah_reports',
+            'patrons',
+            'masjid_services',
+            'masjid_service_enquiries',
+            'user_subscriptions',
+            'users',
+            'subscribers',
+            'notifications',
+            'appeal_requests',
+            'appeal_responses',
+            'appeal_donations',
+            'appeal_messages',
+        ];
+
+        foreach ( $table_names as $name ) {
+            $wpdb->query( "DROP TABLE IF EXISTS " . self::table( $name ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+        }
+
+        delete_option( 'ynj_db_version' );
+    }
+}
