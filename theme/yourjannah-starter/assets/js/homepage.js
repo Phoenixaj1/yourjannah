@@ -417,8 +417,9 @@
                             if (!biz || !biz.length) return;
                             const ticker = document.getElementById('sponsor-ticker');
                             const content = document.getElementById('ticker-content');
-                            const items = biz.map((b, i) =>
-                                `<a href="/mosque/${slug}/sponsors" class="ynj-ticker__item"><span class="ynj-ticker__rank">#${i+1}</span>${b.business_name}<span class="ynj-ticker__cat">${b.category}</span></a>`
+                            function tIcon(fee) { return fee >= 10000 ? '🥇' : fee >= 5000 ? '🥈' : '🥉'; }
+                            const items = biz.map((b) =>
+                                `<a href="/mosque/${slug}/sponsors" class="ynj-ticker__item"><span class="ynj-ticker__rank">${tIcon(b.monthly_fee_pence||0)}</span>${b.business_name}<span class="ynj-ticker__cat">${b.category}</span></a>`
                             ).join('');
                             content.innerHTML = items + items;
                             ticker.style.display = '';
@@ -1049,23 +1050,27 @@
                 var sponsors = (window.ynjPreloaded && window.ynjPreloaded.sponsors) || [];
                 var sponsorSlug = mosqueSlug || localStorage.getItem('ynj_mosque_slug') || '';
                 var html = '';
-                var adIdx = Math.floor(Math.random() * Math.max(1, sponsors.length)); // Random start for rotation
+                var adIdx = Math.floor(Math.random() * Math.max(1, sponsors.length));
+                function sponsorTier(fee) {
+                    if (fee >= 10000) return {icon:'🥇',label:'Gold Sponsor',bg:'linear-gradient(135deg,#fef3c7,#fde68a)',border:'#f59e0b',color:'#92400e'};
+                    if (fee >= 5000) return {icon:'🥈',label:'Silver Sponsor',bg:'linear-gradient(135deg,#f1f5f9,#e2e8f0)',border:'#94a3b8',color:'#475569'};
+                    return {icon:'🥉',label:'Bronze Sponsor',bg:'linear-gradient(135deg,#fef2f2,#fce8e8)',border:'#d97706',color:'#78350f'};
+                }
                 for (var fi = 0; fi < items.length; fi++) {
                     html += renderFeedCard(items[fi]);
-                    // Insert sponsor ad after every 2nd item
                     if (sponsors.length > 0 && (fi + 1) % 2 === 0) {
                         var sp = sponsors[adIdx % sponsors.length];
                         adIdx++;
-                        html += '<div class="ynj-sponsor-ad" style="border-radius:14px;padding:14px;margin-bottom:10px;">' +
+                        var tier = sponsorTier(sp.monthly_fee_pence || 0);
+                        html += '<div style="border-radius:14px;padding:14px;margin-bottom:10px;background:' + tier.bg + ';border:1px solid ' + tier.border + ';">' +
                             '<div style="display:flex;align-items:center;gap:10px;">' +
-                                '<div class="ynj-sponsor-ad__icon" style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">⭐</div>' +
+                                '<div style="width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">' + tier.icon + '</div>' +
                                 '<div style="flex:1;min-width:0;">' +
-                                    '<div class="ynj-sponsor-ad__name" style="font-size:13px;font-weight:700;">' + (sp.business_name || 'Sponsor') + '</div>' +
-                                    '<div class="ynj-sponsor-ad__cat" style="font-size:11px;">' + (sp.category || 'Business') + '</div>' +
+                                    '<div style="font-size:14px;font-weight:800;color:' + tier.color + ';">' + (sp.business_name || 'Sponsor') + '</div>' +
+                                    '<div style="font-size:11px;color:' + tier.color + ';opacity:.7;">' + (sp.category || 'Business') + '</div>' +
                                 '</div>' +
-                                '<a href="/mosque/' + sponsorSlug + '/sponsors" class="ynj-sponsor-ad__link" style="font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;">View →</a>' +
+                                '<a href="/mosque/' + sponsorSlug + '/sponsors" style="font-size:11px;font-weight:700;color:' + tier.color + ';text-decoration:none;white-space:nowrap;">View →</a>' +
                             '</div>' +
-                            '<a href="/mosque/' + sponsorSlug + '/sponsors/join" class="ynj-sponsor-ad__cta" style="display:block;text-align:center;margin-top:8px;padding:6px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;">⭐ Advertise your business here — from £30/mo</a>' +
                         '</div>';
                     }
                 }

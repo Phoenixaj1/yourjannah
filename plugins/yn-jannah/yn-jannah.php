@@ -346,6 +346,47 @@ if (is_admin()) {
     YNJ_Platform_Admin::register();
 }
 
+// ── XML Sitemap for all mosques ──
+// Serves /sitemap-mosques.xml with all active mosque URLs for SEO indexing
+add_action( 'init', function() {
+    $uri = strtok( $_SERVER['REQUEST_URI'] ?? '', '?' );
+    if ( $uri !== '/sitemap-mosques.xml' ) return;
+
+    header( 'Content-Type: application/xml; charset=UTF-8' );
+    header( 'Cache-Control: public, max-age=3600' ); // Cache 1 hour for sitemaps
+
+    global $wpdb;
+    $mosques = $wpdb->get_results(
+        "SELECT slug, city, updated_at FROM " . YNJ_DB::table( 'mosques' ) . " WHERE status IN ('active','unclaimed') ORDER BY name ASC"
+    );
+
+    echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+    echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+
+    // Homepage
+    echo '<url><loc>' . home_url( '/' ) . '</loc><changefreq>daily</changefreq><priority>1.0</priority></url>' . "\n";
+
+    // Each mosque page
+    foreach ( $mosques as $m ) {
+        $lastmod = $m->updated_at ? date( 'Y-m-d', strtotime( $m->updated_at ) ) : date( 'Y-m-d' );
+        echo '<url>';
+        echo '<loc>' . esc_url( home_url( '/mosque/' . $m->slug ) ) . '</loc>';
+        echo '<lastmod>' . $lastmod . '</lastmod>';
+        echo '<changefreq>daily</changefreq>';
+        echo '<priority>0.8</priority>';
+        echo '</url>' . "\n";
+    }
+
+    echo '</urlset>';
+    exit;
+}, 1 );
+
+// Register sitemap in robots.txt
+add_filter( 'robots_txt', function( $output ) {
+    $output .= "\nSitemap: " . home_url( '/sitemap-mosques.xml' ) . "\n";
+    return $output;
+}, 99 );
+
 // Frontend routing — now handled by yourjannah-starter theme templates
 // Old router archived to _archive/class-ynj-router.php
 
