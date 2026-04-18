@@ -311,7 +311,7 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
         localStorage.removeItem('ynj_cached_feed');
         localStorage.removeItem('ynj_mosque_name');
         window.history.replaceState({}, '', '/');
-        window.location.reload();
+        setTimeout(function(){ window.location.reload(); }, 500);
         return;
     }
 
@@ -447,7 +447,7 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
                             body: 'action=ynj_set_session&wp_user_id=' + data.wp_user_id, credentials: 'same-origin'
                         });
                     }
-                    window.location.reload();
+                    setTimeout(function(){ window.location.reload(); }, 500);
                 } else {
                     errEl.textContent = data.error || 'Incorrect PIN. Try again.';
                     btn.disabled = false; btn.textContent = 'Sign In';
@@ -482,7 +482,7 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
                                 body: 'action=ynj_set_session&wp_user_id=' + setData.wp_user_id, credentials: 'same-origin'
                             });
                         }
-                        window.location.reload();
+                        setTimeout(function(){ window.location.reload(); }, 500);
                     } else {
                         errEl.textContent = setData.error || 'Could not set PIN. Try again.';
                         btn.disabled = false; btn.textContent = 'Set PIN & Sign In';
@@ -562,7 +562,7 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
                 body: JSON.stringify({mosque_slug: obSelectedSlug, set_primary: true})
             });
         } catch(e) {}
-        window.location.reload();
+        setTimeout(function(){ window.location.reload(); }, 500);
     }
 
     // ── Sign In flow: email → PIN ──
