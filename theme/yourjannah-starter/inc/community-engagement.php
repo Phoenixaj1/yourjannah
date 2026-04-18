@@ -14,6 +14,62 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // ================================================================
+// MASJID LEVELS — XP-based progression from dhikr
+// ================================================================
+
+/**
+ * Get masjid level based on total dhikr count.
+ * Each level needs more dhikr — creates the "so close to next level" feeling.
+ *
+ * @param int $total_dhikr  Total dhikr count for this masjid
+ * @return array { level, name, icon, current_xp, next_xp, xp_pct, next_name, next_icon }
+ */
+function ynj_get_masjid_level( $total_dhikr ) {
+    $levels = [
+        [ 'level' => 1,  'name' => 'Seedling',       'icon' => '&#x1F331;', 'xp' => 0 ],
+        [ 'level' => 2,  'name' => 'Sprout',          'icon' => '&#x1F33F;', 'xp' => 50 ],
+        [ 'level' => 3,  'name' => 'Rising Star',     'icon' => '&#x1F31F;', 'xp' => 150 ],
+        [ 'level' => 4,  'name' => 'Shining Light',   'icon' => '&#x2728;',  'xp' => 300 ],
+        [ 'level' => 5,  'name' => 'Blessed',         'icon' => '&#x1F54C;', 'xp' => 500 ],
+        [ 'level' => 6,  'name' => 'Radiant',         'icon' => '&#x1F4AB;', 'xp' => 1000 ],
+        [ 'level' => 7,  'name' => 'Luminous',        'icon' => '&#x1F320;', 'xp' => 2000 ],
+        [ 'level' => 8,  'name' => 'Majestic',        'icon' => '&#x1F451;', 'xp' => 5000 ],
+        [ 'level' => 9,  'name' => 'Glorious',        'icon' => '&#x1F3C6;', 'xp' => 10000 ],
+        [ 'level' => 10, 'name' => 'Heavenly',        'icon' => '&#x1F30D;', 'xp' => 25000 ],
+    ];
+
+    $current = $levels[0];
+    $next = $levels[1] ?? null;
+
+    for ( $i = count( $levels ) - 1; $i >= 0; $i-- ) {
+        if ( $total_dhikr >= $levels[ $i ]['xp'] ) {
+            $current = $levels[ $i ];
+            $next = $levels[ $i + 1 ] ?? null;
+            break;
+        }
+    }
+
+    $xp_in_level = $total_dhikr - $current['xp'];
+    $xp_for_next = $next ? ( $next['xp'] - $current['xp'] ) : 1;
+    $pct = $next ? min( 100, round( $xp_in_level / $xp_for_next * 100 ) ) : 100;
+    $remaining = $next ? ( $next['xp'] - $total_dhikr ) : 0;
+
+    return [
+        'level'      => $current['level'],
+        'name'       => $current['name'],
+        'icon'       => $current['icon'],
+        'total_xp'   => $total_dhikr,
+        'current_xp' => $xp_in_level,
+        'next_xp'    => $xp_for_next,
+        'xp_pct'     => $pct,
+        'remaining'  => $remaining,
+        'next_name'  => $next ? $next['name'] : null,
+        'next_icon'  => $next ? $next['icon'] : null,
+        'max_level'  => ! $next,
+    ];
+}
+
+// ================================================================
 // MOSQUE LEAGUES — Size-tiered competition
 // ================================================================
 

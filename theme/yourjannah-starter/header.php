@@ -174,11 +174,9 @@ if ( is_user_logged_in() ) {
 // ── Masjid XP data for progress bar ──
 $_hud_dhikr_total = 0;
 $_hud_members = 0;
-$_hud_next_tier = null;
-$_hud_xp_pct = 0;
+$_hud_level = null;
 if ( $_hud_mosque && class_exists( 'YNJ_DB' ) ) {
     global $wpdb;
-    // Total dhikr for this masjid (all time — the XP)
     $_hud_dhikr_total = (int) $wpdb->get_var( $wpdb->prepare(
         "SELECT COUNT(*) FROM " . YNJ_DB::table( 'ibadah_logs' ) . " WHERE mosque_id = %d AND dhikr = 1",
         (int) $_hud_mosque->id
@@ -187,23 +185,9 @@ if ( $_hud_mosque && class_exists( 'YNJ_DB' ) ) {
         "SELECT COUNT(*) FROM " . YNJ_DB::table( 'user_subscriptions' ) . " WHERE mosque_id = %d AND status = 'active'",
         (int) $_hud_mosque->id
     ) );
-    // Next tier thresholds (based on member count)
-    $all_tiers = [
-        [ 'name' => 'Rising Star', 'icon' => '&#x1F31F;', 'max' => 25 ],
-        [ 'name' => 'Growing',     'icon' => '&#x1F33F;', 'max' => 100 ],
-        [ 'name' => 'Established', 'icon' => '&#x1F333;', 'max' => 500 ],
-        [ 'name' => 'Flagship',    'icon' => '&#x1F3C6;', 'max' => 999999 ],
-    ];
-    foreach ( $all_tiers as $i => $t ) {
-        if ( $_hud_members <= $t['max'] ) {
-            if ( isset( $all_tiers[ $i + 1 ] ) ) {
-                $_hud_next_tier = $all_tiers[ $i + 1 ];
-                $_hud_xp_pct = min( 100, round( $_hud_members / $t['max'] * 100 ) );
-            } else {
-                $_hud_xp_pct = 100;
-            }
-            break;
-        }
+    // Masjid level from dhikr count
+    if ( function_exists( 'ynj_get_masjid_level' ) ) {
+        $_hud_level = ynj_get_masjid_level( $_hud_dhikr_total );
     }
 }
 $_hud_mosque_url = $_hud_mosque ? home_url( '/mosque/' . $_hud_mosque_slug ) : home_url( '/' );
@@ -215,25 +199,28 @@ $_hud_league_url = $_hud_mosque ? home_url( '/mosque/' . $_hud_mosque_slug . '#m
     <!-- Row 1: Masjid identity + XP bar -->
     <div class="ynj-hud__row1">
         <a href="<?php echo esc_url( $_hud_mosque_url ); ?>" class="ynj-hud__masjid">
-            <span class="ynj-hud__tier-icon"><?php echo $_hud_mosque ? $_hud_tier['icon'] : '&#x1F54C;'; ?></span>
+            <span class="ynj-hud__tier-icon"><?php echo $_hud_level ? $_hud_level['icon'] : '&#x1F54C;'; ?></span>
             <span class="ynj-hud__masjid-name"><?php echo $_hud_mosque ? esc_html( $_hud_mosque->name ) : esc_html__( 'Select Masjid', 'yourjannah' ); ?></span>
-            <?php if ( $_hud_mosque ) : ?>
-            <span class="ynj-hud__tier-name"><?php echo esc_html( $_hud_tier['name'] ); ?></span>
+            <?php if ( $_hud_level ) : ?>
+            <span class="ynj-hud__tier-name">Lv<?php echo (int) $_hud_level['level']; ?> <?php echo esc_html( $_hud_level['name'] ); ?></span>
+            <?php endif; ?>
             <?php if ( $_hud_rank > 0 ) : ?>
             <span class="ynj-hud__rank-badge" id="hud-rank" data-rank="<?php echo (int) $_hud_rank; ?>">#<?php echo (int) $_hud_rank; ?></span>
             <?php endif; ?>
-            <?php endif; ?>
         </a>
 
-        <?php if ( $_hud_mosque ) : ?>
+        <?php if ( $_hud_mosque && $_hud_level ) : ?>
         <div class="ynj-hud__xp">
-            <div class="ynj-hud__xp-bar">
-                <div class="ynj-hud__xp-fill" style="width:<?php echo (int) $_hud_xp_pct; ?>%"></div>
+            <div class="ynj-hud__xp-bar" title="<?php printf( esc_attr__( '%d / %d to next level', 'yourjannah' ), $_hud_level['current_xp'], $_hud_level['next_xp'] ); ?>">
+                <div class="ynj-hud__xp-fill" style="width:<?php echo (int) $_hud_level['xp_pct']; ?>%"></div>
             </div>
-            <span class="ynj-hud__xp-text"><?php echo number_format( $_hud_dhikr_total ); ?> <?php esc_html_e( 'dhikr', 'yourjannah' ); ?></span>
-            <?php if ( $_hud_next_tier ) : ?>
-            <span class="ynj-hud__xp-next"><?php echo $_hud_next_tier['icon']; ?></span>
-            <?php endif; ?>
+            <span class="ynj-hud__xp-text">
+                <?php if ( $_hud_level['remaining'] > 0 ) : ?>
+                    <?php echo number_format( $_hud_level['remaining'] ); ?> <?php esc_html_e( 'to', 'yourjannah' ); ?> <?php echo $_hud_level['next_icon']; ?>
+                <?php else : ?>
+                    <?php esc_html_e( 'MAX', 'yourjannah' ); ?>
+                <?php endif; ?>
+            </span>
         </div>
         <?php endif; ?>
     </div>

@@ -875,57 +875,93 @@ class YNJ_API_Points {
     }
 
     /**
-     * GET /ibadah/dhikr — Get today's Sunnah remembrance.
-     * Rotates weekly (week number of year modulo count).
+     * Get today's 5 dhikr for the user.
+     * Picks 5 from the pool using day-of-year rotation, each independently completable.
+     */
+    public static function get_todays_five() {
+        $adhkar = self::get_weekly_adhkar();
+        $day_num = (int) date( 'z' );
+        $count = count( $adhkar );
+        $five = [];
+        for ( $i = 0; $i < 5; $i++ ) {
+            $idx = ( $day_num + $i * 3 ) % $count; // Spread across the pool
+            $d = $adhkar[ $idx ];
+            $d['index'] = $i;
+            $five[] = $d;
+        }
+        return $five;
+    }
+
+    /**
+     * GET /ibadah/dhikr — Get today's 5 remembrances with completion status.
      */
     public static function dhikr_today( \WP_REST_Request $request ) {
-        $adhkar = self::get_weekly_adhkar();
-        // Rotate DAILY (day of year) so users get a fresh remembrance each day
-        $day_num = (int) date( 'z' ); // 0-365
-        $idx = $day_num % count( $adhkar );
-        $today_dhikr = $adhkar[ $idx ];
+        $five = self::get_todays_five();
+        $done = [];
 
-        // Check if user already said it today
-        $already_done = false;
         if ( is_user_logged_in() ) {
             $ynj_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
             if ( $ynj_uid ) {
-                $key = 'ynj_dhikr_' . $ynj_uid . '_' . date( 'Y-m-d' );
-                $already_done = (bool) get_transient( $key );
+                for ( $i = 0; $i < 5; $i++ ) {
+                    $done[ $i ] = (bool) get_transient( 'ynj_dhikr_' . $ynj_uid . '_' . date( 'Y-m-d' ) . '_' . $i );
+                }
             }
         }
 
+        $items = [];
+        $done_count = 0;
+        foreach ( $five as $i => $d ) {
+            $is_done = $done[ $i ] ?? false;
+            if ( $is_done ) $done_count++;
+            $items[] = [
+                'index'       => $i,
+                'arabic'      => $d['arabic'],
+                'english'     => $d['english'],
+                'source'      => $d['source'],
+                'reward'      => $d['reward'],
+                'category'    => $d['category'],
+                'points'      => $d['points'],
+                'action_text' => $d['action_text'],
+                'tier'        => $d['tier'] ?? 'epic',
+                'done'        => $is_done,
+            ];
+        }
+
+        $total_possible = array_sum( array_column( $five, 'points' ) );
+
         return new \WP_REST_Response( [
-            'ok'           => true,
-            'dhikr'        => $today_dhikr,
-            'week_index'   => $idx,
-            'already_done' => $already_done,
+            'ok'             => true,
+            'items'          => $items,
+            'done_count'     => $done_count,
+            'total_possible' => $total_possible,
         ] );
     }
 
     /**
-     * POST /ibadah/dhikr — User taps "Ameen" / "I've said it".
-     * Awards points + contributes to masjid community score.
+     * POST /ibadah/dhikr — Complete a specific dhikr by index (0-4).
+     * Each of the 5 daily dhikr can be done independently.
      */
     public static function dhikr_ameen( \WP_REST_Request $request ) {
         $wp_uid  = get_current_user_id();
         $ynj_uid = (int) get_user_meta( $wp_uid, 'ynj_user_id', true );
         if ( ! $ynj_uid ) return new \WP_REST_Response( [ 'ok' => false ], 400 );
 
-        $today = date( 'Y-m-d' );
-        $key = 'ynj_dhikr_' . $ynj_uid . '_' . $today;
+        $index = (int) $request->get_param( 'index' );
+        if ( $index < 0 || $index > 4 ) $index = 0;
 
-        // Only award once per day
+        $today = date( 'Y-m-d' );
+        $key = 'ynj_dhikr_' . $ynj_uid . '_' . $today . '_' . $index;
+
+        // Already done this specific dhikr today
         if ( get_transient( $key ) ) {
             return new \WP_REST_Response( [ 'ok' => true, 'already_done' => true, 'points' => 0 ] );
         }
 
-        $adhkar = self::get_weekly_adhkar();
-        $day_num = (int) date( 'z' );
-        $idx = $day_num % count( $adhkar );
-        $pts = $adhkar[ $idx ]['points'];
+        $five = self::get_todays_five();
+        $dhikr = $five[ $index ] ?? $five[0];
+        $pts = $dhikr['points'];
 
-        // Award points
+        // Get mosque
         $mosque_id = (int) get_user_meta( $wp_uid, 'ynj_mosque_id', true );
         if ( ! $mosque_id ) {
             global $wpdb;
@@ -935,7 +971,6 @@ class YNJ_API_Points {
         }
 
         global $wpdb;
-        // Record dhikr in today's ibadah log
         $ib_table = YNJ_DB::table( 'ibadah_logs' );
         $existing = $wpdb->get_var( $wpdb->prepare(
             "SELECT id FROM $ib_table WHERE user_id = %d AND log_date = %s", $ynj_uid, $today
@@ -958,15 +993,37 @@ class YNJ_API_Points {
 
         set_transient( $key, 1, DAY_IN_SECONDS );
 
+        // Count how many of 5 are done now
+        $done_count = 0;
+        for ( $i = 0; $i < 5; $i++ ) {
+            if ( get_transient( 'ynj_dhikr_' . $ynj_uid . '_' . $today . '_' . $i ) ) $done_count++;
+        }
+
         $total = (int) $wpdb->get_var( $wpdb->prepare(
             "SELECT total_points FROM " . YNJ_DB::table( 'users' ) . " WHERE id = %d", $ynj_uid
         ) );
 
+        // Bonus for completing all 5!
+        $all_five_bonus = 0;
+        if ( $done_count === 5 ) {
+            $bonus_key = 'ynj_dhikr5_' . $ynj_uid . '_' . $today;
+            if ( ! get_transient( $bonus_key ) ) {
+                $all_five_bonus = 200; // Massive bonus for all 5
+                $wpdb->query( $wpdb->prepare(
+                    "UPDATE " . YNJ_DB::table( 'users' ) . " SET total_points = total_points + %d WHERE id = %d", $all_five_bonus, $ynj_uid
+                ) );
+                $total += $all_five_bonus;
+                set_transient( $bonus_key, 1, DAY_IN_SECONDS );
+            }
+        }
+
         return new \WP_REST_Response( [
-            'ok'     => true,
-            'points' => $pts,
-            'total'  => $total,
-            'message' => '+' . $pts . ' points for your remembrance of Allah',
+            'ok'             => true,
+            'points'         => $pts,
+            'total'          => $total,
+            'done_count'     => $done_count,
+            'all_five_bonus' => $all_five_bonus,
+            'message'        => '+' . $pts . ' points for your remembrance of Allah',
         ] );
     }
 
