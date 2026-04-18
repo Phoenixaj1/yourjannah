@@ -172,7 +172,8 @@ if ( $_hud_mosque && class_exists( 'YNJ_DB' ) ) {
         "SELECT COUNT(*) FROM " . YNJ_DB::table( 'ibadah_logs' ) . " WHERE mosque_id = %d AND dhikr = 1",
         (int) $_hud_mosque->id
     ) );
-    $_hud_members = (int) $wpdb->get_var( $wpdb->prepare(
+    // Live member count: subscriptions + 1 (admin is always member #1)
+    $_hud_members = 1 + (int) $wpdb->get_var( $wpdb->prepare(
         "SELECT COUNT(*) FROM " . YNJ_DB::table( 'user_subscriptions' ) . " WHERE mosque_id = %d AND status = 'active'",
         (int) $_hud_mosque->id
     ) );

@@ -95,6 +95,23 @@ add_action('init', function() {
     }
 }, 5);
 
+// ── Hide WP admin bar + block /wp-admin for congregation members ──
+// Only mosque admins, imams, coordinators, and WP admins see the admin bar.
+add_action( 'init', function() {
+    if ( ! is_user_logged_in() ) return;
+    $user = wp_get_current_user();
+    // Only WP administrators see the admin bar — everyone else uses the YNJ dashboard
+    $has_admin_role = in_array( 'administrator', (array) $user->roles, true );
+    if ( ! $has_admin_role ) {
+        show_admin_bar( false );
+        // Block /wp-admin access (allow admin-ajax.php for API calls)
+        if ( is_admin() && ! wp_doing_ajax() && ! defined( 'DOING_CRON' ) ) {
+            wp_safe_redirect( home_url( '/' ) );
+            exit;
+        }
+    }
+}, 20 );
+
 // ── Bulletproof auto-login via redirect ──
 // JS redirects to: /?ynj_autologin=WP_USER_ID&ynj_token=TOKEN&redirect=DESTINATION
 // This sets the WP auth cookie during a real page request (not AJAX), which is 100% reliable.

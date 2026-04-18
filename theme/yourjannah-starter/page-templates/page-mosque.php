@@ -283,10 +283,14 @@ localStorage.setItem('ynj_mosque_name', <?php echo wp_json_encode( $mosque_name 
 // ── Membership status check ──
 $_ynj_is_member = false;
 $_ynj_is_primary = false;
-$_ynj_member_count = $mosque ? (int) ( $mosque->member_count ?? 0 ) : 0;
-// Social proof: mosques under 20 real members show a seeded number (5-20)
-if ( $_ynj_member_count < 20 && $mosque ) {
-    $_ynj_member_count = ( crc32( $mosque->slug ?? '' ) % 16 ) + 5;
+// Live member count: real subscriptions + 1 (admin is always member #1)
+$_ynj_member_count = 1; // Admin/creator is always counted
+if ( $mosque ) {
+    global $wpdb;
+    $_ynj_member_count = 1 + (int) $wpdb->get_var( $wpdb->prepare(
+        "SELECT COUNT(*) FROM " . YNJ_DB::table( 'user_subscriptions' ) . " WHERE mosque_id = %d AND status = 'active'",
+        (int) $mosque->id
+    ) );
 }
 if ( $mosque && is_user_logged_in() ) {
     $ynj_uid_check = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
