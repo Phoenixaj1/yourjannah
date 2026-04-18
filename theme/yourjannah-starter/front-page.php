@@ -261,35 +261,40 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
         </div>
         <style>@keyframes ob-spin{to{transform:rotate(360deg);}}</style>
 
-        <!-- Email + password just above CTA -->
-        <div style="text-align:left;margin-bottom:12px;">
-            <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;">Your Email</label>
-            <input type="email" id="ob-email" placeholder="your@email.com" autocomplete="email" style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-family:inherit;outline:none;">
-        </div>
-        <!-- Existing user: enter PIN -->
-        <div id="ob-pin-row" style="display:none;margin-bottom:12px;text-align:left;">
-            <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;"><?php esc_html_e( 'Welcome back! Enter your PIN', 'yourjannah' ); ?></label>
-            <input type="tel" id="ob-pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="off" style="width:100%;padding:14px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;letter-spacing:12px;text-align:center;font-family:inherit;outline:none;">
-            <a href="<?php echo esc_url( home_url( '/forgot-password' ) ); ?>" style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px;display:block;"><?php esc_html_e( 'Forgot PIN?', 'yourjannah' ); ?></a>
-        </div>
-        <!-- New user: create PIN -->
-        <div id="ob-newpin-row" style="display:none;margin-bottom:12px;text-align:left;">
-            <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;"><?php esc_html_e( 'Choose a 4-digit PIN', 'yourjannah' ); ?></label>
-            <input type="tel" id="ob-newpin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="off" style="width:100%;padding:14px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;letter-spacing:12px;text-align:center;font-family:inherit;outline:none;margin-bottom:8px;">
-            <label style="font-size:12px;font-weight:600;opacity:.7;display:block;margin-bottom:4px;"><?php esc_html_e( 'Confirm PIN', 'yourjannah' ); ?></label>
-            <input type="tel" id="ob-newpin2" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="off" style="width:100%;padding:14px 16px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;letter-spacing:12px;text-align:center;font-family:inherit;outline:none;">
+        <!-- ═══ Step A: Email field (shared) ═══ -->
+        <div id="ob-email-row" style="text-align:left;margin-bottom:14px;">
+            <label style="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);display:block;margin-bottom:5px;"><?php esc_html_e( 'Your Email', 'yourjannah' ); ?></label>
+            <input type="email" id="ob-email" placeholder="your@email.com" autocomplete="email" style="width:100%;padding:13px 16px;border:1.5px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:16px;font-family:inherit;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='rgba(255,255,255,.6)'" onblur="this.style.borderColor='rgba(255,255,255,.35)'">
         </div>
 
-        <!-- Two clear buttons: Next (auto-detects), or explicit Sign In link -->
-        <button id="ob-submit" onclick="obSubmitEmail()" style="width:100%;padding:14px;border:none;border-radius:12px;background:#fff;color:#0a1628;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">
-            <?php esc_html_e( 'Next', 'yourjannah' ); ?>
-        </button>
+        <!-- ═══ Step B: PIN for sign-in (existing user) ═══ -->
+        <div id="ob-pin-row" style="display:none;margin-bottom:14px;text-align:left;">
+            <label style="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);display:block;margin-bottom:5px;"><?php esc_html_e( 'Enter your PIN', 'yourjannah' ); ?></label>
+            <input type="tel" id="ob-pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="&#x2022; &#x2022; &#x2022; &#x2022;" autocomplete="off" style="width:100%;padding:16px;border:1.5px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:32px;font-weight:900;letter-spacing:14px;text-align:center;font-family:inherit;outline:none;box-sizing:border-box;">
+            <a href="<?php echo esc_url( home_url( '/forgot-password' ) ); ?>" style="font-size:11px;color:rgba(255,255,255,.45);margin-top:5px;display:block;"><?php esc_html_e( 'Forgot PIN?', 'yourjannah' ); ?></a>
+        </div>
+
+        <!-- ═══ Step C: Create PIN (new user / migration) ═══ -->
+        <div id="ob-newpin-row" style="display:none;margin-bottom:14px;text-align:left;">
+            <label style="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);display:block;margin-bottom:5px;"><?php esc_html_e( 'Choose a 4-digit PIN', 'yourjannah' ); ?></label>
+            <input type="tel" id="ob-newpin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="&#x2022; &#x2022; &#x2022; &#x2022;" autocomplete="off" style="width:100%;padding:16px;border:1.5px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:32px;font-weight:900;letter-spacing:14px;text-align:center;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:10px;">
+            <label style="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);display:block;margin-bottom:5px;"><?php esc_html_e( 'Confirm PIN', 'yourjannah' ); ?></label>
+            <input type="tel" id="ob-newpin2" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="&#x2022; &#x2022; &#x2022; &#x2022;" autocomplete="off" style="width:100%;padding:16px;border:1.5px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:32px;font-weight:900;letter-spacing:14px;text-align:center;font-family:inherit;outline:none;box-sizing:border-box;">
+        </div>
+
+        <!-- ═══ Action button (changes based on flow) ═══ -->
+        <button id="ob-submit" style="display:none;width:100%;padding:14px;border:none;border-radius:12px;background:#fff;color:#0a1628;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;"></button>
         <p id="ob-error" style="color:#fca5a5;font-size:13px;text-align:center;margin-top:8px;"></p>
 
-        <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
-            <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" style="font-size:13px;color:rgba(255,255,255,.7);text-decoration:none;font-weight:600;"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></a>
-            <span style="color:rgba(255,255,255,.2);">|</span>
-            <a href="#" onclick="obSkip();return false;" style="font-size:13px;color:rgba(255,255,255,.4);text-decoration:none;"><?php esc_html_e( 'Skip for now', 'yourjannah' ); ?></a>
+        <!-- ═══ Three clear CTAs: Sign In / Sign Up / Guest ═══ -->
+        <div id="ob-cta-buttons" style="margin-top:4px;">
+            <div style="display:flex;gap:8px;margin-bottom:10px;">
+                <button onclick="obStartSignIn()" style="flex:1;padding:14px;border:none;border-radius:12px;background:#fff;color:#0a1628;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></button>
+                <button onclick="obStartSignUp()" style="flex:1;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#287e61,#1a5c43);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;border:none;"><?php esc_html_e( 'Sign Up', 'yourjannah' ); ?></button>
+            </div>
+            <div style="text-align:center;">
+                <a href="#" onclick="obSkip();return false;" style="font-size:13px;color:rgba(255,255,255,.45);text-decoration:none;"><?php esc_html_e( 'Continue as guest', 'yourjannah' ); ?></a>
+            </div>
         </div>
     </div>
 </div>
@@ -559,6 +564,42 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
         } catch(e) {}
         window.location.reload();
     }
+
+    // ── Sign In flow: email → PIN ──
+    window.obStartSignIn = function() {
+        var email = document.getElementById('ob-email').value.trim();
+        if (!email || email.indexOf('@') < 1) {
+            document.getElementById('ob-error').textContent = 'Please enter your email first.';
+            document.getElementById('ob-email').focus();
+            return;
+        }
+        document.getElementById('ob-cta-buttons').style.display = 'none';
+        document.getElementById('ob-newpin-row').style.display = 'none';
+        document.getElementById('ob-pin-row').style.display = '';
+        document.getElementById('ob-pin').focus();
+        var btn = document.getElementById('ob-submit');
+        btn.style.display = ''; btn.textContent = 'Sign In'; btn.onclick = function(){ obSubmitEmail(); };
+        window._obSetPinForExisting = false;
+        window._obIsSignIn = true;
+    };
+
+    // ── Sign Up flow: email → create PIN (twice) ──
+    window.obStartSignUp = function() {
+        var email = document.getElementById('ob-email').value.trim();
+        if (!email || email.indexOf('@') < 1) {
+            document.getElementById('ob-error').textContent = 'Please enter your email first.';
+            document.getElementById('ob-email').focus();
+            return;
+        }
+        document.getElementById('ob-cta-buttons').style.display = 'none';
+        document.getElementById('ob-pin-row').style.display = 'none';
+        document.getElementById('ob-newpin-row').style.display = '';
+        document.getElementById('ob-newpin').focus();
+        var btn = document.getElementById('ob-submit');
+        btn.style.display = ''; btn.textContent = 'Create Account'; btn.onclick = function(){ obSubmitEmail(); };
+        window._obSetPinForExisting = false;
+        window._obIsSignIn = false;
+    };
 
     window.obSkip = function() {
         localStorage.setItem('ynj_onboard_seen', '1');
