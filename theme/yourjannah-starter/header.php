@@ -833,6 +833,12 @@ $_hud_all_done = $_hud_done_count >= 5;
             credentials: 'same-origin',
             body: JSON.stringify({ index: index })
         }).then(function(r){return r.json();}).then(function(d){
+            if (d.cooldown) {
+                btn.disabled = false;
+                btn.innerHTML = '<span style="font-size:11px;color:#6b8fa3;">Wait a moment...</span>';
+                setTimeout(function(){ btn.innerHTML = '\uD83E\uDD32 Say Again'; btn.disabled = false; }, 2000);
+                return;
+            }
             if (d.ok && d.points > 0) {
                 var item = document.getElementById('hud-dhikr-item-' + index);
 
@@ -867,7 +873,8 @@ $_hud_all_done = $_hud_done_count >= 5;
                         extras.forEach(function(el){ el.remove(); });
                         // Add the "Said" marker
                         var doneDiv = item.querySelector('div[style*="animation"]');
-                        if (doneDiv) doneDiv.innerHTML = '<span style="color:#287e61;font-size:11px;font-weight:600;">\u2714 Said</span>';
+                        if (doneDiv) doneDiv.innerHTML = '<span style="color:#287e61;font-size:11px;font-weight:600;">\u2714 Said</span>'
+                            + ' <button type="button" onclick="ynjHudDhikrSay(this,' + index + ',\'\',\'\',\'\');return false;" style="margin-left:8px;padding:4px 10px;border:1px solid #287e61;border-radius:8px;background:none;color:#287e61;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Say Again</button>';
                     }
 
                     // Update progress bar
@@ -905,7 +912,8 @@ $_hud_all_done = $_hud_done_count >= 5;
                         // Single warm haptic
                         if (navigator.vibrate) navigator.vibrate(300);
                         // Mark HUD button
-                        if (hudBtn) { hudBtn.innerHTML = '\u2705 <span>5/5</span>'; hudBtn.classList.add('ynj-hud__dhikr--done'); }
+                        // Keep dhikr button active — unlimited dhikr
+                        if (hudBtn) { hudBtn.innerHTML = '\uD83D\uDCFF <span>5/5 \u2714</span>'; }
                         // Update points with the bonus silently
                         if (ptsEl) ptsEl.textContent = d.total.toLocaleString();
                     }, 4000);

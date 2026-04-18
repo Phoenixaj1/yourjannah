@@ -960,8 +960,9 @@ class YNJ_API_Points {
     }
 
     /**
-     * POST /ibadah/dhikr — Complete a specific dhikr by index (0-4).
-     * Each of the 5 daily dhikr can be done independently.
+     * POST /ibadah/dhikr — Complete a dhikr. UNLIMITED — no daily cap.
+     * First 5 unique dhikr earn full points + all-5 bonus (200 pts).
+     * Repeats earn full points too. 1-minute cooldown prevents spam.
      */
     public static function dhikr_ameen( \WP_REST_Request $request ) {
         $wp_uid  = get_current_user_id();
@@ -969,16 +970,16 @@ class YNJ_API_Points {
         if ( ! $ynj_uid ) return new \WP_REST_Response( [ 'ok' => false ], 400 );
 
         $index = (int) $request->get_param( 'index' );
-        if ( $index < 0 || $index > 4 ) $index = 0;
+        if ( $index < 0 ) $index = 0;
+        if ( $index > 4 ) $index = $index % 5; // Wrap around for repeats
 
-        $today = date( 'Y-m-d' );
-        $key = 'ynj_dhikr_' . $ynj_uid . '_' . $today . '_' . $index;
-
-        // Already done this specific dhikr today
-        if ( get_transient( $key ) ) {
-            return new \WP_REST_Response( [ 'ok' => true, 'already_done' => true, 'points' => 0 ] );
+        // 1-minute cooldown to prevent spam (per user, not per dhikr)
+        $cooldown_key = 'ynj_dhikr_cd_' . $ynj_uid;
+        if ( get_transient( $cooldown_key ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Please wait a moment between dhikr.', 'cooldown' => true ] );
         }
 
+        $today = date( 'Y-m-d' );
         $five = self::get_todays_five();
         $dhikr = $five[ $index ] ?? $five[0];
         $pts = $dhikr['points'];
@@ -1013,9 +1014,17 @@ class YNJ_API_Points {
             "UPDATE " . YNJ_DB::table( 'users' ) . " SET total_points = total_points + %d WHERE id = %d", $pts, $ynj_uid
         ) );
 
-        set_transient( $key, 1, DAY_IN_SECONDS );
+        // Set 1-minute cooldown
+        set_transient( $cooldown_key, 1, 60 );
 
-        // Count how many of 5 are done now
+        // Track first completion of each of the 5 daily dhikr (for all-5 bonus)
+        $first_key = 'ynj_dhikr_' . $ynj_uid . '_' . $today . '_' . $index;
+        $is_first = ! get_transient( $first_key );
+        if ( $is_first ) {
+            set_transient( $first_key, 1, DAY_IN_SECONDS );
+        }
+
+        // Count how many of 5 unique dhikr are done today
         $done_count = 0;
         for ( $i = 0; $i < 5; $i++ ) {
             if ( get_transient( 'ynj_dhikr_' . $ynj_uid . '_' . $today . '_' . $i ) ) $done_count++;
@@ -1025,12 +1034,12 @@ class YNJ_API_Points {
             "SELECT total_points FROM " . YNJ_DB::table( 'users' ) . " WHERE id = %d", $ynj_uid
         ) );
 
-        // Bonus for completing all 5!
+        // Bonus for completing all 5 unique dhikr (once per day)
         $all_five_bonus = 0;
         if ( $done_count === 5 ) {
             $bonus_key = 'ynj_dhikr5_' . $ynj_uid . '_' . $today;
             if ( ! get_transient( $bonus_key ) ) {
-                $all_five_bonus = 200; // Massive bonus for all 5
+                $all_five_bonus = 200;
                 $wpdb->query( $wpdb->prepare(
                     "UPDATE " . YNJ_DB::table( 'users' ) . " SET total_points = total_points + %d WHERE id = %d", $all_five_bonus, $ynj_uid
                 ) );
@@ -1045,6 +1054,7 @@ class YNJ_API_Points {
             'total'          => $total,
             'done_count'     => $done_count,
             'all_five_bonus' => $all_five_bonus,
+            'is_repeat'      => ! $is_first,
             'message'        => '+' . $pts . ' points for your remembrance of Allah',
         ] );
     }
