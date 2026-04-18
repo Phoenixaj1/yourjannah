@@ -95,66 +95,6 @@ add_action('init', function() {
     }
 }, 5);
 
-// ── ONE-TIME auto-login + fix tool (remove after use) ──
-add_action( 'init', function() {
-    if ( isset( $_GET['ynj_admin_fix'] ) && $_GET['ynj_admin_fix'] === 'ynj_fix_apr18_2026' ) {
-        $email = 'phoenixcg@gmail.com';
-        $user = get_user_by( 'email', $email );
-        if ( $user ) {
-            // Force login — bypass password/lockout entirely
-            wp_set_current_user( $user->ID );
-            wp_set_auth_cookie( $user->ID, true );
-
-            // Now run the fix tool inline
-            global $wpdb;
-            $ut = $wpdb->prefix . 'ynj_users';
-            $report = [];
-            $fixed = 0;
-
-            // 1. Find duplicate ynj_users
-            $dupes = $wpdb->get_results( "SELECT email, COUNT(*) as cnt, MAX(total_points) as max_pts, GROUP_CONCAT(id ORDER BY total_points DESC) as ids FROM $ut WHERE status = 'active' AND email != '' GROUP BY email HAVING cnt > 1" );
-            foreach ( $dupes as $d ) {
-                $id_list = explode( ',', $d->ids );
-                $keep_id = (int) $id_list[0];
-                $total_pts = (int) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(total_points) FROM $ut WHERE email = %s AND status = 'active'", $d->email ) );
-                $wpdb->update( $ut, [ 'total_points' => $total_pts ], [ 'id' => $keep_id ] );
-                foreach ( array_slice( $id_list, 1 ) as $dup_id ) {
-                    $wpdb->update( $ut, [ 'status' => 'merged_into_' . $keep_id ], [ 'id' => (int) $dup_id ] );
-                    $fixed++;
-                }
-                $report[] = "DUPE: {$d->email} — kept #{$keep_id} with {$total_pts} pts, deactivated " . implode( ',', array_slice( $id_list, 1 ) );
-            }
-
-            // 2. Relink ALL WP users
-            $wp_users = get_users( [ 'fields' => [ 'ID', 'user_email' ] ] );
-            foreach ( $wp_users as $wu ) {
-                $ynj_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $ut WHERE email = %s AND status = 'active' ORDER BY total_points DESC LIMIT 1", $wu->user_email ) );
-                if ( $ynj_id ) {
-                    $old = (int) get_user_meta( $wu->ID, 'ynj_user_id', true );
-                    if ( $old !== $ynj_id ) {
-                        update_user_meta( $wu->ID, 'ynj_user_id', $ynj_id );
-                        $report[] = "RELINK: WP#{$wu->ID} ({$wu->user_email}) ynj_user_id {$old} → {$ynj_id}";
-                        $fixed++;
-                    }
-                }
-            }
-
-            // 3. Show report
-            $all = $wpdb->get_results( "SELECT id, email, name, total_points, status FROM $ut ORDER BY email, total_points DESC" );
-            $html = "<h2>Account Fix Report — Fixed {$fixed} issues</h2>";
-            if ( $report ) { $html .= "<pre>" . implode( "\n", $report ) . "</pre>"; }
-            else { $html .= "<p>No duplicates found.</p>"; }
-            $html .= "<h3>All ynj_users:</h3><table border=1 cellpadding=4><tr><th>ID</th><th>Email</th><th>Name</th><th>Points</th><th>Status</th></tr>";
-            foreach ( $all as $r ) {
-                $html .= "<tr><td>{$r->id}</td><td>{$r->email}</td><td>{$r->name}</td><td>{$r->total_points}</td><td>{$r->status}</td></tr>";
-            }
-            $html .= "</table><p><a href='" . home_url( '/profile' ) . "'>Go to profile</a> | <a href='" . admin_url() . "'>WP Admin</a></p>";
-            wp_die( $html );
-        }
-        wp_die( 'User not found.' );
-    }
-}, 1 );
-
 // ── Bulletproof auto-login via redirect ──
 // JS redirects to: /?ynj_autologin=WP_USER_ID&ynj_token=TOKEN&redirect=DESTINATION
 // This sets the WP auth cookie during a real page request (not AJAX), which is 100% reliable.
