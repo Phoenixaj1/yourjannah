@@ -1,0 +1,162 @@
+/* YourJannah HUD — yn-jannah-hud plugin v1.0.0 */
+
+/* ════════════════════════════════════════════════
+   MASJID HUD — Your community's status bar
+   Responsive: Desktop (2-row inline) -> Mobile (stacked)
+   ════════════════════════════════════════════════ */
+.ynj-hud-wrap{background:linear-gradient(135deg,#0a1628 0%,#132742 100%);position:sticky;top:0;z-index:102;margin-bottom:-1px;padding-bottom:1px;}
+.admin-bar .ynj-hud-wrap{top:32px;}
+@media(max-width:782px){.admin-bar .ynj-hud-wrap{top:46px;}}
+.ynj-hud{max-width:1200px;margin:0 auto;padding:6px 0;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;color:#fff;}
+@media(min-width:1200px){.ynj-hud{max-width:1280px;}}
+
+/* Guest HUD — inherits from .ynj-hud base, no extra overrides needed */
+.ynj-hud--guest{border-bottom:none;}
+.ynj-hud__guest-link{color:rgba(255,255,255,.6) !important;text-decoration:none !important;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;transition:color .2s;}
+.ynj-hud__guest-link:hover{color:#fff !important;}
+
+/* Layout: Row 1 (masjid + xp) | Row 2 (stats + actions) */
+.ynj-hud__row1{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0;overflow:hidden;}
+.ynj-hud__row2{display:flex;align-items:center;gap:6px;flex:0 0 auto;margin-left:auto;}
+
+/* ── Masjid Identity ── */
+.ynj-hud__masjid{display:flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(255,255,255,.07);border-radius:10px;text-decoration:none;color:#fff;transition:background .2s;max-width:220px;min-width:0;overflow:hidden;flex-shrink:1;}
+.ynj-hud__masjid:hover{background:rgba(255,255,255,.12);}
+.ynj-hud__tier-icon{font-size:16px;flex-shrink:0;}
+.ynj-hud__masjid-name{font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ynj-hud__tier-name{font-size:10px;color:rgba(255,255,255,.45);white-space:nowrap;flex-shrink:0;}
+
+/* League button */
+.ynj-hud__league-btn{display:flex;align-items:center;gap:3px;padding:3px 8px;background:rgba(124,58,237,.12);border:none;border-radius:8px;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .2s;}
+.ynj-hud__league-btn:hover{background:rgba(124,58,237,.2);}
+.ynj-hud__rank-badge{font-size:12px;font-weight:900;color:#a78bfa;}
+.ynj-hud__league-label{font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.3px;}
+.ynj-hud__rank-badge--up{animation:ynj-hud-rankup 1.2s ease-out;}
+@keyframes ynj-hud-rankup{0%{transform:scale(1);}30%{transform:scale(1.5);background:rgba(245,158,11,.4);}100%{transform:scale(1);}}
+
+/* ── XP Progress Bar ── */
+.ynj-hud__xp{display:flex;align-items:center;gap:6px;flex:1;min-width:80px;max-width:200px;}
+.ynj-hud__xp-bar{flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;min-width:40px;}
+.ynj-hud__xp-fill{height:100%;background:linear-gradient(90deg,#287e61,#34d399);border-radius:3px;transition:width 1s ease-out;box-shadow:0 0 6px rgba(40,126,97,.4);}
+.ynj-hud__xp-text{font-size:10px;font-weight:700;color:#34d399;white-space:nowrap;}
+.ynj-hud__xp-next{font-size:12px;flex-shrink:0;opacity:.5;}
+
+/* ── Stats (streak, points, members) ── */
+.ynj-hud__stat{display:flex;align-items:center;gap:3px;padding:3px 7px;border-radius:8px;background:rgba(255,255,255,.06);flex-shrink:0;}
+.ynj-hud__stat--glow{background:rgba(245,158,11,.1);animation:ynj-hud-flame 2s ease-in-out infinite;}
+@keyframes ynj-hud-flame{0%,100%{box-shadow:none;}50%{box-shadow:0 0 10px rgba(245,158,11,.25);}}
+.ynj-hud__stat-icon{font-size:12px;flex-shrink:0;}
+.ynj-hud__stat-num{font-size:12px;font-weight:800;color:#fbbf24;}
+.ynj-hud__stat-label{font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.3px;}
+
+/* ── Quick Dhikr Button ── */
+.ynj-hud__dhikr{display:flex;align-items:center;gap:4px;padding:5px 12px;background:linear-gradient(135deg,#287e61,#1a5c43);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .2s;box-shadow:0 2px 10px rgba(40,126,97,.3);}
+.ynj-hud__dhikr:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(40,126,97,.4);}
+.ynj-hud__dhikr:active{transform:scale(.95);}
+.ynj-hud__dhikr:not(.ynj-hud__dhikr--done){animation:ynj-hud-dhikr-pulse 2s ease-in-out infinite;}
+@keyframes ynj-hud-dhikr-pulse{0%,100%{box-shadow:0 2px 10px rgba(40,126,97,.3);}50%{box-shadow:0 2px 18px rgba(40,126,97,.6),0 0 0 4px rgba(40,126,97,.1);}}
+.ynj-hud__dhikr--done{background:rgba(40,126,97,.15);box-shadow:none;cursor:default;animation:none;}
+.ynj-hud__dhikr--done:hover{transform:none;}
+
+/* ── Info Button ── */
+.ynj-hud__info-btn{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5);font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;transition:all .2s;font-family:inherit;}
+.ynj-hud__info-btn:hover{background:rgba(255,255,255,.2);color:#fff;}
+
+/* ── Info Modal Sections ── */
+.ynj-info-section{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid rgba(0,0,0,.04);}
+.ynj-info-section:last-child{border-bottom:none;}
+.ynj-info-icon{font-size:22px;flex-shrink:0;width:32px;text-align:center;padding-top:2px;}
+.ynj-info-title{font-size:14px;font-weight:800;color:#0a1628;margin-bottom:3px;}
+.ynj-info-desc{font-size:12px;color:#4a3728;line-height:1.5;}
+.ynj-info-levels{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
+.ynj-info-levels span{font-size:10px;padding:2px 8px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;color:#6b8fa3;white-space:nowrap;}
+
+/* ── Profile Link ── */
+.ynj-hud__profile{text-decoration:none;flex-shrink:0;}
+.ynj-hud__avatar{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:12px;font-weight:800;transition:background .2s;}
+.ynj-hud__profile:hover .ynj-hud__avatar{background:rgba(255,255,255,.22);}
+
+/* ── Responsive ── */
+/* Tablet (768px) */
+@media(max-width:768px){
+    .ynj-hud{padding:5px 10px;gap:6px;}
+    .ynj-hud__masjid{max-width:160px;padding:3px 8px;}
+    .ynj-hud__masjid-name{font-size:11px;}
+    .ynj-hud__tier-name{display:none;}
+    .ynj-hud__xp{max-width:140px;}
+    .ynj-hud__stat-label{display:none;}
+}
+/* Mobile (480px) */
+@media(max-width:480px){
+    .ynj-hud{padding:4px 8px;gap:4px;}
+    .ynj-hud__row1{flex:1 1 100%;order:1;}
+    .ynj-hud__row2{flex:1 1 100%;order:2;justify-content:space-between;}
+    .ynj-hud__masjid{max-width:140px;flex:0 1 auto;}
+    .ynj-hud__masjid-name{font-size:10px;}
+    .ynj-hud__xp{flex:0 0 auto;min-width:60px;max-width:90px;}
+    .ynj-hud__xp-text{font-size:9px;}
+    .ynj-hud__stat{padding:2px 5px;}
+    .ynj-hud__stat-num{font-size:11px;}
+    .ynj-hud__dhikr{padding:4px 8px;font-size:11px;}
+    .ynj-hud__avatar{width:24px;height:24px;font-size:10px;}
+    .ynj-hud__guest-link{display:none;}
+}
+
+/* ════════════════════════════════════════════
+   SACRED DHIKR POPUP — The doorway to the Divine
+   ════════════════════════════════════════════ */
+.ynj-hud-popup{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10003;display:flex;align-items:flex-start;justify-content:center;padding-top:50px;background:rgba(10,22,40,.7);backdrop-filter:blur(6px);}
+.ynj-hud-popup__card{background:linear-gradient(180deg,#faf9f6 0%,#f5f0e8 100%);border-radius:24px;padding:24px 20px;max-width:420px;width:calc(100% - 24px);box-shadow:0 24px 80px rgba(0,0,0,.3);animation:ynj-popup-in .4s ease-out;position:relative;max-height:90vh;display:flex;flex-direction:column;}
+@keyframes ynj-popup-in{from{opacity:0;transform:translateY(-16px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);}}
+.ynj-hud-popup__close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:22px;color:#999;cursor:pointer;padding:6px;line-height:1;z-index:1;}
+
+/* Header */
+.ynj-popup-header{padding-bottom:12px;border-bottom:1px solid rgba(0,0,0,.06);margin-bottom:12px;flex-shrink:0;}
+.ynj-popup-header__complete{text-align:center;padding:8px 0;}
+.ynj-popup-progress{height:4px;background:rgba(0,0,0,.06);border-radius:2px;overflow:hidden;}
+.ynj-popup-progress__fill{height:100%;background:linear-gradient(90deg,#287e61,#34d399);border-radius:2px;transition:width .6s ease-out;}
+
+/* Scrollable content */
+.ynj-popup-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:4px;}
+.ynj-popup-scroll::-webkit-scrollbar{width:3px;}
+.ynj-popup-scroll::-webkit-scrollbar-thumb{background:rgba(0,0,0,.1);border-radius:2px;}
+
+/* Individual dhikr item — sacred space */
+.ynj-dhikr-item{padding:20px 16px;margin-bottom:10px;border-radius:16px;background:#fff;border:1px solid rgba(0,0,0,.04);box-shadow:0 1px 4px rgba(0,0,0,.03);transition:all .4s;}
+.ynj-dhikr-item--done{opacity:.5;padding:12px 16px;background:rgba(40,126,97,.03);border-color:rgba(40,126,97,.1);}
+.ynj-dhikr-item--legendary{background:linear-gradient(180deg,#fffef5 0%,#fef9e7 100%);border:1.5px solid rgba(245,158,11,.25);box-shadow:0 2px 12px rgba(245,158,11,.06);}
+
+/* Arabic — let it BREATHE */
+.ynj-dhikr-item__arabic{font-size:22px;line-height:2;text-align:center;color:#1a1a1a;margin:8px 0 12px;font-family:'Amiri','Traditional Arabic','Scheherazade New',serif;}
+.ynj-dhikr-item--legendary .ynj-dhikr-item__arabic{font-size:26px;}
+
+/* English translation */
+.ynj-dhikr-item__english{font-size:13px;color:#5a4a3a;text-align:center;font-style:italic;line-height:1.6;margin-bottom:10px;}
+
+/* Hadith reward — the spiritual motivation */
+.ynj-dhikr-item__reward{font-size:11px;color:#78350f;text-align:center;line-height:1.5;margin-bottom:4px;padding:6px 10px;background:rgba(120,53,15,.03);border-radius:8px;}
+
+/* Source */
+.ynj-dhikr-item__source{font-size:9px;color:rgba(0,0,0,.3);text-align:center;margin-bottom:12px;}
+
+/* Action button — says the dhikr phrase ONLY, no points */
+.ynj-dhikr-item__btn{display:block;width:100%;padding:16px;border:none;border-radius:14px;background:linear-gradient(135deg,#1a3a2a,#0a2418);color:#fff;font-size:18px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .25s;letter-spacing:.5px;}
+.ynj-dhikr-item__btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(10,36,24,.3);}
+.ynj-dhikr-item__btn:active{transform:scale(.97);}
+.ynj-dhikr-item__btn--legendary{background:linear-gradient(135deg,#78350f,#5a2d0c);font-size:20px;}
+
+/* Reflecting state — the breath after the button */
+.ynj-dhikr-item--reflecting{background:linear-gradient(180deg,#f0fdf4,#e8f5e0);border-color:rgba(40,126,97,.15);}
+.ynj-dhikr-item--reflecting .ynj-dhikr-item__arabic{animation:ynj-arabic-glow 3s ease-in-out infinite;}
+@keyframes ynj-arabic-glow{0%,100%{text-shadow:0 0 0 transparent;}50%{text-shadow:0 0 20px rgba(40,126,97,.15);}}
+
+/* Footer */
+.ynj-popup-footer{flex-shrink:0;padding-top:12px;border-top:1px solid rgba(0,0,0,.06);margin-top:8px;text-align:center;font-size:11px;color:#6b8fa3;font-style:italic;line-height:1.4;}
+
+@media(max-width:480px){
+    .ynj-hud-popup{padding-top:8px;}
+    .ynj-hud-popup__card{padding:18px 14px;border-radius:20px;max-height:95vh;}
+    .ynj-dhikr-item__arabic{font-size:20px;}
+    .ynj-dhikr-item--legendary .ynj-dhikr-item__arabic{font-size:24px;}
+    .ynj-dhikr-item__btn{font-size:16px;padding:14px;}
+}
