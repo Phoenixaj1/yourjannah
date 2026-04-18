@@ -343,35 +343,6 @@ if ( $mosque && is_user_logged_in() ) {
     </div>
 
 
-    <!-- Mobile Section Nav -->
-    <div style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0 0 10px;scrollbar-width:none;" class="ynj-section-nav">
-        <a href="#next-prayer-card" style="flex-shrink:0;padding:8px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:20px;font-size:12px;font-weight:600;color:#374151;text-decoration:none;white-space:nowrap;">🕐 Prayers</a>
-        <a href="#feed-section" style="flex-shrink:0;padding:8px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:20px;font-size:12px;font-weight:600;color:#374151;text-decoration:none;white-space:nowrap;">📢 Feed</a>
-        <?php if ( is_user_logged_in() ) : ?>
-        <a href="#ibadah-tracker" style="flex-shrink:0;padding:8px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:20px;font-size:12px;font-weight:600;color:#374151;text-decoration:none;white-space:nowrap;">🤲 My Ibadah</a>
-        <?php endif; ?>
-        <a href="#mosque-league-table" style="flex-shrink:0;padding:8px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:20px;font-size:12px;font-weight:600;color:#374151;text-decoration:none;white-space:nowrap;">🏆 League</a>
-        <a href="#gratitude-wall" style="flex-shrink:0;padding:8px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:20px;font-size:12px;font-weight:600;color:#374151;text-decoration:none;white-space:nowrap;">💖 Gratitude</a>
-    </div>
-    <style>
-    .ynj-section-nav::-webkit-scrollbar{display:none;}
-    .ynj-section-nav a:active{background:#287e61;color:#fff;border-color:#287e61;}
-    </style>
-    <script>
-    // Smooth scroll for section nav anchors
-    document.querySelectorAll('.ynj-section-nav a').forEach(function(link) {
-        link.addEventListener('click', function(e) {
-            var target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                e.preventDefault();
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                // Highlight active chip
-                document.querySelectorAll('.ynj-section-nav a').forEach(function(a){ a.style.background='#fff'; a.style.color='#374151'; a.style.borderColor='#e5e7eb'; });
-                this.style.background='#287e61'; this.style.color='#fff'; this.style.borderColor='#287e61';
-            }
-        });
-    });
-    </script>
 
     <!-- Ramadan banner (shown automatically during Ramadan) -->
     <div id="ramadan-banner" style="display:none;background:linear-gradient(135deg,#1a1628,#2d1b69);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:10px;"></div>
