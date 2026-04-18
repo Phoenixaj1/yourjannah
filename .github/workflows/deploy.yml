@@ -1,15 +1,15 @@
 # ============================================================
 # YourJannah — Auto-Deploy on Push to Main
 #
-# Deploys plugin to Cloudways via SSH/rsync.
-# Same server as YourNiyyah, different application path.
+# Deploys ALL plugins + theme to Cloudways via SSH/rsync.
+# Any new plugin directory added to plugins/ is auto-deployed.
 #
 # Required GitHub Secrets (set in repo Settings > Secrets):
-#   SSH_PRIVATE_KEY  — base64-encoded private key (same as yourniyyah)
-#   SSH_HOST         — same server host
-#   SSH_USER         — same SSH user
-#   SSH_PORT         — same port (usually 22)
-#   WP_PATH          — path to yourjannah app (different from yourniyyah)
+#   SSH_PRIVATE_KEY  — base64-encoded private key
+#   SSH_HOST         — server host
+#   SSH_USER         — SSH user
+#   SSH_PORT         — SSH port (usually 22)
+#   WP_PATH          — path to yourjannah WP installation
 # ============================================================
 
 name: Deploy to Production
@@ -46,7 +46,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'SSH OK'"
 
-      - name: Install Stripe SDK
+      - name: Install Stripe SDK (yn-jannah)
         run: |
           cd plugins/yn-jannah
           cat > composer.json << 'COMPOSEREOF'
@@ -57,37 +57,24 @@ jobs:
           COMPOSEREOF
           composer install --no-dev --no-interaction --optimize-autoloader 2>/dev/null || true
 
-      - name: Deploy yn-jannah plugin
+      - name: Deploy ALL plugins
         run: |
-          echo "📦 Deploying yn-jannah plugin..."
-          rsync -avz --delete \
-            --exclude='.git' \
-            --exclude='.DS_Store' \
-            --exclude='node_modules' \
-            --exclude='merge-mosques.js' \
-            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
-            ./plugins/yn-jannah/ \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.WP_PATH }}/wp-content/plugins/yn-jannah/
-
-      - name: Deploy yn-jannah-gamification plugin
-        run: |
-          echo "📦 Deploying yn-jannah-gamification plugin..."
-          rsync -avz --delete \
-            --exclude='.git' \
-            --exclude='.DS_Store' \
-            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
-            ./plugins/yn-jannah-gamification/ \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.WP_PATH }}/wp-content/plugins/yn-jannah-gamification/
-
-      - name: Deploy yn-jannah-hud plugin
-        run: |
-          echo "📦 Deploying yn-jannah-hud plugin..."
-          rsync -avz --delete \
-            --exclude='.git' \
-            --exclude='.DS_Store' \
-            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
-            ./plugins/yn-jannah-hud/ \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.WP_PATH }}/wp-content/plugins/yn-jannah-hud/
+          for plugin_dir in ./plugins/*/; do
+            plugin_name=$(basename "$plugin_dir")
+            # Skip zip files or non-directories
+            [ ! -d "$plugin_dir" ] && continue
+            echo "📦 Deploying plugin: $plugin_name"
+            rsync -avz --delete \
+              --exclude='.git' \
+              --exclude='.DS_Store' \
+              --exclude='node_modules' \
+              --exclude='merge-mosques.js' \
+              --exclude='*.zip' \
+              -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
+              "$plugin_dir" \
+              "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.WP_PATH }}/wp-content/plugins/$plugin_name/"
+          done
+          echo "✅ All plugins deployed"
 
       - name: Deploy yourjannah-starter theme
         run: |
@@ -108,10 +95,8 @@ jobs:
           wp transient delete --all 2>/dev/null || true
           wp breeze purge --all 2>/dev/null || true
           rm -rf wp-content/cache/* 2>/dev/null || true
-          # Purge Varnish cache
           curl -s -X PURGE http://127.0.0.1:6081/ -H "X-Purge-Method: default" 2>/dev/null || true
           curl -s -X BAN http://127.0.0.1:6081/ -H "X-Ban-URL: .*" 2>/dev/null || true
-          # Also try Cloudways Varnish purge
           wp varnish purge 2>/dev/null || true
           echo "🧹 All caches cleared (WP + Varnish)"
           ENDSSH
