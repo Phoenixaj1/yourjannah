@@ -468,87 +468,96 @@ class YNJ_WP_Auth {
     /**
      * Authenticate a congregation member.
      *
-     * @param string $email    Email.
-     * @param string $password Password.
+     * PIN = WordPress password. One auth system, not two.
+     * Uses wp_check_password() (no lockout triggers) instead of
+     * wp_authenticate() which fires wp_login_failed hooks.
+     *
+     * If WP password is out of sync with ynj_users (legacy), auto-migrates.
+     *
+     * @param string $email      Email.
+     * @param string $credential PIN or password.
      * @return array|WP_Error
      */
-    public static function login_congregation( $email, $password ) {
-        if ( empty( $email ) || empty( $password ) ) {
-            return new WP_Error( 'missing_fields', 'Email and password are required.', [ 'status' => 400 ] );
+    public static function login_congregation( $email, $credential ) {
+        if ( empty( $email ) || empty( $credential ) ) {
+            return new WP_Error( 'missing_fields', 'Email and PIN are required.', [ 'status' => 400 ] );
         }
 
-        // Try WP auth first
-        $user = wp_authenticate( $email, $password );
+        global $wpdb;
+        $ynj_table = YNJ_DB::table( 'users' );
 
-        if ( is_wp_error( $user ) ) {
-            // Fallback: try old custom auth (PIN or legacy password in ynj_users)
-            $old_result = YNJ_User_Auth::login( [ 'email' => $email, 'password' => $password ] );
+        // ── Step 1: Find WP user ──
+        $wp_user = get_user_by( 'email', $email );
 
-            if ( ! isset( $old_result['ok'] ) || ! $old_result['ok'] ) {
+        // ── Step 2: Verify PIN against WordPress password ──
+        $wp_verified = false;
+        if ( $wp_user ) {
+            $wp_verified = wp_check_password( $credential, $wp_user->user_pass, $wp_user->ID );
+        }
+
+        // ── Step 3: If WP check failed, try ynj_users (legacy migration) ──
+        if ( ! $wp_verified ) {
+            $ynj_user = $wpdb->get_row( $wpdb->prepare(
+                "SELECT * FROM $ynj_table WHERE email = %s AND status = 'active' LIMIT 1", $email
+            ) );
+
+            if ( ! $ynj_user || ! $ynj_user->password_hash || ! password_verify( $credential, $ynj_user->password_hash ) ) {
                 return new WP_Error( 'invalid_credentials', 'Invalid email or PIN.', [ 'status' => 401 ] );
             }
 
-            // Old auth succeeded — ensure WP user exists for session cookies
-            $wp_user = get_user_by( 'email', $email );
+            // Legacy PIN verified — migrate to WordPress password system
             if ( $wp_user ) {
-                // Update WP password so future logins use WP auth directly
-                wp_set_password( $password, $wp_user->ID );
-                // Use WP user directly — we already verified credentials via old auth
-                $user = $wp_user;
+                wp_set_password( $credential, $wp_user->ID );
+                // Refresh user object (wp_set_password invalidates cached data)
+                $wp_user = get_user_by( 'ID', $wp_user->ID );
             } else {
-                // Create WP user (handle username collision)
+                // Create WP user with PIN as password
                 $base_username = sanitize_user( str_replace( '@', '_', $email ), true );
                 $username = $base_username;
                 $i = 1;
-                while ( username_exists( $username ) ) {
-                    $username = $base_username . $i++;
-                }
-                $wp_user_id = wp_create_user( $username, $password, $email );
+                while ( username_exists( $username ) ) { $username = $base_username . $i++; }
+                $wp_user_id = wp_create_user( $username, $credential, $email );
                 if ( is_wp_error( $wp_user_id ) ) {
-                    error_log( '[YNJ Login] Cannot create WP user for ' . $email . ': ' . $wp_user_id->get_error_message() );
-                    $old_result['wp_user_id'] = 0;
-                    return $old_result;
+                    return new WP_Error( 'wp_user_failed', 'Login failed. Please try again.', [ 'status' => 500 ] );
                 }
-                $user = new WP_User( $wp_user_id );
-                $user->set_role( 'ynj_congregation' );
-                wp_update_user( [ 'ID' => $wp_user_id, 'display_name' => $old_result['user']['name'] ?? $email ] );
+                $wp_user = new \WP_User( $wp_user_id );
+                $wp_user->set_role( 'ynj_congregation' );
+                wp_update_user( [ 'ID' => $wp_user_id, 'display_name' => $ynj_user->name ?: $email ] );
             }
         }
 
-        // Get ynj_user_id from usermeta
-        $ynj_user_id = (int) get_user_meta( $user->ID, 'ynj_user_id', true );
-
+        // ── Step 4: Link WP user → ynj_users record ──
+        $ynj_user_id = (int) get_user_meta( $wp_user->ID, 'ynj_user_id', true );
         if ( ! $ynj_user_id ) {
-            global $wpdb;
             $ynj_user_id = (int) $wpdb->get_var( $wpdb->prepare(
-                "SELECT id FROM " . YNJ_DB::table( 'users' ) . " WHERE email = %s",
-                $email
+                "SELECT id FROM $ynj_table WHERE email = %s AND status = 'active' ORDER BY total_points DESC LIMIT 1", $email
             ) );
             if ( $ynj_user_id ) {
-                update_user_meta( $user->ID, 'ynj_user_id', $ynj_user_id );
+                update_user_meta( $wp_user->ID, 'ynj_user_id', $ynj_user_id );
             }
         }
+        update_user_meta( $wp_user->ID, 'ynj_has_pin', 1 );
 
-        // Generate old-style user token for frontend backward compat
+        // ── Step 5: Generate session token ──
         $token = bin2hex( random_bytes( 32 ) );
         $token_hash = hash_hmac( 'sha256', $token, 'ynj_user_salt_2024' );
         if ( $ynj_user_id ) {
-            global $wpdb;
-            $wpdb->update( YNJ_DB::table( 'users' ), [
+            $wpdb->update( $ynj_table, [
                 'token_hash'      => $token_hash,
                 'token_last_used' => current_time( 'mysql', true ),
             ], [ 'id' => $ynj_user_id ] );
         }
 
-        // Set WP auth cookie so is_user_logged_in() works on next page load
-        wp_set_auth_cookie( $user->ID, true );
+        // ── Step 6: Set WP auth cookie ──
+        wp_set_current_user( $wp_user->ID );
+        wp_set_auth_cookie( $wp_user->ID, true );
 
         return [
             'ok'         => true,
             'token'      => $token,
-            'wp_user_id' => $user->ID,
+            'wp_user_id' => $wp_user->ID,
             'user_id'    => $ynj_user_id,
-            'user'       => self::format_congregation_user( $user ),
+            'user'       => self::format_congregation_user( $wp_user ),
         ];
     }
 
