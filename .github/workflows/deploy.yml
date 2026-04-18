@@ -69,6 +69,26 @@ jobs:
             ./plugins/yn-jannah/ \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.WP_PATH }}/wp-content/plugins/yn-jannah/
 
+      - name: Deploy yn-jannah-gamification plugin
+        run: |
+          echo "📦 Deploying yn-jannah-gamification plugin..."
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='.DS_Store' \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
+            ./plugins/yn-jannah-gamification/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.WP_PATH }}/wp-content/plugins/yn-jannah-gamification/
+
+      - name: Deploy yn-jannah-hud plugin
+        run: |
+          echo "📦 Deploying yn-jannah-hud plugin..."
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='.DS_Store' \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
+            ./plugins/yn-jannah-hud/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.WP_PATH }}/wp-content/plugins/yn-jannah-hud/
+
       - name: Deploy yourjannah-starter theme
         run: |
           echo "🎨 Deploying yourjannah-starter theme..."
