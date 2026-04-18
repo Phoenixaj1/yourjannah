@@ -57,11 +57,26 @@ jobs:
           COMPOSEREOF
           composer install --no-dev --no-interaction --optimize-autoloader 2>/dev/null || true
 
+      - name: Clean up removed plugins from server
+        run: |
+          # Get list of yn-jannah-* plugin dirs on server
+          REMOTE_PLUGINS=$(ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "ls -d ${{ secrets.WP_PATH }}/wp-content/plugins/yn-jannah-*/ 2>/dev/null | xargs -I{} basename {}" || true)
+          # Remove any that don't exist in repo
+          for remote_plugin in $REMOTE_PLUGINS; do
+            if [ ! -d "./plugins/$remote_plugin" ]; then
+              echo "🗑️ Removing orphaned plugin: $remote_plugin"
+              ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} \
+                ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+                "rm -rf ${{ secrets.WP_PATH }}/wp-content/plugins/$remote_plugin"
+            fi
+          done
+
       - name: Deploy ALL plugins
         run: |
           for plugin_dir in ./plugins/*/; do
             plugin_name=$(basename "$plugin_dir")
-            # Skip zip files or non-directories
             [ ! -d "$plugin_dir" ] && continue
             echo "📦 Deploying plugin: $plugin_name"
             rsync -avz --delete \
