@@ -110,8 +110,8 @@
     // ================================================================
 
     (function() {
-        // Don't double-render if PHP topbar already exists
-        if (document.querySelector('.ynj-topbar')) return;
+        // Don't double-render if PHP topbar or HUD already exists
+        if (document.querySelector('.ynj-topbar') || document.querySelector('.ynj-hud')) return;
 
         var token = localStorage.getItem('ynj_user_token');
         var user = null;
