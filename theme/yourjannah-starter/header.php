@@ -240,7 +240,9 @@ $_hud_league_url = $_hud_mosque ? home_url( '/mosque/' . $_hud_mosque_slug . '#m
    MASJID HUD — Your community's status bar
    Responsive: Desktop (2-row inline) → Mobile (stacked)
    ════════════════════════════════════════════════ */
-.ynj-hud{background:linear-gradient(135deg,#0a1628 0%,#132742 100%);color:#fff;z-index:102;position:sticky;top:0;padding:6px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.ynj-hud{background:linear-gradient(135deg,#0a1628 0%,#132742 100%);color:#fff;z-index:102;position:sticky;top:0;padding:6px 14px;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;}
+.admin-bar .ynj-hud{top:32px;}
+@media(max-width:782px){.admin-bar .ynj-hud{top:46px;}}
 .ynj-hud--guest{display:flex;flex-wrap:nowrap;justify-content:space-between;background:#111827;border-bottom:2px solid #00ADEF;padding:8px 16px;}
 .ynj-hud__msg{white-space:nowrap;font-size:12px;font-weight:600;}
 .ynj-hud__actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
@@ -248,8 +250,8 @@ $_hud_league_url = $_hud_mosque ? home_url( '/mosque/' . $_hud_mosque_slug . '#m
 .ynj-hud__cta{padding:5px 14px;border-radius:8px;background:linear-gradient(135deg,#287e61,#1a5c43);font-weight:700;font-size:12px;text-decoration:none;color:#fff !important;white-space:nowrap;}
 
 /* Layout: Row 1 (masjid + xp) | Row 2 (stats + actions) */
-.ynj-hud__row1{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
-.ynj-hud__row2{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.ynj-hud__row1{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0;overflow:hidden;}
+.ynj-hud__row2{display:flex;align-items:center;gap:6px;flex:0 0 auto;margin-left:auto;}
 
 /* ── Masjid Identity ── */
 .ynj-hud__masjid{display:flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(255,255,255,.07);border-radius:10px;text-decoration:none;color:#fff;flex-shrink:0;transition:background .2s;max-width:280px;}
