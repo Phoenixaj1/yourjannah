@@ -368,28 +368,43 @@ class YNJ_WP_Auth {
         update_user_meta( $wp_user_id, 'ynj_travel_minutes', 0 );
         update_user_meta( $wp_user_id, 'ynj_alert_before_minutes', 20 );
 
-        // Also create record in ynj_users for backward compat (push, verification, etc.)
+        // Link to existing ynj_users record OR create one if none exists
         global $wpdb;
-        $wpdb->insert( YNJ_DB::table( 'users' ), [
-            'name'          => $name,
-            'email'         => $email,
-            'phone'         => $phone,
-            'password_hash' => '', // Not needed — WP handles auth
-            'status'        => 'active',
-        ] );
-        $ynj_user_id = (int) $wpdb->insert_id;
+        $ynj_table = YNJ_DB::table( 'users' );
+        $existing_ynj = $wpdb->get_row( $wpdb->prepare(
+            "SELECT id FROM $ynj_table WHERE email = %s AND status = 'active' LIMIT 1", $email
+        ) );
+
+        if ( $existing_ynj ) {
+            // Reuse existing record (preserves points, streaks, badges)
+            $ynj_user_id = (int) $existing_ynj->id;
+            $wpdb->update( $ynj_table, [
+                'name'  => $name,
+                'phone' => $phone ?: $wpdb->get_var( $wpdb->prepare( "SELECT phone FROM $ynj_table WHERE id = %d", $ynj_user_id ) ),
+            ], [ 'id' => $ynj_user_id ] );
+        } else {
+            // No existing record — create fresh
+            $wpdb->insert( $ynj_table, [
+                'name'          => $name,
+                'email'         => $email,
+                'phone'         => $phone,
+                'password_hash' => '',
+                'status'        => 'active',
+            ] );
+            $ynj_user_id = (int) $wpdb->insert_id;
+        }
         update_user_meta( $wp_user_id, 'ynj_user_id', $ynj_user_id );
 
         // Generate email verification token
         $verify_token = bin2hex( random_bytes( 32 ) );
-        $wpdb->update( YNJ_DB::table( 'users' ), [
+        $wpdb->update( $ynj_table, [
             'email_verify_token' => $verify_token,
         ], [ 'id' => $ynj_user_id ] );
 
         // Generate old-style user token for frontend backward compat
         $token = bin2hex( random_bytes( 32 ) );
         $token_hash = hash_hmac( 'sha256', $token, 'ynj_user_salt_2024' );
-        $wpdb->update( YNJ_DB::table( 'users' ), [
+        $wpdb->update( $ynj_table, [
             'token_hash'      => $token_hash,
             'token_last_used' => current_time( 'mysql', true ),
         ], [ 'id' => $ynj_user_id ] );

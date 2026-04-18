@@ -120,12 +120,15 @@ class YNJ_API_User {
             // We detect PIN by checking if the hash verifies against a 4-6 digit pattern
             // Simpler: check if a pin_set flag transient exists, or just check hash length
             if ( $row && $row->password_hash ) {
-                // If password_hash exists, user has SOME credential set
-                // We'll consider it a PIN if it was set via the PIN flow (stored in usermeta)
-                $has_pin = (bool) get_user_meta(
-                    (int) $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM {$wpdb->users} WHERE user_email = %s LIMIT 1", $email ) ),
-                    'ynj_has_pin', true
-                );
+                // Check WP usermeta for ynj_has_pin flag
+                $wp_uid = (int) $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM {$wpdb->users} WHERE user_email = %s LIMIT 1", $email ) );
+                if ( $wp_uid ) {
+                    $has_pin = (bool) get_user_meta( $wp_uid, 'ynj_has_pin', true );
+                } else {
+                    // No WP user yet — if ynj_users has a password_hash, treat as PIN-ready
+                    // (user set a PIN but no WP user was created yet)
+                    $has_pin = true;
+                }
             }
         }
 
@@ -176,13 +179,26 @@ class YNJ_API_User {
             'token_last_used' => current_time( 'mysql', true ),
         ], [ 'id' => $user->id ] );
 
-        // Mark as having PIN set (for check-email detection)
+        // Ensure WP user exists and is linked to this ynj_users record
         $wp_user = get_user_by( 'email', $email );
+        if ( ! $wp_user ) {
+            // Create WP user so sessions work
+            $base_username = sanitize_user( str_replace( '@', '_', $email ), true );
+            $username = $base_username;
+            $i = 1;
+            while ( username_exists( $username ) ) { $username = $base_username . $i++; }
+            $wp_uid = wp_create_user( $username, $pin, $email );
+            if ( ! is_wp_error( $wp_uid ) ) {
+                $wp_user = new \WP_User( $wp_uid );
+                $wp_user->set_role( 'ynj_congregation' );
+                wp_update_user( [ 'ID' => $wp_uid, 'display_name' => $user->name ?: $email ] );
+            }
+        }
+
         if ( $wp_user ) {
             update_user_meta( $wp_user->ID, 'ynj_has_pin', 1 );
-            // Also update WP password so WP-native auth works too
+            update_user_meta( $wp_user->ID, 'ynj_user_id', (int) $user->id ); // Link to correct ynj_users record
             wp_set_password( $pin, $wp_user->ID );
-            // Set session
             wp_set_auth_cookie( $wp_user->ID, true );
         }
 
