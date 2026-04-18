@@ -967,6 +967,37 @@ if ( $mosque && is_user_logged_in() ) {
     </section>
     <?php endif; endif; ?>
 
+    <!-- ═══ DUA WALL (moved up for visibility) ═══ -->
+    <?php if ( $mosque ) : ?>
+    <section class="ynj-card" style="padding:16px;" id="dua-wall">
+        <h3 style="font-size:15px;font-weight:800;margin:0 0 10px;">🤲 <?php esc_html_e( 'Dua Wall', 'yourjannah' ); ?></h3>
+        <p style="font-size:12px;color:#6b8fa3;margin-bottom:12px;"><?php esc_html_e( 'Request prayers from your community. All requests are anonymous.', 'yourjannah' ); ?></p>
+        <?php if ( is_user_logged_in() ) : ?>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <input type="text" id="dua-input" placeholder="<?php esc_attr_e( 'Please make dua for...', 'yourjannah' ); ?>" maxlength="500" style="flex:1;padding:10px 14px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;font-family:inherit;min-height:44px;">
+            <button type="button" onclick="ynjPostDua()" style="padding:10px 16px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;min-height:44px;font-family:inherit;white-space:nowrap;">🤲 <?php esc_html_e( 'Ask', 'yourjannah' ); ?></button>
+        </div>
+        <?php endif; ?>
+        <div id="dua-list" style="display:flex;flex-direction:column;gap:8px;">
+            <p style="color:#9ca3af;font-size:12px;text-align:center;"><?php esc_html_e( 'Loading...', 'yourjannah' ); ?></p>
+        </div>
+    </section>
+    <?php endif; ?>
+
+    <!-- ═══ GRATITUDE WALL (moved up for visibility) ═══ -->
+    <?php if ( $mosque ) : ?>
+    <section class="ynj-card" style="padding:16px;background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;" id="gratitude-wall">
+        <h3 style="font-size:15px;font-weight:800;color:#9d174d;margin:0 0 10px;">💖 <?php esc_html_e( 'Thank Your Mosque', 'yourjannah' ); ?></h3>
+        <?php if ( is_user_logged_in() ) : ?>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <input type="text" id="gratitude-input" placeholder="<?php esc_attr_e( 'JazakAllah khayr for...', 'yourjannah' ); ?>" maxlength="300" style="flex:1;padding:10px 14px;border:1px solid #f9a8d4;border-radius:10px;font-size:14px;font-family:inherit;min-height:44px;background:#fff;">
+            <button type="button" onclick="ynjPostGratitude()" style="padding:10px 16px;background:#be185d;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;min-height:44px;font-family:inherit;">💖</button>
+        </div>
+        <?php endif; ?>
+        <div id="gratitude-list"></div>
+    </section>
+    <?php endif; ?>
+
     <!-- Hadith -->
     <p class="ynj-hadith" id="hadith-line">
         <em>&ldquo;<?php esc_html_e( 'Prayer in congregation is twenty-seven times more virtuous than prayer offered alone.', 'yourjannah' ); ?>&rdquo;</em>
@@ -1047,62 +1078,6 @@ if ( $mosque && is_user_logged_in() ) {
         <?php endforeach; ?>
         <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/services/join' ) ); ?>" style="display:block;text-align:center;padding:8px;margin-top:4px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:12px;font-weight:700;text-decoration:none;">🤝 <?php esc_html_e( 'List Your Service — from £10/mo', 'yourjannah' ); ?></a>
     </div>
-    <?php endif; ?>
-
-    <!-- ═══ FAJR COUNTER ═══ -->
-    <?php if ( $mosque && function_exists( 'ynj_fajr_counter' ) ) :
-        $fajr_count_left = ynj_fajr_counter( (int) $mosque->id );
-        if ( $fajr_count_left > 0 ) :
-    ?>
-    <section class="ynj-card" style="padding:14px 16px;background:linear-gradient(135deg,#1e1b4b,#312e81);color:#fff;text-align:center;border:none;">
-        <p style="font-size:11px;color:rgba(255,255,255,.6);margin:0 0 4px;text-transform:uppercase;letter-spacing:1px;font-weight:600;"><?php esc_html_e( 'Fajr Today', 'yourjannah' ); ?></p>
-        <div style="font-size:32px;font-weight:800;"><?php echo $fajr_count_left; ?></div>
-        <p style="font-size:13px;color:rgba(255,255,255,.7);margin:4px 0 0;"><?php printf( esc_html__( 'people prayed Fajr at %s', 'yourjannah' ), esc_html( $mosque_name ) ); ?></p>
-    </section>
-    <?php endif; endif; ?>
-
-    <!-- ═══ MILESTONE CELEBRATION ═══ -->
-    <?php if ( $mosque && function_exists( 'ynj_check_milestones' ) ) :
-        ynj_check_milestones( (int) $mosque->id );
-        $latest_ms = function_exists( 'ynj_get_latest_milestone' ) ? ynj_get_latest_milestone( (int) $mosque->id ) : null;
-        if ( $latest_ms ) :
-    ?>
-    <section class="ynj-card" style="padding:14px 16px;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #f59e0b;text-align:center;">
-        <span style="font-size:28px;"><?php echo $latest_ms['icon']; ?></span>
-        <p style="font-size:14px;font-weight:800;color:#92400e;margin:4px 0 2px;"><?php echo esc_html( $latest_ms['label'] ); ?></p>
-        <p style="font-size:11px;color:#a16207;"><?php esc_html_e( 'Milestone reached', 'yourjannah' ); ?> <?php echo esc_html( $latest_ms['ago'] ); ?> <?php esc_html_e( 'ago', 'yourjannah' ); ?></p>
-    </section>
-    <?php endif; endif; ?>
-
-    <!-- ═══ DUA WALL ═══ -->
-    <?php if ( $mosque ) : ?>
-    <section class="ynj-card" style="padding:16px;" id="dua-wall">
-        <h3 style="font-size:15px;font-weight:800;margin:0 0 10px;">🤲 <?php esc_html_e( 'Dua Wall', 'yourjannah' ); ?></h3>
-        <p style="font-size:12px;color:#6b8fa3;margin-bottom:12px;"><?php esc_html_e( 'Request prayers from your community. All requests are anonymous.', 'yourjannah' ); ?></p>
-        <?php if ( is_user_logged_in() ) : ?>
-        <div style="display:flex;gap:8px;margin-bottom:12px;">
-            <input type="text" id="dua-input" placeholder="<?php esc_attr_e( 'Please make dua for...', 'yourjannah' ); ?>" maxlength="500" style="flex:1;padding:10px 14px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;font-family:inherit;min-height:44px;">
-            <button type="button" onclick="ynjPostDua()" style="padding:10px 16px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;min-height:44px;font-family:inherit;white-space:nowrap;">🤲 <?php esc_html_e( 'Ask', 'yourjannah' ); ?></button>
-        </div>
-        <?php endif; ?>
-        <div id="dua-list" style="display:flex;flex-direction:column;gap:8px;">
-            <p style="color:#9ca3af;font-size:12px;text-align:center;"><?php esc_html_e( 'Loading...', 'yourjannah' ); ?></p>
-        </div>
-    </section>
-    <?php endif; ?>
-
-    <!-- ═══ GRATITUDE WALL ═══ -->
-    <?php if ( $mosque ) : ?>
-    <section class="ynj-card" style="padding:16px;background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;" id="gratitude-wall">
-        <h3 style="font-size:15px;font-weight:800;color:#9d174d;margin:0 0 10px;">💖 <?php esc_html_e( 'Thank Your Mosque', 'yourjannah' ); ?></h3>
-        <?php if ( is_user_logged_in() ) : ?>
-        <div style="display:flex;gap:8px;margin-bottom:12px;">
-            <input type="text" id="gratitude-input" placeholder="<?php esc_attr_e( 'JazakAllah khayr for...', 'yourjannah' ); ?>" maxlength="300" style="flex:1;padding:10px 14px;border:1px solid #f9a8d4;border-radius:10px;font-size:14px;font-family:inherit;min-height:44px;background:#fff;">
-            <button type="button" onclick="ynjPostGratitude()" style="padding:10px 16px;background:#be185d;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;min-height:44px;font-family:inherit;">💖</button>
-        </div>
-        <?php endif; ?>
-        <div id="gratitude-list"></div>
-    </section>
     <?php endif; ?>
 
     </div><!-- end left column -->
