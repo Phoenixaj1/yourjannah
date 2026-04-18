@@ -71,10 +71,13 @@ class YNJ_Admin {
             <?php endif; ?>
             <table class="wp-list-table widefat striped">
                 <thead>
-                    <tr><th>ID</th><th>Name</th><th>City</th><th>Email</th><th>Subscribers</th><th>Status</th><th>Created</th><th>Actions</th></tr>
+                    <tr><th>ID</th><th>Name</th><th>City</th><th>Email</th><th>Members</th><th>Subscribers</th><th>Status</th><th>Created</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($mosques as $m):
+                    <?php
+                    $us_table = YNJ_DB::table('user_subscriptions');
+                    foreach ($mosques as $m):
+                        $members = 1 + (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $us_table WHERE mosque_id = %d AND status = 'active'", $m->id));
                         $subs = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $sub_table WHERE mosque_id = %d AND status = 'active'", $m->id));
                     ?>
                     <tr>
@@ -82,7 +85,8 @@ class YNJ_Admin {
                         <td><strong><?php echo esc_html($m->name); ?></strong><br><code style="font-size:11px"><?php echo esc_html($m->slug); ?></code></td>
                         <td><?php echo esc_html($m->city); ?>, <?php echo esc_html($m->postcode); ?></td>
                         <td style="font-size:12px"><?php echo esc_html($m->admin_email); ?></td>
-                        <td><strong><?php echo $subs; ?></strong></td>
+                        <td><strong><?php echo $members; ?></strong></td>
+                        <td><?php echo $subs; ?></td>
                         <td>
                             <?php if ($m->status === 'active'): ?>
                                 <span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">Active</span>
