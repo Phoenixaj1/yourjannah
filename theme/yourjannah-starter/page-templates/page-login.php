@@ -103,7 +103,7 @@ $show_fb     = class_exists( 'YNJ_Social_Auth' ) && YNJ_Social_Auth::is_facebook
             <div class="ynj-auth-email-show" id="login-email-show"></div>
             <div class="ynj-auth-field">
                 <label><?php esc_html_e( 'Enter your PIN', 'yourjannah' ); ?></label>
-                <input type="tel" id="auth-pin-login" class="ynj-auth-pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="off">
+                <input type="tel" id="auth-pin-login" class="ynj-auth-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="off">
             </div>
             <button type="button" class="ynj-auth-btn" id="btn-pin-login"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></button>
             <div class="ynj-auth-error" id="pin-login-error"></div>
@@ -117,12 +117,12 @@ $show_fb     = class_exists( 'YNJ_Social_Auth' ) && YNJ_Social_Auth::is_facebook
             <p style="text-align:center;font-size:13px;color:#6b8fa3;margin-bottom:16px;"><?php esc_html_e( "You're new! Set a 4-digit PIN to secure your account.", 'yourjannah' ); ?></p>
             <div class="ynj-auth-field">
                 <label><?php esc_html_e( 'Choose a PIN', 'yourjannah' ); ?></label>
-                <input type="tel" id="auth-pin-new" class="ynj-auth-pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="off">
-                <div class="ynj-auth-hint"><?php esc_html_e( '4-6 digits, like a bank PIN', 'yourjannah' ); ?></div>
+                <input type="tel" id="auth-pin-new" class="ynj-auth-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="off">
+                <div class="ynj-auth-hint"><?php esc_html_e( '4 digits, like a bank PIN', 'yourjannah' ); ?></div>
             </div>
             <div class="ynj-auth-field">
                 <label><?php esc_html_e( 'Confirm PIN', 'yourjannah' ); ?></label>
-                <input type="tel" id="auth-pin-confirm" class="ynj-auth-pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="off">
+                <input type="tel" id="auth-pin-confirm" class="ynj-auth-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="off">
             </div>
             <button type="button" class="ynj-auth-btn" id="btn-pin-create">&#x1F54C; <?php esc_html_e( 'Create Account', 'yourjannah' ); ?></button>
             <div class="ynj-auth-error" id="pin-create-error"></div>

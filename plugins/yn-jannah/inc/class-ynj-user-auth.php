@@ -13,7 +13,7 @@ class YNJ_User_Auth {
 
     /**
      * Register a new congregation member.
-     * Accepts either PIN (4-6 digits, preferred) or legacy password.
+     * Accepts PIN (exactly 4 digits) or legacy password.
      */
     public static function register( $data ) {
         $name     = sanitize_text_field( $data['name'] ?? '' );
@@ -29,8 +29,8 @@ class YNJ_User_Auth {
         // PIN-based auth (preferred)
         if ( $pin ) {
             $pin = preg_replace( '/\D/', '', $pin ); // Strip non-digits
-            if ( strlen( $pin ) < 4 || strlen( $pin ) > 6 ) {
-                return [ 'ok' => false, 'error' => 'PIN must be 4-6 digits.' ];
+            if ( strlen( $pin ) !== 4 ) {
+                return [ 'ok' => false, 'error' => 'PIN must be exactly 4 digits.' ];
             }
             $password = $pin; // Store PIN hash in password_hash column
         } elseif ( strlen( $password ) < 4 ) {

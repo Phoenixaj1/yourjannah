@@ -270,16 +270,16 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
         <!-- ═══ Step B: PIN for sign-in (existing user) ═══ -->
         <div id="ob-pin-row" style="display:none;margin-bottom:14px;text-align:left;">
             <label style="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);display:block;margin-bottom:5px;"><?php esc_html_e( 'Enter your PIN', 'yourjannah' ); ?></label>
-            <input type="tel" id="ob-pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="&#x2022; &#x2022; &#x2022; &#x2022;" autocomplete="off" style="width:100%;padding:16px;border:1.5px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:32px;font-weight:900;letter-spacing:14px;text-align:center;font-family:inherit;outline:none;box-sizing:border-box;">
+            <input type="tel" id="ob-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="&#x2022; &#x2022; &#x2022; &#x2022;" autocomplete="off" style="width:100%;padding:16px;border:1.5px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:32px;font-weight:900;letter-spacing:14px;text-align:center;font-family:inherit;outline:none;box-sizing:border-box;">
             <a href="<?php echo esc_url( home_url( '/forgot-password' ) ); ?>" style="font-size:11px;color:rgba(255,255,255,.45);margin-top:5px;display:block;"><?php esc_html_e( 'Forgot PIN?', 'yourjannah' ); ?></a>
         </div>
 
         <!-- ═══ Step C: Create PIN (new user / migration) ═══ -->
         <div id="ob-newpin-row" style="display:none;margin-bottom:14px;text-align:left;">
             <label style="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);display:block;margin-bottom:5px;"><?php esc_html_e( 'Choose a 4-digit PIN', 'yourjannah' ); ?></label>
-            <input type="tel" id="ob-newpin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="&#x2022; &#x2022; &#x2022; &#x2022;" autocomplete="off" style="width:100%;padding:16px;border:1.5px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:32px;font-weight:900;letter-spacing:14px;text-align:center;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:10px;">
+            <input type="tel" id="ob-newpin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="&#x2022; &#x2022; &#x2022; &#x2022;" autocomplete="off" style="width:100%;padding:16px;border:1.5px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:32px;font-weight:900;letter-spacing:14px;text-align:center;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:10px;">
             <label style="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);display:block;margin-bottom:5px;"><?php esc_html_e( 'Confirm PIN', 'yourjannah' ); ?></label>
-            <input type="tel" id="ob-newpin2" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="&#x2022; &#x2022; &#x2022; &#x2022;" autocomplete="off" style="width:100%;padding:16px;border:1.5px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:32px;font-weight:900;letter-spacing:14px;text-align:center;font-family:inherit;outline:none;box-sizing:border-box;">
+            <input type="tel" id="ob-newpin2" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="&#x2022; &#x2022; &#x2022; &#x2022;" autocomplete="off" style="width:100%;padding:16px;border:1.5px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:32px;font-weight:900;letter-spacing:14px;text-align:center;font-family:inherit;outline:none;box-sizing:border-box;">
         </div>
 
         <!-- ═══ Action button (changes based on flow) ═══ -->

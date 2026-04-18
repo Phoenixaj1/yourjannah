@@ -141,8 +141,8 @@ class YNJ_API_User {
         }
 
         $pin = preg_replace( '/\D/', '', $pin );
-        if ( strlen( $pin ) < 4 || strlen( $pin ) > 6 ) {
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'PIN must be 4-6 digits.' ], 400 );
+        if ( strlen( $pin ) !== 4 ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'PIN must be exactly 4 digits.' ], 400 );
         }
 
         global $wpdb;
