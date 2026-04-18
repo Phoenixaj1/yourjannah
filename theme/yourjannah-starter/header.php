@@ -168,7 +168,6 @@ if ( is_user_logged_in() ) {
     }
 })();
 </script>
-<?php endif; ?>
 <?php else : ?>
 <?php
 // ── Masjid XP data for progress bar ──
