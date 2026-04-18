@@ -61,7 +61,7 @@ $_comm_can_edit    = isset( $_ynj_can_edit ) ? $_ynj_can_edit : false;
     <a href="#next-prayer-card" style="flex-shrink:0;padding:8px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:20px;font-size:12px;font-weight:600;color:#374151;text-decoration:none;white-space:nowrap;">🕐 Prayers</a>
     <a href="#feed-section" style="flex-shrink:0;padding:8px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:20px;font-size:12px;font-weight:600;color:#374151;text-decoration:none;white-space:nowrap;">📢 Feed</a>
     <?php if ( is_user_logged_in() ) : ?>
-    <a href="#ibadah-tracker" style="flex-shrink:0;padding:8px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:20px;font-size:12px;font-weight:600;color:#374151;text-decoration:none;white-space:nowrap;">🤲 My Ibadah</a>
+    <a href="<?php echo esc_url( home_url( '/profile#ibadah' ) ); ?>" style="flex-shrink:0;padding:8px 14px;background:#287e61;border:1px solid #287e61;border-radius:20px;font-size:12px;font-weight:600;color:#fff;text-decoration:none;white-space:nowrap;">🤲 My Ibadah</a>
     <?php endif; ?>
     <a href="#dua-wall" style="flex-shrink:0;padding:8px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:20px;font-size:12px;font-weight:600;color:#374151;text-decoration:none;white-space:nowrap;">🤲 Dua Wall</a>
     <a href="#mosque-league-table" style="flex-shrink:0;padding:8px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:20px;font-size:12px;font-weight:600;color:#374151;text-decoration:none;white-space:nowrap;">🏆 League</a>

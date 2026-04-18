@@ -552,188 +552,35 @@ if ( $mosque && is_user_logged_in() ) {
         <div id="jumuah-slots"></div>
     </section>
 
-    <!-- ═══ IBADAH TRACKER (logged-in users) ═══ -->
-    <?php if ( is_user_logged_in() && $mosque ) : ?>
-    <section class="ynj-card" id="ibadah-tracker" style="padding:16px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <h3 style="font-size:15px;font-weight:800;margin:0;">🤲 <?php esc_html_e( 'My Daily Ibadah', 'yourjannah' ); ?></h3>
-            <span id="ibadah-streak" style="font-size:14px;font-weight:700;color:#f59e0b;"></span>
-        </div>
-
-        <div style="margin-bottom:12px;">
-            <!-- Mosque / Home toggle -->
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <p style="font-size:11px;color:#6b8fa3;font-weight:600;margin:0;"><?php esc_html_e( "Today's Prayers", 'yourjannah' ); ?></p>
-                <button type="button" id="mosque-toggle" onclick="ynjToggleMosque(this)" style="display:flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid #e5e7eb;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;background:#fff;color:#6b8fa3;font-family:inherit;min-height:28px;">
-                    🏠 <?php esc_html_e( 'At Home', 'yourjannah' ); ?>
-                </button>
-            </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;" id="ibadah-prayers">
-                <?php foreach ( [ 'fajr' => 'Fajr', 'dhuhr' => 'Dhuhr', 'asr' => 'Asr', 'maghrib' => 'Maghrib', 'isha' => 'Isha' ] as $pk => $plabel ) : ?>
-                <button type="button" class="ynj-ibadah-prayer" data-prayer="<?php echo $pk; ?>" onclick="ynjTogglePrayer(this)" style="flex:1;min-width:58px;padding:8px 4px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;font-size:12px;font-weight:700;color:#6b8fa3;cursor:pointer;text-align:center;transition:all .15s;min-height:44px;">
-                    <?php echo esc_html( $plabel ); ?>
-                </button>
-                <?php endforeach; ?>
-            </div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f9fafb;border-radius:8px;min-height:40px;">
-                <span>📖</span>
-                <input type="number" id="ibadah-quran" min="0" max="100" value="0" style="width:48px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:6px;font-size:14px;font-weight:700;text-align:center;" onchange="ynjSaveIbadah()">
-                <span style="font-size:11px;color:#6b8fa3;"><?php esc_html_e( 'pages', 'yourjannah' ); ?></span>
-            </div>
-            <button type="button" class="ynj-ibadah-toggle" data-field="dhikr" onclick="ynjToggleField(this)" style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;color:#6b8fa3;cursor:pointer;min-height:40px;font-family:inherit;">
-                📿 <?php esc_html_e( 'Dhikr', 'yourjannah' ); ?>
-            </button>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-            <button type="button" class="ynj-ibadah-toggle" data-field="fasting" onclick="ynjToggleField(this)" style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;color:#6b8fa3;cursor:pointer;min-height:40px;font-family:inherit;">
-                🌙 <?php esc_html_e( 'Fasting', 'yourjannah' ); ?>
-            </button>
-            <button type="button" class="ynj-ibadah-toggle" data-field="charity" onclick="ynjToggleField(this)" style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;color:#6b8fa3;cursor:pointer;min-height:40px;font-family:inherit;">
-                💝 <?php esc_html_e( 'Charity', 'yourjannah' ); ?>
-            </button>
-        </div>
-
-        <div style="margin-bottom:10px;">
-            <input type="text" id="ibadah-deed" placeholder="<?php esc_attr_e( 'Good deed today... (optional)', 'yourjannah' ); ?>" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;" onchange="ynjSaveIbadah()">
-        </div>
-
-        <div id="ibadah-status" style="display:flex;justify-content:space-between;font-size:12px;color:#6b8fa3;">
-            <span id="ibadah-pts-today"></span>
-            <span id="ibadah-pts-week"></span>
-        </div>
-    </section>
-
-    <script>
-    (function(){
-        var ibadahState = { fajr:0, dhuhr:0, asr:0, maghrib:0, isha:0, quran_pages:0, dhikr:0, fasting:0, charity:0, good_deed:'', prayed_at_mosque:0 };
-        var saving = false;
-        function getNonce() { return typeof wpApiSettings !== 'undefined' ? wpApiSettings.nonce : ''; }
-
-        // Load current state (delay slightly to let wpApiSettings load)
-        setTimeout(function(){
-        fetch('/wp-json/ynj/v1/ibadah/me', { headers: { 'X-WP-Nonce': getNonce() }, credentials: 'same-origin' })
-            .then(function(r){ return r.json(); })
-            .then(function(d){
-                if (!d.ok) return;
-                if (d.today) {
-                    ibadahState = d.today;
-                    ibadahState.prayed_at_mosque = d.today.prayed_at_mosque || 0;
-                    updateUI();
-                    // Update mosque toggle
-                    var mt = document.getElementById('mosque-toggle');
-                    if (mt && ibadahState.prayed_at_mosque) {
-                        mt.innerHTML = '🕌 At Mosque <span style="font-size:9px;color:#16a34a;">27x</span>';
-                        mt.style.background = '#287e61'; mt.style.color = '#fff'; mt.style.borderColor = '#287e61';
-                    }
-                }
-                if (d.streak > 0) {
-                    document.getElementById('ibadah-streak').textContent = '🔥 ' + d.streak + ' day' + (d.streak > 1 ? 's' : '');
-                }
-                if (d.week) {
-                    document.getElementById('ibadah-pts-today').textContent = 'Today: ' + (d.today ? d.today.points : 0) + ' pts';
-                    document.getElementById('ibadah-pts-week').textContent = 'This week: ' + d.week.points + ' pts';
-                }
-            }).catch(function(){});
-        }, 500); // end setTimeout
-
-        function updateUI() {
-            ['fajr','dhuhr','asr','maghrib','isha'].forEach(function(p){
-                var btn = document.querySelector('[data-prayer="'+p+'"]');
-                if (btn) {
-                    var on = ibadahState[p];
-                    btn.style.background = on ? '#287e61' : '#fff';
-                    btn.style.color = on ? '#fff' : '#6b8fa3';
-                    btn.style.borderColor = on ? '#287e61' : '#e5e7eb';
-                }
-            });
-            document.getElementById('ibadah-quran').value = ibadahState.quran_pages || 0;
-            ['dhikr','fasting','charity'].forEach(function(f){
-                var btn = document.querySelector('[data-field="'+f+'"]');
-                if (btn) {
-                    var on = ibadahState[f];
-                    btn.style.background = on ? '#287e61' : '#f9fafb';
-                    btn.style.color = on ? '#fff' : '#6b8fa3';
-                    btn.style.borderColor = on ? '#287e61' : '#e5e7eb';
-                }
-            });
-            if (ibadahState.good_deed) document.getElementById('ibadah-deed').value = ibadahState.good_deed;
+    <!-- ═══ LOG YOUR IBADAH CTA (links to personal profile) ═══ -->
+    <?php if ( is_user_logged_in() && $mosque ) :
+        // Get user's streak for the CTA
+        $_cta_streak = 0;
+        $_cta_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+        if ( $_cta_uid && class_exists( 'YNJ_DB' ) ) {
+            global $wpdb;
+            $_ib_t = YNJ_DB::table( 'ibadah_logs' );
+            $_sd = $wpdb->get_col( $wpdb->prepare(
+                "SELECT log_date FROM $_ib_t WHERE user_id = %d AND (fajr=1 OR dhuhr=1 OR asr=1 OR maghrib=1 OR isha=1) ORDER BY log_date DESC LIMIT 120", $_cta_uid
+            ) );
+            $expected = date( 'Y-m-d' );
+            foreach ( $_sd as $d ) {
+                if ( $d === $expected ) { $_cta_streak++; $expected = date( 'Y-m-d', strtotime( "$expected -1 day" ) ); }
+                elseif ( $_cta_streak === 0 && $d === date( 'Y-m-d', strtotime( '-1 day' ) ) ) { $_cta_streak = 1; $expected = date( 'Y-m-d', strtotime( "$d -1 day" ) ); }
+                else break;
+            }
         }
-
-        window.ynjToggleMosque = function(btn) {
-            ibadahState.prayed_at_mosque = ibadahState.prayed_at_mosque ? 0 : 1;
-            btn.innerHTML = ibadahState.prayed_at_mosque
-                ? '🕌 <?php esc_html_e( 'At Mosque', 'yourjannah' ); ?> <span style="font-size:9px;color:#16a34a;">27x</span>'
-                : '🏠 <?php esc_html_e( 'At Home', 'yourjannah' ); ?>';
-            btn.style.background = ibadahState.prayed_at_mosque ? '#287e61' : '#fff';
-            btn.style.color = ibadahState.prayed_at_mosque ? '#fff' : '#6b8fa3';
-            btn.style.borderColor = ibadahState.prayed_at_mosque ? '#287e61' : '#e5e7eb';
-            ynjSaveIbadah();
-        };
-
-        window.ynjTogglePrayer = function(btn) {
-            var p = btn.getAttribute('data-prayer');
-            ibadahState[p] = ibadahState[p] ? 0 : 1;
-            updateUI();
-            ynjSaveIbadah();
-        };
-
-        window.ynjToggleField = function(btn) {
-            var f = btn.getAttribute('data-field');
-            ibadahState[f] = ibadahState[f] ? 0 : 1;
-            updateUI();
-            ynjSaveIbadah();
-        };
-
-        window.ynjSaveIbadah = function() {
-            if (saving) return;
-            saving = true;
-            ibadahState.quran_pages = parseInt(document.getElementById('ibadah-quran').value) || 0;
-            ibadahState.good_deed = document.getElementById('ibadah-deed').value || '';
-
-            fetch('/wp-json/ynj/v1/ibadah/log', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': getNonce() },
-                credentials: 'same-origin',
-                body: JSON.stringify(ibadahState)
-            }).then(function(r){ return r.json(); }).then(function(d){
-                saving = false;
-                if (d.ok) {
-                    document.getElementById('ibadah-pts-today').textContent = 'Today: ' + d.points_today + ' pts';
-                    if (d.streak > 0) {
-                        document.getElementById('ibadah-streak').textContent = '🔥 ' + d.streak + ' day' + (d.streak > 1 ? 's' : '');
-                    }
-                    // Surprise bonus toast (variable reward — Duolingo-style)
-                    if (d.surprise_bonus && d.surprise_bonus > 0) {
-                        var sToast = document.createElement('div');
-                        sToast.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:14px 24px;border-radius:14px;font-size:15px;font-weight:700;z-index:10000;box-shadow:0 4px 20px rgba(245,158,11,.4);animation:ynj-fade-in .3s;';
-                        sToast.textContent = '🎁 Surprise! +' + d.surprise_bonus + ' bonus points!';
-                        document.body.appendChild(sToast);
-                        setTimeout(function(){ sToast.style.opacity='0'; sToast.style.transition='opacity .5s'; setTimeout(function(){ sToast.remove(); },500); }, 4000);
-                    }
-                    // Mosque multiplier notification
-                    if (d.at_mosque && d.multiplier > 1) {
-                        document.getElementById('ibadah-pts-today').textContent = 'Today: ' + d.points_today + ' pts (27x mosque!)';
-                    }
-                    // Badge earned notification
-                    if (d.new_badges && d.new_badges.length > 0) {
-                        d.new_badges.forEach(function(b) {
-                            var toast = document.createElement('div');
-                            toast.className = 'ynj-toast';
-                            toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#7c3aed;color:#fff;padding:14px 24px;border-radius:14px;font-size:15px;font-weight:700;z-index:10000;box-shadow:0 4px 20px rgba(124,58,237,.4);animation:ynj-fade-in .3s;';
-                            toast.textContent = b.icon + ' Badge Earned: ' + b.name + '!';
-                            document.body.appendChild(toast);
-                            setTimeout(function(){ toast.style.opacity='0'; toast.style.transition='opacity .5s'; setTimeout(function(){ toast.remove(); },500); }, 4000);
-                        });
-                    }
-                }
-            }).catch(function(){ saving = false; });
-        };
-    })();
-    </script>
+    ?>
+    <a href="<?php echo esc_url( home_url( '/profile#ibadah' ) ); ?>" class="ynj-card" style="display:block;text-decoration:none;text-align:center;padding:20px 16px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;">
+        <div style="font-size:28px;margin-bottom:6px;">&#x1F932;</div>
+        <div style="font-size:15px;font-weight:800;color:#166534;margin-bottom:4px;"><?php esc_html_e( "Today's Remembrance & Shukr", 'yourjannah' ); ?></div>
+        <div style="font-size:12px;color:#15803d;margin-bottom:6px;"><?php esc_html_e( 'Say your dhikr, earn points for you & your masjid', 'yourjannah' ); ?></div>
+        <?php if ( $_cta_streak > 0 ) : ?>
+            <div style="font-size:14px;font-weight:700;color:#f59e0b;">&#x1F525; <?php printf( esc_html__( '%d day streak', 'yourjannah' ), $_cta_streak ); ?></div>
+        <?php else : ?>
+            <div style="font-size:12px;color:#15803d;"><?php esc_html_e( 'Start your streak today!', 'yourjannah' ); ?></div>
+        <?php endif; ?>
+    </a>
     <?php endif; ?>
 
     <!-- ═══ UNIFIED COMMUNITY CARD — All stats in one place ═══ -->

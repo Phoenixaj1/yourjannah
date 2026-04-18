@@ -58,6 +58,20 @@ class YNJ_API_Points {
             'permission_callback' => function() { return is_user_logged_in(); },
         ] );
 
+        // GET /ibadah/dhikr — today's Sunnah remembrance + rotating weekly adhkar
+        register_rest_route( self::NS, '/ibadah/dhikr', [
+            'methods'             => 'GET',
+            'callback'            => [ __CLASS__, 'dhikr_today' ],
+            'permission_callback' => '__return_true',
+        ] );
+
+        // POST /ibadah/dhikr — say "Ameen" / "I've said it" to earn points
+        register_rest_route( self::NS, '/ibadah/dhikr', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'dhikr_ameen' ],
+            'permission_callback' => function() { return is_user_logged_in(); },
+        ] );
+
         register_rest_route( self::NS, '/ibadah/community/(?P<mosque_id>\d+)', [
             'methods'             => 'GET',
             'callback'            => [ __CLASS__, 'ibadah_community' ],
@@ -527,9 +541,42 @@ class YNJ_API_Points {
 
         $streak = self::calculate_ibadah_streak( $ynj_uid );
 
+        // Fajr streak (consecutive days with Fajr)
+        $fajr_dates = $wpdb->get_col( $wpdb->prepare(
+            "SELECT log_date FROM $table WHERE user_id = %d AND fajr = 1 ORDER BY log_date DESC LIMIT 120", $ynj_uid
+        ) );
+        $fajr_streak = 0;
+        $expected = $today;
+        foreach ( $fajr_dates as $d ) {
+            if ( $d === $expected ) { $fajr_streak++; $expected = date( 'Y-m-d', strtotime( "$expected -1 day" ) ); }
+            elseif ( $fajr_streak === 0 && $d === date( 'Y-m-d', strtotime( '-1 day' ) ) ) { $fajr_streak = 1; $expected = date( 'Y-m-d', strtotime( "$d -1 day" ) ); }
+            else break;
+        }
+
+        // Jumu'ah streak (consecutive Fridays at mosque)
+        $friday_dates = $wpdb->get_col( $wpdb->prepare(
+            "SELECT log_date FROM $table WHERE user_id = %d AND prayed_at_mosque = 1 AND DAYOFWEEK(log_date) = 6 ORDER BY log_date DESC LIMIT 52", $ynj_uid
+        ) );
+        $jumuah_streak = 0;
+        $last_friday = ( date( 'N' ) == 5 ) ? $today : date( 'Y-m-d', strtotime( 'last friday' ) );
+        $exp_fri = $last_friday;
+        foreach ( $friday_dates as $fd ) {
+            if ( $fd === $exp_fri ) { $jumuah_streak++; $exp_fri = date( 'Y-m-d', strtotime( "$exp_fri -7 days" ) ); }
+            elseif ( $jumuah_streak === 0 ) continue;
+            else break;
+        }
+
+        // Heatmap (last 35 days)
+        $heatmap_since = date( 'Y-m-d', strtotime( '-34 days' ) );
+        $heatmap_rows = $wpdb->get_results( $wpdb->prepare(
+            "SELECT log_date, points_earned FROM $table WHERE user_id = %d AND log_date >= %s ORDER BY log_date ASC", $ynj_uid, $heatmap_since
+        ) ) ?: [];
+        $heatmap = [];
+        foreach ( $heatmap_rows as $hr ) $heatmap[] = [ 'date' => $hr->log_date, 'points' => (int) $hr->points_earned ];
+
         return new \WP_REST_Response( [
-            'ok'      => true,
-            'today'   => $today_log ? [
+            'ok'            => true,
+            'today'         => $today_log ? [
                 'fajr' => (int) $today_log->fajr, 'dhuhr' => (int) $today_log->dhuhr,
                 'asr' => (int) $today_log->asr, 'maghrib' => (int) $today_log->maghrib,
                 'isha' => (int) $today_log->isha, 'quran_pages' => (int) $today_log->quran_pages,
@@ -538,14 +585,17 @@ class YNJ_API_Points {
                 'prayed_at_mosque' => (int) ( $today_log->prayed_at_mosque ?? 0 ),
                 'points' => (int) $today_log->points_earned,
             ] : null,
-            'streak'  => $streak,
-            'week'    => [
+            'streak'        => $streak,
+            'fajr_streak'   => $fajr_streak,
+            'jumuah_streak' => $jumuah_streak,
+            'week'          => [
                 'prayers' => (int) $week->prayers,
                 'pages'   => (int) $week->pages,
                 'points'  => (int) $week->points,
                 'days'    => (int) $week->days_logged,
             ],
             'badges'  => function_exists( 'ynj_get_user_badges' ) ? ynj_get_user_badges( $ynj_uid ) : [],
+            'heatmap' => $heatmap,
         ] );
     }
 
@@ -640,5 +690,297 @@ class YNJ_API_Points {
         }
 
         return $streak;
+    }
+
+    // ================================================================
+    // SUNNAH REMEMBRANCES — Rotating weekly dhikr from Hadith
+    // ================================================================
+
+    /**
+     * Curated Sunnah adhkar — rotates weekly. Each one draws the user
+     * closer to Allah SWT through remembrance. They just tap "Ameen"
+     * or "I've said it" to earn points for themselves AND their masjid.
+     */
+    public static function get_weekly_adhkar() {
+        return [
+            // ── TAWHEED — The most magnificent words ──
+            [
+                'arabic'      => 'لَا إِلٰهَ إِلَّا ٱللّٰهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ ٱلْمُلْكُ وَلَهُ ٱلْحَمْدُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ',
+                'english'     => 'There is no god but Allah, alone, without partner. His is the dominion and His is the praise, and He is over all things capable.',
+                'source'      => 'Sahih Muslim 2693',
+                'reward'      => 'The GREATEST words. 100 good deeds written, 100 sins erased, protection from Shaytan until evening',
+                'category'    => 'tawheed',
+                'points'      => 100,
+                'action_text' => "La ilaha illallah",
+                'tier'        => 'legendary',
+            ],
+            // ── TASBEEH — Light on the tongue, heavy on the Scale ──
+            [
+                'arabic'      => 'سُبْحَانَ ٱللّٰهِ وَبِحَمْدِهِ، سُبْحَانَ ٱللّٰهِ ٱلْعَظِيمِ',
+                'english'     => 'Glory be to Allah and His is the praise. Glory be to Allah, the Magnificent.',
+                'source'      => 'Sahih al-Bukhari 6406',
+                'reward'      => 'Two words: light on the tongue, heavy on the Scale, beloved to the Most Merciful',
+                'category'    => 'tasbeeh',
+                'points'      => 75,
+                'action_text' => "SubhanAllah",
+                'tier'        => 'epic',
+            ],
+            // ── SALAWAT — 10x blessings returned ──
+            [
+                'arabic'      => 'اللَّهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ وَعَلَىٰ آلِ مُحَمَّدٍ',
+                'english'     => 'O Allah, send peace and blessings upon Muhammad and the family of Muhammad.',
+                'source'      => 'Sahih al-Bukhari 3370',
+                'reward'      => 'Whoever sends salawat once, Allah sends 10 blessings upon them. 10x return guaranteed by Allah',
+                'category'    => 'salawat',
+                'points'      => 75,
+                'action_text' => "Allahumma Salli",
+                'tier'        => 'epic',
+            ],
+            // ── ISTIGHFAR — Door to relief ──
+            [
+                'arabic'      => 'أَسْتَغْفِرُ ٱللّٰهَ ٱلْعَظِيمَ ٱلَّذِي لَا إِلٰهَ إِلَّا هُوَ ٱلْحَيُّ ٱلْقَيُّومُ وَأَتُوبُ إِلَيْهِ',
+                'english'     => 'I seek forgiveness from Allah, the Magnificent, there is no god but Him, the Living, the Sustainer, and I repent to Him.',
+                'source'      => 'Abu Dawud 1517, Tirmidhi 3577',
+                'reward'      => 'Allah forgives whoever says this even if they fled from battle. The key that opens every locked door',
+                'category'    => 'istighfar',
+                'points'      => 75,
+                'action_text' => "Astaghfirullah",
+                'tier'        => 'epic',
+            ],
+            // ── HAWQALA — Treasure of Jannah ──
+            [
+                'arabic'      => 'لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِٱللّٰهِ',
+                'english'     => 'There is no power nor strength except with Allah.',
+                'source'      => 'Sahih al-Bukhari 4205',
+                'reward'      => 'A treasure from the treasures of Paradise. The Prophet (PBUH) said: Guard this treasure',
+                'category'    => 'hawqala',
+                'points'      => 75,
+                'action_text' => "I've said it",
+                'tier'        => 'epic',
+            ],
+            // ── THE FOUR BELOVED WORDS ──
+            [
+                'arabic'      => 'سُبْحَانَ ٱللّٰهِ، وَٱلْحَمْدُ لِلّٰهِ، وَلَا إِلٰهَ إِلَّا ٱللّٰهُ، وَٱللّٰهُ أَكْبَرُ',
+                'english'     => 'Glory be to Allah, praise be to Allah, there is no god but Allah, Allah is the Greatest.',
+                'source'      => 'Sahih Muslim 2137',
+                'reward'      => 'More beloved to the Prophet (PBUH) than EVERYTHING the sun rises upon. More beloved than the entire dunya',
+                'category'    => 'tasbeeh',
+                'points'      => 100,
+                'action_text' => "SubhanAllah wal Hamdulillah",
+                'tier'        => 'legendary',
+            ],
+            // ── TAWAKKUL — Shield of the believers ──
+            [
+                'arabic'      => 'حَسْبُنَا ٱللّٰهُ وَنِعْمَ ٱلْوَكِيلُ',
+                'english'     => 'Allah is sufficient for us, and He is the best disposer of affairs.',
+                'source'      => 'Sahih al-Bukhari 4563',
+                'reward'      => 'Said by Ibrahim (AS) when thrown into fire. Said by Muhammad (PBUH) when facing entire armies. The ultimate shield',
+                'category'    => 'tawakkul',
+                'points'      => 75,
+                'action_text' => "HasbunAllah",
+                'tier'        => 'epic',
+            ],
+            // ── DUA — The weapon of the believer ──
+            [
+                'arabic'      => 'رَبَّنَا آتِنَا فِي ٱلدُّنْيَا حَسَنَةً وَفِي ٱلْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ ٱلنَّارِ',
+                'english'     => 'Our Lord, give us good in this world and good in the Hereafter, and protect us from the torment of the Fire.',
+                'source'      => 'Quran 2:201',
+                'reward'      => 'The most frequent dua of the Prophet (PBUH). He made this dua more than any other',
+                'category'    => 'dua',
+                'points'      => 75,
+                'action_text' => 'Ameen',
+                'tier'        => 'epic',
+            ],
+            // ── MORNING PROTECTION ──
+            [
+                'arabic'      => 'بِسْمِ ٱللّٰهِ ٱلَّذِي لَا يَضُرُّ مَعَ ٱسْمِهِ شَيْءٌ فِي ٱلْأَرْضِ وَلَا فِي ٱلسَّمَاءِ وَهُوَ ٱلسَّمِيعُ ٱلْعَلِيمُ',
+                'english'     => 'In the Name of Allah, with Whose Name nothing on earth or in the heavens can cause harm, and He is the All-Hearing, All-Knowing.',
+                'source'      => 'Abu Dawud 5088, Tirmidhi 3388',
+                'reward'      => 'Said 3 times in morning: NOTHING will harm you until evening. Complete divine protection',
+                'category'    => 'protection',
+                'points'      => 75,
+                'action_text' => "Bismillah",
+                'tier'        => 'epic',
+            ],
+            // ── EVENING PEACE ──
+            [
+                'arabic'      => 'أَعُوذُ بِكَلِمَاتِ ٱللّٰهِ ٱلتَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ',
+                'english'     => 'I seek refuge in the perfect words of Allah from the evil of what He has created.',
+                'source'      => 'Sahih Muslim 2708',
+                'reward'      => 'Said at evening: nothing will harm you that night. The words of Allah are your shield',
+                'category'    => 'protection',
+                'points'      => 75,
+                'action_text' => "A'udhu billah",
+                'tier'        => 'epic',
+            ],
+            // ── CONTENTMENT — The secret to happiness ──
+            [
+                'arabic'      => 'رَضِيتُ بِٱللّٰهِ رَبًّا، وَبِٱلْإِسْلَامِ دِينًا، وَبِمُحَمَّدٍ صَلَّى ٱللّٰهُ عَلَيْهِ وَسَلَّمَ نَبِيًّا',
+                'english'     => 'I am pleased with Allah as my Lord, Islam as my religion, and Muhammad (PBUH) as my Prophet.',
+                'source'      => 'Abu Dawud 5072',
+                'reward'      => 'Whoever says this: Paradise becomes OBLIGATORY for them. Guaranteed by the Prophet (PBUH)',
+                'category'    => 'contentment',
+                'points'      => 100,
+                'action_text' => "Raditu Billah",
+                'tier'        => 'legendary',
+            ],
+            // ── GRATITUDE OVERFLOWING ──
+            [
+                'arabic'      => 'ٱلْحَمْدُ لِلّٰهِ حَمْدًا كَثِيرًا طَيِّبًا مُبَارَكًا فِيهِ',
+                'english'     => 'All praise is due to Allah, abundant, pure and blessed praise.',
+                'source'      => 'Sahih al-Bukhari 5294',
+                'reward'      => 'When a man said this, the Prophet (PBUH) said: The angels competed to write it first',
+                'category'    => 'hamd',
+                'points'      => 75,
+                'action_text' => "Alhamdulillah",
+                'tier'        => 'epic',
+            ],
+            // ── POWER OF ALLAH ──
+            [
+                'arabic'      => 'سُبْحَانَ ٱللّٰهِ وَبِحَمْدِهِ عَدَدَ خَلْقِهِ وَرِضَا نَفْسِهِ وَزِنَةَ عَرْشِهِ وَمِدَادَ كَلِمَاتِهِ',
+                'english'     => 'Glory be to Allah and His is the praise, as many times as the number of His creation, as pleases Him, as weighs His Throne, and as much as the ink of His words.',
+                'source'      => 'Sahih Muslim 2726',
+                'reward'      => 'Said once: equals the reward of hours of regular tasbeeh. The Prophet (PBUH) taught this to multiply reward infinitely',
+                'category'    => 'tasbeeh',
+                'points'      => 100,
+                'action_text' => "SubhanAllah",
+                'tier'        => 'legendary',
+            ],
+            // ── SAFETY DUA ──
+            [
+                'arabic'      => 'اللَّهُمَّ إِنِّي أَسْأَلُكَ ٱلْعَافِيَةَ فِي ٱلدُّنْيَا وَٱلْآخِرَةِ',
+                'english'     => 'O Allah, I ask You for well-being in this world and the Hereafter.',
+                'source'      => 'Ibn Majah 3871',
+                'reward'      => 'The Prophet (PBUH) said: After certainty of faith, no one is given anything better than well-being',
+                'category'    => 'dua',
+                'points'      => 75,
+                'action_text' => 'Ameen',
+                'tier'        => 'epic',
+            ],
+        ];
+    }
+
+    /**
+     * GET /ibadah/dhikr — Get today's Sunnah remembrance.
+     * Rotates weekly (week number of year modulo count).
+     */
+    public static function dhikr_today( \WP_REST_Request $request ) {
+        $adhkar = self::get_weekly_adhkar();
+        // Rotate DAILY (day of year) so users get a fresh remembrance each day
+        $day_num = (int) date( 'z' ); // 0-365
+        $idx = $day_num % count( $adhkar );
+        $today_dhikr = $adhkar[ $idx ];
+
+        // Check if user already said it today
+        $already_done = false;
+        if ( is_user_logged_in() ) {
+            $ynj_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+            if ( $ynj_uid ) {
+                $key = 'ynj_dhikr_' . $ynj_uid . '_' . date( 'Y-m-d' );
+                $already_done = (bool) get_transient( $key );
+            }
+        }
+
+        return new \WP_REST_Response( [
+            'ok'           => true,
+            'dhikr'        => $today_dhikr,
+            'week_index'   => $idx,
+            'already_done' => $already_done,
+        ] );
+    }
+
+    /**
+     * POST /ibadah/dhikr — User taps "Ameen" / "I've said it".
+     * Awards points + contributes to masjid community score.
+     */
+    public static function dhikr_ameen( \WP_REST_Request $request ) {
+        $wp_uid  = get_current_user_id();
+        $ynj_uid = (int) get_user_meta( $wp_uid, 'ynj_user_id', true );
+        if ( ! $ynj_uid ) return new \WP_REST_Response( [ 'ok' => false ], 400 );
+
+        $today = date( 'Y-m-d' );
+        $key = 'ynj_dhikr_' . $ynj_uid . '_' . $today;
+
+        // Only award once per day
+        if ( get_transient( $key ) ) {
+            return new \WP_REST_Response( [ 'ok' => true, 'already_done' => true, 'points' => 0 ] );
+        }
+
+        $adhkar = self::get_weekly_adhkar();
+        $day_num = (int) date( 'z' );
+        $idx = $day_num % count( $adhkar );
+        $pts = $adhkar[ $idx ]['points'];
+
+        // Award points
+        $mosque_id = (int) get_user_meta( $wp_uid, 'ynj_mosque_id', true );
+        if ( ! $mosque_id ) {
+            global $wpdb;
+            $mosque_id = (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT favourite_mosque_id FROM " . YNJ_DB::table( 'users' ) . " WHERE id = %d", $ynj_uid
+            ) );
+        }
+
+        global $wpdb;
+        // Record dhikr in today's ibadah log
+        $ib_table = YNJ_DB::table( 'ibadah_logs' );
+        $existing = $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM $ib_table WHERE user_id = %d AND log_date = %s", $ynj_uid, $today
+        ) );
+        if ( $existing ) {
+            $wpdb->query( $wpdb->prepare(
+                "UPDATE $ib_table SET dhikr = 1, points_earned = points_earned + %d WHERE id = %d", $pts, $existing
+            ) );
+        } else {
+            $wpdb->insert( $ib_table, [
+                'user_id' => $ynj_uid, 'mosque_id' => $mosque_id, 'log_date' => $today,
+                'dhikr' => 1, 'points_earned' => $pts,
+            ] );
+        }
+
+        // Update user total
+        $wpdb->query( $wpdb->prepare(
+            "UPDATE " . YNJ_DB::table( 'users' ) . " SET total_points = total_points + %d WHERE id = %d", $pts, $ynj_uid
+        ) );
+
+        set_transient( $key, 1, DAY_IN_SECONDS );
+
+        $total = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT total_points FROM " . YNJ_DB::table( 'users' ) . " WHERE id = %d", $ynj_uid
+        ) );
+
+        return new \WP_REST_Response( [
+            'ok'     => true,
+            'points' => $pts,
+            'total'  => $total,
+            'message' => '+' . $pts . ' points for your remembrance of Allah',
+        ] );
+    }
+
+    /**
+     * Award welcome bonus to a new user (50 pts + first remembrance).
+     * Called once when user first visits their ibadah page.
+     */
+    public static function award_welcome_bonus( $ynj_uid, $mosque_id = 0 ) {
+        $key = 'ynj_welcome_' . $ynj_uid;
+        if ( get_transient( $key ) ) return 0; // Already awarded
+
+        global $wpdb;
+        $pts = 50;
+
+        // Award points
+        $wpdb->insert( YNJ_DB::table( 'points' ), [
+            'user_id'     => $ynj_uid,
+            'mosque_id'   => $mosque_id,
+            'action'      => 'welcome_bonus',
+            'points'      => $pts,
+            'description' => 'Welcome to YourJannah! La ilaha illallah',
+        ] );
+
+        $wpdb->query( $wpdb->prepare(
+            "UPDATE " . YNJ_DB::table( 'users' ) . " SET total_points = total_points + %d WHERE id = %d", $pts, $ynj_uid
+        ) );
+
+        set_transient( $key, 1, 365 * DAY_IN_SECONDS );
+        return $pts;
     }
 }
