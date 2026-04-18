@@ -31,6 +31,21 @@ if ( is_admin() ) {
 }
 
 // ================================================================
+// PREVENT SERVER-SIDE CACHING (Varnish/Nginx/OPcache)
+// ================================================================
+// Dynamic pages must never be served from cache — the HUD, member
+// counts, login state all depend on the current user's session.
+add_action( 'send_headers', function() {
+    if ( is_admin() || wp_doing_ajax() || defined( 'DOING_CRON' ) ) return;
+    header( 'Cache-Control: no-cache, no-store, must-revalidate, max-age=0' );
+    header( 'Pragma: no-cache' );
+    header( 'Expires: 0' );
+    // Tell Varnish/Nginx not to cache
+    header( 'X-Accel-Expires: 0' );
+    if ( ! defined( 'DONOTCACHEPAGE' ) ) define( 'DONOTCACHEPAGE', true );
+}, 1 );
+
+// ================================================================
 // THEME SETUP
 // ================================================================
 
