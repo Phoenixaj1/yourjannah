@@ -97,9 +97,20 @@ add_action('init', function() {
 
 // AJAX handler to set WP auth cookie (called after JS login/register)
 // NOTE: nopriv handler removed — it allowed unauthenticated session hijacking.
-add_action('wp_ajax_ynj_set_session', function() {
-    wp_send_json(['ok' => true]); // Already logged in
-});
+// Set WP auth cookie after PIN login (works for both logged-in and guests)
+$_ynj_session_handler = function() {
+    $wp_user_id = (int) ( $_POST['wp_user_id'] ?? 0 );
+    if ( $wp_user_id && ! is_user_logged_in() ) {
+        $user = get_user_by( 'ID', $wp_user_id );
+        if ( $user ) {
+            wp_set_current_user( $wp_user_id );
+            wp_set_auth_cookie( $wp_user_id, true );
+        }
+    }
+    wp_send_json(['ok' => true]);
+};
+add_action('wp_ajax_ynj_set_session', $_ynj_session_handler);
+add_action('wp_ajax_nopriv_ynj_set_session', $_ynj_session_handler);
 
 // Configure wp_mail — Postmark SMTP (reliable delivery)
 // yourjannah.com is DKIM + Return-Path verified in Postmark
