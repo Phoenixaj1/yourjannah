@@ -572,18 +572,9 @@ if ( $mosque && is_user_logged_in() ) {
 
 
 
-    <!-- ═══ GRATITUDE WALL ═══ -->
-    <?php if ( $mosque ) : ?>
-    <section class="ynj-card" style="padding:16px;background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;" id="gratitude-wall">
-        <h3 style="font-size:15px;font-weight:800;color:#9d174d;margin:0 0 10px;">💖 <?php esc_html_e( 'Thank Your Mosque', 'yourjannah' ); ?></h3>
-        <?php if ( is_user_logged_in() ) : ?>
-        <div style="display:flex;gap:8px;margin-bottom:12px;">
-            <input type="text" id="gratitude-input" placeholder="<?php esc_attr_e( 'JazakAllah khayr for...', 'yourjannah' ); ?>" maxlength="300" style="flex:1;padding:10px 14px;border:1px solid #f9a8d4;border-radius:10px;font-size:14px;font-family:inherit;min-height:44px;background:#fff;">
-            <button type="button" onclick="ynjPostGratitude()" style="padding:10px 16px;background:#be185d;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;min-height:44px;font-family:inherit;">💖</button>
-        </div>
-        <?php endif; ?>
-        <div id="gratitude-list"></div>
-    </section>
+    <!-- ═══ GRATITUDE ═══ -->
+    <?php if ( $mosque && is_user_logged_in() ) : ?>
+    <button type="button" onclick="ynjPostGratitude()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;border-radius:14px;font-size:14px;font-weight:700;color:#9d174d;cursor:pointer;font-family:inherit;margin-bottom:10px;">💖 <?php esc_html_e( 'Thank Your Mosque', 'yourjannah' ); ?></button>
     <?php endif; ?>
 
     <!-- Hadith -->
@@ -898,19 +889,15 @@ if (window.ynjPreloaded.jumuahSlots && window.ynjPreloaded.jumuahSlots.length > 
             }).catch(function(){});
     }
     window.ynjPostGratitude = function() {
-        var input = document.getElementById('gratitude-input');
-        if (!input) return;
-        var msg = input.value.trim();
-        if (!msg) return;
+        var btn = event ? event.target : null;
+        if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
         fetch('/wp-json/ynj/v1/gratitude/create', {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce() },
-            credentials: 'same-origin', body: JSON.stringify({ message: msg, mosque_id: mosqueId })
+            credentials: 'same-origin', body: JSON.stringify({ message: 'JazakAllah Khayr', mosque_id: mosqueId })
         }).then(function(r){ return r.json(); }).then(function(d){
-            if (d.ok) { input.value = ''; loadGratitude(); }
-            else if (d.error) alert(d.error);
-        }).catch(function(){});
+            if (btn) { btn.textContent = d.ok ? '💖 JazakAllah Khayr sent!' : '💖 Thank Your Mosque'; btn.disabled = false; }
+        }).catch(function(){ if (btn) { btn.textContent = '💖 Thank Your Mosque'; btn.disabled = false; } });
     };
-    setTimeout(loadGratitude, 400);
 })();
 
 // ── Content View Tracking (Intersection Observer) ──
