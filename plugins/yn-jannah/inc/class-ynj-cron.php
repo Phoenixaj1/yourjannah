@@ -38,6 +38,13 @@ class YNJ_Cron {
         }
         add_action( 'ynj_challenge_generator_cron', [ __CLASS__, 'generate_challenges' ] );
 
+        // Head-to-head mosque challenges — runs daily, creates on Mondays
+        add_action( 'ynj_challenge_generator_cron', function() {
+            if ( function_exists( 'ynj_generate_h2h_challenges' ) ) {
+                ynj_generate_h2h_challenges();
+            }
+        } );
+
         // Register custom interval
         add_filter( 'cron_schedules', [ __CLASS__, 'add_interval' ] );
     }

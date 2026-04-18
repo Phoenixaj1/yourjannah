@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '3.6.0';
+    const SCHEMA_VERSION = '3.7.0';
 
     /**
      * Return the full table name for a given short name.
@@ -1091,6 +1091,7 @@ class YNJ_DB {
             fasting tinyint(1) NOT NULL DEFAULT 0,
             charity tinyint(1) NOT NULL DEFAULT 0,
             good_deed varchar(255) NOT NULL DEFAULT '',
+            prayed_at_mosque tinyint(1) NOT NULL DEFAULT 0,
             points_earned int(11) NOT NULL DEFAULT 0,
             PRIMARY KEY  (id),
             UNIQUE KEY user_date (user_id, log_date),
@@ -1111,6 +1112,25 @@ class YNJ_DB {
             status varchar(20) NOT NULL DEFAULT 'active',
             PRIMARY KEY  (id),
             KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY end_date (end_date)
+        ) $charset_collate;";
+
+        // Head-to-head mosque challenges
+        $tables[] = "CREATE TABLE {$t('h2h_challenges')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_a_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_b_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            challenge_type varchar(30) NOT NULL DEFAULT 'engagement',
+            mosque_a_score int(11) NOT NULL DEFAULT 0,
+            mosque_b_score int(11) NOT NULL DEFAULT 0,
+            start_date date NOT NULL,
+            end_date date NOT NULL,
+            winner_mosque_id bigint(20) unsigned DEFAULT NULL,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            PRIMARY KEY  (id),
+            KEY mosque_a_id (mosque_a_id),
+            KEY mosque_b_id (mosque_b_id),
             KEY status (status),
             KEY end_date (end_date)
         ) $charset_collate;";

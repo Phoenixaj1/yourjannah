@@ -561,7 +561,13 @@ if ( $mosque && is_user_logged_in() ) {
         </div>
 
         <div style="margin-bottom:12px;">
-            <p style="font-size:11px;color:#6b8fa3;margin-bottom:6px;font-weight:600;"><?php esc_html_e( "Today's Prayers", 'yourjannah' ); ?></p>
+            <!-- Mosque / Home toggle -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <p style="font-size:11px;color:#6b8fa3;font-weight:600;margin:0;"><?php esc_html_e( "Today's Prayers", 'yourjannah' ); ?></p>
+                <button type="button" id="mosque-toggle" onclick="ynjToggleMosque(this)" style="display:flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid #e5e7eb;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;background:#fff;color:#6b8fa3;font-family:inherit;min-height:28px;">
+                    🏠 <?php esc_html_e( 'At Home', 'yourjannah' ); ?>
+                </button>
+            </div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;" id="ibadah-prayers">
                 <?php foreach ( [ 'fajr' => 'Fajr', 'dhuhr' => 'Dhuhr', 'asr' => 'Asr', 'maghrib' => 'Maghrib', 'isha' => 'Isha' ] as $pk => $plabel ) : ?>
                 <button type="button" class="ynj-ibadah-prayer" data-prayer="<?php echo $pk; ?>" onclick="ynjTogglePrayer(this)" style="flex:1;min-width:58px;padding:8px 4px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;font-size:12px;font-weight:700;color:#6b8fa3;cursor:pointer;text-align:center;transition:all .15s;min-height:44px;">
@@ -603,7 +609,7 @@ if ( $mosque && is_user_logged_in() ) {
 
     <script>
     (function(){
-        var ibadahState = { fajr:0, dhuhr:0, asr:0, maghrib:0, isha:0, quran_pages:0, dhikr:0, fasting:0, charity:0, good_deed:'' };
+        var ibadahState = { fajr:0, dhuhr:0, asr:0, maghrib:0, isha:0, quran_pages:0, dhikr:0, fasting:0, charity:0, good_deed:'', prayed_at_mosque:0 };
         var saving = false;
         function getNonce() { return typeof wpApiSettings !== 'undefined' ? wpApiSettings.nonce : ''; }
 
@@ -615,7 +621,14 @@ if ( $mosque && is_user_logged_in() ) {
                 if (!d.ok) return;
                 if (d.today) {
                     ibadahState = d.today;
+                    ibadahState.prayed_at_mosque = d.today.prayed_at_mosque || 0;
                     updateUI();
+                    // Update mosque toggle
+                    var mt = document.getElementById('mosque-toggle');
+                    if (mt && ibadahState.prayed_at_mosque) {
+                        mt.innerHTML = '🕌 At Mosque <span style="font-size:9px;color:#16a34a;">27x</span>';
+                        mt.style.background = '#287e61'; mt.style.color = '#fff'; mt.style.borderColor = '#287e61';
+                    }
                 }
                 if (d.streak > 0) {
                     document.getElementById('ibadah-streak').textContent = '🔥 ' + d.streak + ' day' + (d.streak > 1 ? 's' : '');
@@ -650,6 +663,17 @@ if ( $mosque && is_user_logged_in() ) {
             if (ibadahState.good_deed) document.getElementById('ibadah-deed').value = ibadahState.good_deed;
         }
 
+        window.ynjToggleMosque = function(btn) {
+            ibadahState.prayed_at_mosque = ibadahState.prayed_at_mosque ? 0 : 1;
+            btn.innerHTML = ibadahState.prayed_at_mosque
+                ? '🕌 <?php esc_html_e( 'At Mosque', 'yourjannah' ); ?> <span style="font-size:9px;color:#16a34a;">27x</span>'
+                : '🏠 <?php esc_html_e( 'At Home', 'yourjannah' ); ?>';
+            btn.style.background = ibadahState.prayed_at_mosque ? '#287e61' : '#fff';
+            btn.style.color = ibadahState.prayed_at_mosque ? '#fff' : '#6b8fa3';
+            btn.style.borderColor = ibadahState.prayed_at_mosque ? '#287e61' : '#e5e7eb';
+            ynjSaveIbadah();
+        };
+
         window.ynjTogglePrayer = function(btn) {
             var p = btn.getAttribute('data-prayer');
             ibadahState[p] = ibadahState[p] ? 0 : 1;
@@ -681,6 +705,18 @@ if ( $mosque && is_user_logged_in() ) {
                     document.getElementById('ibadah-pts-today').textContent = 'Today: ' + d.points_today + ' pts';
                     if (d.streak > 0) {
                         document.getElementById('ibadah-streak').textContent = '🔥 ' + d.streak + ' day' + (d.streak > 1 ? 's' : '');
+                    }
+                    // Surprise bonus toast (variable reward — Duolingo-style)
+                    if (d.surprise_bonus && d.surprise_bonus > 0) {
+                        var sToast = document.createElement('div');
+                        sToast.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:14px 24px;border-radius:14px;font-size:15px;font-weight:700;z-index:10000;box-shadow:0 4px 20px rgba(245,158,11,.4);animation:ynj-fade-in .3s;';
+                        sToast.textContent = '🎁 Surprise! +' + d.surprise_bonus + ' bonus points!';
+                        document.body.appendChild(sToast);
+                        setTimeout(function(){ sToast.style.opacity='0'; sToast.style.transition='opacity .5s'; setTimeout(function(){ sToast.remove(); },500); }, 4000);
+                    }
+                    // Mosque multiplier notification
+                    if (d.at_mosque && d.multiplier > 1) {
+                        document.getElementById('ibadah-pts-today').textContent = 'Today: ' + d.points_today + ' pts (27x mosque!)';
                     }
                     // Badge earned notification
                     if (d.new_badges && d.new_badges.length > 0) {
@@ -801,6 +837,58 @@ if ( $mosque && is_user_logged_in() ) {
         <p style="font-size:11px;color:#22c55e;margin-top:2px;"><?php esc_html_e( 'Based on recent check-ins', 'yourjannah' ); ?></p>
     </section>
     <?php endif; endif; ?>
+
+    <!-- ═══ HEAD-TO-HEAD CHALLENGE ═══ -->
+    <?php if ( $mosque && function_exists( 'ynj_get_h2h_challenge' ) ) :
+        $h2h = ynj_get_h2h_challenge( (int) $mosque->id );
+        if ( $h2h ) :
+    ?>
+    <section class="ynj-card" style="padding:16px;background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border:none;text-align:center;">
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;opacity:.7;margin:0 0 6px;"><?php esc_html_e( 'This Week\'s Challenge', 'yourjannah' ); ?></p>
+        <h3 style="font-size:16px;font-weight:800;color:#fff;margin:0 0 12px;">⚔️ <?php echo esc_html( $mosque_name ); ?> vs <?php echo esc_html( $h2h['opponent'] ); ?></h3>
+        <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:8px;">
+            <div style="text-align:center;flex:1;">
+                <div style="font-size:28px;font-weight:800;"><?php echo number_format( $h2h['my_score'] ); ?></div>
+                <div style="font-size:10px;opacity:.7;"><?php esc_html_e( 'Us', 'yourjannah' ); ?></div>
+            </div>
+            <div style="font-size:20px;font-weight:800;opacity:.5;">vs</div>
+            <div style="text-align:center;flex:1;">
+                <div style="font-size:28px;font-weight:800;"><?php echo number_format( $h2h['their_score'] ); ?></div>
+                <div style="font-size:10px;opacity:.7;"><?php echo esc_html( $h2h['opponent'] ); ?></div>
+            </div>
+        </div>
+        <p style="font-size:12px;margin:0;opacity:.8;">
+            <?php if ( $h2h['winning'] ) : ?>
+                🏆 <?php esc_html_e( 'We\'re winning!', 'yourjannah' ); ?>
+            <?php elseif ( $h2h['tied'] ) : ?>
+                ⚖️ <?php esc_html_e( 'It\'s tied!', 'yourjannah' ); ?>
+            <?php else : ?>
+                💪 <?php esc_html_e( 'We\'re behind — engage more to win!', 'yourjannah' ); ?>
+            <?php endif; ?>
+            · <?php echo $h2h['days_left']; ?> <?php esc_html_e( 'days left', 'yourjannah' ); ?>
+        </p>
+    </section>
+    <?php endif; endif; ?>
+
+    <!-- ═══ PERSONAL IMPACT SCORE ═══ -->
+    <?php if ( is_user_logged_in() && $mosque && function_exists( 'ynj_personal_impact' ) ) :
+        $ynj_uid_impact = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+        if ( $ynj_uid_impact ) :
+            $impact = ynj_personal_impact( $ynj_uid_impact, (int) $mosque->id, 7 );
+            if ( $impact['total_points'] > 0 ) :
+    ?>
+    <section class="ynj-card" style="padding:14px 16px;text-align:center;">
+        <p style="font-size:11px;color:#6b8fa3;margin:0 0 4px;font-weight:600;"><?php esc_html_e( 'Your Impact This Week', 'yourjannah' ); ?></p>
+        <div style="font-size:32px;font-weight:800;color:#287e61;"><?php echo $impact['percentage']; ?>%</div>
+        <p style="font-size:12px;color:#6b8fa3;margin:4px 0 0;">
+            <?php printf( esc_html__( 'You contributed %s of %s pts to %s', 'yourjannah' ),
+                '<strong>' . number_format( $impact['my_points'] ) . '</strong>',
+                number_format( $impact['total_points'] ),
+                esc_html( $mosque_name )
+            ); ?>
+        </p>
+    </section>
+    <?php endif; endif; endif; ?>
 
     <!-- ═══ MOSQUE LEAGUE TABLE — Size-tiered competition ═══ -->
     <?php if ( $mosque && function_exists( 'ynj_get_league_standings' ) ) :

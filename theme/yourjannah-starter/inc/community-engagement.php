@@ -325,6 +325,140 @@ function ynj_whos_at_masjid( $mosque_id, $hours = 2 ) {
 // ================================================================
 
 // ================================================================
+// PERSONAL IMPACT SCORE
+// ================================================================
+
+/**
+ * Calculate what % of the mosque's total ibadah this user contributed.
+ */
+function ynj_personal_impact( $user_id, $mosque_id, $days = 7 ) {
+    global $wpdb;
+    $ib = YNJ_DB::table( 'ibadah_logs' );
+    $since = date( 'Y-m-d', strtotime( "-{$days} days" ) );
+
+    $my_pts = (int) $wpdb->get_var( $wpdb->prepare(
+        "SELECT COALESCE(SUM(points_earned),0) FROM $ib WHERE user_id = %d AND mosque_id = %d AND log_date >= %s",
+        $user_id, $mosque_id, $since
+    ) );
+    $total_pts = (int) $wpdb->get_var( $wpdb->prepare(
+        "SELECT COALESCE(SUM(points_earned),0) FROM $ib WHERE mosque_id = %d AND log_date >= %s",
+        $mosque_id, $since
+    ) );
+
+    $pct = $total_pts > 0 ? round( $my_pts / $total_pts * 100, 1 ) : 0;
+
+    return [
+        'my_points'    => $my_pts,
+        'total_points' => $total_pts,
+        'percentage'   => $pct,
+    ];
+}
+
+// ================================================================
+// HEAD-TO-HEAD MOSQUE CHALLENGES
+// ================================================================
+
+/**
+ * Get the current head-to-head challenge for a mosque (if any).
+ */
+function ynj_get_h2h_challenge( $mosque_id ) {
+    global $wpdb;
+    $h2h = YNJ_DB::table( 'h2h_challenges' );
+    $mt  = YNJ_DB::table( 'mosques' );
+    $today = date( 'Y-m-d' );
+
+    $challenge = $wpdb->get_row( $wpdb->prepare(
+        "SELECT h.*,
+                ma.name AS mosque_a_name, ma.slug AS mosque_a_slug,
+                mb.name AS mosque_b_name, mb.slug AS mosque_b_slug
+         FROM $h2h h
+         JOIN $mt ma ON ma.id = h.mosque_a_id
+         JOIN $mt mb ON mb.id = h.mosque_b_id
+         WHERE (h.mosque_a_id = %d OR h.mosque_b_id = %d) AND h.status = 'active' AND h.end_date >= %s
+         ORDER BY h.id DESC LIMIT 1",
+        $mosque_id, $mosque_id, $today
+    ) );
+
+    if ( ! $challenge ) return null;
+
+    $is_a = ( (int) $challenge->mosque_a_id === $mosque_id );
+    $my_score   = $is_a ? (int) $challenge->mosque_a_score : (int) $challenge->mosque_b_score;
+    $their_score = $is_a ? (int) $challenge->mosque_b_score : (int) $challenge->mosque_a_score;
+    $opponent_name = $is_a ? $challenge->mosque_b_name : $challenge->mosque_a_name;
+    $days_left = max( 0, (int) ( ( strtotime( $challenge->end_date ) - time() ) / DAY_IN_SECONDS ) + 1 );
+
+    return [
+        'id'             => (int) $challenge->id,
+        'opponent'       => $opponent_name,
+        'my_score'       => $my_score,
+        'their_score'    => $their_score,
+        'winning'        => $my_score > $their_score,
+        'tied'           => $my_score === $their_score,
+        'days_left'      => $days_left,
+        'type'           => $challenge->challenge_type,
+    ];
+}
+
+/**
+ * Generate weekly head-to-head challenges — match mosques in same tier.
+ * Called by cron on Mondays.
+ */
+function ynj_generate_h2h_challenges() {
+    global $wpdb;
+    $h2h = YNJ_DB::table( 'h2h_challenges' );
+    $mt  = YNJ_DB::table( 'mosques' );
+    $sub = YNJ_DB::table( 'user_subscriptions' );
+
+    $week_start = date( 'Y-m-d', strtotime( 'Monday this week' ) );
+    $week_end   = date( 'Y-m-d', strtotime( 'Sunday this week' ) );
+
+    // Mark expired challenges
+    $wpdb->query( $wpdb->prepare(
+        "UPDATE $h2h SET status = 'completed' WHERE status = 'active' AND end_date < %s", date( 'Y-m-d' )
+    ) );
+
+    // Get all active mosques with member counts, grouped by tier
+    $mosques = $wpdb->get_results(
+        "SELECT m.id, m.name, COALESCE(s.cnt, 0) AS members
+         FROM $mt m
+         LEFT JOIN (SELECT mosque_id, COUNT(*) AS cnt FROM $sub WHERE status = 'active' GROUP BY mosque_id) s ON s.mosque_id = m.id
+         LEFT JOIN $h2h h ON (h.mosque_a_id = m.id OR h.mosque_b_id = m.id) AND h.start_date = '$week_start'
+         WHERE m.status = 'active' AND h.id IS NULL
+         ORDER BY COALESCE(s.cnt, 0) ASC"
+    );
+
+    // Group by tier
+    $tiers = [];
+    foreach ( $mosques as $m ) {
+        $tier = ynj_get_league_tier( (int) $m->members );
+        $tiers[ $tier['key'] ][] = $m;
+    }
+
+    $created = 0;
+    foreach ( $tiers as $tier_key => $tier_mosques ) {
+        // Shuffle and pair up
+        shuffle( $tier_mosques );
+        for ( $i = 0; $i + 1 < count( $tier_mosques ); $i += 2 ) {
+            $wpdb->insert( $h2h, [
+                'mosque_a_id'    => (int) $tier_mosques[ $i ]->id,
+                'mosque_b_id'    => (int) $tier_mosques[ $i + 1 ]->id,
+                'challenge_type' => 'engagement',
+                'mosque_a_score' => 0,
+                'mosque_b_score' => 0,
+                'start_date'     => $week_start,
+                'end_date'       => $week_end,
+                'status'         => 'active',
+            ] );
+            $created++;
+        }
+    }
+
+    if ( $created > 0 ) {
+        error_log( "[YNJ] Generated {$created} head-to-head challenges for this week." );
+    }
+}
+
+// ================================================================
 // FAJR COUNTER — Who's awake for Fajr today
 // ================================================================
 

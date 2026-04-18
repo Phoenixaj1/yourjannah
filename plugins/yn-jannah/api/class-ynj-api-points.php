@@ -338,32 +338,44 @@ class YNJ_API_Points {
         $today = date( 'Y-m-d' );
         $prayers = [ 'fajr', 'dhuhr', 'asr', 'maghrib', 'isha' ];
 
+        $prayed_at_mosque = (int) ( $request->get_param( 'prayed_at_mosque' ) ? 1 : 0 );
+
         $data = [
-            'user_id'     => $ynj_uid,
-            'mosque_id'   => $mosque_id,
-            'log_date'    => $today,
-            'fajr'        => (int) ( $request->get_param( 'fajr' ) ? 1 : 0 ),
-            'dhuhr'       => (int) ( $request->get_param( 'dhuhr' ) ? 1 : 0 ),
-            'asr'         => (int) ( $request->get_param( 'asr' ) ? 1 : 0 ),
-            'maghrib'     => (int) ( $request->get_param( 'maghrib' ) ? 1 : 0 ),
-            'isha'        => (int) ( $request->get_param( 'isha' ) ? 1 : 0 ),
-            'quran_pages' => max( 0, min( 100, (int) $request->get_param( 'quran_pages' ) ) ),
-            'dhikr'       => (int) ( $request->get_param( 'dhikr' ) ? 1 : 0 ),
-            'fasting'     => (int) ( $request->get_param( 'fasting' ) ? 1 : 0 ),
-            'charity'     => (int) ( $request->get_param( 'charity' ) ? 1 : 0 ),
-            'good_deed'   => sanitize_text_field( $request->get_param( 'good_deed' ) ?: '' ),
+            'user_id'          => $ynj_uid,
+            'mosque_id'        => $mosque_id,
+            'log_date'         => $today,
+            'fajr'             => (int) ( $request->get_param( 'fajr' ) ? 1 : 0 ),
+            'dhuhr'            => (int) ( $request->get_param( 'dhuhr' ) ? 1 : 0 ),
+            'asr'              => (int) ( $request->get_param( 'asr' ) ? 1 : 0 ),
+            'maghrib'          => (int) ( $request->get_param( 'maghrib' ) ? 1 : 0 ),
+            'isha'             => (int) ( $request->get_param( 'isha' ) ? 1 : 0 ),
+            'quran_pages'      => max( 0, min( 100, (int) $request->get_param( 'quran_pages' ) ) ),
+            'dhikr'            => (int) ( $request->get_param( 'dhikr' ) ? 1 : 0 ),
+            'fasting'          => (int) ( $request->get_param( 'fasting' ) ? 1 : 0 ),
+            'charity'          => (int) ( $request->get_param( 'charity' ) ? 1 : 0 ),
+            'good_deed'        => sanitize_text_field( $request->get_param( 'good_deed' ) ?: '' ),
+            'prayed_at_mosque' => $prayed_at_mosque,
         ];
 
-        // Calculate points
+        // Calculate points — 27x multiplier for mosque prayers (Hadith)
         $pts = 0;
         $prayer_count = $data['fajr'] + $data['dhuhr'] + $data['asr'] + $data['maghrib'] + $data['isha'];
-        $pts += $prayer_count * 2;                           // 2 pts per prayer
-        if ( $prayer_count === 5 ) $pts += 15;               // All 5 bonus
+        $prayer_multiplier = $prayed_at_mosque ? 27 : 1;    // 27x reward for praying at mosque
+        $pts += $prayer_count * 2 * $prayer_multiplier;      // 2 pts × multiplier per prayer
+        if ( $prayer_count === 5 ) $pts += 15 * $prayer_multiplier; // All 5 bonus × multiplier
         $pts += $data['quran_pages'] * 5;                    // 5 pts per page
         if ( $data['dhikr'] )   $pts += 3;
         if ( $data['fasting'] ) $pts += 10;
         if ( $data['charity'] ) $pts += 5;
         if ( $data['good_deed'] ) $pts += 5;
+
+        // Variable reward — random bonus (Duolingo-style surprise)
+        $surprise_bonus = 0;
+        if ( $prayer_count >= 3 && mt_rand( 1, 5 ) === 1 ) { // 20% chance when 3+ prayers
+            $surprise_bonus = [ 10, 15, 20, 25, 50 ][ mt_rand( 0, 4 ) ];
+            $pts += $surprise_bonus;
+        }
+
         $data['points_earned'] = $pts;
 
         // UPSERT
@@ -457,12 +469,31 @@ class YNJ_API_Points {
             $new_badges = ynj_check_badges( $ynj_uid, $mosque_id );
         }
 
+        // Jumu'ah streak (consecutive Fridays with check-in)
+        $jumuah_streak = 0;
+        if ( date( 'N' ) == 5 && $prayed_at_mosque ) { // Friday + at mosque
+            $friday_checkins = $wpdb->get_col( $wpdb->prepare(
+                "SELECT DISTINCT log_date FROM $table WHERE user_id = %d AND prayed_at_mosque = 1 AND DAYOFWEEK(log_date) = 6 ORDER BY log_date DESC LIMIT 52",
+                $ynj_uid
+            ) ); // DAYOFWEEK 6 = Friday in MySQL
+            $expected_friday = date( 'Y-m-d' );
+            foreach ( $friday_checkins as $fd ) {
+                if ( $fd === $expected_friday ) { $jumuah_streak++; $expected_friday = date( 'Y-m-d', strtotime( "$expected_friday -7 days" ) ); }
+                elseif ( $jumuah_streak === 0 ) continue;
+                else break;
+            }
+        }
+
         return new \WP_REST_Response( [
-            'ok'           => true,
-            'points_today' => $pts,
-            'streak'       => $streak,
-            'total_points' => $total,
-            'new_badges'   => array_map( function( $b ) { return [ 'name' => $b['name'], 'icon' => $b['icon'], 'desc' => $b['desc'] ]; }, $new_badges ),
+            'ok'              => true,
+            'points_today'    => $pts,
+            'streak'          => $streak,
+            'total_points'    => $total,
+            'at_mosque'       => $prayed_at_mosque,
+            'multiplier'      => $prayed_at_mosque ? 27 : 1,
+            'surprise_bonus'  => $surprise_bonus,
+            'jumuah_streak'   => $jumuah_streak,
+            'new_badges'      => array_map( function( $b ) { return [ 'name' => $b['name'], 'icon' => $b['icon'], 'desc' => $b['desc'] ]; }, $new_badges ),
         ] );
     }
 
@@ -504,6 +535,7 @@ class YNJ_API_Points {
                 'isha' => (int) $today_log->isha, 'quran_pages' => (int) $today_log->quran_pages,
                 'dhikr' => (int) $today_log->dhikr, 'fasting' => (int) $today_log->fasting,
                 'charity' => (int) $today_log->charity, 'good_deed' => $today_log->good_deed,
+                'prayed_at_mosque' => (int) ( $today_log->prayed_at_mosque ?? 0 ),
                 'points' => (int) $today_log->points_earned,
             ] : null,
             'streak'  => $streak,
