@@ -121,15 +121,6 @@ if ( is_user_logged_in() ) {
     <!-- Join CTA (reuses dhikr button style with pulse) -->
     <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" class="ynj-hud__dhikr">&#x1F4FF; <?php esc_html_e( 'Join', 'yourjannah' ); ?></a>
 </div>
-<style>
-/* Guest HUD — same gradient as logged-in, single row, no border-bottom */
-.ynj-hud--guest{background:linear-gradient(135deg,#0a1628 0%,#132742 100%) !important;border-bottom:none !important;}
-.ynj-hud__guest-link{color:rgba(255,255,255,.6) !important;text-decoration:none !important;font-size:12px;font-weight:600;white-space:nowrap;transition:color .2s;}
-.ynj-hud__guest-link:hover{color:#fff !important;}
-@media(max-width:480px){
-    .ynj-hud__guest-link{display:none;}
-}
-</style>
 <script>
 (function(){
     /* Detect guest location: GPS first, then IP fallback */
@@ -557,11 +548,10 @@ $_hud_all_done = $_hud_done_count >= 5;
 .ynj-hud{background:linear-gradient(135deg,#0a1628 0%,#132742 100%);color:#fff;z-index:102;position:sticky;top:0;padding:6px 14px;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;}
 .admin-bar .ynj-hud{top:32px;}
 @media(max-width:782px){.admin-bar .ynj-hud{top:46px;}}
-.ynj-hud--guest{display:flex;flex-wrap:nowrap;justify-content:space-between;background:#111827;border-bottom:2px solid #00ADEF;padding:8px 16px;}
-.ynj-hud__msg{white-space:nowrap;font-size:12px;font-weight:600;}
-.ynj-hud__actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.ynj-hud__link{color:rgba(255,255,255,.8);text-decoration:none;font-size:12px;}
-.ynj-hud__cta{padding:5px 14px;border-radius:8px;background:linear-gradient(135deg,#287e61,#1a5c43);font-weight:700;font-size:12px;text-decoration:none;color:#fff !important;white-space:nowrap;}
+/* Guest HUD — inherits from .ynj-hud base, no extra overrides needed */
+.ynj-hud--guest{border-bottom:none;}
+.ynj-hud__guest-link{color:rgba(255,255,255,.6) !important;text-decoration:none !important;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;transition:color .2s;}
+.ynj-hud__guest-link:hover{color:#fff !important;}
 
 /* Layout: Row 1 (masjid + xp) | Row 2 (stats + actions) */
 .ynj-hud__row1{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0;overflow:hidden;}
@@ -645,6 +635,7 @@ $_hud_all_done = $_hud_done_count >= 5;
     .ynj-hud__stat-num{font-size:11px;}
     .ynj-hud__dhikr{padding:4px 8px;font-size:11px;}
     .ynj-hud__avatar{width:24px;height:24px;font-size:10px;}
+    .ynj-hud__guest-link{display:none;}
 }
 
 /* ════════════════════════════════════════════
