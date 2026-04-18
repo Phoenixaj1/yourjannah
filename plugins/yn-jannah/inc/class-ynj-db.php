@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '3.4.0';
+    const SCHEMA_VERSION = '3.5.0';
 
     /**
      * Return the full table name for a given short name.
@@ -1113,6 +1113,20 @@ class YNJ_DB {
             KEY mosque_id (mosque_id),
             KEY status (status),
             KEY end_date (end_date)
+        ) $charset_collate;";
+
+        // User badges / achievements
+        $tables[] = "CREATE TABLE {$t('user_badges')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            badge_key varchar(50) NOT NULL DEFAULT '',
+            badge_name varchar(100) NOT NULL DEFAULT '',
+            badge_icon varchar(10) NOT NULL DEFAULT '',
+            earned_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY user_badge (user_id, badge_key),
+            KEY mosque_id (mosque_id)
         ) $charset_collate;";
 
         // Content view tracking (dopamine metrics for admins)

@@ -11,7 +11,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YNJ_THEME_VERSION', '3.9.9' );
+define( 'YNJ_THEME_VERSION', '3.10.0' );
 define( 'YNJ_THEME_DIR', get_stylesheet_directory() );
 define( 'YNJ_THEME_URI', get_stylesheet_directory_uri() );
 
@@ -23,6 +23,7 @@ require_once YNJ_THEME_DIR . '/inc/class-ynj-theme-admin.php';
 require_once YNJ_THEME_DIR . '/inc/template-tags.php';
 require_once YNJ_THEME_DIR . '/inc/quick-templates.php';
 require_once YNJ_THEME_DIR . '/inc/admin-nudges.php';
+require_once YNJ_THEME_DIR . '/inc/community-engagement.php';
 
 // Register admin settings page
 if ( is_admin() ) {

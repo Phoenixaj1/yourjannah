@@ -451,11 +451,18 @@ class YNJ_API_Points {
             "SELECT total_points FROM " . YNJ_DB::table( 'users' ) . " WHERE id = %d", $ynj_uid
         ) );
 
+        // Check for new badges
+        $new_badges = [];
+        if ( function_exists( 'ynj_check_badges' ) ) {
+            $new_badges = ynj_check_badges( $ynj_uid, $mosque_id );
+        }
+
         return new \WP_REST_Response( [
             'ok'           => true,
             'points_today' => $pts,
             'streak'       => $streak,
             'total_points' => $total,
+            'new_badges'   => array_map( function( $b ) { return [ 'name' => $b['name'], 'icon' => $b['icon'], 'desc' => $b['desc'] ]; }, $new_badges ),
         ] );
     }
 
@@ -506,6 +513,7 @@ class YNJ_API_Points {
                 'points'  => (int) $week->points,
                 'days'    => (int) $week->days_logged,
             ],
+            'badges'  => function_exists( 'ynj_get_user_badges' ) ? ynj_get_user_badges( $ynj_uid ) : [],
         ] );
     }
 

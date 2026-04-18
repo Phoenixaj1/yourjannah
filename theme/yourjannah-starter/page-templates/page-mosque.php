@@ -607,6 +607,17 @@ if ( $mosque && is_user_logged_in() ) {
                     if (d.streak > 0) {
                         document.getElementById('ibadah-streak').textContent = '🔥 ' + d.streak + ' day' + (d.streak > 1 ? 's' : '');
                     }
+                    // Badge earned notification
+                    if (d.new_badges && d.new_badges.length > 0) {
+                        d.new_badges.forEach(function(b) {
+                            var toast = document.createElement('div');
+                            toast.className = 'ynj-toast';
+                            toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#7c3aed;color:#fff;padding:14px 24px;border-radius:14px;font-size:15px;font-weight:700;z-index:10000;box-shadow:0 4px 20px rgba(124,58,237,.4);animation:ynj-fade-in .3s;';
+                            toast.textContent = b.icon + ' Badge Earned: ' + b.name + '!';
+                            document.body.appendChild(toast);
+                            setTimeout(function(){ toast.style.opacity='0'; toast.style.transition='opacity .5s'; setTimeout(function(){ toast.remove(); },500); }, 4000);
+                        });
+                    }
                 }
             }).catch(function(){ saving = false; });
         };
@@ -664,6 +675,119 @@ if ( $mosque && is_user_logged_in() ) {
     })();
     </script>
     <?php endif; ?>
+
+    <!-- ═══ CONGREGATION POINTS — Detailed ibadah breakdown ═══ -->
+    <?php if ( $mosque && function_exists( 'ynj_get_congregation_points' ) ) :
+        $cp = ynj_get_congregation_points( (int) $mosque->id, 7 );
+        if ( $cp['total_points'] > 0 ) :
+    ?>
+    <section class="ynj-card" style="padding:16px;background:linear-gradient(135deg,#faf5ff,#ede9fe);border:1px solid #c4b5fd;">
+        <h3 style="font-size:14px;font-weight:800;color:#5b21b6;margin:0 0 10px;">🏅 <?php esc_html_e( 'Congregation Points', 'yourjannah' ); ?></h3>
+        <div style="text-align:center;margin-bottom:10px;">
+            <span style="font-size:28px;font-weight:800;color:#7c3aed;"><?php echo number_format( $cp['total_points'] ); ?></span>
+            <span style="font-size:12px;color:#7c3aed;display:block;"><?php esc_html_e( 'collective points this week', 'yourjannah' ); ?></span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:11px;text-align:center;">
+            <div style="padding:8px 4px;background:rgba(255,255,255,.7);border-radius:8px;">
+                <div style="font-size:16px;">🤲</div>
+                <strong style="font-size:14px;color:#5b21b6;"><?php echo number_format( $cp['prayers']['total'] ); ?></strong>
+                <div style="color:#7c3aed;"><?php esc_html_e( 'prayers', 'yourjannah' ); ?></div>
+            </div>
+            <div style="padding:8px 4px;background:rgba(255,255,255,.7);border-radius:8px;">
+                <div style="font-size:16px;">📖</div>
+                <strong style="font-size:14px;color:#5b21b6;"><?php echo number_format( $cp['quran_pages'] ); ?></strong>
+                <div style="color:#7c3aed;"><?php esc_html_e( 'Quran pages', 'yourjannah' ); ?></div>
+            </div>
+            <div style="padding:8px 4px;background:rgba(255,255,255,.7);border-radius:8px;">
+                <div style="font-size:16px;">📿</div>
+                <strong style="font-size:14px;color:#5b21b6;"><?php echo number_format( $cp['dhikr_days'] ); ?></strong>
+                <div style="color:#7c3aed;"><?php esc_html_e( 'dhikr', 'yourjannah' ); ?></div>
+            </div>
+        </div>
+        <div style="display:flex;justify-content:center;gap:12px;margin-top:8px;font-size:11px;color:#7c3aed;">
+            <?php if ( $cp['fasting_days'] > 0 ) : ?><span>🌙 <?php echo $cp['fasting_days']; ?> <?php esc_html_e( 'fasting', 'yourjannah' ); ?></span><?php endif; ?>
+            <?php if ( $cp['charity_days'] > 0 ) : ?><span>💝 <?php echo $cp['charity_days']; ?> <?php esc_html_e( 'charity', 'yourjannah' ); ?></span><?php endif; ?>
+            <?php if ( $cp['good_deeds'] > 0 ) : ?><span>⭐ <?php echo $cp['good_deeds']; ?> <?php esc_html_e( 'good deeds', 'yourjannah' ); ?></span><?php endif; ?>
+        </div>
+        <p style="text-align:center;font-size:11px;color:#a78bfa;margin-top:6px;"><?php echo $cp['active_members']; ?> <?php esc_html_e( 'members contributing', 'yourjannah' ); ?></p>
+    </section>
+    <?php endif; endif; ?>
+
+    <!-- ═══ WHO'S AT THE MASJID — Anonymous check-in counter ═══ -->
+    <?php if ( $mosque && function_exists( 'ynj_whos_at_masjid' ) ) :
+        $whos = ynj_whos_at_masjid( (int) $mosque->id, 2 );
+        if ( $whos['count'] > 0 ) :
+    ?>
+    <section class="ynj-card" style="padding:14px 16px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;text-align:center;">
+        <div style="font-size:28px;font-weight:800;color:#16a34a;"><?php echo $whos['count']; ?></div>
+        <p style="font-size:13px;color:#15803d;font-weight:600;margin:2px 0 0;">
+            <?php printf( esc_html__( 'people at %s right now', 'yourjannah' ), esc_html( $mosque->name ) ); ?>
+        </p>
+        <p style="font-size:11px;color:#22c55e;margin-top:2px;"><?php esc_html_e( 'Based on recent check-ins', 'yourjannah' ); ?></p>
+    </section>
+    <?php endif; endif; ?>
+
+    <!-- ═══ MOSQUE LEAGUE — Size-tiered competition ═══ -->
+    <?php if ( $mosque && function_exists( 'ynj_get_league_standings' ) ) :
+        $league = ynj_get_league_standings( (int) $mosque->id, $mosque->city ?? null, 7 );
+        if ( $league['rank'] > 0 && $league['total'] > 1 ) :
+    ?>
+    <section class="ynj-card" style="padding:16px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <span style="font-size:28px;"><?php echo $league['tier']['icon']; ?></span>
+            <div>
+                <h3 style="font-size:14px;font-weight:800;color:#92400e;margin:0;"><?php echo esc_html( $league['tier']['name'] ); ?> <?php esc_html_e( 'League', 'yourjannah' ); ?></h3>
+                <p style="font-size:11px;color:#a16207;margin:0;">
+                    <?php printf( esc_html__( '#%d of %d mosques · %s pts/member', 'yourjannah' ), $league['rank'], $league['total'], number_format( $league['per_member'], 1 ) ); ?>
+                </p>
+            </div>
+        </div>
+        <?php if ( ! empty( $league['top_3'] ) ) : ?>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+            <?php foreach ( $league['top_3'] as $i => $tm ) :
+                $is_me = ( (int) $tm->id === (int) $mosque->id );
+                $medals = [ '🥇', '🥈', '🥉' ];
+            ?>
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:<?php echo $is_me ? 'rgba(245,158,11,.15)' : 'rgba(255,255,255,.6)'; ?>;border-radius:8px;<?php echo $is_me ? 'border:1px solid #f59e0b;font-weight:700;' : ''; ?>">
+                <span style="font-size:16px;"><?php echo $medals[ $i ] ?? ( $i + 1 ); ?></span>
+                <span style="flex:1;font-size:12px;color:#78350f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?php echo esc_html( $tm->name ); ?></span>
+                <span style="font-size:11px;color:#a16207;font-weight:700;"><?php echo number_format( (float) $tm->per_member, 1 ); ?> pts/m</span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+    </section>
+    <?php endif; endif; ?>
+
+    <!-- ═══ MY BADGES (logged-in only) ═══ -->
+    <?php if ( is_user_logged_in() && $mosque && function_exists( 'ynj_get_user_badges' ) ) :
+        $ynj_uid_badges = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+        $my_badges = $ynj_uid_badges ? ynj_get_user_badges( $ynj_uid_badges ) : [];
+        $all_badges = function_exists( 'ynj_get_badge_definitions' ) ? ynj_get_badge_definitions() : [];
+        if ( ! empty( $all_badges ) ) :
+    ?>
+    <section class="ynj-card" style="padding:16px;">
+        <h3 style="font-size:14px;font-weight:800;margin:0 0 10px;">🏅 <?php esc_html_e( 'My Badges', 'yourjannah' ); ?>
+            <span style="font-size:12px;font-weight:500;color:#6b8fa3;margin-left:4px;"><?php echo count( $my_badges ); ?>/<?php echo count( $all_badges ); ?></span>
+        </h3>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            <?php
+            $earned_keys = array_column( $my_badges, 'badge_key' );
+            foreach ( $all_badges as $bd ) :
+                $earned = in_array( $bd['key'], $earned_keys, true );
+            ?>
+            <div title="<?php echo esc_attr( $bd['name'] . ': ' . $bd['desc'] ); ?>" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 6px;min-width:56px;border-radius:10px;font-size:10px;font-weight:600;text-align:center;
+                background:<?php echo $earned ? '#fff' : '#f3f4f6'; ?>;
+                border:1px solid <?php echo $earned ? '#e5e7eb' : '#f3f4f6'; ?>;
+                opacity:<?php echo $earned ? '1' : '0.4'; ?>;
+                <?php echo $earned ? 'box-shadow:0 1px 3px rgba(0,0,0,.08);' : ''; ?>">
+                <span style="font-size:20px;<?php echo $earned ? '' : 'filter:grayscale(1);'; ?>"><?php echo $bd['icon']; ?></span>
+                <span style="color:<?php echo $earned ? '#374151' : '#9ca3af'; ?>;"><?php echo esc_html( $bd['name'] ); ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <?php endif; endif; ?>
 
     <!-- Hadith -->
     <p class="ynj-hadith" id="hadith-line">
