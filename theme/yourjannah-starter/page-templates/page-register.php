@@ -352,14 +352,7 @@ if ( is_user_logged_in() ) {
             localStorage.setItem('ynj_user_token', data.token);
             if (data.user) localStorage.setItem('ynj_user', JSON.stringify(data.user));
 
-            // 3. Set WP session
-            await fetch(adminAjax, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'action=ynj_set_session&wp_user_id=' + (data.wp_user_id || '')
-            }).catch(function(){});
-
-            // 4. Show check-email message then redirect
+            // 3. Show success message then redirect through server-side cookie setter
             var emailMsg = document.getElementById('step2-error');
             emailMsg.style.color = '#166534';
             emailMsg.innerHTML = '<?php echo esc_js( __( '✅ Account created! Your PIN is set. Use it with', 'yourjannah' ) ); ?> <strong>' + email + '</strong> <?php echo esc_js( __( 'to sign in anytime.', 'yourjannah' ) ); ?>';
@@ -367,9 +360,10 @@ if ( is_user_logged_in() ) {
             btn.style.background = '#166534';
 
             if (selectedTier === 'free') {
+                var dest = slug ? '/mosque/' + slug : '/';
                 setTimeout(function() {
-                    window.location.href = slug ? homeUrl + 'mosque/' + slug : homeUrl;
-                }, 4000);
+                    window.location.href = '/?ynj_autologin=' + (data.wp_user_id || '') + '&ynj_token=' + encodeURIComponent(data.token) + '&redirect=' + encodeURIComponent(dest);
+                }, 2000);
                 return;
             }
 

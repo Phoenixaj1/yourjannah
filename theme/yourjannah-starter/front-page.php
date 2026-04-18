@@ -441,13 +441,8 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
                 if (data.ok && data.token) {
                     localStorage.setItem('ynj_user_token', data.token);
                     localStorage.setItem('ynj_onboard_seen', '1');
-                    if (data.wp_user_id) {
-                        await fetch('<?php echo admin_url("admin-ajax.php"); ?>', {
-                            method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'},
-                            body: 'action=ynj_set_session&wp_user_id=' + data.wp_user_id, credentials: 'same-origin'
-                        });
-                    }
-                    setTimeout(function(){ window.location.reload(); }, 500);
+                    // Redirect through server-side cookie setter
+                    window.location.href = '/?ynj_autologin=' + (data.wp_user_id || '') + '&ynj_token=' + encodeURIComponent(data.token) + '&redirect=' + encodeURIComponent(window.location.pathname);
                 } else {
                     errEl.textContent = data.error || 'Incorrect PIN. Try again.';
                     btn.disabled = false; btn.textContent = 'Sign In';
@@ -476,13 +471,8 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
                     if (setData.ok && setData.token) {
                         localStorage.setItem('ynj_user_token', setData.token);
                         localStorage.setItem('ynj_onboard_seen', '1');
-                        if (setData.wp_user_id) {
-                            await fetch('<?php echo admin_url("admin-ajax.php"); ?>', {
-                                method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'},
-                                body: 'action=ynj_set_session&wp_user_id=' + setData.wp_user_id, credentials: 'same-origin'
-                            });
-                        }
-                        setTimeout(function(){ window.location.reload(); }, 500);
+                        // Redirect through server-side cookie setter
+                        window.location.href = '/?ynj_autologin=' + (setData.wp_user_id || '') + '&ynj_token=' + encodeURIComponent(setData.token) + '&redirect=' + encodeURIComponent(window.location.pathname);
                     } else {
                         errEl.textContent = setData.error || 'Could not set PIN. Try again.';
                         btn.disabled = false; btn.textContent = 'Set PIN & Sign In';
@@ -501,13 +491,8 @@ if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
                     if (regData.ok && regData.token) {
                         localStorage.setItem('ynj_user_token', regData.token);
                         localStorage.setItem('ynj_onboard_seen', '1');
-                        if (regData.wp_user_id) {
-                            await fetch('<?php echo admin_url("admin-ajax.php"); ?>', {
-                                method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'},
-                                body: 'action=ynj_set_session&wp_user_id=' + regData.wp_user_id, credentials: 'same-origin'
-                            });
-                        }
-                        obJoinAndReload(regData);
+                        // Redirect through server-side cookie setter
+                        window.location.href = '/?ynj_autologin=' + (regData.wp_user_id || '') + '&ynj_token=' + encodeURIComponent(regData.token) + '&redirect=' + encodeURIComponent(window.location.pathname);
                     } else {
                         errEl.textContent = regData.error || 'Registration failed. Try again.';
                         btn.disabled = false; btn.textContent = 'Create Account';

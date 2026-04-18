@@ -91,39 +91,43 @@ if ( is_user_logged_in() ) {
 ?>
 
 <?php if ( $_ynj_bar_status === 'guest' ) : ?>
-<!-- ── Guest HUD — Geo Aura ── -->
+<!-- ── Guest HUD — Geo Aura (matches logged-in HUD styling) ── -->
 <div class="ynj-hud ynj-hud--guest" id="ynj-hud">
-    <div class="ynj-hud__row1">
-        <span class="ynj-hud__aura-icon">&#x2728;</span>
-        <span class="ynj-hud__aura-location" id="hud-guest-location"><?php esc_html_e( 'Detecting your area...', 'yourjannah' ); ?></span>
-        <span class="ynj-hud__aura-stat" id="hud-guest-dhikr" style="display:none;">
-            <span class="ynj-hud__aura-num" id="hud-guest-dhikr-num">0</span>
-            <span class="ynj-hud__aura-label"><?php esc_html_e( 'dhikr', 'yourjannah' ); ?></span>
-        </span>
-        <span class="ynj-hud__aura-stat" id="hud-guest-masjids" style="display:none;">
-            <span class="ynj-hud__aura-num" id="hud-guest-masjid-num">0</span>
-            <span class="ynj-hud__aura-label"><?php esc_html_e( 'masjids', 'yourjannah' ); ?></span>
-        </span>
+
+    <!-- Location chip (reuses mosque chip style) -->
+    <div class="ynj-hud__masjid">
+        <span class="ynj-hud__tier-icon">&#x2728;</span>
+        <span class="ynj-hud__masjid-name" id="hud-guest-location"><?php esc_html_e( 'Your area', 'yourjannah' ); ?></span>
     </div>
-    <div class="ynj-hud__row2">
-        <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" class="ynj-hud__link"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></a>
-        <a href="<?php echo esc_url( home_url( '/register' ) ); ?>" class="ynj-hud__cta">&#x2728; <?php esc_html_e( 'Join & Add Your Dhikr', 'yourjannah' ); ?></a>
+
+    <!-- Stats (reuse logged-in stat pill style) -->
+    <div class="ynj-hud__stat" id="hud-guest-dhikr" style="display:none;">
+        <span class="ynj-hud__stat-icon">&#x1F4FF;</span>
+        <span class="ynj-hud__stat-num" id="hud-guest-dhikr-num">0</span>
+        <span class="ynj-hud__stat-label"><?php esc_html_e( 'dhikr', 'yourjannah' ); ?></span>
     </div>
+    <div class="ynj-hud__stat" id="hud-guest-masjids" style="display:none;">
+        <span class="ynj-hud__stat-icon">&#x1F54C;</span>
+        <span class="ynj-hud__stat-num" id="hud-guest-masjid-num">0</span>
+        <span class="ynj-hud__stat-label"><?php esc_html_e( 'masjids', 'yourjannah' ); ?></span>
+    </div>
+
+    <!-- Spacer pushes actions to the right -->
+    <div style="flex:1;"></div>
+
+    <!-- Sign In (subtle link) -->
+    <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" class="ynj-hud__guest-link"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></a>
+
+    <!-- Join CTA (reuses dhikr button style with pulse) -->
+    <a href="<?php echo esc_url( home_url( '/login' ) ); ?>" class="ynj-hud__dhikr">&#x1F4FF; <?php esc_html_e( 'Join', 'yourjannah' ); ?></a>
 </div>
 <style>
-.ynj-hud--guest .ynj-hud__row1{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
-.ynj-hud--guest .ynj-hud__row2{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:auto;}
-.ynj-hud__aura-icon{font-size:16px;flex-shrink:0;}
-.ynj-hud__aura-location{font-size:12px;font-weight:800;color:#fff;white-space:nowrap;}
-.ynj-hud__aura-stat{display:flex;align-items:center;gap:3px;padding:2px 8px;background:rgba(255,255,255,.08);border-radius:8px;flex-shrink:0;}
-.ynj-hud__aura-num{font-size:13px;font-weight:900;color:#34d399;}
-.ynj-hud__aura-label{font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.3px;}
-.ynj-hud--guest .ynj-hud__link{color:rgba(255,255,255,.7);text-decoration:none;font-size:12px;font-weight:600;}
-.ynj-hud--guest .ynj-hud__cta{padding:5px 14px;border-radius:10px;background:linear-gradient(135deg,#287e61,#1a5c43);font-weight:700;font-size:12px;text-decoration:none;color:#fff !important;white-space:nowrap;box-shadow:0 2px 8px rgba(40,126,97,.3);}
+/* Guest HUD — same gradient as logged-in, single row, no border-bottom */
+.ynj-hud--guest{background:linear-gradient(135deg,#0a1628 0%,#132742 100%) !important;border-bottom:none !important;}
+.ynj-hud__guest-link{color:rgba(255,255,255,.6) !important;text-decoration:none !important;font-size:12px;font-weight:600;white-space:nowrap;transition:color .2s;}
+.ynj-hud__guest-link:hover{color:#fff !important;}
 @media(max-width:480px){
-    .ynj-hud--guest .ynj-hud__aura-location{font-size:11px;}
-    .ynj-hud--guest .ynj-hud__cta{font-size:11px;padding:4px 10px;}
-    .ynj-hud--guest .ynj-hud__link{display:none;}
+    .ynj-hud__guest-link{display:none;}
 }
 </style>
 <script>

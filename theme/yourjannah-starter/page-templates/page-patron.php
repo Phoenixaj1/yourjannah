@@ -204,15 +204,10 @@ $mosque_status = $mosque ? $mosque->status : '';
                 btn.disabled = false; btn.textContent = '<?php echo esc_js( __( 'Create Account & Become a Patron', 'yourjannah' ) ); ?>';
                 return;
             }
-            // Store token + set WP session
+            // Store token
             localStorage.setItem('ynj_user_token', regData.token);
-            await fetch('<?php echo esc_js( admin_url( 'admin-ajax.php' ) ); ?>', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: 'action=ynj_set_session&wp_user_id=' + (regData.wp_user_id || '')
-            }).catch(function(){});
 
-            // Now checkout as patron
+            // Now checkout as patron (cookie will be set on next page load via autologin)
             btn.textContent = '<?php echo esc_js( __( 'Redirecting to checkout...', 'yourjannah' ) ); ?>';
             var checkResp = await fetch(API + 'patrons/checkout', {
                 method: 'POST',

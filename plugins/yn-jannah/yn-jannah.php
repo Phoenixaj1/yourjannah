@@ -95,9 +95,43 @@ add_action('init', function() {
     }
 }, 5);
 
-// AJAX handler to set WP auth cookie (called after JS login/register)
-// NOTE: nopriv handler removed — it allowed unauthenticated session hijacking.
-// Set WP auth cookie after PIN login (works for both logged-in and guests)
+// ── Bulletproof auto-login via redirect ──
+// JS redirects to: /?ynj_autologin=WP_USER_ID&ynj_token=TOKEN&redirect=DESTINATION
+// This sets the WP auth cookie during a real page request (not AJAX), which is 100% reliable.
+add_action( 'init', function() {
+    if ( ! isset( $_GET['ynj_autologin'] ) ) return;
+    $wp_user_id = (int) ( $_GET['ynj_autologin'] ?? 0 );
+    $token      = sanitize_text_field( $_GET['ynj_token'] ?? '' );
+    $redirect   = wp_validate_redirect( sanitize_text_field( $_GET['redirect'] ?? '' ), home_url( '/' ) );
+
+    if ( ! $wp_user_id || ! $token ) {
+        wp_safe_redirect( $redirect );
+        exit;
+    }
+
+    // Verify token against ynj_users table
+    if ( class_exists( 'YNJ_DB' ) ) {
+        global $wpdb;
+        $token_hash = hash_hmac( 'sha256', $token, 'ynj_user_salt_2024' );
+        $valid = (bool) $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM " . YNJ_DB::table( 'users' ) . " WHERE token_hash = %s",
+            $token_hash
+        ) );
+
+        if ( $valid ) {
+            $user = get_user_by( 'ID', $wp_user_id );
+            if ( $user ) {
+                wp_set_current_user( $wp_user_id );
+                wp_set_auth_cookie( $wp_user_id, true );
+            }
+        }
+    }
+
+    wp_safe_redirect( $redirect );
+    exit;
+}, 1 );
+
+// Legacy AJAX handler (kept as fallback)
 $_ynj_session_handler = function() {
     $wp_user_id = (int) ( $_POST['wp_user_id'] ?? 0 );
     if ( $wp_user_id && ! is_user_logged_in() ) {

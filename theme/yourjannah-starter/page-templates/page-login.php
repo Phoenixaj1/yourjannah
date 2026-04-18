@@ -240,17 +240,11 @@ $show_fb     = class_exists( 'YNJ_Social_Auth' ) && YNJ_Social_Auth::is_facebook
             if (data.ok && data.token) {
                 localStorage.setItem('ynj_user_token', data.token);
                 if (data.user) localStorage.setItem('ynj_user', JSON.stringify(data.user));
-                // Set WP session
-                await fetch(<?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: 'action=ynj_set_session&wp_user_id=' + (data.wp_user_id || '')
-                }).catch(function(){});
-                // Redirect
+                // Redirect through server-side cookie setter (bulletproof)
                 var params = new URLSearchParams(window.location.search);
-                var redirect = params.get('redirect');
-                if (redirect) { window.location.href = redirect; }
-                else { var s = localStorage.getItem('ynj_mosque_slug'); window.location.href = s ? <?php echo wp_json_encode( home_url( '/mosque/' ) ); ?> + s : <?php echo wp_json_encode( home_url( '/' ) ); ?>; }
+                var dest = params.get('redirect');
+                if (!dest) { var s = localStorage.getItem('ynj_mosque_slug'); dest = s ? '/mosque/' + s : '/'; }
+                window.location.href = '/?ynj_autologin=' + (data.wp_user_id || '') + '&ynj_token=' + encodeURIComponent(data.token) + '&redirect=' + encodeURIComponent(dest);
             } else {
                 err.textContent = data.error || <?php echo wp_json_encode( __( 'Invalid PIN. Please try again.', 'yourjannah' ) ); ?>;
                 btn.disabled = false; btn.textContent = <?php echo wp_json_encode( __( 'Sign In', 'yourjannah' ) ); ?>;
@@ -315,17 +309,14 @@ $show_fb     = class_exists( 'YNJ_Social_Auth' ) && YNJ_Social_Auth::is_facebook
             if (data.ok && data.token) {
                 localStorage.setItem('ynj_user_token', data.token);
                 if (data.user) localStorage.setItem('ynj_user', JSON.stringify(data.user));
-                await fetch(<?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: 'action=ynj_set_session&wp_user_id=' + (data.wp_user_id || '')
-                }).catch(function(){});
                 btn.textContent = (window._setPinForExisting ? <?php echo wp_json_encode( __( 'PIN Set!', 'yourjannah' ) ); ?> : <?php echo wp_json_encode( __( 'Account Created!', 'yourjannah' ) ); ?>) + ' \u2713';
                 btn.style.background = '#166534';
+                // Redirect through server-side cookie setter (bulletproof)
                 var s = localStorage.getItem('ynj_mosque_slug');
+                var dest = s ? '/mosque/' + s : '/profile';
                 setTimeout(function(){
-                    window.location.href = s ? <?php echo wp_json_encode( home_url( '/mosque/' ) ); ?> + s : <?php echo wp_json_encode( home_url( '/profile' ) ); ?>;
-                }, 1500);
+                    window.location.href = '/?ynj_autologin=' + (data.wp_user_id || '') + '&ynj_token=' + encodeURIComponent(data.token) + '&redirect=' + encodeURIComponent(dest);
+                }, 1000);
             } else {
                 err.textContent = data.error || <?php echo wp_json_encode( __( 'Failed. Try again.', 'yourjannah' ) ); ?>;
                 btn.disabled = false; btn.textContent = '\uD83D\uDD4C ' + <?php echo wp_json_encode( __( 'Create Account', 'yourjannah' ) ); ?>;
