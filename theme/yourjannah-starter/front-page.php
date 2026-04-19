@@ -191,13 +191,17 @@ if ( $_hp_mosque_id ) {
     if ( ! is_array( $_hp_services ) ) $_hp_services = [];
     if ( count( $_hp_services ) > 10 ) { shuffle( $_hp_services ); $_hp_services = array_slice( $_hp_services, 0, 10 ); }
 
-    // Announcements
-    $_hp_announcements = class_exists( 'YNJ_Events' ) ? YNJ_Events::get_announcements( $_hp_mosque_id ) : [];
-    if ( ! is_array( $_hp_announcements ) ) $_hp_announcements = [];
+    // Announcements — get_announcements returns {announcements:[], total:N}, extract + cast to objects
+    if ( class_exists( 'YNJ_Events' ) ) {
+        $ann_result = YNJ_Events::get_announcements( $_hp_mosque_id );
+        $_hp_announcements = array_map( function( $a ) { return (object) $a; }, $ann_result['announcements'] ?? [] );
+    }
 
-    // Upcoming events
-    $_hp_events = class_exists( 'YNJ_Events' ) ? YNJ_Events::get_upcoming_events( $_hp_mosque_id ) : [];
-    if ( ! is_array( $_hp_events ) ) $_hp_events = [];
+    // Upcoming events — get_upcoming_events returns {events:[], total:N}, extract + cast to objects
+    if ( class_exists( 'YNJ_Events' ) ) {
+        $ev_result = YNJ_Events::get_upcoming_events( $_hp_mosque_id );
+        $_hp_events = array_map( function( $e ) { return (object) $e; }, $ev_result['events'] ?? [] );
+    }
 
     // Classes
     $_hp_classes = class_exists( 'YNJ_Madrassah' ) ? YNJ_Madrassah::get_classes( $_hp_mosque_id ) : [];
