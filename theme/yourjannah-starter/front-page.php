@@ -617,6 +617,32 @@ if ( $_hp_mosque_id && is_user_logged_in() ) {
 }
 ?>
 
+<?php
+// ── Mosque Cover + Profile Photo ──
+$_hp_cover_url   = $_hp_mosque_id ? get_option( 'ynj_mosque_cover_' . $_hp_mosque_id, '' ) : '';
+$_hp_profile_url = $_hp_mosque_id ? get_option( 'ynj_mosque_profile_' . $_hp_mosque_id, '' ) : '';
+$_hp_mosque_addr = $_ynj_mosque_for_prayer ? ( $_ynj_mosque_for_prayer->address ?? '' ) : '';
+?>
+<?php if ( $_hp_mosque_id ) : ?>
+<div class="ynj-mosque-banner" style="position:relative;width:100%;max-width:1200px;margin:0 auto 0;">
+    <div style="position:relative;width:100%;height:200px;border-radius:0 0 18px 18px;overflow:hidden;background:<?php echo $_hp_cover_url ? 'url(' . esc_url( $_hp_cover_url ) . ') center/cover no-repeat' : 'linear-gradient(135deg,#1a3a2a,#2d6a4f,#40916c)'; ?>;">
+    </div>
+    <div style="position:absolute;bottom:-36px;left:20px;z-index:2;">
+        <div style="width:90px;height:90px;border-radius:50%;border:4px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.15);background:<?php echo $_hp_profile_url ? 'url(' . esc_url( $_hp_profile_url ) . ') center/cover no-repeat' : 'linear-gradient(135deg,#065f46,#10b981)'; ?>;display:flex;align-items:center;justify-content:center;">
+            <?php if ( ! $_hp_profile_url ) : ?><span style="font-size:36px;">🕌</span><?php endif; ?>
+        </div>
+    </div>
+</div>
+<div style="max-width:1200px;margin:0 auto;padding:8px 16px 0 126px;min-height:44px;display:flex;align-items:center;">
+    <div>
+        <h1 style="margin:0;font-size:18px;font-weight:800;color:#1a1a1a;"><?php echo esc_html( $_hp_mosque_name ); ?></h1>
+        <?php if ( $_hp_mosque_addr ) : ?>
+        <p style="margin:2px 0 0;font-size:12px;color:#666;"><?php echo esc_html( $_hp_mosque_addr ); ?></p>
+        <?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
+
 <main class="ynj-main">
   <div class="ynj-desktop-grid">
     <div class="ynj-desktop-grid__left">

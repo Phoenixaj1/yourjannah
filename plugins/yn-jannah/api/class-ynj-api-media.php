@@ -143,16 +143,23 @@ class YNJ_API_Media {
             return $upload_response;
         }
 
-        // Determine column to update
+        // Determine type (cover or profile)
         $params = $request->get_body_params();
         $type = sanitize_text_field( $params['type'] ?? 'profile' );
-        $column = $type === 'cover' ? 'cover_photo_url' : 'photo_url';
 
-        // Update mosque record
+        // Store in wp_options (matches template's get_option pattern)
+        $option_key = $type === 'cover'
+            ? 'ynj_mosque_cover_' . $mosque_id
+            : 'ynj_mosque_profile_' . $mosque_id;
+        update_option( $option_key, $data['url'] );
+
+        // Also update mosque table column if it exists
+        $column = $type === 'cover' ? 'cover_photo_url' : 'photo_url';
         $wpdb->update( $mt, [ $column => $data['url'] ], [ 'id' => $mosque_id ] );
 
         // Clear mosque cache
-        wp_cache_delete( 'ynj_mosque_' . $wpdb->get_var( $wpdb->prepare( "SELECT slug FROM $mt WHERE id = %d", $mosque_id ) ), 'ynj' );
+        $slug = $wpdb->get_var( $wpdb->prepare( "SELECT slug FROM $mt WHERE id = %d", $mosque_id ) );
+        if ( $slug ) wp_cache_delete( 'ynj_mosque_' . $slug, 'ynj' );
 
         return new \WP_REST_Response( [
             'ok'   => true,
