@@ -50,6 +50,9 @@ $mosque_name = $mosque ? $mosque->name : '';
         <?php endif; ?>
 
         <div class="ynj-header__right">
+            <!-- Checkout / Donate icon -->
+            <a href="<?php echo esc_url( home_url( '/checkout/' ) ); ?>" class="ynj-header__checkout" aria-label="Donate" title="Donate" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:rgba(39,126,97,0.1);text-decoration:none;font-size:18px;transition:background .15s;" onmouseover="this.style.background='rgba(39,126,97,0.2)'" onmouseout="this.style.background='rgba(39,126,97,0.1)'">🤲</a>
+
             <?php if ( is_user_logged_in() ) : ?>
             <!-- Notification bell -->
             <div class="ynj-notif-bell" id="ynj-notif-bell">
