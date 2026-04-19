@@ -91,6 +91,10 @@ jobs:
           done
           echo "✅ All plugins deployed"
 
+      - name: Write deploy timestamp (cache buster)
+        run: |
+          echo "$(date +%s)" > ./theme/yourjannah-starter/.deploy-time
+
       - name: Deploy yourjannah-starter theme
         run: |
           echo "🎨 Deploying yourjannah-starter theme..."
@@ -115,6 +119,17 @@ jobs:
           wp varnish purge 2>/dev/null || true
           echo "🧹 All caches cleared (WP + Varnish)"
           ENDSSH
+
+      - name: Purge Cloudflare cache
+        if: ${{ secrets.CF_ZONE_ID != '' && secrets.CF_API_TOKEN != '' }}
+        run: |
+          curl -s -X POST \
+            "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/purge_cache" \
+            -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            --data '{"purge_everything":true}' \
+            && echo "☁️ Cloudflare cache purged" \
+            || echo "⚠️ Cloudflare purge failed (secrets may not be set)"
 
       - name: Cleanup SSH key
         if: always()

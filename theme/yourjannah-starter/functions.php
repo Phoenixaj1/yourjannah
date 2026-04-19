@@ -11,7 +11,9 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YNJ_THEME_VERSION', '3.15.0' );
+define( 'YNJ_THEME_VERSION', '3.16.0' );
+// Deploy timestamp for cache busting — changes every push
+define( 'YNJ_CACHE_BUST', file_exists( __DIR__ . '/.deploy-time' ) ? trim( file_get_contents( __DIR__ . '/.deploy-time' ) ) : YNJ_THEME_VERSION );
 define( 'YNJ_THEME_DIR', get_stylesheet_directory() );
 define( 'YNJ_THEME_URI', get_stylesheet_directory_uri() );
 
@@ -122,7 +124,7 @@ add_action( 'wp_enqueue_scripts', function() {
         'ynj-theme',
         YNJ_THEME_URI . '/assets/css/theme.css',
         [ 'ynj-google-fonts' ],
-        YNJ_THEME_VERSION
+        YNJ_CACHE_BUST
     );
 
     // Modern theme overlay (loads AFTER theme.css, only when mosque has theme='modern')
@@ -135,7 +137,7 @@ add_action( 'wp_enqueue_scripts', function() {
             'ynj-theme-modern',
             YNJ_THEME_URI . '/assets/css/theme-modern.css',
             [ 'ynj-theme' ],
-            YNJ_THEME_VERSION
+            YNJ_CACHE_BUST
         );
     }
 
@@ -144,7 +146,7 @@ add_action( 'wp_enqueue_scripts', function() {
         'ynj-theme',
         YNJ_THEME_URI . '/assets/js/theme.js',
         [],
-        YNJ_THEME_VERSION,
+        YNJ_CACHE_BUST,
         true // load in footer
     );
 
@@ -173,7 +175,7 @@ add_action( 'wp_enqueue_scripts', function() {
             'ynj-homepage',
             YNJ_THEME_URI . '/assets/js/homepage.js',
             [ 'ynj-theme' ],
-            YNJ_THEME_VERSION,
+            YNJ_CACHE_BUST,
             true
         );
     }
