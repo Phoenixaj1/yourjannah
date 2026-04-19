@@ -1154,6 +1154,9 @@ function ynjCloseJoinModal() {
             <div class="ynj-qp-tabs">
                 <button class="ynj-qp-tab ynj-qp-tab--active" id="qp-tab-ann" onclick="ynjQpTab('ann')">📢 <?php esc_html_e( 'Announcement', 'yourjannah' ); ?></button>
                 <button class="ynj-qp-tab" id="qp-tab-event" onclick="ynjQpTab('event')">📅 <?php esc_html_e( 'Event', 'yourjannah' ); ?></button>
+                <?php if ( $_ynj_is_page_imam || $_ynj_is_page_admin ) : ?>
+                <button class="ynj-qp-tab" id="qp-tab-imam" onclick="ynjQpTab('imam')">🕌 <?php esc_html_e( 'Imam Message', 'yourjannah' ); ?></button>
+                <?php endif; ?>
             </div>
 
             <!-- Announcement Form -->
@@ -1254,6 +1257,33 @@ function ynjCloseJoinModal() {
                     <button type="submit" class="ynj-qp-submit">📅 <?php esc_html_e( 'Create Event', 'yourjannah' ); ?></button>
                 </form>
             </div>
+
+            <?php if ( $_ynj_is_page_imam || $_ynj_is_page_admin ) : ?>
+            <!-- Imam Message Form (uses REST API) -->
+            <div id="qp-form-imam" style="display:none;">
+                <div class="ynj-qp-field">
+                    <label><?php esc_html_e( 'Category', 'yourjannah' ); ?></label>
+                    <select id="qp-imam-cat">
+                        <option value="daily">🕌 <?php esc_html_e( 'Daily Reminder', 'yourjannah' ); ?></option>
+                        <option value="friday">📿 <?php esc_html_e( 'Friday Message', 'yourjannah' ); ?></option>
+                        <option value="dua">🤲 <?php esc_html_e( 'Dua', 'yourjannah' ); ?></option>
+                        <option value="hadith">📖 <?php esc_html_e( 'Hadith', 'yourjannah' ); ?></option>
+                        <option value="quran">📗 <?php esc_html_e( 'Quran Reflection', 'yourjannah' ); ?></option>
+                        <option value="notice">📢 <?php esc_html_e( 'Important Notice', 'yourjannah' ); ?></option>
+                    </select>
+                </div>
+                <div class="ynj-qp-field">
+                    <label><?php esc_html_e( 'Title', 'yourjannah' ); ?></label>
+                    <input type="text" id="qp-imam-title" required placeholder="<?php esc_attr_e( 'e.g. Patience in Hardship', 'yourjannah' ); ?>">
+                </div>
+                <div class="ynj-qp-field">
+                    <label><?php esc_html_e( 'Message', 'yourjannah' ); ?></label>
+                    <textarea id="qp-imam-body" rows="4" placeholder="<?php esc_attr_e( 'Your message to the congregation...', 'yourjannah' ); ?>"></textarea>
+                </div>
+                <button type="button" class="ynj-qp-submit" onclick="ynjPostImamMessage()">🕌 <?php esc_html_e( 'Publish Message', 'yourjannah' ); ?></button>
+                <div id="qp-imam-status" style="display:none;text-align:center;padding:8px;margin-top:8px;border-radius:8px;font-size:13px;font-weight:600;"></div>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -1266,8 +1296,59 @@ var ynjTemplates = <?php echo wp_json_encode( $qp_templates ); ?>;
 function ynjQpTab(tab) {
     document.getElementById('qp-form-ann').style.display = tab === 'ann' ? '' : 'none';
     document.getElementById('qp-form-event').style.display = tab === 'event' ? '' : 'none';
+    var imamForm = document.getElementById('qp-form-imam');
+    if (imamForm) imamForm.style.display = tab === 'imam' ? '' : 'none';
     document.getElementById('qp-tab-ann').className = 'ynj-qp-tab' + (tab === 'ann' ? ' ynj-qp-tab--active' : '');
     document.getElementById('qp-tab-event').className = 'ynj-qp-tab' + (tab === 'event' ? ' ynj-qp-tab--active' : '');
+    var imamTab = document.getElementById('qp-tab-imam');
+    if (imamTab) imamTab.className = 'ynj-qp-tab' + (tab === 'imam' ? ' ynj-qp-tab--active' : '');
+}
+
+// Post Imam Message via REST API
+function ynjPostImamMessage() {
+    var title = document.getElementById('qp-imam-title').value.trim();
+    var body = document.getElementById('qp-imam-body').value.trim();
+    var cat = document.getElementById('qp-imam-cat').value;
+    var status = document.getElementById('qp-imam-status');
+    if (!title) { alert('Please enter a title'); return; }
+    var btn = event.currentTarget;
+    btn.disabled = true;
+    btn.textContent = 'Publishing...';
+    fetch(<?php echo wp_json_encode( rest_url( 'ynj/v1/imam-messages' ) ); ?>, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': <?php echo wp_json_encode( wp_create_nonce( 'wp_rest' ) ); ?> },
+        body: JSON.stringify({
+            title: title,
+            body: body,
+            category: cat,
+            mosque_id: <?php echo (int) $mosque->id; ?>
+        })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            status.style.display = '';
+            status.style.background = '#dcfce7';
+            status.style.color = '#166534';
+            status.textContent = 'Message published — JazakAllah Khayr!';
+            document.getElementById('qp-imam-title').value = '';
+            document.getElementById('qp-imam-body').value = '';
+            btn.textContent = '🕌 Publish Message';
+            btn.disabled = false;
+            setTimeout(function() { location.reload(); }, 1500);
+        } else {
+            status.style.display = '';
+            status.style.background = '#fee2e2';
+            status.style.color = '#991b1b';
+            status.textContent = data.error || 'Failed to post';
+            btn.textContent = '🕌 Publish Message';
+            btn.disabled = false;
+        }
+    })
+    .catch(function() {
+        btn.textContent = '🕌 Publish Message';
+        btn.disabled = false;
+    });
 }
 
 // Template picker
