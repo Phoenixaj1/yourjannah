@@ -82,14 +82,41 @@ class YNJ_Store {
         return $wpdb->delete( YNJ_DB::table( 'store_items' ), [ 'id' => absint( $id ) ] );
     }
 
+    /** Private item keys — announcements for these go to admin only, not community feed. */
+    const PRIVATE_ITEMS = [ 'dua_request' ];
+
     /**
      * When a store item payment succeeds, auto-post announcement.
+     * Amounts are NEVER shown publicly. Private items (dua_request) only notify admin.
      */
     public static function on_payment_succeeded( $txn_row_id, $txn ) {
-        if ( ( $txn->item_type ?? '' ) !== 'store' ) return;
+        // Handle both single-item (item_type=store) and multi-item (items_json array)
+        $store_items_to_process = [];
 
-        $item = self::get_item( $txn->fund_type ?? '' );
-        if ( ! $item ) return;
+        if ( ( $txn->item_type ?? '' ) === 'store' ) {
+            $store_items_to_process[] = [
+                'fund_type' => $txn->fund_type ?? '',
+                'items_json' => $txn->items_json,
+            ];
+        }
+
+        // Check items_json for multi-item carts
+        if ( $txn->items_json ) {
+            $decoded = json_decode( $txn->items_json, true );
+            if ( is_array( $decoded ) && isset( $decoded[0]['item_type'] ) ) {
+                foreach ( $decoded as $cart_item ) {
+                    if ( ( $cart_item['item_type'] ?? '' ) === 'store' ) {
+                        $meta = $cart_item['meta'] ?? [];
+                        $store_items_to_process[] = [
+                            'fund_type' => $cart_item['fund_type'] ?? '',
+                            'items_json' => ! empty( $meta ) ? wp_json_encode( $meta ) : null,
+                        ];
+                    }
+                }
+            }
+        }
+
+        if ( empty( $store_items_to_process ) ) return;
 
         $mosque_id = (int) ( $txn->mosque_id ?? 0 );
         if ( ! $mosque_id ) return;
@@ -101,40 +128,60 @@ class YNJ_Store {
 
         $donor_name = $txn->donor_name ?: 'A community member';
 
-        $custom_msg = '';
-        if ( $txn->items_json ) {
-            $d = json_decode( $txn->items_json, true );
-            $custom_msg = $d['message'] ?? '';
+        foreach ( $store_items_to_process as $si ) {
+            $item = self::get_item( $si['fund_type'] );
+            if ( ! $item ) continue;
+
+            $custom_msg = '';
+            if ( $si['items_json'] ) {
+                $d = json_decode( $si['items_json'], true );
+                $custom_msg = is_array( $d ) ? ( $d['message'] ?? '' ) : '';
+            }
+
+            $body = str_replace(
+                [ '{name}', '{mosque}', '{message}' ],
+                [ $donor_name, $mosque_name, $custom_msg ?: '' ],
+                $item->announcement_template
+            );
+            $body = trim( preg_replace( '/\s+/', ' ', $body ) );
+
+            $is_private = in_array( $item->item_key, self::PRIVATE_ITEMS, true );
+
+            if ( class_exists( 'YNJ_Events' ) ) {
+                if ( $is_private ) {
+                    // Private items: only visible to mosque admin, not community feed
+                    YNJ_Events::create_announcement( [
+                        'mosque_id' => $mosque_id,
+                        'title'     => $item->badge_text . ' — ' . $donor_name,
+                        'body'      => $body,
+                        'type'      => 'admin',
+                        'publish'   => true,
+                        'pinned'    => 0,
+                    ] );
+                } else {
+                    // Public items: post to community feed (amount NOT included)
+                    YNJ_Events::create_announcement( [
+                        'mosque_id' => $mosque_id,
+                        'title'     => $item->badge_text . ' — ' . $donor_name,
+                        'body'      => $body,
+                        'type'      => 'community',
+                        'publish'   => true,
+                        'pinned'    => 1,
+                    ] );
+                }
+            }
         }
 
-        $body = str_replace(
-            [ '{name}', '{mosque}', '{message}' ],
-            [ $donor_name, $mosque_name, $custom_msg ?: '' ],
-            $item->announcement_template
-        );
-        $body = trim( preg_replace( '/\s+/', ' ', $body ) );
-
-        if ( class_exists( 'YNJ_Events' ) ) {
-            YNJ_Events::create_announcement( [
-                'mosque_id' => $mosque_id,
-                'title'     => $item->badge_text . ' — ' . $donor_name,
-                'body'      => $body,
-                'type'      => 'community',
-                'publish'   => true,
-                'pinned'    => 1,
-            ] );
-        }
-
-        // Revenue share: 95% to masjid
+        // Revenue share: 95% to masjid (on total store amount)
         $amount = (int) ( $txn->amount_pence ?? 0 );
         $masjid_share = (int) floor( $amount * self::MASJID_SHARE / 100 );
-        if ( class_exists( 'YNJ_Revenue_Share' ) ) {
+        if ( $amount > 0 && class_exists( 'YNJ_Revenue_Share' ) ) {
             $wpdb->insert( YNJ_DB::table( 'revenue_shares' ), [
                 'mosque_id'             => $mosque_id,
                 'donation_id'           => (int) $txn_row_id,
                 'donation_amount_pence' => $amount,
                 'share_amount_pence'    => $masjid_share,
-                'cause'                 => 'store_' . $item->item_key,
+                'cause'                 => 'store',
                 'status'                => 'pending',
             ] );
         }
