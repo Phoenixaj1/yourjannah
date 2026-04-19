@@ -133,18 +133,36 @@ class YNJ_Broadcast {
             return new \WP_Error( 'already_live', 'This mosque already has a live stream.' );
         }
 
-        $wpdb->insert( $t, [
+        // Scheduled or live now?
+        $scheduled_at = sanitize_text_field( $data['scheduled_at'] ?? '' );
+        $is_scheduled = ! empty( $scheduled_at );
+        $status_val   = $is_scheduled ? 'scheduled' : 'live';
+
+        $insert = [
             'mosque_id'           => $mosque_id,
             'broadcaster_user_id' => $user_id,
             'title'               => sanitize_text_field( $data['title'] ?? '' ),
             'youtube_video_id'    => sanitize_text_field( $data['youtube_video_id'] ?? '' ),
             'stream_type'         => sanitize_text_field( $data['stream_type'] ?? 'prayer' ),
-            'status'              => 'live',
-            'started_at'          => current_time( 'mysql' ),
-        ] );
+            'status'              => $status_val,
+        ];
+
+        if ( $is_scheduled ) {
+            // Store scheduled time — started_at will be set when it actually goes live
+            $insert['created_at'] = $scheduled_at;
+        } else {
+            $insert['started_at'] = current_time( 'mysql' );
+        }
+
+        $wpdb->insert( $t, $insert );
         $id = (int) $wpdb->insert_id;
 
         if ( ! $id ) return new \WP_Error( 'db_error', 'Failed to create broadcast.' );
+
+        // Only fire hooks + auto-post for live (not scheduled)
+        if ( $is_scheduled ) {
+            return $id;
+        }
 
         // Fire hook for notifications
         do_action( 'ynj_broadcast_started', $id, $mosque_id, $data );

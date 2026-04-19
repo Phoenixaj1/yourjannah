@@ -1111,6 +1111,23 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
                 <input type="text" id="ynj-live-yt-id" placeholder="e.g. https://youtube.com/live/abc123 or just abc123" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;">
                 <p style="font-size:11px;color:#999;margin:4px 0 0;"><?php esc_html_e( 'Go to YouTube Studio → Go Live → copy the stream URL', 'yourjannah' ); ?></p>
             </div>
+            <p style="font-size:13px;color:#666;margin-bottom:8px;"><?php esc_html_e( '3. Go live now or schedule for later', 'yourjannah' ); ?></p>
+            <div style="display:flex;gap:8px;margin-bottom:12px;">
+                <button type="button" id="ynj-live-now-tab" onclick="ynjLiveToggleSchedule(false)" style="flex:1;padding:10px;border:2px solid #dc2626;border-radius:10px;background:#fef2f2;color:#dc2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🔴 Now</button>
+                <button type="button" id="ynj-live-schedule-tab" onclick="ynjLiveToggleSchedule(true)" style="flex:1;padding:10px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;color:#666;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">📅 Schedule</button>
+            </div>
+            <div id="ynj-live-schedule-fields" style="display:none;margin-bottom:12px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div>
+                        <label style="font-size:11px;font-weight:600;color:#666;display:block;margin-bottom:4px;">Date</label>
+                        <input type="date" id="ynj-live-date" min="<?php echo date( 'Y-m-d' ); ?>" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:11px;font-weight:600;color:#666;display:block;margin-bottom:4px;">Time</label>
+                        <input type="time" id="ynj-live-time" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;">
+                    </div>
+                </div>
+            </div>
             <button type="button" id="ynj-live-start-btn" onclick="ynjStartLive()" disabled style="width:100%;padding:14px;background:#dc2626;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;opacity:.5;transition:opacity .15s;">
                 🔴 <?php esc_html_e( 'Start Stream', 'yourjannah' ); ?>
             </button>
@@ -1607,9 +1624,24 @@ function ynjQpTab(tab) {
     if (imamTab) imamTab.className = 'ynj-qp-tab' + (tab === 'imam' ? ' ynj-qp-tab--active' : '');
 }
 
-// Go Live — 2-step: select type, then start
+// Go Live — select type, enter URL, go now or schedule
 var _ynjSelectedStreamType = '';
+var _ynjIsScheduled = false;
 var _ynjStreamLabels = {fajr:'Fajr',dhuhr:'Dhuhr',asr:'Asr',maghrib:'Maghrib',isha:'Isha',jumuah:"Jumu'ah",taraweeh:'Taraweeh',lecture:'Lecture',event:'Event',other:'Live'};
+
+function ynjLiveToggleSchedule(scheduled) {
+    _ynjIsScheduled = scheduled;
+    document.getElementById('ynj-live-schedule-fields').style.display = scheduled ? '' : 'none';
+    document.getElementById('ynj-live-now-tab').style.borderColor = scheduled ? '#e5e7eb' : '#dc2626';
+    document.getElementById('ynj-live-now-tab').style.background = scheduled ? '#fff' : '#fef2f2';
+    document.getElementById('ynj-live-now-tab').style.color = scheduled ? '#666' : '#dc2626';
+    document.getElementById('ynj-live-schedule-tab').style.borderColor = scheduled ? '#2563eb' : '#e5e7eb';
+    document.getElementById('ynj-live-schedule-tab').style.background = scheduled ? '#eff6ff' : '#fff';
+    document.getElementById('ynj-live-schedule-tab').style.color = scheduled ? '#2563eb' : '#666';
+    var btn = document.getElementById('ynj-live-start-btn');
+    btn.textContent = scheduled ? '📅 Schedule Stream' : '🔴 Start Stream';
+    btn.style.background = scheduled ? '#2563eb' : '#dc2626';
+}
 
 function ynjSelectStreamType(btn, type) {
     _ynjSelectedStreamType = type;
@@ -1641,22 +1673,30 @@ function ynjStartLive() {
     status.style.color = '#92400e';
     status.textContent = 'Starting stream...';
 
+    var payload = {
+        mosque_id: <?php echo (int) $mosque->id; ?>,
+        stream_type: _ynjSelectedStreamType,
+        youtube_video_id: ytId,
+        title: (_ynjStreamLabels[_ynjSelectedStreamType] || _ynjSelectedStreamType) + ' at <?php echo esc_js( $mosque_name ); ?>'
+    };
+    if (_ynjIsScheduled) {
+        var d = document.getElementById('ynj-live-date').value;
+        var t = document.getElementById('ynj-live-time').value;
+        if (!d || !t) { status.textContent = 'Please select date and time'; status.style.background='#fee2e2'; status.style.color='#991b1b'; status.style.display=''; btn.disabled=false; btn.textContent='📅 Schedule Stream'; return; }
+        payload.scheduled_at = d + 'T' + t;
+    }
+
     fetch(<?php echo wp_json_encode( rest_url( 'ynj/v1/broadcast/start' ) ); ?>, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': <?php echo wp_json_encode( wp_create_nonce( 'wp_rest' ) ); ?> },
-        body: JSON.stringify({
-            mosque_id: <?php echo (int) $mosque->id; ?>,
-            stream_type: _ynjSelectedStreamType,
-            youtube_video_id: ytId,
-            title: (_ynjStreamLabels[_ynjSelectedStreamType] || _ynjSelectedStreamType) + ' at <?php echo esc_js( $mosque_name ); ?>'
-        })
+        body: JSON.stringify(payload)
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
         if (data.ok) {
             status.style.background = '#dcfce7';
             status.style.color = '#166534';
-            status.textContent = '🔴 You are now LIVE!';
+            status.textContent = _ynjIsScheduled ? '📅 Stream scheduled!' : '🔴 You are now LIVE!';
             setTimeout(function() { location.reload(); }, 1000);
         } else {
             status.style.background = '#fee2e2';
