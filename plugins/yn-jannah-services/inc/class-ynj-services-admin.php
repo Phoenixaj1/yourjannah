@@ -404,6 +404,21 @@ class YNJ_Services_List_Table extends WP_List_Table {
         return $views;
     }
 
+    public function extra_tablenav( $which ) {
+        if ( $which !== 'top' ) return;
+        global $wpdb;
+        $mosques = $wpdb->get_results( "SELECT id, name FROM " . YNJ_DB::table('mosques') . " WHERE status IN ('active','unclaimed') ORDER BY name" );
+        $sel = absint( $_GET['mosque_id'] ?? 0 );
+        echo '<div class="alignleft actions">';
+        echo '<select name="mosque_id"><option value="">All Mosques</option>';
+        foreach ( $mosques as $m ) {
+            printf( '<option value="%d"%s>%s</option>', $m->id, $sel === (int) $m->id ? ' selected' : '', esc_html( $m->name ) );
+        }
+        echo '</select>';
+        submit_button( 'Filter', '', 'filter_action', false );
+        echo '</div>';
+    }
+
     public function prepare_items() {
         global $wpdb;
         $table    = YNJ_DB::table( 'masjid_services' );
@@ -415,6 +430,11 @@ class YNJ_Services_List_Table extends WP_List_Table {
         $status = sanitize_text_field( $_GET['status'] ?? '' );
         if ( in_array( $status, [ 'active', 'inactive' ], true ) ) {
             $where .= $wpdb->prepare( ' AND status = %s', $status );
+        }
+
+        $mosque_id = absint( $_GET['mosque_id'] ?? 0 );
+        if ( $mosque_id ) {
+            $where .= $wpdb->prepare( ' AND mosque_id = %d', $mosque_id );
         }
 
         $orderby = sanitize_sql_orderby( $_GET['orderby'] ?? 'id' ) ?: 'id';
@@ -549,6 +569,21 @@ class YNJ_Service_Enquiries_List_Table extends WP_List_Table {
         return $views;
     }
 
+    public function extra_tablenav( $which ) {
+        if ( $which !== 'top' ) return;
+        global $wpdb;
+        $mosques = $wpdb->get_results( "SELECT id, name FROM " . YNJ_DB::table('mosques') . " WHERE status IN ('active','unclaimed') ORDER BY name" );
+        $sel = absint( $_GET['mosque_id'] ?? 0 );
+        echo '<div class="alignleft actions">';
+        echo '<select name="mosque_id"><option value="">All Mosques</option>';
+        foreach ( $mosques as $m ) {
+            printf( '<option value="%d"%s>%s</option>', $m->id, $sel === (int) $m->id ? ' selected' : '', esc_html( $m->name ) );
+        }
+        echo '</select>';
+        submit_button( 'Filter', '', 'filter_action', false );
+        echo '</div>';
+    }
+
     public function prepare_items() {
         global $wpdb;
         $et       = YNJ_DB::table( 'masjid_service_enquiries' );
@@ -561,6 +596,11 @@ class YNJ_Service_Enquiries_List_Table extends WP_List_Table {
         $status = sanitize_text_field( $_GET['status'] ?? '' );
         if ( in_array( $status, [ 'pending', 'read', 'replied' ], true ) ) {
             $where .= $wpdb->prepare( ' AND e.status = %s', $status );
+        }
+
+        $mosque_id = absint( $_GET['mosque_id'] ?? 0 );
+        if ( $mosque_id ) {
+            $where .= $wpdb->prepare( ' AND e.mosque_id = %d', $mosque_id );
         }
 
         $orderby = sanitize_sql_orderby( $_GET['orderby'] ?? 'id' ) ?: 'id';

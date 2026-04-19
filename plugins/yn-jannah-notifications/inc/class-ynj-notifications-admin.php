@@ -329,11 +329,15 @@ class YNJ_Sent_Notifications_List_Table extends WP_List_Table {
         ];
     }
 
-    /** Type filter tabs. */
+    /** Type + mosque filter tabs. */
     protected function extra_tablenav( $which ) {
         if ( $which !== 'top' ) return;
+        global $wpdb;
 
         $current_type = sanitize_text_field( $_GET['filter_type'] ?? '' );
+
+        $mosques = $wpdb->get_results( "SELECT id, name FROM " . YNJ_DB::table('mosques') . " WHERE status IN ('active','unclaimed') ORDER BY name" );
+        $sel_mosque = absint( $_GET['mosque_id'] ?? 0 );
 
         echo '<div class="alignleft actions">';
         echo '<select name="filter_type">';
@@ -342,6 +346,11 @@ class YNJ_Sent_Notifications_List_Table extends WP_List_Table {
         foreach ( $types as $t ) {
             $sel = ( $current_type === $t ) ? ' selected' : '';
             echo '<option value="' . esc_attr( $t ) . '"' . $sel . '>' . esc_html( ucfirst( $t ) ) . '</option>';
+        }
+        echo '</select>';
+        echo '<select name="mosque_id"><option value="">All Mosques</option>';
+        foreach ( $mosques as $m ) {
+            printf( '<option value="%d"%s>%s</option>', $m->id, $sel_mosque === (int) $m->id ? ' selected' : '', esc_html( $m->name ) );
         }
         echo '</select>';
         submit_button( 'Filter', '', 'filter_action', false );
@@ -362,6 +371,12 @@ class YNJ_Sent_Notifications_List_Table extends WP_List_Table {
         if ( in_array( $filter_type, [ 'announcement', 'event', 'broadcast', 'general' ], true ) ) {
             $where   .= ' AND type = %s';
             $params[] = $filter_type;
+        }
+
+        $mosque_id = absint( $_GET['mosque_id'] ?? 0 );
+        if ( $mosque_id ) {
+            $where   .= ' AND mosque_id = %d';
+            $params[] = $mosque_id;
         }
 
         $orderby = sanitize_sql_orderby( $_GET['orderby'] ?? 'id' ) ?: 'id';

@@ -597,6 +597,21 @@ class YNJ_Business_List_Table extends WP_List_Table {
         ] );
     }
 
+    public function extra_tablenav( $which ) {
+        if ( $which !== 'top' ) return;
+        global $wpdb;
+        $mosques = $wpdb->get_results( "SELECT id, name FROM " . YNJ_DB::table('mosques') . " WHERE status IN ('active','unclaimed') ORDER BY name" );
+        $sel = absint( $_GET['mosque_id'] ?? 0 );
+        echo '<div class="alignleft actions">';
+        echo '<select name="mosque_id"><option value="">All Mosques</option>';
+        foreach ( $mosques as $m ) {
+            printf( '<option value="%d"%s>%s</option>', $m->id, $sel === (int) $m->id ? ' selected' : '', esc_html( $m->name ) );
+        }
+        echo '</select>';
+        submit_button( 'Filter', '', 'filter_action', false );
+        echo '</div>';
+    }
+
     public function get_columns() {
         return [
             'cb'            => '<input type="checkbox" />',

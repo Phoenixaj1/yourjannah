@@ -82,7 +82,10 @@ class YNJ_Gamification_Admin {
         echo '<p class="description">Top 50 mosques by dhikr count this week.</p>';
         echo '<hr class="wp-header-end">';
 
+        echo '<form method="get">';
+        echo '<input type="hidden" name="page" value="ynj-gamification">';
         $table->display();
+        echo '</form>';
         echo '</div>';
     }
 
@@ -99,7 +102,10 @@ class YNJ_Gamification_Admin {
         echo '<p class="description">Last 100 point awards across all mosques.</p>';
         echo '<hr class="wp-header-end">';
 
+        echo '<form method="get">';
+        echo '<input type="hidden" name="page" value="ynj-points-log">';
         $table->display();
+        echo '</form>';
         echo '</div>';
     }
 
@@ -116,7 +122,10 @@ class YNJ_Gamification_Admin {
         echo '<p class="description">Users who have earned badges.</p>';
         echo '<hr class="wp-header-end">';
 
+        echo '<form method="get">';
+        echo '<input type="hidden" name="page" value="ynj-badges">';
         $table->display();
+        echo '</form>';
         echo '</div>';
     }
 
@@ -201,12 +210,34 @@ class YNJ_Leaderboard_List_Table extends WP_List_Table {
         ];
     }
 
+    public function extra_tablenav( $which ) {
+        if ( $which !== 'top' ) return;
+        global $wpdb;
+        $mosques = $wpdb->get_results( "SELECT id, name FROM " . YNJ_DB::table('mosques') . " WHERE status IN ('active','unclaimed') ORDER BY name" );
+        $sel = absint( $_GET['mosque_id'] ?? 0 );
+        echo '<div class="alignleft actions">';
+        echo '<select name="mosque_id"><option value="">All Mosques</option>';
+        foreach ( $mosques as $m ) {
+            printf( '<option value="%d"%s>%s</option>', $m->id, $sel === (int) $m->id ? ' selected' : '', esc_html( $m->name ) );
+        }
+        echo '</select>';
+        submit_button( 'Filter', '', 'filter_action', false );
+        echo '</div>';
+    }
+
     public function prepare_items() {
         global $wpdb;
         $mt    = YNJ_DB::table( 'mosques' );
         $sub   = YNJ_DB::table( 'user_subscriptions' );
         $ib    = YNJ_DB::table( 'ibadah_logs' );
         $since = date( 'Y-m-d', strtotime( '-7 days' ) );
+
+        $where = "m.status = 'active'";
+
+        $mosque_id = absint( $_GET['mosque_id'] ?? 0 );
+        if ( $mosque_id ) {
+            $where .= $wpdb->prepare( ' AND m.id = %d', $mosque_id );
+        }
 
         $this->items = $wpdb->get_results(
             "SELECT m.id, m.name, m.city,
@@ -221,7 +252,7 @@ class YNJ_Leaderboard_List_Table extends WP_List_Table {
                  SELECT mosque_id, COUNT(*) AS dhikr_count
                  FROM $ib WHERE dhikr = 1 AND log_date >= '$since' GROUP BY mosque_id
              ) dk ON dk.mosque_id = m.id
-             WHERE m.status = 'active'
+             WHERE $where
              ORDER BY dhikr_week DESC
              LIMIT 50"
         ) ?: [];
@@ -271,13 +302,35 @@ class YNJ_Points_Log_List_Table extends WP_List_Table {
         ];
     }
 
+    public function extra_tablenav( $which ) {
+        if ( $which !== 'top' ) return;
+        global $wpdb;
+        $mosques = $wpdb->get_results( "SELECT id, name FROM " . YNJ_DB::table('mosques') . " WHERE status IN ('active','unclaimed') ORDER BY name" );
+        $sel = absint( $_GET['mosque_id'] ?? 0 );
+        echo '<div class="alignleft actions">';
+        echo '<select name="mosque_id"><option value="">All Mosques</option>';
+        foreach ( $mosques as $m ) {
+            printf( '<option value="%d"%s>%s</option>', $m->id, $sel === (int) $m->id ? ' selected' : '', esc_html( $m->name ) );
+        }
+        echo '</select>';
+        submit_button( 'Filter', '', 'filter_action', false );
+        echo '</div>';
+    }
+
     public function prepare_items() {
         global $wpdb;
         $pt = YNJ_DB::table( 'points' );
 
+        $where  = '1=1';
+        $mosque_id = absint( $_GET['mosque_id'] ?? 0 );
+        if ( $mosque_id ) {
+            $where .= $wpdb->prepare( ' AND mosque_id = %d', $mosque_id );
+        }
+
         $this->items = $wpdb->get_results(
             "SELECT user_id, mosque_id, action, points, created_at
              FROM $pt
+             WHERE $where
              ORDER BY created_at DESC
              LIMIT 100"
         ) ?: [];
@@ -333,12 +386,34 @@ class YNJ_Badges_List_Table extends WP_List_Table {
         ];
     }
 
+    public function extra_tablenav( $which ) {
+        if ( $which !== 'top' ) return;
+        global $wpdb;
+        $mosques = $wpdb->get_results( "SELECT id, name FROM " . YNJ_DB::table('mosques') . " WHERE status IN ('active','unclaimed') ORDER BY name" );
+        $sel = absint( $_GET['mosque_id'] ?? 0 );
+        echo '<div class="alignleft actions">';
+        echo '<select name="mosque_id"><option value="">All Mosques</option>';
+        foreach ( $mosques as $m ) {
+            printf( '<option value="%d"%s>%s</option>', $m->id, $sel === (int) $m->id ? ' selected' : '', esc_html( $m->name ) );
+        }
+        echo '</select>';
+        submit_button( 'Filter', '', 'filter_action', false );
+        echo '</div>';
+    }
+
     public function prepare_items() {
         global $wpdb;
         $bt       = YNJ_DB::table( 'user_badges' );
         $per_page = 20;
         $page     = $this->get_pagenum();
         $offset   = ( $page - 1 ) * $per_page;
+
+        $where = '1=1';
+
+        $mosque_id = absint( $_GET['mosque_id'] ?? 0 );
+        if ( $mosque_id ) {
+            $where .= $wpdb->prepare( ' AND mosque_id = %d', $mosque_id );
+        }
 
         $orderby = sanitize_sql_orderby( $_GET['orderby'] ?? 'earned_at' ) ?: 'earned_at';
         $allowed = [ 'badge_name', 'earned_at' ];
@@ -348,11 +423,12 @@ class YNJ_Badges_List_Table extends WP_List_Table {
         $this->items = $wpdb->get_results(
             "SELECT user_id, mosque_id, badge_key, badge_name, badge_icon, earned_at
              FROM $bt
+             WHERE $where
              ORDER BY $orderby $order
              LIMIT $per_page OFFSET $offset"
         ) ?: [];
 
-        $total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $bt" );
+        $total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $bt WHERE $where" );
 
         $this->set_pagination_args( [
             'total_items' => $total,

@@ -419,6 +419,21 @@ class YNJ_Donations_List_Table extends WP_List_Table {
         ] );
     }
 
+    public function extra_tablenav( $which ) {
+        if ( $which !== 'top' ) return;
+        global $wpdb;
+        $mosques = $wpdb->get_results( "SELECT id, name FROM " . YNJ_DB::table('mosques') . " WHERE status IN ('active','unclaimed') ORDER BY name" );
+        $sel = absint( $_GET['mosque_id'] ?? 0 );
+        echo '<div class="alignleft actions">';
+        echo '<select name="mosque_id"><option value="">All Mosques</option>';
+        foreach ( $mosques as $m ) {
+            printf( '<option value="%d"%s>%s</option>', $m->id, $sel === (int) $m->id ? ' selected' : '', esc_html( $m->name ) );
+        }
+        echo '</select>';
+        submit_button( 'Filter', '', 'filter_action', false );
+        echo '</div>';
+    }
+
     public function get_columns() {
         return [
             'id'            => 'ID',
@@ -479,8 +494,13 @@ class YNJ_Donations_List_Table extends WP_List_Table {
         $params = [];
 
         if ( in_array( $status_filter, [ 'succeeded', 'pending', 'failed' ], true ) ) {
-            $where = 'd.status = %s';
+            $where .= ' AND d.status = %s';
             $params[] = $status_filter;
+        }
+
+        if ( ! empty( $_GET['mosque_id'] ) ) {
+            $where .= ' AND d.mosque_id = %d';
+            $params[] = absint( $_GET['mosque_id'] );
         }
 
         // Sorting
@@ -582,6 +602,21 @@ class YNJ_Campaigns_List_Table extends WP_List_Table {
         ] );
     }
 
+    public function extra_tablenav( $which ) {
+        if ( $which !== 'top' ) return;
+        global $wpdb;
+        $mosques = $wpdb->get_results( "SELECT id, name FROM " . YNJ_DB::table('mosques') . " WHERE status IN ('active','unclaimed') ORDER BY name" );
+        $sel = absint( $_GET['mosque_id'] ?? 0 );
+        echo '<div class="alignleft actions">';
+        echo '<select name="mosque_id"><option value="">All Mosques</option>';
+        foreach ( $mosques as $m ) {
+            printf( '<option value="%d"%s>%s</option>', $m->id, $sel === (int) $m->id ? ' selected' : '', esc_html( $m->name ) );
+        }
+        echo '</select>';
+        submit_button( 'Filter', '', 'filter_action', false );
+        echo '</div>';
+    }
+
     public function get_columns() {
         return [
             'id'           => 'ID',
@@ -610,20 +645,30 @@ class YNJ_Campaigns_List_Table extends WP_List_Table {
         $paged    = max( 1, absint( $_GET['paged'] ?? 1 ) );
         $offset   = ( $paged - 1 ) * $per_page;
 
+        $where  = '1=1';
+        $params = [];
+
+        if ( ! empty( $_GET['mosque_id'] ) ) {
+            $where .= ' AND c.mosque_id = %d';
+            $params[] = absint( $_GET['mosque_id'] );
+        }
+
         $allowed_orderby = [ 'id', 'created_at' ];
         $orderby = in_array( $_GET['orderby'] ?? '', $allowed_orderby, true ) ? sanitize_text_field( $_GET['orderby'] ) : 'id';
         $order   = ( isset( $_GET['order'] ) && strtoupper( $_GET['order'] ) === 'ASC' ) ? 'ASC' : 'DESC';
 
-        $total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $ct" );
+        $count_sql = "SELECT COUNT(*) FROM $ct c WHERE $where";
+        $total     = $params ? (int) $wpdb->get_var( $wpdb->prepare( $count_sql, $params ) ) : (int) $wpdb->get_var( $count_sql );
 
-        $this->items = $wpdb->get_results( $wpdb->prepare(
-            "SELECT c.*, m.name AS mosque_name
+        $select_sql = "SELECT c.*, m.name AS mosque_name
              FROM $ct c
              LEFT JOIN $mt m ON c.mosque_id = m.id
+             WHERE $where
              ORDER BY c.$orderby $order
-             LIMIT %d OFFSET %d",
-            $per_page, $offset
-        ) );
+             LIMIT %d OFFSET %d";
+
+        $query_params = array_merge( $params, [ $per_page, $offset ] );
+        $this->items = $wpdb->get_results( $wpdb->prepare( $select_sql, $query_params ) );
 
         $this->set_pagination_args( [
             'total_items' => $total,
@@ -722,6 +767,21 @@ class YNJ_Patrons_List_Table extends WP_List_Table {
         ] );
     }
 
+    public function extra_tablenav( $which ) {
+        if ( $which !== 'top' ) return;
+        global $wpdb;
+        $mosques = $wpdb->get_results( "SELECT id, name FROM " . YNJ_DB::table('mosques') . " WHERE status IN ('active','unclaimed') ORDER BY name" );
+        $sel = absint( $_GET['mosque_id'] ?? 0 );
+        echo '<div class="alignleft actions">';
+        echo '<select name="mosque_id"><option value="">All Mosques</option>';
+        foreach ( $mosques as $m ) {
+            printf( '<option value="%d"%s>%s</option>', $m->id, $sel === (int) $m->id ? ' selected' : '', esc_html( $m->name ) );
+        }
+        echo '</select>';
+        submit_button( 'Filter', '', 'filter_action', false );
+        echo '</div>';
+    }
+
     public function get_columns() {
         return [
             'id'                     => 'ID',
@@ -753,20 +813,30 @@ class YNJ_Patrons_List_Table extends WP_List_Table {
         $paged    = max( 1, absint( $_GET['paged'] ?? 1 ) );
         $offset   = ( $paged - 1 ) * $per_page;
 
+        $where  = '1=1';
+        $params = [];
+
+        if ( ! empty( $_GET['mosque_id'] ) ) {
+            $where .= ' AND p.mosque_id = %d';
+            $params[] = absint( $_GET['mosque_id'] );
+        }
+
         $allowed_orderby = [ 'id', 'amount_pence', 'started_at' ];
         $orderby = in_array( $_GET['orderby'] ?? '', $allowed_orderby, true ) ? sanitize_text_field( $_GET['orderby'] ) : 'id';
         $order   = ( isset( $_GET['order'] ) && strtoupper( $_GET['order'] ) === 'ASC' ) ? 'ASC' : 'DESC';
 
-        $total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $pt" );
+        $count_sql = "SELECT COUNT(*) FROM $pt p WHERE $where";
+        $total     = $params ? (int) $wpdb->get_var( $wpdb->prepare( $count_sql, $params ) ) : (int) $wpdb->get_var( $count_sql );
 
-        $this->items = $wpdb->get_results( $wpdb->prepare(
-            "SELECT p.*, m.name AS mosque_name
+        $select_sql = "SELECT p.*, m.name AS mosque_name
              FROM $pt p
              LEFT JOIN $mt m ON p.mosque_id = m.id
+             WHERE $where
              ORDER BY p.$orderby $order
-             LIMIT %d OFFSET %d",
-            $per_page, $offset
-        ) );
+             LIMIT %d OFFSET %d";
+
+        $query_params = array_merge( $params, [ $per_page, $offset ] );
+        $this->items = $wpdb->get_results( $wpdb->prepare( $select_sql, $query_params ) );
 
         $this->set_pagination_args( [
             'total_items' => $total,
@@ -863,6 +933,21 @@ class YNJ_Fund_Types_List_Table extends WP_List_Table {
         ] );
     }
 
+    public function extra_tablenav( $which ) {
+        if ( $which !== 'top' ) return;
+        global $wpdb;
+        $mosques = $wpdb->get_results( "SELECT id, name FROM " . YNJ_DB::table('mosques') . " WHERE status IN ('active','unclaimed') ORDER BY name" );
+        $sel = absint( $_GET['mosque_id'] ?? 0 );
+        echo '<div class="alignleft actions">';
+        echo '<select name="mosque_id"><option value="">All Mosques</option>';
+        foreach ( $mosques as $m ) {
+            printf( '<option value="%d"%s>%s</option>', $m->id, $sel === (int) $m->id ? ' selected' : '', esc_html( $m->name ) );
+        }
+        echo '</select>';
+        submit_button( 'Filter', '', 'filter_action', false );
+        echo '</div>';
+    }
+
     public function get_columns() {
         return [
             'id'           => 'ID',
@@ -890,20 +975,30 @@ class YNJ_Fund_Types_List_Table extends WP_List_Table {
         $paged    = max( 1, absint( $_GET['paged'] ?? 1 ) );
         $offset   = ( $paged - 1 ) * $per_page;
 
+        $where  = '1=1';
+        $params = [];
+
+        if ( ! empty( $_GET['mosque_id'] ) ) {
+            $where .= ' AND f.mosque_id = %d';
+            $params[] = absint( $_GET['mosque_id'] );
+        }
+
         $allowed_orderby = [ 'id', 'raised_pence' ];
         $orderby = in_array( $_GET['orderby'] ?? '', $allowed_orderby, true ) ? sanitize_text_field( $_GET['orderby'] ) : 'id';
         $order   = ( isset( $_GET['order'] ) && strtoupper( $_GET['order'] ) === 'ASC' ) ? 'ASC' : 'DESC';
 
-        $total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $ft" );
+        $count_sql = "SELECT COUNT(*) FROM $ft f WHERE $where";
+        $total     = $params ? (int) $wpdb->get_var( $wpdb->prepare( $count_sql, $params ) ) : (int) $wpdb->get_var( $count_sql );
 
-        $this->items = $wpdb->get_results( $wpdb->prepare(
-            "SELECT f.*, m.name AS mosque_name
+        $select_sql = "SELECT f.*, m.name AS mosque_name
              FROM $ft f
              LEFT JOIN $mt m ON f.mosque_id = m.id
+             WHERE $where
              ORDER BY f.$orderby $order
-             LIMIT %d OFFSET %d",
-            $per_page, $offset
-        ) );
+             LIMIT %d OFFSET %d";
+
+        $query_params = array_merge( $params, [ $per_page, $offset ] );
+        $this->items = $wpdb->get_results( $wpdb->prepare( $select_sql, $query_params ) );
 
         $this->set_pagination_args( [
             'total_items' => $total,

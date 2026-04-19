@@ -631,6 +631,21 @@ class YNJ_Events_List_Table extends WP_List_Table {
         return $views;
     }
 
+    public function extra_tablenav( $which ) {
+        if ( $which !== 'top' ) return;
+        global $wpdb;
+        $mosques = $wpdb->get_results( "SELECT id, name FROM " . YNJ_DB::table('mosques') . " WHERE status IN ('active','unclaimed') ORDER BY name" );
+        $sel = absint( $_GET['mosque_id'] ?? 0 );
+        echo '<div class="alignleft actions">';
+        echo '<select name="mosque_id"><option value="">All Mosques</option>';
+        foreach ( $mosques as $m ) {
+            printf( '<option value="%d"%s>%s</option>', $m->id, $sel === (int) $m->id ? ' selected' : '', esc_html( $m->name ) );
+        }
+        echo '</select>';
+        submit_button( 'Filter', '', 'filter_action', false );
+        echo '</div>';
+    }
+
     public function prepare_items() {
         global $wpdb;
         $table    = YNJ_DB::table( 'events' );
@@ -642,6 +657,10 @@ class YNJ_Events_List_Table extends WP_List_Table {
         $status = sanitize_text_field( $_GET['status'] ?? '' );
         if ( in_array( $status, [ 'published', 'draft', 'cancelled' ], true ) ) {
             $where .= $wpdb->prepare( ' AND status = %s', $status );
+        }
+
+        if ( ! empty( $_GET['mosque_id'] ) ) {
+            $where .= $wpdb->prepare( ' AND mosque_id = %d', absint( $_GET['mosque_id'] ) );
         }
 
         $orderby = sanitize_sql_orderby( $_GET['orderby'] ?? 'id' ) ?: 'id';
@@ -727,6 +746,21 @@ class YNJ_Announcements_List_Table extends WP_List_Table {
         ] );
     }
 
+    public function extra_tablenav( $which ) {
+        if ( $which !== 'top' ) return;
+        global $wpdb;
+        $mosques = $wpdb->get_results( "SELECT id, name FROM " . YNJ_DB::table('mosques') . " WHERE status IN ('active','unclaimed') ORDER BY name" );
+        $sel = absint( $_GET['mosque_id'] ?? 0 );
+        echo '<div class="alignleft actions">';
+        echo '<select name="mosque_id"><option value="">All Mosques</option>';
+        foreach ( $mosques as $m ) {
+            printf( '<option value="%d"%s>%s</option>', $m->id, $sel === (int) $m->id ? ' selected' : '', esc_html( $m->name ) );
+        }
+        echo '</select>';
+        submit_button( 'Filter', '', 'filter_action', false );
+        echo '</div>';
+    }
+
     public function get_columns() {
         return [
             'id'           => 'ID',
@@ -776,6 +810,10 @@ class YNJ_Announcements_List_Table extends WP_List_Table {
         $status = sanitize_text_field( $_GET['status'] ?? '' );
         if ( in_array( $status, [ 'published', 'draft' ], true ) ) {
             $where .= $wpdb->prepare( ' AND status = %s', $status );
+        }
+
+        if ( ! empty( $_GET['mosque_id'] ) ) {
+            $where .= $wpdb->prepare( ' AND mosque_id = %d', absint( $_GET['mosque_id'] ) );
         }
 
         $orderby = sanitize_sql_orderby( $_GET['orderby'] ?? 'id' ) ?: 'id';
@@ -857,6 +895,21 @@ class YNJ_Bookings_List_Table extends WP_List_Table {
         ] );
     }
 
+    public function extra_tablenav( $which ) {
+        if ( $which !== 'top' ) return;
+        global $wpdb;
+        $mosques = $wpdb->get_results( "SELECT id, name FROM " . YNJ_DB::table('mosques') . " WHERE status IN ('active','unclaimed') ORDER BY name" );
+        $sel = absint( $_GET['mosque_id'] ?? 0 );
+        echo '<div class="alignleft actions">';
+        echo '<select name="mosque_id"><option value="">All Mosques</option>';
+        foreach ( $mosques as $m ) {
+            printf( '<option value="%d"%s>%s</option>', $m->id, $sel === (int) $m->id ? ' selected' : '', esc_html( $m->name ) );
+        }
+        echo '</select>';
+        submit_button( 'Filter', '', 'filter_action', false );
+        echo '</div>';
+    }
+
     public function get_columns() {
         return [
             'id'           => 'ID',
@@ -910,6 +963,10 @@ class YNJ_Bookings_List_Table extends WP_List_Table {
         $status = sanitize_text_field( $_GET['status'] ?? '' );
         if ( in_array( $status, [ 'pending', 'confirmed', 'cancelled' ], true ) ) {
             $where .= $wpdb->prepare( ' AND status = %s', $status );
+        }
+
+        if ( ! empty( $_GET['mosque_id'] ) ) {
+            $where .= $wpdb->prepare( ' AND mosque_id = %d', absint( $_GET['mosque_id'] ) );
         }
 
         $orderby = sanitize_sql_orderby( $_GET['orderby'] ?? 'id' ) ?: 'id';
