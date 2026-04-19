@@ -109,8 +109,10 @@ if ( $flash ) {
     if ( ! empty( $flash['error'] ) )   { $error   = $flash['error']; }
 }
 
-// ── Sidebar navigation (grouped by purpose) ──
-$nav_groups = [
+// ── Sidebar navigation (plugin-driven via filter) ──
+// Each plugin registers its dashboard sections via this filter.
+// Default sections are provided here — plugins can add/remove/reorder.
+$default_groups = [
     'main' => [
         'label' => '',
         'items' => [
@@ -156,6 +158,20 @@ $nav_groups = [
         ],
     ],
 ];
+
+/**
+ * Filter: ynj_dashboard_sections
+ *
+ * Plugins can add/remove/reorder dashboard sidebar sections.
+ * Each group has: 'label' (string) + 'items' (array of ['key','icon','label']).
+ * Optionally include 'template' => '/path/to/template.php' per item
+ * to load the template from the plugin instead of the theme.
+ *
+ * @param array $groups  Default navigation groups
+ * @param int   $mosque_id Current mosque ID
+ * @param bool  $is_admin  Whether user is a full admin
+ */
+$nav_groups = apply_filters( 'ynj_dashboard_sections', $default_groups, $mosque_id, $is_admin );
 
 // Coordinator sees limited sidebar
 if ( $is_coordinator && ! $is_admin && ! $is_imam_user ) {
@@ -401,10 +417,23 @@ a{color:var(--primary);text-decoration:none;}
     <?php if ( ! empty( $error ) ) : ?><div class="d-alert d-alert--error"><?php echo esc_html( $error ); ?></div><?php endif; ?>
 
     <?php
-    // Include section template (GET requests only — POST already handled above)
-    $section_file = $dash_dir . $section . '.php';
-    if ( file_exists( $section_file ) ) {
-        include $section_file;
+    // Include section template — check plugin-provided path first, then theme
+    $plugin_template = null;
+    foreach ( $nav_groups as $g ) {
+        foreach ( $g['items'] as $item ) {
+            if ( $item['key'] === $section && ! empty( $item['template'] ) ) {
+                $plugin_template = $item['template'];
+                break 2;
+            }
+        }
+    }
+
+    if ( $plugin_template && file_exists( $plugin_template ) ) {
+        // Plugin-provided template (takes priority)
+        include $plugin_template;
+    } elseif ( file_exists( $dash_dir . $section . '.php' ) ) {
+        // Theme template (default)
+        include $dash_dir . $section . '.php';
     } else {
         // Section not yet built — show coming soon
         ?>
