@@ -393,6 +393,37 @@ class YNJ_API_Subscriptions {
 
         $mosque_name = $wpdb->get_var( $wpdb->prepare( "SELECT name FROM $mt WHERE id = %d", $mosque_id ) );
 
+        // Notify mosque admin of new member
+        if ( ! $was_already_member ) {
+            $member_name = $wpdb->get_var( $wpdb->prepare( "SELECT name FROM $ut WHERE id = %d", $ynj_user_id ) ) ?: 'Someone';
+            $new_count   = (int) $wpdb->get_var( $wpdb->prepare( "SELECT member_count FROM $mt WHERE id = %d", $mosque_id ) );
+
+            // In-app notification to mosque admin(s)
+            if ( class_exists( 'YNJ_Notifications' ) ) {
+                // Find admin user_id for this mosque
+                $admin_uid = (int) $wpdb->get_var( $wpdb->prepare(
+                    "SELECT user_id FROM $st WHERE mosque_id = %d AND status = 'active' ORDER BY id ASC LIMIT 1",
+                    $mosque_id
+                ) );
+                if ( $admin_uid && $admin_uid !== $ynj_user_id ) {
+                    YNJ_Notifications::create( [
+                        'mosque_id' => $mosque_id,
+                        'user_id'   => $admin_uid,
+                        'title'     => $member_name . ' joined your masjid!',
+                        'body'      => $member_name . ' is now a member of ' . ( $mosque_name ?: 'your mosque' ) . '. You now have ' . $new_count . ' members.',
+                        'type'      => 'new_member',
+                    ] );
+                }
+            }
+
+            // Email notification to mosque admin
+            if ( class_exists( 'YNJ_Notify' ) && method_exists( 'YNJ_Notify', 'new_member' ) ) {
+                YNJ_Notify::new_member( $mosque_id, $member_name, $new_count );
+            }
+
+            do_action( 'ynj_new_member', $ynj_user_id, $mosque_id, $member_name );
+        }
+
         return new \WP_REST_Response( [
             'ok'         => true,
             'message'    => 'Welcome to ' . ( $mosque_name ?: 'the mosque' ) . '!',

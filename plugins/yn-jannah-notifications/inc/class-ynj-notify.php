@@ -221,6 +221,22 @@ class YNJ_Notify {
     }
 
     /**
+     * New member joined mosque.
+     * Called from join_mosque() in subscriptions API.
+     */
+    public static function new_member( $mosque_id, $member_name, $member_count ) {
+        $name = esc_html( $member_name );
+        $count = (int) $member_count;
+
+        self::send( $mosque_id, "New member: {$name}", "
+            <h3 style='margin:0 0 12px;'>New Member! 🎉</h3>
+            <p style='font-size:14px;'><strong>{$name}</strong> has joined your masjid on YourJannah.</p>
+            <p style='font-size:14px;'>You now have <strong>{$count} members</strong> in your congregation.</p>
+            <a href='https://yourjannah.com/dashboard#/members' style='display:inline-block;background:#27ae60;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;margin-top:16px;'>View Members</a>
+        " );
+    }
+
+    /**
      * Payment received via Stripe.
      * do_action( 'ynj_payment_received', $mosque_id, $type, $item_id )
      */
