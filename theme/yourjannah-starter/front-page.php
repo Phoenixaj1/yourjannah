@@ -702,12 +702,32 @@ if ( $_hp_mosque_id && is_user_logged_in() ) {
 
     <!-- Next Prayer Hero (PHP-rendered from Aladhan) -->
     <section class="ynj-card ynj-card--hero" id="next-prayer-card">
+        <?php
+        // Arabic prayer names + Hijri date (same as mosque page)
+        $_arabic_names = [
+            'Fajr' => 'الفجر', 'Sunrise' => 'الشروق', 'Dhuhr' => 'الظهر',
+            'Asr' => 'العصر', 'Maghrib' => 'المغرب', 'Isha' => 'العشاء',
+            "Jumu'ah" => 'الجمعة',
+        ];
+        $_arabic_prayer = $_arabic_names[ $_ynj_next_name ] ?? '';
+        $_hijri_date = '';
+        if ( class_exists( 'IntlDateFormatter' ) ) {
+            $fmt = new IntlDateFormatter( 'ar_SA@calendar=islamic-civil', IntlDateFormatter::LONG, IntlDateFormatter::NONE, 'UTC', IntlDateFormatter::TRADITIONAL );
+            $_hijri_date = $fmt->format( time() );
+        }
+        ?>
+        <?php if ( $_hijri_date ) : ?>
+        <p style="text-align:center;font-size:12px;color:rgba(255,255,255,.5);margin-bottom:4px;font-family:'Amiri',serif;direction:rtl;"><?php echo esc_html( $_hijri_date ); ?></p>
+        <?php endif; ?>
         <?php if ( $_ynj_is_friday && strpos( $_ynj_next_name, "Jumu'ah" ) !== false ) : ?>
         <p class="ynj-label" id="next-prayer-label" style="color:#fbbf24;">🕌 <?php echo esc_html( 'It\'s Friday! Jumu\'ah at ' . ( $_hp_mosque_name ?: 'your masjid' ) ); ?></p>
         <?php else : ?>
-        <p class="ynj-label" id="next-prayer-label"><?php echo $_hp_mosque_name ? esc_html( 'Next Prayer at ' . $_hp_mosque_name ) : esc_html__( 'Next Prayer', 'yourjannah' ); ?></p>
+        <p class="ynj-label" id="next-prayer-label"><?php echo $_hp_mosque_name ? esc_html( 'NEXT PRAYER AT ' . strtoupper( $_hp_mosque_name ) ) : esc_html__( 'NEXT PRAYER', 'yourjannah' ); ?></p>
         <?php endif; ?>
         <h2 class="ynj-hero-prayer" id="next-prayer-name"><?php echo esc_html( $_ynj_next_name ?: '—' ); ?></h2>
+        <?php if ( $_arabic_prayer ) : ?>
+        <p style="font-family:'Amiri','Traditional Arabic',serif;font-size:20px;color:rgba(255,255,255,.6);margin-top:-4px;direction:rtl;"><?php echo esc_html( $_arabic_prayer ); ?></p>
+        <?php endif; ?>
         <p class="ynj-hero-time" id="next-prayer-time"><?php echo esc_html( $_ynj_next_time ?: '—' ); ?></p>
         <?php if ( $_ynj_is_friday && ! empty( $_ynj_jumuah_slots ) && count( $_ynj_jumuah_slots ) > 0 ) : ?>
         <div id="jumuah-slots" style="margin:10px 0;width:100%;">
@@ -994,6 +1014,30 @@ async function ynjJoinMosqueHP(mosqueId) {
     } catch(e) { alert('Network error.'); }
 }
 </script>
+
+<?php
+// ── Admin toolbar (same as mosque page) ──
+$_hp_can_edit = false;
+if ( $_hp_mosque_id && is_user_logged_in() ) {
+    $_hp_wp_uid = get_current_user_id();
+    $_hp_user_mosque = (int) get_user_meta( $_hp_wp_uid, 'ynj_mosque_id', true );
+    $_hp_can_edit = ( $_hp_user_mosque === $_hp_mosque_id ) &&
+                    ( current_user_can( 'ynj_manage_mosque' ) || current_user_can( 'manage_options' ) );
+}
+if ( $_hp_can_edit ) :
+?>
+<style>
+.ynj-admin-toolbar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;gap:8px;padding:10px 16px;background:#fff;border-top:1px solid #e5e7eb;z-index:900;padding-bottom:max(10px,env(safe-area-inset-bottom));}
+.ynj-admin-toolbar a,.ynj-admin-toolbar button{display:flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;border:none;cursor:pointer;min-height:44px;font-family:inherit;}
+.ynj-atb-primary{background:#287e61;color:#fff;}
+.ynj-atb-outline{background:#f9fafb;color:#333;border:1px solid #e5e7eb;}
+</style>
+<div class="ynj-admin-toolbar">
+    <a href="<?php echo esc_url( home_url( '/mosque/' . ( $_ynj_mosque_for_prayer ? $_ynj_mosque_for_prayer->slug : '' ) ) ); ?>" class="ynj-atb-primary">📢 <?php esc_html_e( 'New Post', 'yourjannah' ); ?></a>
+    <a href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>" class="ynj-atb-outline">📊 <?php esc_html_e( 'Dashboard', 'yourjannah' ); ?></a>
+    <a href="<?php echo esc_url( home_url( '/dashboard?section=settings' ) ); ?>" class="ynj-atb-outline">⚙️ <?php esc_html_e( 'Settings', 'yourjannah' ); ?></a>
+</div>
+<?php endif; ?>
 
 <?php
 get_footer();
