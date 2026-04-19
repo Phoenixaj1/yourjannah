@@ -491,8 +491,7 @@ img,svg{display:block;max-width:100%;}
 .ynj-react-share{margin-left:auto;background:#e8f5e9;border-color:#c8e6c9;color:#2e7d32;}
 .ynj-react-share:hover{background:#c8e6c9;}
 .ynj-react-share .ynj-react-icon{font-size:14px;}
-.ynj-views-count{margin-left:4px;font-size:12px;color:#6c757d;font-weight:600;display:flex;align-items:center;gap:3px;padding:4px 8px;background:#fff;border-radius:16px;border:1px solid #e9ecef;}
-.ynj-views-count span{font-variant-numeric:tabular-nums;}
+.ynj-views-count{margin-left:auto;font-size:11px;color:#9ca3af;font-weight:600;padding:4px 8px;font-variant-numeric:tabular-nums;}
 
 /* Sponsor ad in feed (classic style) */
 .ynj-sponsor-ad{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;}
@@ -539,23 +538,53 @@ img,svg{display:block;max-width:100%;}
 .ynj-sponsors-grid{display:grid;grid-template-columns:1fr;gap:14px;}
 @media(min-width:700px){.ynj-sponsors-grid{grid-template-columns:1fr 1fr;}}
 /* Business listing cards */
+/* Business Plaque Cards — Gold / Silver / Bronze tiers */
 .ynj-biz-card{
-    background:rgba(255,255,255,.92);backdrop-filter:blur(8px);
-    border-radius:16px;border:1px solid rgba(255,255,255,.6);
+    background:#fff;
+    border-radius:18px;border:1px solid #e5e7eb;
     padding:0;margin-bottom:14px;overflow:hidden;
-    box-shadow:0 2px 12px rgba(0,0,0,.04);
-    transition:transform .15s, box-shadow .15s;
+    box-shadow:0 2px 12px rgba(0,0,0,.05);
+    transition:transform .2s, box-shadow .2s;
+    position:relative;
 }
-.ynj-biz-card:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,0,0,.08);}
-.ynj-biz--premium{border:2px solid #f59e0b;background:linear-gradient(180deg,#fffbeb,#fff);box-shadow:0 4px 24px rgba(245,158,11,.18);}
-.ynj-biz--featured{border:2px solid #00ADEF;background:linear-gradient(180deg,#eff6ff,#fff);box-shadow:0 4px 20px rgba(0,173,239,.12);}
-.ynj-biz--standard{border:1px solid #e5e7eb;}
+.ynj-biz-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.1);}
+/* ── Gold Plaque ── */
+.ynj-biz--premium{
+    border:2px solid #d4a017;
+    background:linear-gradient(165deg,#fef9e7 0%,#fdf5d6 30%,#fff8e1 70%,#fffdf5 100%);
+    box-shadow:0 4px 24px rgba(212,160,23,.2), inset 0 1px 0 rgba(255,255,255,.8);
+}
+.ynj-biz--premium:hover{box-shadow:0 8px 36px rgba(212,160,23,.35);}
+/* ── Silver Plaque ── */
+.ynj-biz--featured{
+    border:2px solid #a0aab4;
+    background:linear-gradient(165deg,#f5f7f9 0%,#eef1f4 30%,#f8f9fb 70%,#fff 100%);
+    box-shadow:0 4px 20px rgba(160,170,180,.15), inset 0 1px 0 rgba(255,255,255,.9);
+}
+.ynj-biz--featured:hover{box-shadow:0 8px 32px rgba(160,170,180,.3);}
+/* ── Bronze Plaque ── */
+.ynj-biz--standard{
+    border:2px solid #cd7f32;
+    background:linear-gradient(165deg,#fdf4ec 0%,#faebd7 30%,#fef6ee 70%,#fff 100%);
+    box-shadow:0 4px 18px rgba(205,127,50,.12), inset 0 1px 0 rgba(255,255,255,.8);
+}
+.ynj-biz--standard:hover{box-shadow:0 8px 28px rgba(205,127,50,.25);}
+/* ── Tier Badge Ribbon ── */
 .ynj-biz-tier{
-    padding:8px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+    padding:8px 18px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
 }
-.ynj-biz--premium .ynj-biz-tier{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;}
-.ynj-biz--featured .ynj-biz-tier{background:linear-gradient(135deg,#00ADEF,#0369a1);color:#fff;}
-.ynj-biz--standard .ynj-biz-tier{background:#f4f4f5;color:#71717a;}
+.ynj-biz--premium .ynj-biz-tier{
+    background:linear-gradient(135deg,#d4a017 0%,#f5c842 50%,#d4a017 100%);
+    color:#3d2c00;text-shadow:0 1px 0 rgba(255,255,255,.3);
+}
+.ynj-biz--featured .ynj-biz-tier{
+    background:linear-gradient(135deg,#8e99a4 0%,#c0c7ce 50%,#8e99a4 100%);
+    color:#1a2530;text-shadow:0 1px 0 rgba(255,255,255,.4);
+}
+.ynj-biz--standard .ynj-biz-tier{
+    background:linear-gradient(135deg,#b87333 0%,#daa06d 50%,#b87333 100%);
+    color:#3d1f00;text-shadow:0 1px 0 rgba(255,255,255,.25);
+}
 .ynj-biz-header{display:flex;gap:14px;padding:16px 16px 0;align-items:center;}
 .ynj-biz-logo{
     width:56px;height:56px;border-radius:12px;flex-shrink:0;

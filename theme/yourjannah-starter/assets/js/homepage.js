@@ -802,12 +802,17 @@
                     : window.location.href;
                 const shareTitle = item.title || '';
 
-                // Pre-loaded counts
+                // Pre-loaded counts + per-user reaction state
                 const rc = item.reactions || {};
                 const likeCount = rc.like || 0;
                 const duaCount = rc.dua || 0;
                 const intCount = rc.interested || 0;
                 const viewCount = item.views || 0;
+                const ur = item.user_reacted || [];
+                const likeActive = ur.indexOf('like') !== -1 ? ' ynj-react-btn--active' : '';
+                const duaActive = ur.indexOf('dua') !== -1 ? ' ynj-react-btn--active' : '';
+                const intActive = ur.indexOf('interested') !== -1 ? ' ynj-react-btn--active' : '';
+                const waUrl = 'https://wa.me/?text=' + encodeURIComponent(shareTitle + ' ' + shareUrl);
 
                 return `<div class="ynj-feed-card ${cardAccent}" data-ynj-type="${contentType}" data-ynj-id="${contentId}">
                     ${dateStrip}
@@ -817,19 +822,19 @@
                         <div class="ynj-feed-card__meta">${meta.join(' ')}</div>
                         ${mosqueTag}
                         <div class="ynj-reaction-bar" data-type="${contentType}" data-id="${contentId}">
-                            <button class="ynj-react-btn" onclick="event.stopPropagation();ynjReact(this,'like')" title="Like">
+                            <button class="ynj-react-btn${likeActive}" onclick="event.stopPropagation();ynjReact(this,'like')" title="Like">
                                 <span class="ynj-react-icon">👍</span><span class="ynj-react-count" data-r="like">${likeCount||''}</span>
                             </button>
-                            <button class="ynj-react-btn" onclick="event.stopPropagation();ynjReact(this,'dua')" title="Make Dua">
+                            <button class="ynj-react-btn${duaActive}" onclick="event.stopPropagation();ynjReact(this,'dua')" title="Make Dua">
                                 <span class="ynj-react-icon">🤲</span><span class="ynj-react-count" data-r="dua">${duaCount||''}</span>
                             </button>
-                            <button class="ynj-react-btn" onclick="event.stopPropagation();ynjReact(this,'interested')" title="Interested">
+                            <button class="ynj-react-btn${intActive}" onclick="event.stopPropagation();ynjReact(this,'interested')" title="Interested">
                                 <span class="ynj-react-icon">❤️</span><span class="ynj-react-count" data-r="interested">${intCount||''}</span>
                             </button>
-                            <button class="ynj-react-btn ynj-react-share" onclick="event.stopPropagation();ynjShareCard('${shareTitle.replace(/'/g,"\\'")}','${shareUrl}')" title="Share">
-                                <span class="ynj-react-icon">↗️</span>
-                            </button>
-                            <span class="ynj-views-count">👁 <span>${viewCount > 0 ? viewCount : ''}</span></span>
+                            <a class="ynj-react-btn ynj-react-share" href="${waUrl}" target="_blank" onclick="event.stopPropagation();" title="Share on WhatsApp" style="background:#25D366;color:#fff;border-color:#25D366;">
+                                <span class="ynj-react-icon">💬</span>
+                            </a>
+                            ${viewCount > 0 ? `<span class="ynj-views-count">${viewCount}</span>` : ''}
                         </div>
                     </div>
                 </div>`;

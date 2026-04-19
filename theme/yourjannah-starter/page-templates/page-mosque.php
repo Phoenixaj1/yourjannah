@@ -236,15 +236,27 @@ if ( $_mp_id && class_exists( 'YNJ_DB' ) ) {
     $at = YNJ_DB::table( 'announcements' );
     $_mp_announcements = $wpdb->get_results( $wpdb->prepare( "SELECT id, title, body, type, pinned, published_at FROM $at WHERE mosque_id = %d AND status = 'published' ORDER BY pinned DESC, published_at DESC LIMIT 20", $_mp_id ) ) ?: [];
 
-    // Enrich announcements with view counts + reaction counts
+    // Enrich announcements with view counts + reaction counts + per-user state
     $cv_table = YNJ_DB::table( 'content_views' );
     $rt_table = YNJ_DB::table( 'reactions' );
+    $_current_ynj_uid = 0;
+    if ( is_user_logged_in() ) {
+        $_current_ynj_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+    }
     foreach ( $_mp_announcements as &$_ann ) {
         $_ann->views = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(view_count),0) FROM $cv_table WHERE content_type='announcement' AND content_id=%d", $_ann->id ) );
         $r_counts = $wpdb->get_results( $wpdb->prepare( "SELECT reaction, COUNT(*) AS cnt FROM $rt_table WHERE content_type='announcement' AND content_id=%d GROUP BY reaction", $_ann->id ), OBJECT_K );
         $_ann->reactions = new stdClass();
         foreach ( [ 'like', 'dua', 'interested' ] as $_rk ) {
             $_ann->reactions->$_rk = (int) ( $r_counts[ $_rk ]->cnt ?? 0 );
+        }
+        // Per-user: which reactions has the current user made on this announcement?
+        $_ann->user_reacted = [];
+        if ( $_current_ynj_uid ) {
+            $_ann->user_reacted = $wpdb->get_col( $wpdb->prepare(
+                "SELECT reaction FROM $rt_table WHERE user_id = %d AND content_type = 'announcement' AND content_id = %d",
+                $_current_ynj_uid, $_ann->id
+            ) );
         }
     }
     unset( $_ann );
