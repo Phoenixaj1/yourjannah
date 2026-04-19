@@ -50,8 +50,8 @@ $mosque_name = $mosque ? $mosque->name : '';
         <?php endif; ?>
 
         <div class="ynj-header__right">
-            <!-- Checkout / Donate icon -->
-            <a href="<?php echo esc_url( home_url( '/checkout/' ) ); ?>" class="ynj-header__checkout" aria-label="Donate" title="Donate" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:rgba(39,126,97,0.1);text-decoration:none;font-size:18px;transition:background .15s;" onmouseover="this.style.background='rgba(39,126,97,0.2)'" onmouseout="this.style.background='rgba(39,126,97,0.1)'">🤲</a>
+            <!-- Donate / Cart icon -->
+            <button type="button" class="ynj-header__checkout" id="ynj-header-cart-btn" aria-label="Donate" title="Donate" onclick="if(typeof ynjCartDrawerToggle==='function'){ynjCartDrawerToggle();}else{window.location.href='<?php echo esc_url( home_url( '/checkout/' ) ); ?>';}" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:rgba(39,126,97,0.1);border:none;cursor:pointer;font-size:18px;transition:background .15s;position:relative;" onmouseover="this.style.background='rgba(39,126,97,0.2)'" onmouseout="this.style.background='rgba(39,126,97,0.1)'">🤲<span id="ynj-header-cart-badge" style="display:none;position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;line-height:16px;text-align:center;">0</span></button>
 
             <?php if ( is_user_logged_in() ) : ?>
             <!-- Notification bell -->

@@ -66,12 +66,11 @@ add_action( 'plugins_loaded', function() {
         service:"\uD83D\uDD27",professional_service:"\uD83D\uDD27"};
 
     function updateCartBadge(){
-        var btn=document.getElementById("hud-cart-btn");
-        var badge=document.getElementById("hud-cart-badge");
-        if(!btn||!badge||typeof ynjBasket==="undefined") return;
+        if(typeof ynjBasket==="undefined") return;
         var c=ynjBasket.getCount();
-        badge.textContent=c;
-        btn.style.display=c>0?"":"none";
+        // Header 🤲 badge
+        var hBadge=document.getElementById("ynj-header-cart-badge");
+        if(hBadge){hBadge.textContent=c;hBadge.style.display=c>0?"":"none";}
     }
 
     function renderDrawerItems(){
@@ -140,11 +139,10 @@ add_action( 'plugins_loaded', function() {
     document.addEventListener("ynjBasketUpdated",function(e){
         updateCartBadge();
         renderDrawerItems();
-        var btn=document.getElementById("hud-cart-btn");
-        if(btn&&e.detail&&e.detail.action==="add"){
-            btn.classList.remove("ynj-hud__cart--bounce");
-            void btn.offsetWidth;
-            btn.classList.add("ynj-hud__cart--bounce");
+        var hBtn=document.getElementById("ynj-header-cart-btn");
+        if(hBtn&&e.detail&&e.detail.action==="add"){
+            hBtn.style.transform="scale(1.2)";
+            setTimeout(function(){hBtn.style.transform="";},300);
             // Auto-open drawer on add
             var drawer=document.getElementById("ynj-cart-drawer");
             if(drawer&&!drawer.classList.contains("ynj-cart-drawer--open")){
