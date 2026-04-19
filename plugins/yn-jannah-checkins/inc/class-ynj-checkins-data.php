@@ -73,6 +73,18 @@ class YNJ_Checkins_Data {
     }
 
     /**
+     * Get a user's total check-in count.
+     */
+    public static function get_user_checkin_count( $user_id ) {
+        global $wpdb;
+        $pt = YNJ_DB::table( 'points' );
+        return (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM $pt WHERE user_id = %d AND action = 'check_in'",
+            absint( $user_id )
+        ) );
+    }
+
+    /**
      * Record a check-in.
      */
     public static function record( $user_id, $mosque_id ) {

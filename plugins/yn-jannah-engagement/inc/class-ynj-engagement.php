@@ -75,6 +75,22 @@ class YNJ_Engagement {
     }
 
     /**
+     * Get a user's own dua requests (across all mosques).
+     *
+     * @param  int   $user_id  YNJ user ID.
+     * @param  int   $limit    Max results.
+     * @return array           Flat array of dua objects.
+     */
+    public static function get_user_duas( $user_id, $limit = 10 ) {
+        global $wpdb;
+        $dt = YNJ_DB::table( 'dua_requests' );
+        return $wpdb->get_results( $wpdb->prepare(
+            "SELECT id, request_text, dua_count, status, created_at FROM $dt WHERE user_id = %d ORDER BY created_at DESC LIMIT %d",
+            absint( $user_id ), absint( $limit )
+        ) ) ?: [];
+    }
+
+    /**
      * Create a new dua request.
      *
      * @param  array    $data {
@@ -421,6 +437,31 @@ class YNJ_Engagement {
         }
 
         return $counts;
+    }
+
+    /**
+     * Get a user's reactions on a specific piece of content.
+     *
+     * @param  int    $user_id       YNJ user ID.
+     * @param  string $content_type  announcement|event|class.
+     * @param  int    $content_id    Content row ID.
+     * @return array                 List of reaction type strings (e.g. ['like','dua']).
+     */
+    public static function get_user_reactions( $user_id, $content_type, $content_id ) {
+        global $wpdb;
+
+        $user_id      = absint( $user_id );
+        $content_type = sanitize_text_field( $content_type );
+        $content_id   = absint( $content_id );
+
+        if ( ! $user_id ) return [];
+
+        $rt = YNJ_DB::table( 'reactions' );
+
+        return $wpdb->get_col( $wpdb->prepare(
+            "SELECT reaction FROM $rt WHERE user_id = %d AND content_type = %s AND content_id = %d",
+            $user_id, $content_type, $content_id
+        ) ) ?: [];
     }
 
     /**

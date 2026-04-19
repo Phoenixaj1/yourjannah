@@ -37,9 +37,8 @@ if ( $mosque && $_ynj_can_edit && $_SERVER['REQUEST_METHOD'] === 'POST'
      && wp_verify_nonce( $_POST['_ynj_nonce'] ?? '', 'ynj_quick_post' ) ) {
 
     $qp_action = sanitize_text_field( $_POST['qp_action'] ?? '' );
-    global $wpdb;
 
-    if ( $qp_action === 'announcement' ) {
+    if ( $qp_action === 'announcement' && class_exists( 'YNJ_Events' ) ) {
         $title = sanitize_text_field( $_POST['title'] ?? '' );
         if ( $title ) {
             $ann_data = [
@@ -48,32 +47,30 @@ if ( $mosque && $_ynj_can_edit && $_SERVER['REQUEST_METHOD'] === 'POST'
                 'body'            => sanitize_textarea_field( $_POST['body'] ?? '' ),
                 'type'            => sanitize_text_field( $_POST['type'] ?? 'general' ),
                 'status'          => 'published',
+                'publish'         => true,
                 'author_user_id'  => $_wp_uid,
                 'author_role'     => $_ynj_is_page_imam && ! $_ynj_is_page_admin ? 'imam' : 'admin',
                 'approval_status' => 'approved',
-                'published_at'    => current_time( 'mysql' ),
             ];
-            // Imam without auto-publish → pending
+            // Imam without auto-publish → pending (mosque object has imam_auto_publish via SELECT *)
             if ( $_ynj_is_page_imam && ! $_ynj_is_page_admin ) {
-                $imam_auto = $wpdb->get_var( $wpdb->prepare(
-                    "SELECT imam_auto_publish FROM " . YNJ_DB::table( 'mosques' ) . " WHERE id = %d",
-                    (int) $mosque->id
-                ) );
-                if ( ! $imam_auto ) {
+                if ( empty( $mosque->imam_auto_publish ) ) {
                     $ann_data['status']          = 'draft';
+                    $ann_data['publish']         = false;
+                    $ann_data['published_at']    = current_time( 'mysql' );
                     $ann_data['approval_status'] = 'pending';
                 }
             }
-            $wpdb->insert( YNJ_DB::table( 'announcements' ), $ann_data );
+            YNJ_Events::create_announcement( $ann_data );
             $_ynj_posted = $ann_data['approval_status'] === 'pending' ? 'pending' : 'announcement';
         }
     }
 
-    if ( $qp_action === 'event' ) {
+    if ( $qp_action === 'event' && class_exists( 'YNJ_Events' ) ) {
         $title = sanitize_text_field( $_POST['event_title'] ?? '' );
         $date  = sanitize_text_field( $_POST['event_date'] ?? '' );
         if ( $title && $date ) {
-            $wpdb->insert( YNJ_DB::table( 'events' ), [
+            YNJ_Events::create_event( [
                 'mosque_id'   => (int) $mosque->id,
                 'title'       => $title,
                 'description' => sanitize_textarea_field( $_POST['event_description'] ?? '' ),
@@ -130,14 +127,9 @@ if ( $mosque && $mosque->latitude ) {
             }
             if ( ! $aladhan ) set_transient( $fail_key, 1, HOUR_IN_SECONDS );
         }
-        // Fallback: use prayer_times table
-        if ( ! $aladhan ) {
-            global $wpdb;
-            $pt_table = YNJ_DB::table( 'prayer_times' );
-            $db_times = $wpdb->get_row( $wpdb->prepare(
-                "SELECT fajr, sunrise, dhuhr, asr, maghrib, isha FROM $pt_table WHERE mosque_id = %d AND date = %s",
-                (int) $mosque->id, date( 'Y-m-d' )
-            ) );
+        // Fallback: use prayer_times table via plugin
+        if ( ! $aladhan && class_exists( 'YNJ_Mosques' ) ) {
+            $db_times = YNJ_Mosques::get_prayer_times( (int) $mosque->id );
             if ( $db_times ) {
                 $aladhan = [ 'Fajr' => $db_times->fajr, 'Sunrise' => $db_times->sunrise, 'Dhuhr' => $db_times->dhuhr, 'Asr' => $db_times->asr, 'Maghrib' => $db_times->maghrib, 'Isha' => $db_times->isha ];
             }
@@ -148,10 +140,8 @@ if ( $mosque && $mosque->latitude ) {
     $_ynj_jamat = [];
     $_ynj_jumuah_slots = [];
     $_ynj_is_friday = ( date( 'N' ) == 5 );
-    if ( $mosque && class_exists( 'YNJ_DB' ) ) {
-        global $wpdb;
-        $pt_table = YNJ_DB::table( 'prayer_times' );
-        $db_row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $pt_table WHERE mosque_id = %d AND date = %s", (int) $mosque->id, date( 'Y-m-d' ) ) );
+    if ( $mosque && class_exists( 'YNJ_Mosques' ) ) {
+        $db_row = YNJ_Mosques::get_prayer_times( (int) $mosque->id );
         if ( $db_row ) {
             foreach ( [ 'fajr', 'dhuhr', 'asr', 'maghrib', 'isha' ] as $pk ) {
                 $jk = $pk . '_jamat';
@@ -159,8 +149,10 @@ if ( $mosque && $mosque->latitude ) {
             }
         }
         if ( $_ynj_is_friday ) {
-            $jt = YNJ_DB::table( 'jumuah_times' );
-            $_ynj_jumuah_slots = $wpdb->get_results( $wpdb->prepare( "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND enabled = 1 ORDER BY salah_time ASC", (int) $mosque->id ) ) ?: [];
+            $_ynj_jumuah_slots = array_values( array_filter(
+                YNJ_Mosques::get_jumuah_times( (int) $mosque->id ),
+                function( $j ) { return ! empty( $j->enabled ); }
+            ) );
         }
     }
 
@@ -224,52 +216,60 @@ $_mp_classes = [];
 $_mp_points = [ 'total' => 0 ];
 
 if ( $_mp_id && class_exists( 'YNJ_DB' ) ) {
-    global $wpdb;
-    $jt = YNJ_DB::table( 'jumuah_times' );
-    if ( $wpdb->get_var( "SHOW TABLES LIKE '$jt'" ) === $jt ) {
-        $_mp_jumuah = $wpdb->get_results( $wpdb->prepare( "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND enabled = 1 ORDER BY salah_time ASC", $_mp_id ) ) ?: [];
+    // Jumuah times via plugin (filter to enabled only)
+    if ( class_exists( 'YNJ_Mosques' ) ) {
+        $_mp_jumuah = array_values( array_filter(
+            YNJ_Mosques::get_jumuah_times( $_mp_id ),
+            function( $j ) { return ! empty( $j->enabled ); }
+        ) );
     }
-    $bt = YNJ_DB::table( 'businesses' );
-    $_mp_sponsors = $wpdb->get_results( $wpdb->prepare( "SELECT id, business_name, category, monthly_fee_pence FROM $bt WHERE mosque_id = %d AND status = 'active' ORDER BY monthly_fee_pence DESC LIMIT 20", $_mp_id ) ) ?: [];
-    $svt = YNJ_DB::table( 'services' );
-    $_mp_services = $wpdb->get_results( $wpdb->prepare( "SELECT id, provider_name, service_type, phone, area_covered, hourly_rate_pence FROM $svt WHERE mosque_id = %d AND status = 'active' ORDER BY RAND() LIMIT 10", $_mp_id ) ) ?: [];
-    $at = YNJ_DB::table( 'announcements' );
-    $_mp_announcements = $wpdb->get_results( $wpdb->prepare( "SELECT id, title, body, type, pinned, published_at FROM $at WHERE mosque_id = %d AND status = 'published' ORDER BY pinned DESC, published_at DESC LIMIT 20", $_mp_id ) ) ?: [];
+    // Sponsors (businesses) via plugin
+    if ( class_exists( 'YNJ_Directory' ) ) {
+        $_mp_sponsors = YNJ_Directory::get_businesses( $_mp_id, [ 'limit' => 20 ] );
+    }
+    // Community services via plugin
+    if ( class_exists( 'YNJ_Directory' ) ) {
+        $_mp_services = YNJ_Directory::get_services( $_mp_id, [ 'limit' => 10 ] );
+    }
+    // Announcements via plugin — returns {announcements: array, total: int}
+    // format_announcement returns arrays, but template uses object syntax → cast back
+    if ( class_exists( 'YNJ_Events' ) ) {
+        $ann_result = YNJ_Events::get_announcements( $_mp_id );
+        $_mp_announcements = array_map( function( $a ) { return (object) $a; }, $ann_result['announcements'] ?? [] );
+    }
 
     // Enrich announcements with view counts + reaction counts + per-user state
-    $cv_table = YNJ_DB::table( 'content_views' );
-    $rt_table = YNJ_DB::table( 'reactions' );
     $_current_ynj_uid = 0;
     if ( is_user_logged_in() ) {
         $_current_ynj_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
     }
-    foreach ( $_mp_announcements as &$_ann ) {
-        $_ann->views = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(view_count),0) FROM $cv_table WHERE content_type='announcement' AND content_id=%d", $_ann->id ) );
-        $r_counts = $wpdb->get_results( $wpdb->prepare( "SELECT reaction, COUNT(*) AS cnt FROM $rt_table WHERE content_type='announcement' AND content_id=%d GROUP BY reaction", $_ann->id ), OBJECT_K );
-        $_ann->reactions = new stdClass();
-        foreach ( [ 'like', 'dua', 'interested' ] as $_rk ) {
-            $_ann->reactions->$_rk = (int) ( $r_counts[ $_rk ]->cnt ?? 0 );
+    if ( class_exists( 'YNJ_Engagement' ) ) {
+        foreach ( $_mp_announcements as &$_ann ) {
+            $_ann->views = YNJ_Engagement::get_view_count( 'announcement', (int) $_ann->id );
+            $r_counts = YNJ_Engagement::get_reactions( 'announcement', (int) $_ann->id );
+            $_ann->reactions = (object) $r_counts;
+            $_ann->user_reacted = [];
+            if ( $_current_ynj_uid ) {
+                $_ann->user_reacted = YNJ_Engagement::get_user_reactions( $_current_ynj_uid, 'announcement', (int) $_ann->id );
+            }
         }
-        // Per-user: which reactions has the current user made on this announcement?
-        $_ann->user_reacted = [];
-        if ( $_current_ynj_uid ) {
-            $_ann->user_reacted = $wpdb->get_col( $wpdb->prepare(
-                "SELECT reaction FROM $rt_table WHERE user_id = %d AND content_type = 'announcement' AND content_id = %d",
-                $_current_ynj_uid, $_ann->id
-            ) );
-        }
+        unset( $_ann );
     }
-    unset( $_ann );
 
-    $et = YNJ_DB::table( 'events' );
-    $_mp_events = $wpdb->get_results( $wpdb->prepare( "SELECT id, title, description, event_date, start_time, end_time, location, category, ticket_price_pence, max_capacity, rsvp_count FROM $et WHERE mosque_id = %d AND status = 'published' AND event_date >= CURDATE() ORDER BY event_date ASC LIMIT 20", $_mp_id ) ) ?: [];
-    $ct = YNJ_DB::table( 'classes' );
-    $_mp_classes = $wpdb->get_results( $wpdb->prepare( "SELECT id, title, description, instructor_name, day_of_week, start_time, end_time, price_pence, category, max_capacity, enrolled_count FROM $ct WHERE mosque_id = %d AND status = 'active' ORDER BY day_of_week ASC LIMIT 20", $_mp_id ) ) ?: [];
+    // Events via plugin — returns {events: array, total: int}
+    if ( class_exists( 'YNJ_Events' ) ) {
+        $ev_result = YNJ_Events::get_upcoming_events( $_mp_id );
+        $_mp_events = array_map( function( $e ) { return (object) $e; }, $ev_result['events'] ?? [] );
+    }
+    // Classes via plugin (returns raw objects already)
+    if ( class_exists( 'YNJ_Madrassah' ) ) {
+        $_mp_classes = YNJ_Madrassah::get_classes( $_mp_id, [ 'limit' => 20 ] );
+    }
+    // User total points via plugin
     if ( is_user_logged_in() ) {
         $ynj_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
-        if ( $ynj_uid ) {
-            $ut = YNJ_DB::table( 'users' );
-            $_mp_points = [ 'ok' => true, 'total' => (int) $wpdb->get_var( $wpdb->prepare( "SELECT total_points FROM $ut WHERE id = %d", $ynj_uid ) ) ];
+        if ( $ynj_uid && class_exists( 'YNJ_People' ) ) {
+            $_mp_points = [ 'ok' => true, 'total' => YNJ_People::get_total_points( $ynj_uid ) ];
         }
     }
 }
@@ -295,24 +295,15 @@ localStorage.setItem('ynj_mosque_name', <?php echo wp_json_encode( $mosque_name 
 // ── Membership status check ──
 $_ynj_is_member = false;
 $_ynj_is_primary = false;
-// Live member count: real subscriptions + 1 (admin is always member #1)
-$_ynj_member_count = 1; // Admin/creator is always counted
-if ( $mosque ) {
-    global $wpdb;
-    $_ynj_member_count = 1 + (int) $wpdb->get_var( $wpdb->prepare(
-        "SELECT COUNT(*) FROM " . YNJ_DB::table( 'user_subscriptions' ) . " WHERE mosque_id = %d AND status = 'active'",
-        (int) $mosque->id
-    ) );
+// Live member count via plugin (includes +1 for admin)
+$_ynj_member_count = 1;
+if ( $mosque && class_exists( 'YNJ_Mosques' ) ) {
+    $_ynj_member_count = YNJ_Mosques::get_member_count( (int) $mosque->id );
 }
-if ( $mosque && is_user_logged_in() ) {
+if ( $mosque && is_user_logged_in() && class_exists( 'YNJ_Mosques' ) ) {
     $ynj_uid_check = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
     if ( $ynj_uid_check ) {
-        global $wpdb;
-        $sub_table = YNJ_DB::table( 'user_subscriptions' );
-        $membership = $wpdb->get_row( $wpdb->prepare(
-            "SELECT is_member, is_primary FROM $sub_table WHERE user_id = %d AND mosque_id = %d AND status = 'active'",
-            $ynj_uid_check, (int) $mosque->id
-        ) );
+        $membership = YNJ_Mosques::get_user_subscription( $ynj_uid_check, (int) $mosque->id );
         if ( $membership ) {
             $_ynj_is_member = (bool) $membership->is_member;
             $_ynj_is_primary = (bool) $membership->is_primary;
@@ -362,13 +353,10 @@ if ( $mosque && is_user_logged_in() ) {
     <!-- Patron Membership -->
     <?php
     $_patron_status = null;
-    if ( is_user_logged_in() && $mosque ) {
+    if ( is_user_logged_in() && $mosque && class_exists( 'YNJ_Donations' ) ) {
         $_p_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
         if ( $_p_uid ) {
-            $_patron_status = $wpdb->get_row( $wpdb->prepare(
-                "SELECT tier, amount_pence, status FROM " . YNJ_DB::table( 'patrons' ) . " WHERE mosque_id = %d AND user_id = %d AND status = 'active' LIMIT 1",
-                (int) $mosque->id, $_p_uid
-            ) );
+            $_patron_status = YNJ_Donations::get_patron_status( $_p_uid, (int) $mosque->id );
         }
     }
     $patron_tiers = class_exists( 'YNJ_API_Patrons' ) ? YNJ_API_Patrons::get_tiers() : [];
@@ -533,20 +521,12 @@ if ( $mosque && is_user_logged_in() ) {
         $_cta_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
         $_cta_streak = 0;
         $_cta_done = 0;
-        if ( $_cta_uid && class_exists( 'YNJ_DB' ) ) {
-            global $wpdb;
-            $_ib_t = YNJ_DB::table( 'ibadah_logs' );
-            // Streak
-            $_sd = $wpdb->get_col( $wpdb->prepare(
-                "SELECT log_date FROM $_ib_t WHERE user_id = %d AND dhikr = 1 ORDER BY log_date DESC LIMIT 120", $_cta_uid
-            ) );
-            $expected = date( 'Y-m-d' );
-            foreach ( $_sd as $d ) {
-                if ( $d === $expected ) { $_cta_streak++; $expected = date( 'Y-m-d', strtotime( "$expected -1 day" ) ); }
-                elseif ( $_cta_streak === 0 && $d === date( 'Y-m-d', strtotime( '-1 day' ) ) ) { $_cta_streak = 1; $expected = date( 'Y-m-d', strtotime( "$d -1 day" ) ); }
-                else break;
+        if ( $_cta_uid ) {
+            // Streak via plugin
+            if ( class_exists( 'YNJ_Streaks' ) ) {
+                $_cta_streak = YNJ_Streaks::get_user_streak( $_cta_uid );
             }
-            // Done count today
+            // Done count today (transient-based, no DB)
             for ( $i = 0; $i < 5; $i++ ) {
                 if ( get_transient( 'ynj_dhikr_' . $_cta_uid . '_' . date( 'Y-m-d' ) . '_' . $i ) ) $_cta_done++;
             }

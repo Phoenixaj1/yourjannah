@@ -40,21 +40,15 @@ $phone    = get_user_meta( $wp_uid, 'ynj_phone', true ) ?: '';
 $fav_mosque_id = (int) get_user_meta( $wp_uid, 'ynj_favourite_mosque_id', true );
 
 // Auto-link: if WP user exists but ynj_user_id not set
-if ( ! $ynj_uid && $wp_uid && class_exists( 'YNJ_DB' ) ) {
-    global $wpdb;
-    $ut = YNJ_DB::table( 'users' );
+if ( ! $ynj_uid && $wp_uid && class_exists( 'YNJ_People' ) ) {
     $email = $wp_user->user_email;
-    $existing = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM $ut WHERE email = %s LIMIT 1", $email ) );
+    $existing = YNJ_People::find_by_email( $email );
     if ( $existing ) {
         $ynj_uid = (int) $existing->id;
     } else {
-        $token = bin2hex( random_bytes( 32 ) );
-        $token_hash = hash_hmac( 'sha256', $token, 'ynj_user_salt_2024' );
-        $wpdb->insert( $ut, [
+        $ynj_uid = YNJ_People::create_user( [
             'name' => $wp_user->display_name, 'email' => $email, 'phone' => $phone,
-            'password_hash' => '', 'token_hash' => $token_hash, 'status' => 'active',
         ] );
-        $ynj_uid = (int) $wpdb->insert_id;
     }
     if ( $ynj_uid ) update_user_meta( $wp_uid, 'ynj_user_id', $ynj_uid );
 }
@@ -65,72 +59,45 @@ $businesses = []; $services = []; $points_total = 0; $points_recent = [];
 $fav_mosque = null;
 
 // ── Core user data ──
-if ( $ynj_uid && class_exists( 'YNJ_DB' ) ) {
-    global $wpdb;
-    $users_table   = YNJ_DB::table( 'users' );
-    $mosques_table = YNJ_DB::table( 'mosques' );
+if ( $ynj_uid ) {
+    // User profile via plugin (includes subscriptions)
+    if ( class_exists( 'YNJ_People' ) ) {
+        $member_data = YNJ_People::get_member( $ynj_uid );
+        if ( $member_data ) {
+            $ynj_user = $member_data;
+            $subscriptions = $member_data->subscriptions ?? [];
+        }
+    }
 
-    $ynj_user = $wpdb->get_row( $wpdb->prepare(
-        "SELECT travel_mode, travel_minutes, alert_before_minutes, total_points, favourite_mosque_id FROM $users_table WHERE id = %d", $ynj_uid
-    ) );
-
-    if ( ! $fav_mosque_id && $ynj_user && $ynj_user->favourite_mosque_id ) {
+    if ( ! $fav_mosque_id && $ynj_user && ! empty( $ynj_user->favourite_mosque_id ) ) {
         $fav_mosque_id = (int) $ynj_user->favourite_mosque_id;
     }
 
-    // Patron
-    $patron_table = YNJ_DB::table( 'patrons' );
-    $patron = $wpdb->get_row( $wpdb->prepare(
-        "SELECT p.*, m.name AS mosque_name, m.slug AS mosque_slug FROM $patron_table p
-         LEFT JOIN $mosques_table m ON m.id = p.mosque_id
-         WHERE p.user_id = %d AND p.status = 'active' ORDER BY p.amount_pence DESC LIMIT 1", $ynj_uid
-    ) );
+    // Patron via plugin
+    if ( class_exists( 'YNJ_Patrons_Data' ) ) {
+        $patron = YNJ_Patrons_Data::get_user_patron( $ynj_uid );
+    }
 
-    // Subscriptions
-    $sub_table = YNJ_DB::table( 'user_subscriptions' );
-    $subscriptions = $wpdb->get_results( $wpdb->prepare(
-        "SELECT s.*, m.name AS mosque_name, m.city AS mosque_city, m.slug AS mosque_slug
-         FROM $sub_table s LEFT JOIN $mosques_table m ON m.id = s.mosque_id
-         WHERE s.user_id = %d AND s.status = 'active' ORDER BY s.subscribed_at DESC LIMIT 20", $ynj_uid
-    ) ) ?: [];
+    // Bookings via plugin
+    if ( class_exists( 'YNJ_Events' ) ) {
+        $bookings = YNJ_Events::get_user_bookings( $wp_user->user_email );
+    }
 
-    // Bookings
-    $book_table = YNJ_DB::table( 'bookings' );
-    $events_table = YNJ_DB::table( 'events' );
-    $rooms_table = YNJ_DB::table( 'rooms' );
-    $bookings = $wpdb->get_results( $wpdb->prepare(
-        "SELECT b.*, m.name AS mosque_name, e.title AS event_title, r.name AS room_name
-         FROM $book_table b LEFT JOIN $mosques_table m ON m.id = b.mosque_id
-         LEFT JOIN $events_table e ON e.id = b.event_id LEFT JOIN $rooms_table r ON r.id = b.room_id
-         WHERE b.user_email = %s ORDER BY b.created_at DESC LIMIT 20", $wp_user->user_email
-    ) ) ?: [];
+    // Businesses & Services via plugin
+    if ( class_exists( 'YNJ_Directory' ) ) {
+        $businesses = YNJ_Directory::get_user_businesses( $wp_user->user_email );
+        $services   = YNJ_Directory::get_user_services( $wp_user->user_email );
+    }
 
-    // Businesses & Services
-    $biz_table = YNJ_DB::table( 'businesses' );
-    $businesses = $wpdb->get_results( $wpdb->prepare(
-        "SELECT b.*, m.name AS mosque_name, m.slug AS mosque_slug FROM $biz_table b
-         LEFT JOIN $mosques_table m ON m.id = b.mosque_id
-         WHERE b.email = %s AND b.status IN ('active','pending') ORDER BY b.created_at DESC LIMIT 20", $wp_user->user_email
-    ) ) ?: [];
-    $svc_table = YNJ_DB::table( 'services' );
-    $services = $wpdb->get_results( $wpdb->prepare(
-        "SELECT s.*, m.name AS mosque_name, m.slug AS mosque_slug FROM $svc_table s
-         LEFT JOIN $mosques_table m ON m.id = s.mosque_id
-         WHERE s.email = %s AND s.status IN ('active','pending') ORDER BY s.created_at DESC LIMIT 20", $wp_user->user_email
-    ) ) ?: [];
+    // Points via plugin
+    if ( class_exists( 'YNJ_People' ) ) {
+        $points_total  = YNJ_People::get_points_sum( $ynj_uid );
+        $points_recent = YNJ_People::get_recent_points( $ynj_uid );
+    }
 
-    // Points
-    $pts_table = YNJ_DB::table( 'points' );
-    $points_total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(points), 0) FROM $pts_table WHERE user_id = %d", $ynj_uid ) );
-    $points_recent = $wpdb->get_results( $wpdb->prepare(
-        "SELECT action, points, description, created_at FROM $pts_table WHERE user_id = %d ORDER BY created_at DESC LIMIT 5", $ynj_uid
-    ) ) ?: [];
-
-    // Favourite mosque
-    if ( $fav_mosque_id ) {
-        $fav_mosque = $wpdb->get_row( $wpdb->prepare(
-            "SELECT id, name, slug, city FROM $mosques_table WHERE id = %d", $fav_mosque_id
-        ) );
+    // Favourite mosque via plugin
+    if ( $fav_mosque_id && class_exists( 'YNJ_Mosques' ) ) {
+        $fav_mosque = YNJ_Mosques::get_by_id( $fav_mosque_id );
     }
 }
 
@@ -154,81 +121,21 @@ $seven_day_log   = [];
 $masjid_dhikr_total = 0; // Total dhikr/remembrances for this masjid (all time)
 $masjid_dhikr_today = 0; // How many people said dhikr today
 
-if ( $ynj_uid && class_exists( 'YNJ_DB' ) ) {
-    global $wpdb;
-    $ib_table = YNJ_DB::table( 'ibadah_logs' );
-    $today = date( 'Y-m-d' );
-
-    // Today's ibadah
-    $ibadah_today = $wpdb->get_row( $wpdb->prepare(
-        "SELECT fajr, dhuhr, asr, maghrib, isha, quran_pages, dhikr, fasting, charity, good_deed, prayed_at_mosque, points_earned
-         FROM $ib_table WHERE user_id = %d AND log_date = %s", $ynj_uid, $today
-    ) );
-
-    // General streak (consecutive days with any prayer OR dhikr)
-    $streak_dates = $wpdb->get_col( $wpdb->prepare(
-        "SELECT log_date FROM $ib_table WHERE user_id = %d AND (fajr=1 OR dhuhr=1 OR asr=1 OR maghrib=1 OR isha=1 OR dhikr=1) ORDER BY log_date DESC LIMIT 120", $ynj_uid
-    ) );
-    $ibadah_streak = 0;
-    $expected = $today;
-    foreach ( $streak_dates as $d ) {
-        if ( $d === $expected ) { $ibadah_streak++; $expected = date( 'Y-m-d', strtotime( "$expected -1 day" ) ); }
-        elseif ( $ibadah_streak === 0 && $d === date( 'Y-m-d', strtotime( '-1 day' ) ) ) { $ibadah_streak = 1; $expected = date( 'Y-m-d', strtotime( "$d -1 day" ) ); }
-        else break;
-    }
-
-    // Fajr streak (consecutive days with Fajr specifically)
-    $fajr_dates = $wpdb->get_col( $wpdb->prepare(
-        "SELECT log_date FROM $ib_table WHERE user_id = %d AND fajr = 1 ORDER BY log_date DESC LIMIT 120", $ynj_uid
-    ) );
-    $fajr_streak = 0;
-    $expected = $today;
-    foreach ( $fajr_dates as $d ) {
-        if ( $d === $expected ) { $fajr_streak++; $expected = date( 'Y-m-d', strtotime( "$expected -1 day" ) ); }
-        elseif ( $fajr_streak === 0 && $d === date( 'Y-m-d', strtotime( '-1 day' ) ) ) { $fajr_streak = 1; $expected = date( 'Y-m-d', strtotime( "$d -1 day" ) ); }
-        else break;
-    }
-
-    // Jumu'ah streak (consecutive Fridays prayed at mosque)
-    $friday_dates = $wpdb->get_col( $wpdb->prepare(
-        "SELECT log_date FROM $ib_table WHERE user_id = %d AND prayed_at_mosque = 1 AND DAYOFWEEK(log_date) = 6 ORDER BY log_date DESC LIMIT 52", $ynj_uid
-    ) );
-    $jumuah_streak = 0;
-    // Find the most recent Friday
-    $last_friday = date( 'N' ) >= 5 ? date( 'Y-m-d', strtotime( 'last friday' ) ) : date( 'Y-m-d', strtotime( 'last friday' ) );
-    if ( date( 'N' ) == 5 ) $last_friday = $today; // Today is Friday
-    $expected_fri = $last_friday;
-    foreach ( $friday_dates as $fd ) {
-        if ( $fd === $expected_fri ) { $jumuah_streak++; $expected_fri = date( 'Y-m-d', strtotime( "$expected_fri -7 days" ) ); }
-        elseif ( $jumuah_streak === 0 ) continue;
-        else break;
-    }
-
-    // Week stats
-    $week_start = date( 'Y-m-d', strtotime( 'Monday this week' ) );
-    $week_row = $wpdb->get_row( $wpdb->prepare(
-        "SELECT COALESCE(SUM(fajr+dhuhr+asr+maghrib+isha),0) AS prayers, COALESCE(SUM(quran_pages),0) AS pages,
-                COALESCE(SUM(points_earned),0) AS points, COUNT(*) AS days_logged
-         FROM $ib_table WHERE user_id = %d AND log_date >= %s", $ynj_uid, $week_start
-    ) );
-    if ( $week_row ) {
-        $ibadah_week = [ 'prayers' => (int) $week_row->prayers, 'pages' => (int) $week_row->pages,
-                         'points' => (int) $week_row->points, 'days' => (int) $week_row->days_logged ];
-    }
-
-    // 7-day log for streak grid (Mon-Sun of this week)
-    $seven_day_log = $wpdb->get_results( $wpdb->prepare(
-        "SELECT log_date, (fajr+dhuhr+asr+maghrib+isha) AS prayers, points_earned FROM $ib_table
-         WHERE user_id = %d AND log_date >= %s ORDER BY log_date ASC", $ynj_uid, $week_start
-    ) ) ?: [];
+if ( $ynj_uid && class_exists( 'YNJ_Streaks' ) ) {
+    // Today's ibadah via plugin
+    $ibadah_today  = YNJ_Streaks::get_user_ibadah_today( $ynj_uid );
+    // Streaks via plugin
+    $ibadah_streak = YNJ_Streaks::get_user_ibadah_streak( $ynj_uid );
+    $fajr_streak   = YNJ_Streaks::get_user_fajr_streak( $ynj_uid );
+    $jumuah_streak = YNJ_Streaks::get_user_jumuah_streak( $ynj_uid );
+    // Week stats via plugin
+    $ibadah_week   = YNJ_Streaks::get_user_week_stats( $ynj_uid );
+    // 7-day log for streak grid
+    $seven_day_log = YNJ_Streaks::get_user_7day_log( $ynj_uid );
     $seven_day_map = [];
     foreach ( $seven_day_log as $sl ) $seven_day_map[ $sl->log_date ] = $sl;
-
     // Heatmap (last 35 days for 5-week calendar)
-    $heatmap_since = date( 'Y-m-d', strtotime( '-34 days' ) );
-    $heatmap_data = $wpdb->get_results( $wpdb->prepare(
-        "SELECT log_date, points_earned FROM $ib_table WHERE user_id = %d AND log_date >= %s ORDER BY log_date ASC", $ynj_uid, $heatmap_since
-    ) ) ?: [];
+    $heatmap_data = YNJ_Streaks::get_user_heatmap( $ynj_uid, 35 );
     $heatmap_map = [];
     $max_heatmap_pts = 1;
     foreach ( $heatmap_data as $hd ) {
@@ -236,23 +143,13 @@ if ( $ynj_uid && class_exists( 'YNJ_DB' ) ) {
         if ( (int) $hd->points_earned > $max_heatmap_pts ) $max_heatmap_pts = (int) $hd->points_earned;
     }
 
-    // Badges
+    // Badges (already use function wrappers — no $wpdb here)
     if ( function_exists( 'ynj_get_user_badges' ) ) $user_badges = ynj_get_user_badges( $ynj_uid );
-    // Check for new badges (also awards them)
     if ( function_exists( 'ynj_check_badges' ) && $fav_mosque_id ) $badge_stats = ynj_check_badges( $ynj_uid, $fav_mosque_id );
 
-    // Badge stats for progress (total prayer count, quran pages, etc.)
-    $ibadah_totals = $wpdb->get_row( $wpdb->prepare(
-        "SELECT COALESCE(SUM(fajr+dhuhr+asr+maghrib+isha),0) AS prayers, COALESCE(SUM(quran_pages),0) AS quran,
-                COALESCE(SUM(dhikr),0) AS dhikr_days, COALESCE(SUM(fasting),0) AS fasting_days,
-                COALESCE(SUM(charity),0) AS charity_days,
-                COUNT(DISTINCT CASE WHEN good_deed != '' THEN log_date END) AS good_deeds,
-                COUNT(DISTINCT CASE WHEN fajr+dhuhr+asr+maghrib+isha = 5 THEN log_date END) AS all_five
-         FROM $ib_table WHERE user_id = %d", $ynj_uid
-    ) );
-    $checkins_count = (int) $wpdb->get_var( $wpdb->prepare(
-        "SELECT COUNT(*) FROM " . YNJ_DB::table( 'points' ) . " WHERE user_id = %d AND action = 'check_in'", $ynj_uid
-    ) );
+    // Badge progress via plugin
+    $ibadah_totals = YNJ_Streaks::get_user_ibadah_totals( $ynj_uid );
+    $checkins_count = class_exists( 'YNJ_Checkins_Data' ) ? YNJ_Checkins_Data::get_user_checkin_count( $ynj_uid ) : 0;
     $badge_progress = [
         'prayers' => (int) ( $ibadah_totals->prayers ?? 0 ), 'quran' => (int) ( $ibadah_totals->quran ?? 0 ),
         'dhikr_days' => (int) ( $ibadah_totals->dhikr_days ?? 0 ), 'fasting_days' => (int) ( $ibadah_totals->fasting_days ?? 0 ),
@@ -268,20 +165,16 @@ if ( $ynj_uid && class_exists( 'YNJ_DB' ) ) {
         if ( function_exists( 'ynj_get_congregation_points' ) ) $congregation = ynj_get_congregation_points( $fav_mosque_id );
         if ( function_exists( 'ynj_get_h2h_challenge' ) ) $h2h = ynj_get_h2h_challenge( $fav_mosque_id );
 
-        // Masjid-wide dhikr counters
-        $masjid_dhikr_total = (int) $wpdb->get_var( $wpdb->prepare(
-            "SELECT COUNT(*) FROM $ib_table WHERE mosque_id = %d AND dhikr = 1", $fav_mosque_id
-        ) );
-        $masjid_dhikr_today = (int) $wpdb->get_var( $wpdb->prepare(
-            "SELECT COUNT(DISTINCT user_id) FROM $ib_table WHERE mosque_id = %d AND dhikr = 1 AND log_date = %s", $fav_mosque_id, $today
-        ) );
+        // Masjid-wide dhikr counters via plugin
+        $dhikr_stats = YNJ_Streaks::get_masjid_dhikr_stats( $fav_mosque_id );
+        $masjid_dhikr_total = $dhikr_stats['total'];
+        $masjid_dhikr_today = $dhikr_stats['today'];
     }
 
-    // My dua requests
-    $dua_table = YNJ_DB::table( 'dua_requests' );
-    $my_duas = $wpdb->get_results( $wpdb->prepare(
-        "SELECT id, request_text, dua_count, status, created_at FROM $dua_table WHERE user_id = %d ORDER BY created_at DESC LIMIT 10", $ynj_uid
-    ) ) ?: [];
+    // My dua requests via plugin
+    if ( class_exists( 'YNJ_Engagement' ) ) {
+        $my_duas = YNJ_Engagement::get_user_duas( $ynj_uid );
+    }
 }
 
 // Derived values
@@ -913,21 +806,10 @@ $shukr_today = $shukr_phrases[ (int) date( 'z' ) % count( $shukr_phrases ) ];
      4. MASJID STREAK — Your community's streak
      ═══════════════════════════════════════════ -->
 <?php
-// Calculate MASJID streak (consecutive days where at least 1 member logged)
+// Calculate MASJID streak via plugin
 $masjid_streak = 0;
-if ( $fav_mosque_id && $ynj_uid && class_exists( 'YNJ_DB' ) ) {
-    global $wpdb;
-    $_ms_table = YNJ_DB::table( 'ibadah_logs' );
-    $_ms_dates = $wpdb->get_col( $wpdb->prepare(
-        "SELECT DISTINCT log_date FROM $_ms_table WHERE mosque_id = %d AND (fajr=1 OR dhuhr=1 OR asr=1 OR maghrib=1 OR isha=1 OR dhikr=1) ORDER BY log_date DESC LIMIT 120",
-        $fav_mosque_id
-    ) );
-    $expected = date( 'Y-m-d' );
-    foreach ( $_ms_dates as $d ) {
-        if ( $d === $expected ) { $masjid_streak++; $expected = date( 'Y-m-d', strtotime( "$expected -1 day" ) ); }
-        elseif ( $masjid_streak === 0 && $d === date( 'Y-m-d', strtotime( '-1 day' ) ) ) { $masjid_streak = 1; $expected = date( 'Y-m-d', strtotime( "$d -1 day" ) ); }
-        else break;
-    }
+if ( $fav_mosque_id && $ynj_uid && class_exists( 'YNJ_Streaks' ) ) {
+    $masjid_streak = YNJ_Streaks::get_mosque_streak( $fav_mosque_id );
 }
 ?>
 <div class="ynj-streaks">

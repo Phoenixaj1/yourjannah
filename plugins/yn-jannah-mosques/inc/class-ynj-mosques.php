@@ -202,6 +202,22 @@ class YNJ_Mosques {
     }
 
     /**
+     * Get a user's active subscription for a mosque.
+     *
+     * @param  int         $user_id    YNJ user ID.
+     * @param  int         $mosque_id  Mosque ID.
+     * @return object|null             Row with is_member, is_primary, etc. or null.
+     */
+    public static function get_user_subscription( $user_id, $mosque_id ) {
+        global $wpdb;
+        $st = YNJ_DB::table( 'user_subscriptions' );
+        return $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM $st WHERE user_id = %d AND mosque_id = %d AND status = 'active'",
+            absint( $user_id ), absint( $mosque_id )
+        ) );
+    }
+
+    /**
      * Get all active mosques (for sitemap).
      */
     public static function get_all_active( $limit = 5000 ) {

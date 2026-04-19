@@ -18,6 +18,21 @@ class YNJ_Patrons_Data {
         return $wpdb->get_results( "SELECT * FROM $pt $where ORDER BY amount_pence DESC, created_at DESC" ) ?: [];
     }
 
+    /**
+     * Get a user's highest-value active patron record (with mosque name).
+     */
+    public static function get_user_patron( $user_id ) {
+        global $wpdb;
+        $pt = YNJ_DB::table( 'patrons' );
+        $mt = YNJ_DB::table( 'mosques' );
+        return $wpdb->get_row( $wpdb->prepare(
+            "SELECT p.*, m.name AS mosque_name, m.slug AS mosque_slug FROM $pt p
+             LEFT JOIN $mt m ON m.id = p.mosque_id
+             WHERE p.user_id = %d AND p.status = 'active' ORDER BY p.amount_pence DESC LIMIT 1",
+            absint( $user_id )
+        ) );
+    }
+
     public static function get_all_patrons( $args = [] ) {
         global $wpdb;
         $pt = YNJ_DB::table( 'patrons' );

@@ -128,6 +128,12 @@ class YNJ_Events {
         if ( isset( $data['scheduled_at'] ) ) {
             $insert['scheduled_at'] = sanitize_text_field( $data['scheduled_at'] );
         }
+        if ( isset( $data['approval_status'] ) ) {
+            $insert['approval_status'] = sanitize_text_field( $data['approval_status'] );
+        }
+        if ( isset( $data['published_at'] ) && ! $publish ) {
+            $insert['published_at'] = sanitize_text_field( $data['published_at'] );
+        }
 
         $wpdb->insert( $table, $insert );
         $id = (int) $wpdb->insert_id;
@@ -873,6 +879,32 @@ class YNJ_Events {
             "SELECT * FROM $table WHERE id = %d",
             absint( $id )
         ) );
+    }
+
+    // ================================================================
+    //  USER-SPECIFIC QUERIES
+    // ================================================================
+
+    /**
+     * Get a user's bookings across all mosques.
+     *
+     * @param  string $email  User email.
+     * @param  int    $limit  Max results.
+     * @return array          Flat array of booking objects (with mosque_name, event_title, room_name).
+     */
+    public static function get_user_bookings( $email, $limit = 20 ) {
+        global $wpdb;
+        $bt = YNJ_DB::table( 'bookings' );
+        $mt = YNJ_DB::table( 'mosques' );
+        $et = YNJ_DB::table( 'events' );
+        $rt = YNJ_DB::table( 'rooms' );
+        return $wpdb->get_results( $wpdb->prepare(
+            "SELECT b.*, m.name AS mosque_name, e.title AS event_title, r.name AS room_name
+             FROM $bt b LEFT JOIN $mt m ON m.id = b.mosque_id
+             LEFT JOIN $et e ON e.id = b.event_id LEFT JOIN $rt r ON r.id = b.room_id
+             WHERE b.user_email = %s ORDER BY b.created_at DESC LIMIT %d",
+            sanitize_email( $email ), absint( $limit )
+        ) ) ?: [];
     }
 
     // ================================================================

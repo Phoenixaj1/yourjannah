@@ -48,6 +48,36 @@ class YNJ_Directory {
     }
 
     /**
+     * Get a user's businesses (by email, across all mosques).
+     */
+    public static function get_user_businesses( $email, $limit = 20 ) {
+        global $wpdb;
+        $t  = YNJ_DB::table( 'businesses' );
+        $mt = YNJ_DB::table( 'mosques' );
+        return $wpdb->get_results( $wpdb->prepare(
+            "SELECT b.*, m.name AS mosque_name, m.slug AS mosque_slug FROM $t b
+             LEFT JOIN $mt m ON m.id = b.mosque_id
+             WHERE b.email = %s AND b.status IN ('active','pending') ORDER BY b.created_at DESC LIMIT %d",
+            sanitize_email( $email ), absint( $limit )
+        ) ) ?: [];
+    }
+
+    /**
+     * Get a user's services (by email, across all mosques).
+     */
+    public static function get_user_services( $email, $limit = 20 ) {
+        global $wpdb;
+        $t  = YNJ_DB::table( 'services' );
+        $mt = YNJ_DB::table( 'mosques' );
+        return $wpdb->get_results( $wpdb->prepare(
+            "SELECT s.*, m.name AS mosque_name, m.slug AS mosque_slug FROM $t s
+             LEFT JOIN $mt m ON m.id = s.mosque_id
+             WHERE s.email = %s AND s.status IN ('active','pending') ORDER BY s.created_at DESC LIMIT %d",
+            sanitize_email( $email ), absint( $limit )
+        ) ) ?: [];
+    }
+
+    /**
      * Get active services for a mosque.
      */
     public static function get_services( $mosque_id, $args = [] ) {
