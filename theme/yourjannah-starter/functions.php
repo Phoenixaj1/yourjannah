@@ -112,7 +112,7 @@ add_action( 'wp_enqueue_scripts', function() {
     // Google Fonts
     wp_enqueue_style(
         'ynj-google-fonts',
-        'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
+        'https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap',
         [],
         null
     );

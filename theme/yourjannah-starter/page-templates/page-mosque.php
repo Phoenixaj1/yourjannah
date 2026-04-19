@@ -24,8 +24,8 @@ $_ynj_is_page_imam  = false;
 if ( $mosque && is_user_logged_in() ) {
     $_wp_uid = get_current_user_id();
     $_user_mosque_id = (int) get_user_meta( $_wp_uid, 'ynj_mosque_id', true );
-    $_ynj_is_page_admin = ( $_user_mosque_id === (int) $mosque->id ) &&
-                          ( current_user_can( 'ynj_manage_mosque' ) || current_user_can( 'manage_options' ) );
+    $_ynj_is_page_admin = current_user_can( 'manage_options' ) ||
+                          ( ( $_user_mosque_id === (int) $mosque->id ) && current_user_can( 'ynj_manage_mosque' ) );
     $_ynj_is_page_imam  = ( $_user_mosque_id === (int) $mosque->id ) &&
                           in_array( 'ynj_imam', (array) wp_get_current_user()->roles, true );
 }
@@ -409,12 +409,34 @@ if ( $mosque && is_user_logged_in() && class_exists( 'YNJ_Mosques' ) ) {
         <?php if ( $_ynj_can_edit ) : ?>
         <a href="<?php echo esc_url( home_url( '/dashboard?section=prayers' ) ); ?>" class="ynj-admin-edit" title="<?php esc_attr_e( 'Edit Prayer Times', 'yourjannah' ); ?>">✏️</a>
         <?php endif; ?>
+        <?php
+        // Arabic prayer names
+        $_arabic_names = [
+            'Fajr' => 'الفجر', 'Sunrise' => 'الشروق', 'Dhuhr' => 'الظهر',
+            'Asr' => 'العصر', 'Maghrib' => 'المغرب', 'Isha' => 'العشاء',
+            "Jumu'ah" => 'الجمعة',
+        ];
+        $_arabic_prayer = $_arabic_names[ $_ynj_next_name ] ?? '';
+
+        // Hijri date via IntlDateFormatter if available
+        $_hijri_date = '';
+        if ( class_exists( 'IntlDateFormatter' ) ) {
+            $fmt = new IntlDateFormatter( 'ar_SA@calendar=islamic-civil', IntlDateFormatter::LONG, IntlDateFormatter::NONE, 'UTC', IntlDateFormatter::TRADITIONAL );
+            $_hijri_date = $fmt->format( time() );
+        }
+        ?>
+        <?php if ( $_hijri_date ) : ?>
+        <p style="text-align:center;font-size:12px;color:rgba(255,255,255,.5);margin-bottom:4px;font-family:'Amiri',serif;direction:rtl;"><?php echo esc_html( $_hijri_date ); ?></p>
+        <?php endif; ?>
         <?php if ( $_ynj_is_friday && strpos( $_ynj_next_name, "Jumu'ah" ) !== false ) : ?>
         <p class="ynj-label" id="next-prayer-label" style="color:#fbbf24;">🕌 <?php echo esc_html( 'It\'s Friday! Jumu\'ah at ' . $mosque_name ); ?></p>
         <?php else : ?>
-        <p class="ynj-label" id="next-prayer-label"><?php echo esc_html( 'Next Prayer at ' . $mosque_name ); ?></p>
+        <p class="ynj-label" id="next-prayer-label"><?php esc_html_e( 'NEXT PRAYER AT', 'yourjannah' ); ?> <?php echo esc_html( strtoupper( $mosque_name ) ); ?></p>
         <?php endif; ?>
         <h2 class="ynj-hero-prayer" id="next-prayer-name"><?php echo esc_html( $_ynj_next_name ?: '—' ); ?></h2>
+        <?php if ( $_arabic_prayer ) : ?>
+        <p style="font-family:'Amiri','Traditional Arabic',serif;font-size:20px;color:rgba(255,255,255,.6);margin-top:-4px;direction:rtl;"><?php echo esc_html( $_arabic_prayer ); ?></p>
+        <?php endif; ?>
         <p class="ynj-hero-time" id="next-prayer-time"><?php echo esc_html( $_ynj_next_time ?: '—' ); ?></p>
         <?php if ( $_ynj_is_friday && ! empty( $_ynj_jumuah_slots ) && count( $_ynj_jumuah_slots ) > 0 ) : ?>
         <div id="jumuah-slots" style="margin:10px 0;width:100%;">
