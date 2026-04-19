@@ -202,7 +202,11 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f8f9fa;color:#1a1a1a;m
     <div class="uc-card">
         <div class="uc-label">Your details</div>
         <input type="email" class="uc-input" id="uc-email" placeholder="Email address" value="<?php echo esc_attr( $user_email ); ?>" required>
-        <input type="text" class="uc-input" id="uc-name" placeholder="Full name (optional)" value="<?php echo esc_attr( $user_name ); ?>">
+        <input type="text" class="uc-input" id="uc-name" placeholder="Your name (shown in announcement)" value="<?php echo esc_attr( $user_name ); ?>">
+        <?php if ( $item_type === 'store' ) : ?>
+        <textarea class="uc-input" id="uc-message" placeholder="Add a personal message (optional)" rows="2" style="resize:vertical;"></textarea>
+        <p style="font-size:11px;color:#16a34a;margin:-4px 0 4px;">🕌 95% of your purchase goes directly to the masjid</p>
+        <?php endif; ?>
     </div>
 
     <div class="uc-card">
@@ -317,6 +321,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f8f9fa;color:#1a1a1a;m
         btn.textContent = 'Setting up payment...';
 
         var fundEl = document.getElementById('uc-fund');
+        var msgEl = document.getElementById('uc-message');
         var payload = {
             email: email,
             name: document.getElementById('uc-name').value.trim(),
@@ -326,10 +331,13 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f8f9fa;color:#1a1a1a;m
             item_type: ITEM_TYPE,
             item_id: ITEM_ID,
             item_label: ITEM_LABEL,
-            fund_type: fundEl ? fundEl.value : 'general',
+            fund_type: fundEl ? fundEl.value : '<?php echo esc_js( $fund_type ); ?>',
             frequency: selectedFreq,
             source: 'checkout_page'
         };
+        if (msgEl && msgEl.value.trim()) {
+            payload.items = { message: msgEl.value.trim() };
+        }
 
         fetch(API + 'unified-checkout/create-intent', {
             method: 'POST',

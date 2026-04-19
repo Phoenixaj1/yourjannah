@@ -880,6 +880,31 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
     </script>
     <?php endif; ?>
 
+    <!-- ═══ MASJID STORE — Community Shout-Outs ═══ -->
+    <?php if ( $mosque && class_exists( 'YNJ_Store' ) ) :
+        $_store_items = YNJ_Store::get_items();
+    ?>
+    <div class="ynj-card" style="padding:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div>
+                <div style="font-size:15px;font-weight:800;color:#1a1a1a;">🎁 <?php esc_html_e( 'Community Store', 'yourjannah' ); ?></div>
+                <div style="font-size:12px;color:#666;"><?php esc_html_e( 'Send a message to the entire congregation — 95% supports the masjid', 'yourjannah' ); ?></div>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <?php foreach ( $_store_items as $key => $si ) : ?>
+            <a href="<?php echo esc_url( home_url( '/checkout/?type=store&mosque_id=' . (int) $mosque->id . '&fund=' . $key . '&label=' . urlencode( $si['title'] ) . '&amount=' . $si['default'] ) ); ?>" style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#1a1a1a;transition:all .15s;background:#fff;" onmouseover="this.style.borderColor='<?php echo esc_attr( $si['badge_color'] ); ?>';this.style.background='<?php echo esc_attr( $si['badge_color'] ); ?>10'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#fff'">
+                <span style="font-size:22px;flex-shrink:0;"><?php echo $si['icon']; ?></span>
+                <div>
+                    <div style="font-size:13px;font-weight:700;"><?php echo esc_html( $si['title'] ); ?></div>
+                    <div style="font-size:11px;color:#666;">from &pound;<?php echo number_format( $si['prices'][0] / 100, 2 ); ?></div>
+                </div>
+            </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Hadith -->
     <p class="ynj-hadith" id="hadith-line">
         <em>&ldquo;<?php esc_html_e( 'Prayer in congregation is twenty-seven times more virtuous than prayer offered alone.', 'yourjannah' ); ?>&rdquo;</em>
