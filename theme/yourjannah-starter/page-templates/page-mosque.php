@@ -1081,8 +1081,8 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
         🔴 <?php esc_html_e( 'Go Live', 'yourjannah' ); ?>
     </button>
     <!-- Go Live Modal -->
-    <div id="ynj-live-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)this.style.display='none'">
-        <div style="background:#fff;border-radius:20px;padding:24px;max-width:400px;width:100%;position:relative;">
+    <div id="ynj-live-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;border-radius:20px;padding:24px;max-width:400px;width:100%;position:relative;margin:40px auto;">
             <button onclick="document.getElementById('ynj-live-modal').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#999;">&times;</button>
             <h3 style="font-size:18px;font-weight:800;margin:0 0 4px;">🔴 <?php esc_html_e( 'Go Live', 'yourjannah' ); ?></h3>
             <p style="font-size:13px;color:#666;margin-bottom:12px;"><?php esc_html_e( '1. Select stream type', 'yourjannah' ); ?></p>
