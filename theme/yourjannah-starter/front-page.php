@@ -58,12 +58,11 @@ if ( $_ynj_mosque_for_prayer && $_ynj_mosque_for_prayer->latitude ) {
         }
         // Fallback: use prayer_times table if imported via dashboard
         if ( ! $aladhan ) {
-            global $wpdb;
-            $pt_table = YNJ_DB::table( 'prayer_times' );
-            $db_times = $wpdb->get_row( $wpdb->prepare(
-                "SELECT fajr, sunrise, dhuhr, asr, maghrib, isha FROM $pt_table WHERE mosque_id = %d AND date = %s",
-                (int) $_ynj_mosque_for_prayer->id, date( 'Y-m-d' )
-            ) );
+            $_pt_all = class_exists( 'YNJ_Prayer_Times_Data' ) ? YNJ_Prayer_Times_Data::get_times( (int) $_ynj_mosque_for_prayer->id ) : [];
+            $db_times = null;
+            if ( is_array( $_pt_all ) ) {
+                foreach ( $_pt_all as $_ptr ) { if ( isset( $_ptr->date ) && $_ptr->date === date( 'Y-m-d' ) ) { $db_times = $_ptr; break; } }
+            } elseif ( is_object( $_pt_all ) ) { $db_times = $_pt_all; }
             if ( $db_times ) {
                 $aladhan = [
                     'Fajr'    => $db_times->fajr,
@@ -81,13 +80,12 @@ if ( $_ynj_mosque_for_prayer && $_ynj_mosque_for_prayer->latitude ) {
     $_ynj_jamat = [];
     $_ynj_jumuah_slots = [];
     $_ynj_is_friday = ( date( 'N' ) == 5 );
-    if ( $_ynj_mosque_for_prayer && class_exists( 'YNJ_DB' ) ) {
-        global $wpdb;
-        $pt_table = YNJ_DB::table( 'prayer_times' );
-        $db_row = $wpdb->get_row( $wpdb->prepare(
-            "SELECT * FROM $pt_table WHERE mosque_id = %d AND date = %s",
-            (int) $_ynj_mosque_for_prayer->id, date( 'Y-m-d' )
-        ) );
+    if ( $_ynj_mosque_for_prayer ) {
+        $_pt_today = class_exists( 'YNJ_Prayer_Times_Data' ) ? YNJ_Prayer_Times_Data::get_times( (int) $_ynj_mosque_for_prayer->id ) : [];
+        $db_row = null;
+        if ( is_array( $_pt_today ) ) {
+            foreach ( $_pt_today as $_ptr ) { if ( isset( $_ptr->date ) && $_ptr->date === date( 'Y-m-d' ) ) { $db_row = $_ptr; break; } }
+        } elseif ( is_object( $_pt_today ) ) { $db_row = $_pt_today; }
         if ( $db_row ) {
             foreach ( [ 'fajr', 'dhuhr', 'asr', 'maghrib', 'isha' ] as $pk ) {
                 $jk = $pk . '_jamat';
@@ -96,11 +94,8 @@ if ( $_ynj_mosque_for_prayer && $_ynj_mosque_for_prayer->latitude ) {
         }
         // Load Jumu'ah slots for Friday
         if ( $_ynj_is_friday ) {
-            $jt = YNJ_DB::table( 'jumuah_times' );
-            $_ynj_jumuah_slots = $wpdb->get_results( $wpdb->prepare(
-                "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND enabled = 1 ORDER BY salah_time ASC",
-                (int) $_ynj_mosque_for_prayer->id
-            ) ) ?: [];
+            $_ynj_jumuah_slots = class_exists( 'YNJ_Jumuah_Data' ) ? YNJ_Jumuah_Data::get_times( (int) $_ynj_mosque_for_prayer->id ) : [];
+            if ( ! is_array( $_ynj_jumuah_slots ) ) $_ynj_jumuah_slots = [];
         }
     }
 
@@ -181,57 +176,39 @@ $_hp_events = [];
 $_hp_classes = [];
 $_hp_points = [ 'total' => 0 ];
 
-if ( $_hp_mosque_id && class_exists( 'YNJ_DB' ) ) {
-    global $wpdb;
-
+if ( $_hp_mosque_id ) {
     // Jumu'ah slots
-    $jt = YNJ_DB::table( 'jumuah_times' );
-    if ( $wpdb->get_var( "SHOW TABLES LIKE '$jt'" ) === $jt ) {
-        $_hp_jumuah = $wpdb->get_results( $wpdb->prepare(
-            "SELECT slot_name, khutbah_time, salah_time, language FROM $jt WHERE mosque_id = %d AND enabled = 1 ORDER BY salah_time ASC",
-            $_hp_mosque_id
-        ) ) ?: [];
-    }
+    $_hp_jumuah = class_exists( 'YNJ_Jumuah_Data' ) ? YNJ_Jumuah_Data::get_times( $_hp_mosque_id ) : [];
+    if ( ! is_array( $_hp_jumuah ) ) $_hp_jumuah = [];
 
     // Sponsor ticker (businesses for this mosque)
-    $bt = YNJ_DB::table( 'businesses' );
-    $_hp_sponsors = $wpdb->get_results( $wpdb->prepare(
-        "SELECT id, business_name, category, monthly_fee_pence FROM $bt WHERE mosque_id = %d AND status = 'active' ORDER BY monthly_fee_pence DESC, business_name ASC LIMIT 20",
-        $_hp_mosque_id
-    ) ) ?: [];
+    $_hp_sponsors = class_exists( 'YNJ_Directory' ) ? YNJ_Directory::get_businesses( $_hp_mosque_id ) : [];
+    if ( ! is_array( $_hp_sponsors ) ) $_hp_sponsors = [];
 
     // Service listings (people/professionals)
-    $svt = YNJ_DB::table( 'services' );
-    $_hp_services = $wpdb->get_results( $wpdb->prepare(
-        "SELECT id, provider_name, service_type, phone, area_covered, hourly_rate_pence FROM $svt WHERE mosque_id = %d AND status = 'active' ORDER BY RAND() LIMIT 10",
-        $_hp_mosque_id
-    ) ) ?: [];
+    // TODO: move to plugin — YNJ_Directory::get_services returns all; need RAND() LIMIT 10 variant
+    $_hp_services = class_exists( 'YNJ_Directory' ) ? YNJ_Directory::get_services( $_hp_mosque_id ) : [];
+    if ( ! is_array( $_hp_services ) ) $_hp_services = [];
+    if ( count( $_hp_services ) > 10 ) { shuffle( $_hp_services ); $_hp_services = array_slice( $_hp_services, 0, 10 ); }
 
     // Announcements
-    $at = YNJ_DB::table( 'announcements' );
-    $_hp_announcements = $wpdb->get_results( $wpdb->prepare(
-        "SELECT id, title, body, type, pinned, published_at FROM $at WHERE mosque_id = %d AND status = 'published' ORDER BY pinned DESC, published_at DESC LIMIT 20",
-        $_hp_mosque_id
-    ) ) ?: [];
+    $_hp_announcements = class_exists( 'YNJ_Events' ) ? YNJ_Events::get_announcements( $_hp_mosque_id ) : [];
+    if ( ! is_array( $_hp_announcements ) ) $_hp_announcements = [];
 
     // Upcoming events
-    $et = YNJ_DB::table( 'events' );
-    $_hp_events = $wpdb->get_results( $wpdb->prepare(
-        "SELECT id, title, description, event_date, start_time, end_time, location, category, ticket_price_pence, max_capacity, rsvp_count FROM $et WHERE mosque_id = %d AND status = 'published' AND event_date >= CURDATE() ORDER BY event_date ASC LIMIT 20",
-        $_hp_mosque_id
-    ) ) ?: [];
+    $_hp_events = class_exists( 'YNJ_Events' ) ? YNJ_Events::get_upcoming_events( $_hp_mosque_id ) : [];
+    if ( ! is_array( $_hp_events ) ) $_hp_events = [];
 
     // Classes
-    $ct = YNJ_DB::table( 'classes' );
-    $_hp_classes = $wpdb->get_results( $wpdb->prepare(
-        "SELECT id, title, description, instructor_name, day_of_week, start_time, end_time, price_pence, category, max_capacity, enrolled_count FROM $ct WHERE mosque_id = %d AND status = 'active' ORDER BY day_of_week ASC, start_time ASC LIMIT 20",
-        $_hp_mosque_id
-    ) ) ?: [];
+    $_hp_classes = class_exists( 'YNJ_Madrassah' ) ? YNJ_Madrassah::get_classes( $_hp_mosque_id ) : [];
+    if ( ! is_array( $_hp_classes ) ) $_hp_classes = [];
 
     // User points (if logged in)
-    if ( is_user_logged_in() ) {
+    // TODO: move to plugin — no YNJ_Gamification::get_user_points() method yet
+    if ( is_user_logged_in() && class_exists( 'YNJ_DB' ) ) {
         $ynj_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
         if ( $ynj_uid ) {
+            global $wpdb;
             $ut = YNJ_DB::table( 'users' );
             $pts = (int) $wpdb->get_var( $wpdb->prepare( "SELECT total_points FROM $ut WHERE id = %d", $ynj_uid ) );
             $_hp_points = [ 'ok' => true, 'total' => $pts ];
@@ -610,15 +587,13 @@ $_hp_is_primary = false;
 $_hp_mosque_id = $_ynj_mosque_for_prayer ? (int) $_ynj_mosque_for_prayer->id : 0;
 $_hp_member_count = 1;
 if ( $_hp_mosque_id ) {
-    global $wpdb;
-    $_hp_member_count = 1 + (int) $wpdb->get_var( $wpdb->prepare(
-        "SELECT COUNT(*) FROM " . YNJ_DB::table( 'user_subscriptions' ) . " WHERE mosque_id = %d AND status = 'active'",
-        $_hp_mosque_id
-    ) );
+    $_hp_member_count = class_exists( 'YNJ_Mosques' ) ? (int) YNJ_Mosques::get_member_count( $_hp_mosque_id ) : 1;
+    if ( $_hp_member_count < 1 ) $_hp_member_count = 1;
 }
 if ( $_hp_mosque_id && is_user_logged_in() ) {
+    // TODO: move to plugin — no YNJ_Mosques::get_user_membership() method yet
     $ynj_uid_hp = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
-    if ( $ynj_uid_hp ) {
+    if ( $ynj_uid_hp && class_exists( 'YNJ_DB' ) ) {
         global $wpdb;
         $sub_tbl = YNJ_DB::table( 'user_subscriptions' );
         $hp_mem = $wpdb->get_row( $wpdb->prepare(

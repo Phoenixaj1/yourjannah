@@ -17,16 +17,9 @@ $mosque_lat = $mosque ? (float) $mosque->latitude : 0;
 $mosque_lng = $mosque ? (float) $mosque->longitude : 0;
 $mosque_phone = $mosque ? $mosque->phone : '';
 $classes = [];
-if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
-    global $wpdb;
-    $cls_table = YNJ_DB::table( 'classes' );
-    $classes = $wpdb->get_results( $wpdb->prepare(
-        "SELECT id, title, description, instructor_name, day_of_week, start_time, location,
-                price_pence, status, category, price_type, max_capacity, enrolled_count,
-                total_sessions, is_online
-         FROM $cls_table WHERE mosque_id = %d AND status = 'active'
-         ORDER BY title ASC LIMIT 50", $mosque_id
-    ) ) ?: [];
+if ( $mosque_id ) {
+    $classes = class_exists( 'YNJ_Madrassah' ) ? YNJ_Madrassah::get_classes( $mosque_id ) : [];
+    if ( ! is_array( $classes ) ) $classes = [];
 }
 ?>
 <style>

@@ -28,21 +28,16 @@ $today = date( 'Y-m-d' );
 
 // Load prayer times from DB
 $monthly_data = [];
-if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
-    global $wpdb;
-    $pt = YNJ_DB::table( 'prayer_times' );
-    $rows = $wpdb->get_results( $wpdb->prepare(
-        "SELECT * FROM $pt WHERE mosque_id = %d AND date BETWEEN %s AND %s ORDER BY date ASC",
-        $mosque_id, "$year-$mon-01", "$year-$mon-$days_in_month"
-    ) ) ?: [];
-    foreach ( $rows as $r ) { $monthly_data[ $r->date ] = $r; }
+if ( $mosque_id ) {
+    $rows = class_exists( 'YNJ_Prayer_Times_Data' ) ? YNJ_Prayer_Times_Data::get_times( $mosque_id ) : [];
+    if ( ! is_array( $rows ) ) $rows = [];
+    foreach ( $rows as $r ) {
+        if ( isset( $r->date ) ) $monthly_data[ $r->date ] = $r;
+    }
 
     // Load Jumu'ah slots
-    $jt = YNJ_DB::table( 'jumuah_times' );
-    $jumuah_slots = $wpdb->get_results( $wpdb->prepare(
-        "SELECT * FROM $jt WHERE mosque_id = %d AND enabled = 1 ORDER BY salah_time ASC",
-        $mosque_id
-    ) ) ?: [];
+    $jumuah_slots = class_exists( 'YNJ_Jumuah_Data' ) ? YNJ_Jumuah_Data::get_times( $mosque_id ) : [];
+    if ( ! is_array( $jumuah_slots ) ) $jumuah_slots = [];
 
     // Today's times for the hero card
     $today_data = $monthly_data[ $today ] ?? null;

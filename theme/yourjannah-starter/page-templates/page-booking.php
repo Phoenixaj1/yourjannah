@@ -16,20 +16,20 @@ $mosque_id = $mosque ? (int) $mosque->id : 0;
 $mosque_name = $mosque ? $mosque->name : __( 'Mosque', 'yourjannah' );
 $masjid_services = [];
 $rooms = [];
-if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
-    global $wpdb;
-    $msvc_table = YNJ_DB::table( 'masjid_services' );
-    $room_table = YNJ_DB::table( 'rooms' );
-    $masjid_services = $wpdb->get_results( $wpdb->prepare(
-        "SELECT id, title, category, description, price_pence, price_label, contact_phone, contact_email, image_url, status
-         FROM $msvc_table WHERE mosque_id = %d AND status = 'active'
-         ORDER BY title ASC LIMIT 50", $mosque_id
-    ) ) ?: [];
-    $rooms = $wpdb->get_results( $wpdb->prepare(
-        "SELECT id, name, description, capacity, hourly_rate_pence, image_url, status
-         FROM $room_table WHERE mosque_id = %d AND status = 'active'
-         ORDER BY name ASC LIMIT 50", $mosque_id
-    ) ) ?: [];
+if ( $mosque_id ) {
+    $masjid_services = class_exists( 'YNJ_Services' ) ? YNJ_Services::get_services( $mosque_id ) : [];
+    if ( ! is_array( $masjid_services ) ) $masjid_services = [];
+
+    // TODO: move to plugin — no YNJ_Services::get_rooms() method yet
+    if ( class_exists( 'YNJ_DB' ) ) {
+        global $wpdb;
+        $room_table = YNJ_DB::table( 'rooms' );
+        $rooms = $wpdb->get_results( $wpdb->prepare(
+            "SELECT id, name, description, capacity, hourly_rate_pence, image_url, status
+             FROM $room_table WHERE mosque_id = %d AND status = 'active'
+             ORDER BY name ASC LIMIT 50", $mosque_id
+        ) ) ?: [];
+    }
 }
 ?>
 <style>

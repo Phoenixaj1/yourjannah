@@ -17,17 +17,9 @@ $mosque_name = $mosque ? $mosque->name : __( 'Events', 'yourjannah' );
 $mosque_lat  = $mosque ? (float) $mosque->latitude : 0;
 $mosque_lng  = $mosque ? (float) $mosque->longitude : 0;
 $events = [];
-if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
-    global $wpdb;
-    $ev_table = YNJ_DB::table( 'events' );
-    $events = $wpdb->get_results( $wpdb->prepare(
-        "SELECT id, title, description, event_date, start_time, end_time, location, event_type, status,
-                ticket_price_pence, is_live, is_online, live_url, max_capacity, registered_count, requires_booking
-         FROM $ev_table
-         WHERE mosque_id = %d AND status = 'active' AND event_date >= CURDATE()
-         ORDER BY event_date ASC, start_time ASC
-         LIMIT 100", $mosque_id
-    ) ) ?: [];
+if ( $mosque_id ) {
+    $events = class_exists( 'YNJ_Events' ) ? YNJ_Events::get_upcoming_events( $mosque_id ) : [];
+    if ( ! is_array( $events ) ) $events = [];
 }
 ?>
 <style>

@@ -17,20 +17,11 @@ $mosque_id   = $mosque ? (int) $mosque->id : 0;
 $mosque_name = $mosque ? $mosque->name : __( 'Your Masjid', 'yourjannah' );
 $businesses  = [];
 $services    = [];
-if ( $mosque_id && class_exists( 'YNJ_DB' ) ) {
-    global $wpdb;
-    $biz_table = YNJ_DB::table( 'businesses' );
-    $svc_table = YNJ_DB::table( 'services' );
-    $businesses = $wpdb->get_results( $wpdb->prepare(
-        "SELECT id, business_name, owner_name, category, description, phone, email, website, logo_url, address, postcode, monthly_fee_pence, featured_position
-         FROM $biz_table WHERE mosque_id = %d AND status = 'active' AND (expires_at IS NULL OR expires_at > NOW())
-         ORDER BY monthly_fee_pence DESC, business_name ASC LIMIT 50", $mosque_id
-    ) ) ?: [];
-    $services = $wpdb->get_results( $wpdb->prepare(
-        "SELECT id, provider_name, phone, email, service_type, description, hourly_rate_pence, area_covered
-         FROM $svc_table WHERE mosque_id = %d AND status = 'active'
-         ORDER BY monthly_fee_pence DESC, provider_name ASC LIMIT 50", $mosque_id
-    ) ) ?: [];
+if ( $mosque_id ) {
+    $businesses = class_exists( 'YNJ_Directory' ) ? YNJ_Directory::get_businesses( $mosque_id ) : [];
+    if ( ! is_array( $businesses ) ) $businesses = [];
+    $services = class_exists( 'YNJ_Directory' ) ? YNJ_Directory::get_services( $mosque_id ) : [];
+    if ( ! is_array( $services ) ) $services = [];
 }
 ?>
 

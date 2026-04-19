@@ -17,14 +17,11 @@ $mosque  = ynj_get_mosque( $slug );
 $item = null;
 $is_business = ( $type === 'business_detail' );
 
-if ( $item_id && class_exists( 'YNJ_DB' ) ) {
-    global $wpdb;
+if ( $item_id ) {
     if ( $is_business ) {
-        $table = YNJ_DB::table( 'businesses' );
-        $item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d AND status = 'active'", $item_id ) );
+        $item = class_exists( 'YNJ_Directory' ) ? YNJ_Directory::get_business( $item_id ) : null;
     } else {
-        $table = YNJ_DB::table( 'services' );
-        $item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d AND status = 'active'", $item_id ) );
+        $item = class_exists( 'YNJ_Directory' ) ? YNJ_Directory::get_service( $item_id ) : null;
     }
 }
 
