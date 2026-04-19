@@ -377,8 +377,9 @@ if ( is_user_logged_in() ) {
             });
             var checkData = await checkResp.json();
 
-            if (checkData.ok && checkData.checkout_url) {
-                window.location.href = checkData.checkout_url;
+            if (checkData.ok && checkData.cart_item) {
+                if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(checkData.cart_item);
+                window.location.href = '/checkout/';
             } else {
                 errEl.textContent = checkData.error || <?php echo wp_json_encode( __( 'Checkout error. Your account was created — try upgrading from your profile.', 'yourjannah' ) ); ?>;
                 btn.disabled = false;

@@ -325,34 +325,15 @@ if ( $_nb_id && $_nb_pk ) :
         document.getElementById('nb-pay-btn').textContent = 'Donate \u00A3' + amt + freq + ' \u2192';
     }
 
-    // Init Stripe
-    function initStripe() {
-        if (stripe) return;
-        if (typeof Stripe === 'undefined') { setTimeout(initStripe, 200); return; }
-        stripe = Stripe(PK);
-        var elements = stripe.elements();
-        cardElement = elements.create('card', {
-            style: { base: { color:'#fff', fontSize:'15px', fontWeight:'500', '::placeholder':{ color:'rgba(255,255,255,.4)' } }, invalid:{ color:'#fca5a5' } }
-        });
-        cardElement.mount('#nb-card-element');
-        cardElement.on('change', function(e){
-            cardReady = e.complete;
-            document.getElementById('nb-pay-btn').disabled = !e.complete;
-            var err = document.getElementById('nb-card-error');
-            if (e.error) { err.textContent = e.error.message; err.style.display = ''; }
-            else { err.style.display = 'none'; }
-        });
-    }
-
-    // Pay
+    // Pay — add to cart and redirect to unified checkout
     window.nbPay = async function() {
-        if (!cardReady || !selectedAmount) return;
+        if (!selectedAmount) return;
         var email = emailIn.value.trim();
         var fund = document.getElementById('nb-fund').value;
         var payBtn = document.getElementById('nb-pay-btn');
         var errEl = document.getElementById('nb-card-error');
         payBtn.disabled = true;
-        payBtn.textContent = 'Processing...';
+        payBtn.textContent = 'Adding to cart...';
         errEl.style.display = 'none';
 
         try {
@@ -374,7 +355,7 @@ if ( $_nb_id && $_nb_pk ) :
             });
             var data = await resp.json();
 
-            if (!data.ok || !data.client_secret) {
+            if (!data.ok || !data.cart_item) {
                 errEl.textContent = data.message || data.error || 'Could not process. Try again.';
                 errEl.style.display = '';
                 payBtn.disabled = false;
@@ -382,31 +363,12 @@ if ( $_nb_id && $_nb_pk ) :
                 return;
             }
 
-            donationId = data.donation_id;
-
-            var result = await stripe.confirmCardPayment(data.client_secret, {
-                payment_method: { card: cardElement, billing_details: { email: email } }
-            });
-
-            if (result.error) {
-                errEl.textContent = result.error.message;
-                errEl.style.display = '';
-                payBtn.disabled = false;
-                updatePayBtn();
-                return;
-            }
-
-            // Confirm with backend
-            fetch(API + 'donate/confirm', {
-                method: 'POST',
-                headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ donation_id: donationId })
-            }).catch(function(){});
-
-            nbSetStep(4);
+            // Add to cart and go to checkout
+            if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(data.cart_item);
+            window.location.href = '/checkout/';
 
         } catch(e) {
-            errEl.textContent = 'Payment failed. Please try again.';
+            errEl.textContent = 'Something went wrong. Please try again.';
             errEl.style.display = '';
             payBtn.disabled = false;
             updatePayBtn();

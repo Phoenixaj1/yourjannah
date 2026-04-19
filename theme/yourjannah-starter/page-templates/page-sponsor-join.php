@@ -129,8 +129,9 @@ $slug = ynj_mosque_slug();
                 })
             });
             var data = await resp.json();
-            if (data.ok && data.checkout_url) {
-                window.location.href = data.checkout_url;
+            if (data.ok && data.cart_item) {
+                if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(data.cart_item);
+                window.location.href = '/checkout/';
             } else {
                 document.getElementById('sponsor-error').textContent = data.error || 'Could not process. Please try again.';
                 btn.disabled = false; btn.textContent = 'Continue to Payment';

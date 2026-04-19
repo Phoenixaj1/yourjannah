@@ -181,8 +181,9 @@ get_header();
                 body: JSON.stringify({ amount_pounds: amount, tier: tier, name: name, email: email })
             });
             var data = await res.json();
-            if (data.ok && data.checkout_url) {
-                window.location.href = data.checkout_url;
+            if (data.ok && data.cart_item) {
+                if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(data.cart_item);
+                window.location.href = '/checkout/';
             } else {
                 msg.style.display = ''; msg.style.color = '#dc2626';
                 msg.textContent = data.error || '<?php echo esc_js( __( 'Something went wrong.', 'yourjannah' ) ); ?>';

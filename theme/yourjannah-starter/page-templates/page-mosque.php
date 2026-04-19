@@ -746,34 +746,6 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
     <script>
     function ynjPurifySadaqah(amountPence) {
         window.location.href = '/checkout/?type=sadaqah&amount=' + amountPence + '&mosque_id=<?php echo (int) $mosque->id; ?>&label=Purify+Your+Rizq&fund=sadaqah';
-        return;
-        // Legacy API call (kept for reference)
-        const btn = event.currentTarget;
-        btn.disabled = true;
-        btn.textContent = '...';
-        fetch('<?php echo esc_url( rest_url( 'ynj/v1/checkout/donate' ) ); ?>', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': '<?php echo wp_create_nonce( 'wp_rest' ); ?>' },
-            body: JSON.stringify({
-                amount_pence: amountPence,
-                mosque_id: <?php echo (int) $mosque->id; ?>,
-                fund_type: 'sadaqah',
-                name: <?php echo wp_json_encode( wp_get_current_user()->display_name ); ?>,
-                email: <?php echo wp_json_encode( wp_get_current_user()->user_email ); ?>,
-                cause: 'sadaqah'
-            })
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.url) {
-                window.location.href = data.url;
-            } else {
-                btn.disabled = false;
-                btn.textContent = '£' + (amountPence / 100);
-                alert(data.error || 'Something went wrong');
-            }
-        })
-        .catch(() => { btn.disabled = false; btn.textContent = '£' + (amountPence / 100); });
     }
     </script>
 

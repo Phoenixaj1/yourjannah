@@ -172,8 +172,9 @@ $mosque_status = $mosque ? $mosque->status : '';
                 body: JSON.stringify({ mosque_slug: slug, tier: selectedTier })
             });
             const data = await res.json();
-            if (data.ok && data.checkout_url) {
-                window.location.href = data.checkout_url;
+            if (data.ok && data.cart_item) {
+                if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(data.cart_item);
+                window.location.href = '/checkout/';
             } else {
                 alert(data.error || '<?php echo esc_js( __( 'Something went wrong.', 'yourjannah' ) ); ?>');
                 btn.disabled = false;
@@ -223,8 +224,9 @@ $mosque_status = $mosque ? $mosque->status : '';
                 body: JSON.stringify({mosque_slug: slug, tier: selectedTier})
             });
             var checkData = await checkResp.json();
-            if (checkData.ok && checkData.checkout_url) {
-                window.location.href = checkData.checkout_url;
+            if (checkData.ok && checkData.cart_item) {
+                if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(checkData.cart_item);
+                window.location.href = '/checkout/';
             } else {
                 errEl.textContent = checkData.error || '<?php echo esc_js( __( 'Checkout error.', 'yourjannah' ) ); ?>';
                 btn.disabled = false; btn.textContent = '<?php echo esc_js( __( 'Create Account & Become a Patron', 'yourjannah' ) ); ?>';
