@@ -28,4 +28,10 @@ add_action( 'plugins_loaded', function() {
         require_once YNJ_MADRASSAH_DIR . 'api/class-ynj-api-classes.php';
     }
 
+    // WP Admin pages.
+    if ( is_admin() ) {
+        require_once YNJ_MADRASSAH_DIR . 'inc/class-ynj-madrassah-admin.php';
+        YNJ_Madrassah_Admin::init();
+    }
+
 }, 10 );

@@ -31,4 +31,10 @@ add_action( 'plugins_loaded', function() {
         require_once YNJ_NOTIFICATIONS_DIR . 'inc/class-ynj-interest-notify.php';
     }
 
+    // WP Admin pages.
+    if ( is_admin() ) {
+        require_once YNJ_NOTIFICATIONS_DIR . 'inc/class-ynj-notifications-admin.php';
+        YNJ_Notifications_Admin::init();
+    }
+
 }, 10 );

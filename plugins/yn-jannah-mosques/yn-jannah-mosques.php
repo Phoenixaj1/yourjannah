@@ -33,4 +33,10 @@ add_action( 'plugins_loaded', function() {
         require_once YNJ_MOSQUES_DIR . 'api/class-ynj-api-prayer.php';
     }
 
+    // WP Admin pages.
+    if ( is_admin() ) {
+        require_once YNJ_MOSQUES_DIR . 'inc/class-ynj-mosques-admin.php';
+        YNJ_Mosques_Admin::init();
+    }
+
 }, 10 );

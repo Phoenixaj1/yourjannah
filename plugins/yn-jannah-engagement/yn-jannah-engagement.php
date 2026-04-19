@@ -23,4 +23,10 @@ add_action( 'plugins_loaded', function() {
     // API endpoints (when ready)
     // require_once YNJ_ENGAGEMENT_DIR . 'api/class-ynj-api-engagement.php';
 
+    // WP Admin pages.
+    if ( is_admin() ) {
+        require_once YNJ_ENGAGEMENT_DIR . 'inc/class-ynj-engagement-admin.php';
+        YNJ_Engagement_Admin::init();
+    }
+
 }, 10 );

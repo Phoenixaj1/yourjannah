@@ -32,4 +32,10 @@ add_action( 'plugins_loaded', function() {
         require_once YNJ_SERVICES_DIR . 'api/class-ynj-api-masjid-services.php';
     }
 
+    // WP Admin pages.
+    if ( is_admin() ) {
+        require_once YNJ_SERVICES_DIR . 'inc/class-ynj-services-admin.php';
+        YNJ_Services_Admin::init();
+    }
+
 }, 10 );

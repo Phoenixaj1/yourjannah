@@ -123,4 +123,10 @@ add_action( 'plugins_loaded', function() {
     // ── Provide gamification data to HUD via filter ──
     add_filter( 'ynj_hud_gamification_data', [ 'YNJ_Levels', 'filter_hud_data' ], 10, 3 );
 
+    // WP Admin pages.
+    if ( is_admin() ) {
+        require_once YNJ_GAMIFICATION_DIR . 'inc/class-ynj-gamification-admin.php';
+        YNJ_Gamification_Admin::init();
+    }
+
 }, 15 ); // priority 15 = after yn-jannah loads at 10
