@@ -1085,8 +1085,8 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
         <div style="background:#fff;border-radius:20px;padding:24px;max-width:400px;width:100%;position:relative;">
             <button onclick="document.getElementById('ynj-live-modal').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#999;">&times;</button>
             <h3 style="font-size:18px;font-weight:800;margin:0 0 4px;">🔴 <?php esc_html_e( 'Go Live', 'yourjannah' ); ?></h3>
-            <p style="font-size:13px;color:#666;margin-bottom:16px;"><?php esc_html_e( 'What are you streaming?', 'yourjannah' ); ?></p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+            <p style="font-size:13px;color:#666;margin-bottom:12px;"><?php esc_html_e( '1. Select stream type', 'yourjannah' ); ?></p>
+            <div id="ynj-live-types" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
                 <?php
                 $stream_types = [
                     'fajr'     => ['🌙','Fajr'],
@@ -1101,16 +1101,20 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
                     'other'    => ['📡','Other'],
                 ];
                 foreach ( $stream_types as $key => $st ) : ?>
-                <button type="button" onclick="ynjStartLive('<?php echo esc_js( $key ); ?>')" style="display:flex;align-items:center;gap:8px;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;" onmouseover="this.style.background='#f0fdf4';this.style.borderColor='#287e61'" onmouseout="this.style.background='#fff';this.style.borderColor='#e5e7eb'">
+                <button type="button" data-stream-type="<?php echo esc_attr( $key ); ?>" onclick="ynjSelectStreamType(this,'<?php echo esc_js( $key ); ?>')" style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #e5e7eb;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;">
                     <span style="font-size:20px;"><?php echo $st[0]; ?></span> <?php echo esc_html( $st[1] ); ?>
                 </button>
                 <?php endforeach; ?>
             </div>
-            <div class="ynj-qp-field" style="margin-bottom:12px;">
-                <label style="font-size:12px;font-weight:600;color:#666;display:block;margin-bottom:4px;"><?php esc_html_e( 'YouTube Video ID (optional)', 'yourjannah' ); ?></label>
-                <input type="text" id="ynj-live-yt-id" placeholder="e.g. dQw4w9WgXcQ" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;">
+            <p style="font-size:13px;color:#666;margin-bottom:8px;"><?php esc_html_e( '2. Paste your YouTube Live URL or Video ID', 'yourjannah' ); ?></p>
+            <div style="margin-bottom:12px;">
+                <input type="text" id="ynj-live-yt-id" placeholder="e.g. https://youtube.com/live/abc123 or just abc123" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;">
+                <p style="font-size:11px;color:#999;margin:4px 0 0;"><?php esc_html_e( 'Go to YouTube Studio → Go Live → copy the stream URL', 'yourjannah' ); ?></p>
             </div>
-            <div id="ynj-live-status" style="display:none;text-align:center;padding:12px;border-radius:10px;font-size:13px;font-weight:600;"></div>
+            <button type="button" id="ynj-live-start-btn" onclick="ynjStartLive()" disabled style="width:100%;padding:14px;background:#dc2626;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;opacity:.5;transition:opacity .15s;">
+                🔴 <?php esc_html_e( 'Start Stream', 'yourjannah' ); ?>
+            </button>
+            <div id="ynj-live-status" style="display:none;text-align:center;padding:12px;border-radius:10px;font-size:13px;font-weight:600;margin-top:8px;"></div>
         </div>
     </div>
     <?php endif; ?>
@@ -1603,11 +1607,35 @@ function ynjQpTab(tab) {
     if (imamTab) imamTab.className = 'ynj-qp-tab' + (tab === 'imam' ? ' ynj-qp-tab--active' : '');
 }
 
-// Go Live — start broadcast via modal
-function ynjStartLive(streamType) {
-    var ytId = document.getElementById('ynj-live-yt-id').value.trim();
+// Go Live — 2-step: select type, then start
+var _ynjSelectedStreamType = '';
+var _ynjStreamLabels = {fajr:'Fajr',dhuhr:'Dhuhr',asr:'Asr',maghrib:'Maghrib',isha:'Isha',jumuah:"Jumu'ah",taraweeh:'Taraweeh',lecture:'Lecture',event:'Event',other:'Live'};
+
+function ynjSelectStreamType(btn, type) {
+    _ynjSelectedStreamType = type;
+    document.querySelectorAll('#ynj-live-types button').forEach(function(b) {
+        b.style.borderColor = '#e5e7eb';
+        b.style.background = '#fff';
+    });
+    btn.style.borderColor = '#dc2626';
+    btn.style.background = '#fef2f2';
+    var startBtn = document.getElementById('ynj-live-start-btn');
+    startBtn.disabled = false;
+    startBtn.style.opacity = '1';
+}
+
+function ynjStartLive() {
+    if (!_ynjSelectedStreamType) return;
+    var rawYt = document.getElementById('ynj-live-yt-id').value.trim();
+    // Extract video ID from full URL if pasted
+    var ytId = rawYt;
+    var match = rawYt.match(/(?:youtube\.com\/(?:live\/|watch\?v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    if (match) ytId = match[1];
+
     var status = document.getElementById('ynj-live-status');
-    var labels = {fajr:'Fajr',dhuhr:'Dhuhr',asr:'Asr',maghrib:'Maghrib',isha:'Isha',jumuah:"Jumu'ah",taraweeh:'Taraweeh',lecture:'Lecture',event:'Event',other:'Live'};
+    var btn = document.getElementById('ynj-live-start-btn');
+    btn.disabled = true;
+    btn.textContent = 'Starting...';
     status.style.display = '';
     status.style.background = '#fef3c7';
     status.style.color = '#92400e';
@@ -1618,9 +1646,9 @@ function ynjStartLive(streamType) {
         headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': <?php echo wp_json_encode( wp_create_nonce( 'wp_rest' ) ); ?> },
         body: JSON.stringify({
             mosque_id: <?php echo (int) $mosque->id; ?>,
-            stream_type: streamType,
+            stream_type: _ynjSelectedStreamType,
             youtube_video_id: ytId,
-            title: (labels[streamType] || streamType) + ' at <?php echo esc_js( $mosque_name ); ?>'
+            title: (_ynjStreamLabels[_ynjSelectedStreamType] || _ynjSelectedStreamType) + ' at <?php echo esc_js( $mosque_name ); ?>'
         })
     })
     .then(function(r) { return r.json(); })
@@ -1634,12 +1662,16 @@ function ynjStartLive(streamType) {
             status.style.background = '#fee2e2';
             status.style.color = '#991b1b';
             status.textContent = data.error || 'Failed to start stream';
+            btn.disabled = false;
+            btn.textContent = '🔴 Start Stream';
         }
     })
     .catch(function() {
         status.style.background = '#fee2e2';
         status.style.color = '#991b1b';
         status.textContent = 'Network error — try again';
+        btn.disabled = false;
+        btn.textContent = '🔴 Start Stream';
     });
 }
 
