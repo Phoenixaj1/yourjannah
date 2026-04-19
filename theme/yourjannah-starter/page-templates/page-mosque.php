@@ -883,6 +883,7 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
     <!-- ═══ MASJID STORE — Community Shout-Outs ═══ -->
     <?php if ( $mosque && class_exists( 'YNJ_Store' ) ) :
         $_store_items = YNJ_Store::get_items();
+        if ( ! empty( $_store_items ) ) :
     ?>
     <div class="ynj-card" style="padding:16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -892,18 +893,22 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
             </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <?php foreach ( $_store_items as $key => $si ) : ?>
-            <a href="<?php echo esc_url( home_url( '/checkout/?type=store&mosque_id=' . (int) $mosque->id . '&fund=' . $key . '&label=' . urlencode( $si['title'] ) . '&amount=' . $si['default'] ) ); ?>" style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#1a1a1a;transition:all .15s;background:#fff;" onmouseover="this.style.borderColor='<?php echo esc_attr( $si['badge_color'] ); ?>';this.style.background='<?php echo esc_attr( $si['badge_color'] ); ?>10'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#fff'">
-                <span style="font-size:22px;flex-shrink:0;"><?php echo $si['icon']; ?></span>
+            <?php foreach ( $_store_items as $si ) : ?>
+            <a href="<?php echo esc_url( home_url( '/checkout/?type=store&mosque_id=' . (int) $mosque->id . '&fund=' . esc_attr( $si->item_key ) . '&label=' . urlencode( $si->title ) . '&amount=' . (int) $si->default_price ) ); ?>" style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#1a1a1a;transition:all .15s;background:#fff;" onmouseover="this.style.borderColor='<?php echo esc_attr( $si->badge_color ); ?>';this.style.background='<?php echo esc_attr( $si->badge_color ); ?>10'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#fff'">
+                <?php if ( $si->image_url ) : ?>
+                <img src="<?php echo esc_url( $si->image_url ); ?>" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;">
+                <?php else : ?>
+                <span style="font-size:22px;flex-shrink:0;"><?php echo esc_html( $si->icon ); ?></span>
+                <?php endif; ?>
                 <div>
-                    <div style="font-size:13px;font-weight:700;"><?php echo esc_html( $si['title'] ); ?></div>
-                    <div style="font-size:11px;color:#666;">from &pound;<?php echo number_format( $si['prices'][0] / 100, 2 ); ?></div>
+                    <div style="font-size:13px;font-weight:700;"><?php echo esc_html( $si->title ); ?></div>
+                    <div style="font-size:11px;color:#666;">from &pound;<?php echo number_format( $si->price_1 / 100, 2 ); ?></div>
                 </div>
             </a>
             <?php endforeach; ?>
         </div>
     </div>
-    <?php endif; ?>
+    <?php endif; endif; ?>
 
     <!-- Hadith -->
     <p class="ynj-hadith" id="hadith-line">

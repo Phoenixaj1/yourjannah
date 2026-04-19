@@ -1,22 +1,79 @@
 <?php
 /**
  * Plugin Name: YourJannah — Masjid Store
- * Description: Digital community shout-outs — Jumuah Mubarak, Eid Mubarak, Khatam announcements. 95% goes to masjid.
- * Version:     1.0.0
+ * Description: Digital community shout-outs — purchasable announcements with images. 95% goes to masjid. Fully admin-managed.
+ * Version:     1.1.0
  * Author:      YourNiyyah
  * Requires:    yn-jannah (core — for YNJ_DB)
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YNJ_STORE_VERSION', '1.0.0' );
+define( 'YNJ_STORE_VERSION', '1.1.0' );
 define( 'YNJ_STORE_DIR', plugin_dir_path( __FILE__ ) );
+define( 'YNJ_STORE_DB_VERSION', '1.0.0' );
+
+// ── Create table on activation ──
+register_activation_hook( __FILE__, function() {
+    if ( ! class_exists( 'YNJ_DB' ) ) return;
+    global $wpdb;
+    $charset = $wpdb->get_charset_collate();
+    $t = YNJ_DB::table( 'store_items' );
+
+    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+    dbDelta( "CREATE TABLE $t (
+        id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+        item_key varchar(50) NOT NULL DEFAULT '',
+        title varchar(255) NOT NULL DEFAULT '',
+        description varchar(500) NOT NULL DEFAULT '',
+        icon varchar(10) NOT NULL DEFAULT '',
+        image_url varchar(500) NOT NULL DEFAULT '',
+        price_1 int(11) NOT NULL DEFAULT 300,
+        price_2 int(11) NOT NULL DEFAULT 500,
+        price_3 int(11) NOT NULL DEFAULT 1000,
+        default_price int(11) NOT NULL DEFAULT 500,
+        badge_color varchar(20) NOT NULL DEFAULT '#287e61',
+        badge_text varchar(100) NOT NULL DEFAULT '',
+        announcement_template text NOT NULL,
+        sort_order int(11) NOT NULL DEFAULT 0,
+        is_active tinyint(1) NOT NULL DEFAULT 1,
+        created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY  (id),
+        KEY item_key (item_key),
+        KEY is_active (is_active)
+    ) $charset;" );
+
+    // Seed default items if table is empty
+    $count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $t" );
+    if ( $count === 0 ) {
+        $defaults = [
+            [ 'jumuah_mubarak', "Jumu'ah Mubarak", 'Send Jumuah Mubarak to the entire congregation', '🕌', 300, 500, 1000, 500, '#287e61', "Jumu'ah Mubarak", "🕌 Jumu'ah Mubarak from {name} to the entire congregation of {mosque}! May Allah accept our prayers." ],
+            [ 'eid_mubarak', 'Eid Mubarak', 'Wish Eid Mubarak to the whole community', '🌙', 500, 1000, 2000, 1000, '#7c3aed', 'Eid Mubarak', '🌙 Eid Mubarak from {name} to the entire congregation of {mosque}! Taqabbal Allahu minna wa minkum.' ],
+            [ 'khatam_quran', 'Khatam al-Quran', 'Announce a Quran completion to the congregation', '📗', 1000, 2000, 5000, 2000, '#0369a1', 'Quran Khatam', '📗 MashaAllah! {name} has completed the Quran — Khatam Mubarak! May Allah reward them. Please make dua.' ],
+            [ 'hajj_mubarak', 'Hajj Mubarak', 'Congratulate someone who completed Hajj', '🕋', 1000, 2000, 5000, 2000, '#92400e', 'Hajj Mubarak', '🕋 Hajj Mubarak! {name} has completed Hajj. May Allah accept their pilgrimage.' ],
+            [ 'nikah_mubarak', 'Nikah Mubarak', 'Announce a marriage blessing to the community', '💍', 1000, 2000, 5000, 2000, '#be185d', 'Nikah Mubarak', '💍 Nikah Mubarak! {name} — may Allah bless this union with love, mercy, and barakah.' ],
+            [ 'new_baby', 'New Baby Mubarak', 'Share the joy of a new arrival', '👶', 500, 1000, 2000, 1000, '#059669', 'New Baby', '👶 MashaAllah! {name} has been blessed with a new baby! May Allah make the child a source of joy.' ],
+            [ 'dua_request', 'Community Dua Request', 'Ask the entire congregation to make dua for you', '🤲', 300, 500, 1000, 500, '#1e40af', 'Dua Request', '🤲 {name} is asking the congregation of {mosque} for dua. {message}' ],
+            [ 'thank_you', 'Thank You Message', 'Thank the masjid and its community publicly', '💖', 300, 500, 1000, 300, '#9d174d', 'Thank You', '💖 {name} says JazakAllah Khayr to the community of {mosque}. {message}' ],
+        ];
+        foreach ( $defaults as $i => $d ) {
+            $wpdb->insert( $t, [
+                'item_key' => $d[0], 'title' => $d[1], 'description' => $d[2], 'icon' => $d[3],
+                'price_1' => $d[4], 'price_2' => $d[5], 'price_3' => $d[6], 'default_price' => $d[7],
+                'badge_color' => $d[8], 'badge_text' => $d[9], 'announcement_template' => $d[10],
+                'sort_order' => $i,
+            ] );
+        }
+    }
+
+    update_option( 'ynj_store_db_version', YNJ_STORE_DB_VERSION );
+} );
 
 add_action( 'plugins_loaded', function() {
     if ( ! class_exists( 'YNJ_DB' ) ) return;
 
     require_once YNJ_STORE_DIR . 'inc/class-ynj-store.php';
 
-    // When a unified checkout payment succeeds for a store item, auto-post the announcement
+    // When a unified checkout payment succeeds for a store item, auto-post
     add_action( 'ynj_unified_payment_succeeded', [ 'YNJ_Store', 'on_payment_succeeded' ], 10, 2 );
 
     // WP Admin

@@ -1,6 +1,6 @@
 <?php
 /**
- * Masjid Store WP Admin — view purchases, manage items.
+ * Masjid Store WP Admin — full CRUD for store items with image upload.
  * @package YNJ_Store
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -16,25 +16,37 @@ class YNJ_Store_Admin {
     }
 
     public static function render_page() {
+        wp_enqueue_media();
+
+        // Handle actions
+        if ( isset( $_POST['ynj_store_save'] ) && wp_verify_nonce( $_POST['_wpnonce'] ?? '', 'ynj_store_item' ) ) {
+            $id = absint( $_POST['item_id'] ?? 0 );
+            YNJ_Store::save_item( $_POST, $id );
+            echo '<div class="notice notice-success"><p>Item saved.</p></div>';
+        }
+
+        if ( isset( $_GET['delete'] ) && wp_verify_nonce( $_GET['_wpnonce'] ?? '', 'ynj_store_delete' ) ) {
+            YNJ_Store::delete_item( absint( $_GET['delete'] ) );
+            echo '<div class="notice notice-success"><p>Item deleted.</p></div>';
+        }
+
+        // Edit mode?
+        $editing = null;
+        if ( isset( $_GET['edit'] ) ) {
+            $editing = YNJ_Store::get_item_by_id( absint( $_GET['edit'] ) );
+        }
+
         $items = YNJ_Store::get_items();
 
-        // Get store purchases from transactions table
+        // Stats
         global $wpdb;
-        $t  = YNJ_DB::table( 'transactions' );
-        $mt = YNJ_DB::table( 'mosques' );
-
-        $total = (int) $wpdb->get_var( "SELECT COALESCE(SUM(amount_pence), 0) FROM $t WHERE item_type = 'store' AND status = 'succeeded'" );
-        $count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $t WHERE item_type = 'store' AND status = 'succeeded'" );
-        $masjid_total = (int) floor( $total * YNJ_Store::MASJID_SHARE / 100 );
-
-        $recent = $wpdb->get_results(
-            "SELECT t.*, m.name AS mosque_name FROM $t t LEFT JOIN $mt m ON m.id = t.mosque_id
-             WHERE t.item_type = 'store' ORDER BY t.created_at DESC LIMIT 50"
-        ) ?: [];
+        $tt = YNJ_DB::table( 'transactions' );
+        $total = (int) $wpdb->get_var( "SELECT COALESCE(SUM(amount_pence), 0) FROM $tt WHERE item_type = 'store' AND status = 'succeeded'" );
+        $count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $tt WHERE item_type = 'store' AND status = 'succeeded'" );
         ?>
         <div class="wrap">
             <h1>Masjid Store — Community Shout-Outs</h1>
-            <p>Community members purchase announcements. 95% goes to the masjid, 5% to YourJannah.</p>
+            <p>Manage purchasable items. 95% goes to the masjid, 5% to YourJannah. Each purchase auto-posts an announcement.</p>
 
             <div style="display:flex;gap:16px;margin:20px 0;">
                 <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px 24px;text-align:center;">
@@ -42,53 +54,135 @@ class YNJ_Store_Admin {
                     <div style="font-size:12px;color:#666;">Total Sales</div>
                 </div>
                 <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px 24px;text-align:center;">
-                    <div style="font-size:28px;font-weight:800;color:#16a34a;">&pound;<?php echo number_format( $masjid_total / 100, 2 ); ?></div>
-                    <div style="font-size:12px;color:#666;">To Masjids (95%)</div>
-                </div>
-                <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px 24px;text-align:center;">
                     <div style="font-size:28px;font-weight:800;"><?php echo $count; ?></div>
                     <div style="font-size:12px;color:#666;">Purchases</div>
                 </div>
+                <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px 24px;text-align:center;">
+                    <div style="font-size:28px;font-weight:800;"><?php echo count( $items ); ?></div>
+                    <div style="font-size:12px;color:#666;">Active Items</div>
+                </div>
             </div>
 
-            <h2>Available Items</h2>
-            <table class="wp-list-table widefat fixed striped" style="margin-bottom:20px;">
-                <thead><tr><th></th><th>Item</th><th>Description</th><th>Prices</th></tr></thead>
-                <tbody>
-                    <?php foreach ( $items as $key => $item ) : ?>
-                    <tr>
-                        <td style="font-size:24px;width:40px;"><?php echo $item['icon']; ?></td>
-                        <td><strong><?php echo esc_html( $item['title'] ); ?></strong></td>
-                        <td><?php echo esc_html( $item['description'] ); ?></td>
-                        <td><?php echo implode( ', ', array_map( function( $p ) { return '£' . number_format( $p / 100, 2 ); }, $item['prices'] ) ); ?></td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+            <!-- Add/Edit Form -->
+            <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:20px;margin-bottom:20px;">
+                <h2 style="margin-top:0;"><?php echo $editing ? 'Edit Item' : 'Add New Item'; ?></h2>
+                <form method="post">
+                    <?php wp_nonce_field( 'ynj_store_item' ); ?>
+                    <input type="hidden" name="item_id" value="<?php echo $editing ? (int) $editing->id : 0; ?>">
+                    <table class="form-table">
+                        <tr>
+                            <th>Key (slug)</th>
+                            <td><input type="text" name="item_key" value="<?php echo esc_attr( $editing->item_key ?? '' ); ?>" class="regular-text" required placeholder="e.g. jumuah_mubarak"></td>
+                        </tr>
+                        <tr>
+                            <th>Title</th>
+                            <td><input type="text" name="title" value="<?php echo esc_attr( $editing->title ?? '' ); ?>" class="regular-text" required placeholder="e.g. Jumu'ah Mubarak"></td>
+                        </tr>
+                        <tr>
+                            <th>Description</th>
+                            <td><input type="text" name="description" value="<?php echo esc_attr( $editing->description ?? '' ); ?>" class="large-text" placeholder="Short description shown to buyer"></td>
+                        </tr>
+                        <tr>
+                            <th>Icon (emoji)</th>
+                            <td><input type="text" name="icon" value="<?php echo esc_attr( $editing->icon ?? '🕌' ); ?>" style="width:60px;font-size:24px;text-align:center;"></td>
+                        </tr>
+                        <tr>
+                            <th>Image</th>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:12px;">
+                                    <input type="text" name="image_url" id="ynj-store-img" value="<?php echo esc_attr( $editing->image_url ?? '' ); ?>" class="regular-text" placeholder="Image URL">
+                                    <button type="button" class="button" onclick="ynjStorePickImage()">Choose Image</button>
+                                    <?php if ( ! empty( $editing->image_url ) ) : ?>
+                                    <img src="<?php echo esc_url( $editing->image_url ); ?>" style="height:50px;border-radius:6px;">
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Prices (pence)</th>
+                            <td>
+                                <div style="display:flex;gap:8px;">
+                                    <input type="number" name="price_1" value="<?php echo (int) ( $editing->price_1 ?? 300 ); ?>" style="width:100px;" placeholder="Low">
+                                    <input type="number" name="price_2" value="<?php echo (int) ( $editing->price_2 ?? 500 ); ?>" style="width:100px;" placeholder="Mid">
+                                    <input type="number" name="price_3" value="<?php echo (int) ( $editing->price_3 ?? 1000 ); ?>" style="width:100px;" placeholder="High">
+                                </div>
+                                <p class="description">In pence. 300 = £3.00, 1000 = £10.00</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Default Price (pence)</th>
+                            <td><input type="number" name="default_price" value="<?php echo (int) ( $editing->default_price ?? 500 ); ?>" style="width:100px;"></td>
+                        </tr>
+                        <tr>
+                            <th>Badge Color</th>
+                            <td><input type="color" name="badge_color" value="<?php echo esc_attr( $editing->badge_color ?? '#287e61' ); ?>"></td>
+                        </tr>
+                        <tr>
+                            <th>Badge Text</th>
+                            <td><input type="text" name="badge_text" value="<?php echo esc_attr( $editing->badge_text ?? '' ); ?>" class="regular-text" placeholder="e.g. Jumu'ah Mubarak"></td>
+                        </tr>
+                        <tr>
+                            <th>Announcement Template</th>
+                            <td>
+                                <textarea name="announcement_template" rows="3" class="large-text" placeholder="Use {name}, {mosque}, {message} as placeholders"><?php echo esc_textarea( $editing->announcement_template ?? '' ); ?></textarea>
+                                <p class="description">Variables: <code>{name}</code> = buyer's name, <code>{mosque}</code> = mosque name, <code>{message}</code> = custom message</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Sort Order</th>
+                            <td><input type="number" name="sort_order" value="<?php echo (int) ( $editing->sort_order ?? 0 ); ?>" style="width:60px;"></td>
+                        </tr>
+                        <tr>
+                            <th>Active</th>
+                            <td><label><input type="checkbox" name="is_active" value="1" <?php checked( $editing ? $editing->is_active : 1 ); ?>> Show in store</label></td>
+                        </tr>
+                    </table>
+                    <p class="submit">
+                        <button type="submit" name="ynj_store_save" class="button button-primary"><?php echo $editing ? 'Update Item' : 'Add Item'; ?></button>
+                        <?php if ( $editing ) : ?>
+                        <a href="<?php echo esc_url( admin_url( 'admin.php?page=ynj-store' ) ); ?>" class="button">Cancel</a>
+                        <?php endif; ?>
+                    </p>
+                </form>
+            </div>
 
-            <h2>Recent Purchases</h2>
-            <?php if ( empty( $recent ) ) : ?>
-                <p style="color:#666;">No store purchases yet.</p>
+            <!-- Items List -->
+            <h2>Store Items</h2>
+            <?php if ( empty( $items ) ) : ?>
+                <p>No items yet. Add your first item above.</p>
             <?php else : ?>
             <table class="wp-list-table widefat fixed striped">
-                <thead><tr><th>Item</th><th>Mosque</th><th>From</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+                <thead><tr><th style="width:40px;"></th><th>Image</th><th>Title</th><th>Description</th><th>Prices</th><th>Active</th><th>Actions</th></tr></thead>
                 <tbody>
-                    <?php foreach ( $recent as $tx ) :
-                        $item = $items[ $tx->fund_type ] ?? null;
-                    ?>
+                    <?php foreach ( $items as $item ) : ?>
                     <tr>
-                        <td><?php echo $item ? $item['icon'] . ' ' . esc_html( $item['title'] ) : esc_html( $tx->fund_type ); ?></td>
-                        <td><?php echo esc_html( $tx->mosque_name ?: '—' ); ?></td>
-                        <td><?php echo esc_html( $tx->donor_name ?: $tx->donor_email ); ?></td>
-                        <td>&pound;<?php echo number_format( $tx->amount_pence / 100, 2 ); ?></td>
-                        <td><?php echo $tx->status === 'succeeded' ? '<span style="color:#16a34a;">✓</span>' : esc_html( $tx->status ); ?></td>
-                        <td style="font-size:12px;"><?php echo esc_html( $tx->created_at ); ?></td>
+                        <td style="font-size:24px;"><?php echo esc_html( $item->icon ); ?></td>
+                        <td><?php if ( $item->image_url ) : ?><img src="<?php echo esc_url( $item->image_url ); ?>" style="height:40px;border-radius:6px;"><?php else : ?>—<?php endif; ?></td>
+                        <td><strong><?php echo esc_html( $item->title ); ?></strong></td>
+                        <td style="font-size:12px;color:#666;"><?php echo esc_html( $item->description ); ?></td>
+                        <td>£<?php echo number_format( $item->price_1 / 100 ); ?> / £<?php echo number_format( $item->price_2 / 100 ); ?> / £<?php echo number_format( $item->price_3 / 100 ); ?></td>
+                        <td><?php echo $item->is_active ? '<span style="color:#16a34a;">Yes</span>' : '<span style="color:#999;">No</span>'; ?></td>
+                        <td>
+                            <a href="<?php echo esc_url( admin_url( 'admin.php?page=ynj-store&edit=' . $item->id ) ); ?>">Edit</a> |
+                            <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=ynj-store&delete=' . $item->id ), 'ynj_store_delete' ) ); ?>" onclick="return confirm('Delete this item?');" style="color:#dc2626;">Delete</a>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
             <?php endif; ?>
         </div>
+
+        <script>
+        function ynjStorePickImage() {
+            var frame = wp.media({ title: 'Select Store Item Image', library: { type: 'image' }, multiple: false });
+            frame.on('select', function() {
+                var url = frame.state().get('selection').first().toJSON().url;
+                document.getElementById('ynj-store-img').value = url;
+            });
+            frame.open();
+        }
+        </script>
         <?php
     }
 }

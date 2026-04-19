@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '4.0.0';
+    const SCHEMA_VERSION = '4.1.0';
 
     /**
      * Return the full table name for a given short name.
