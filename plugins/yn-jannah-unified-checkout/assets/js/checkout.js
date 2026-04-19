@@ -1,10 +1,11 @@
 /**
- * YourJannah Unified Checkout — multi-item basket checkout.
+ * YourJannah Unified Checkout — v3.0 Multi-step checkout.
  *
- * Reads items from ynjBasket (ynj-basket.js) and renders the checkout experience.
- * Handles: item-type renderers, Stripe Elements, split-mode (one-off + recurring).
+ * Step 1: Review items + contact info
+ * Step 2: Support YourJannah (platform tip)
+ * Step 3: Payment (Stripe Elements)
  *
- * Expects global: ynjCheckoutData { apiUrl, stripePk, mosqueId, mosqueName, userEmail, userName, homeUrl, funds:[] }
+ * Reads from ynjBasket. Expects global: ynjCheckoutData
  *
  * @package YNJ_Unified_Checkout
  */
@@ -16,156 +17,38 @@
     var PK  = CFG.stripePk || '';
     var FUNDS = CFG.funds || [];
 
-    var stripe, elements, paymentElement;
-    var tipPercent = 5;
+    var currentStep = 1;
+    var tipPence = 30; // default: £0.30 minimum
+    var causePence = 0;
+    var stripe, elements, paymentElement, cardReady = false;
     var txnId = '';
     var processing = false;
 
-    // ── DOM refs ──
-    var $cartItems, $detailsCard, $tipCard, $summaryCard, $paymentCard, $continueBtn, $payBtn, $errorEl;
-
     // ════════════════════════════════════════════
-    //  URL-PARAM BACKWARDS COMPATIBILITY
+    //  URL PARAM BACKWARDS COMPAT
     // ════════════════════════════════════════════
 
     function handleUrlParams() {
         var params = new URLSearchParams(window.location.search);
         var type = params.get('type');
         if (!type) return;
-
         var item = {
-            item_type:    type,
-            item_id:      parseInt(params.get('item_id') || '0', 10),
-            item_label:   params.get('label') || '',
-            mosque_id:    parseInt(params.get('mosque_id') || '0', 10),
-            mosque_name:  CFG.mosqueName || '',
+            item_type: type,
+            item_id: parseInt(params.get('item_id') || '0', 10),
+            item_label: params.get('label') || '',
+            mosque_id: parseInt(params.get('mosque_id') || '0', 10),
+            mosque_name: CFG.mosqueName || '',
             amount_pence: parseInt(params.get('amount') || '0', 10),
-            fund_type:    params.get('fund') || 'general',
-            frequency:    params.get('frequency') || 'once'
+            fund_type: params.get('fund') || 'general',
+            frequency: params.get('frequency') || 'once'
         };
-
-        // Don't add duplicates
-        if (!ynjBasket.hasItem(item)) {
-            ynjBasket.addItem(item);
-        }
-
-        // Clean URL
+        if (!ynjBasket.hasItem(item)) ynjBasket.addItem(item);
         history.replaceState(null, '', window.location.pathname);
     }
 
     // ════════════════════════════════════════════
-    //  ITEM RENDERERS
+    //  HELPERS
     // ════════════════════════════════════════════
-
-    function typeLabel(t) {
-        var labels = {
-            donation: 'Donation', sadaqah: 'Sadaqah', patron: 'Patron',
-            tip: 'Support YJ', sponsor: 'Sponsor', business_sponsor: 'Sponsor',
-            store: 'Store', event_ticket: 'Event Ticket', event_donation: 'Event Donation',
-            room_booking: 'Room Booking', class_enrolment: 'Class', service: 'Service',
-            professional_service: 'Service', platform_donate: 'Platform'
-        };
-        return labels[t] || t.replace(/_/g, ' ');
-    }
-
-    function freqLabel(f) {
-        if (!f || f === 'once') return '';
-        if (f === 'weekly') return '/week';
-        if (f === 'monthly') return '/month';
-        if (f === 'daily') return '/day';
-        return '/' + f;
-    }
-
-    function pence(p) {
-        return '\u00A3' + (p / 100).toFixed(2);
-    }
-
-    function renderCartItem(item) {
-        var isRecurring = item.frequency && item.frequency !== 'once';
-        var typeClass = 'uc-cart-item--' + item.item_type;
-        var freqBadge = isRecurring ? ' uc-cart-item__type--recurring' : '';
-
-        var html = '<div class="uc-cart-item ' + typeClass + '" data-cart-id="' + item.id + '">';
-        html += '<div class="uc-cart-item__header">';
-        html += '<span class="uc-cart-item__type' + freqBadge + '">' + esc(typeLabel(item.item_type));
-        if (isRecurring) html += ' &bull; ' + esc(item.frequency);
-        html += '</span>';
-        html += '<button type="button" class="uc-cart-item__remove" data-remove="' + item.id + '" title="Remove">&times;</button>';
-        html += '</div>';
-
-        html += '<div class="uc-cart-item__label">' + esc(item.item_label || typeLabel(item.item_type)) + '</div>';
-        if (item.mosque_name) {
-            html += '<div class="uc-cart-item__mosque">' + esc(item.mosque_name) + '</div>';
-        }
-
-        html += '<div class="uc-cart-item__amount">' + pence(item.amount_pence);
-        if (isRecurring) html += '<span class="uc-cart-item__freq">' + freqLabel(item.frequency) + '</span>';
-        html += '</div>';
-
-        // Type-specific fields
-        html += renderTypeFields(item);
-
-        html += '</div>';
-        return html;
-    }
-
-    function renderTypeFields(item) {
-        var html = '';
-
-        switch (item.item_type) {
-            case 'donation':
-            case 'sadaqah':
-                if (FUNDS.length > 1) {
-                    html += '<div class="uc-cart-item__field">';
-                    html += '<label>Fund</label>';
-                    html += '<select data-field="fund_type" data-cart-id="' + item.id + '">';
-                    for (var i = 0; i < FUNDS.length; i++) {
-                        var sel = FUNDS[i].slug === item.fund_type ? ' selected' : '';
-                        html += '<option value="' + esc(FUNDS[i].slug) + '"' + sel + '>' + esc(FUNDS[i].label) + '</option>';
-                    }
-                    html += '</select></div>';
-                }
-                break;
-
-            case 'store':
-                var msg = (item.meta && item.meta.message) || '';
-                html += '<div class="uc-cart-item__field">';
-                html += '<label>Personal message (optional)</label>';
-                html += '<textarea data-field="meta.message" data-cart-id="' + item.id + '" rows="2" placeholder="Add a message...">' + esc(msg) + '</textarea>';
-                html += '</div>';
-                html += '<div class="uc-cart-item__meta" style="color:#16a34a;">&#x1F54C; 95% goes directly to the masjid</div>';
-                break;
-
-            case 'patron':
-                var tier = (item.meta && item.meta.tier) || 'supporter';
-                html += '<div class="uc-cart-item__meta">Tier: <strong>' + esc(tier.charAt(0).toUpperCase() + tier.slice(1)) + '</strong></div>';
-                break;
-
-            case 'event_ticket':
-            case 'event_donation':
-                if (item.meta && item.meta.event_date) {
-                    html += '<div class="uc-cart-item__meta">Date: ' + esc(item.meta.event_date) + '</div>';
-                }
-                break;
-
-            case 'room_booking':
-                if (item.meta && item.meta.booking_date) {
-                    html += '<div class="uc-cart-item__meta">Date: ' + esc(item.meta.booking_date) + '</div>';
-                }
-                if (item.meta && item.meta.time_slot) {
-                    html += '<div class="uc-cart-item__meta">Time: ' + esc(item.meta.time_slot) + '</div>';
-                }
-                break;
-
-            case 'class_enrolment':
-                if (item.meta && item.meta.class_name) {
-                    html += '<div class="uc-cart-item__meta">Class: ' + esc(item.meta.class_name) + '</div>';
-                }
-                break;
-        }
-
-        return html;
-    }
 
     function esc(s) {
         if (!s) return '';
@@ -174,176 +57,260 @@
         return d.innerHTML;
     }
 
+    function pence(p) { return '\u00A3' + (p / 100).toFixed(2); }
+
+    function typeLabel(t) {
+        var m = { donation:'Donation', sadaqah:'Sadaqah', patron:'Patron', tip:'Support YJ',
+            sponsor:'Sponsor', business_sponsor:'Sponsor', store:'Store',
+            event_ticket:'Event Ticket', event_donation:'Event Donation',
+            room_booking:'Room Booking', class_enrolment:'Class', service:'Service',
+            professional_service:'Service', platform_donate:'Platform' };
+        return m[t] || t.replace(/_/g, ' ');
+    }
+
+    function freqLabel(f) {
+        if (!f || f === 'once') return '';
+        return f === 'weekly' ? '/week' : f === 'monthly' ? '/month' : '/' + f;
+    }
+
+    function getSubtotal() { return ynjBasket.getSubtotal(); }
+    function getTotal() { return getSubtotal() + tipPence + causePence; }
+
     // ════════════════════════════════════════════
-    //  RENDER FUNCTIONS
+    //  STEP NAVIGATION
     // ════════════════════════════════════════════
 
-    function renderItems() {
+    function goStep(step) {
+        if (step < 1 || step > 3) return;
+
+        // Validate before advancing
+        if (step > currentStep) {
+            if (currentStep === 1 && !validateStep1()) return;
+        }
+
+        currentStep = step;
+
+        // Show/hide step panels
+        document.querySelectorAll('.uc-step').forEach(function (el) {
+            el.classList.toggle('uc-step--active', el.dataset.step == step);
+        });
+
+        // Update step bar
+        document.querySelectorAll('.uc-steps__item').forEach(function (el) {
+            var s = parseInt(el.dataset.step, 10);
+            el.classList.toggle('uc-steps__item--active', s === step);
+            el.classList.toggle('uc-steps__item--done', s < step);
+            if (s < step) el.querySelector('.uc-steps__num').textContent = '\u2713';
+            else el.querySelector('.uc-steps__num').textContent = s;
+        });
+
+        // Back button
+        var backBtn = document.getElementById('uc-steps-back');
+        if (backBtn) backBtn.style.display = step > 1 ? '' : 'none';
+
+        // Show step2 summary lines
+        document.querySelectorAll('.uc-summary__step2').forEach(function (el) {
+            el.style.display = step >= 2 ? '' : 'none';
+        });
+
+        // Mount Stripe on step 3
+        if (step === 3 && !paymentElement) initStripe();
+
+        updateSummary();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function validateStep1() {
+        var email = document.getElementById('uc-email');
+        if (!email || !email.value.trim() || email.value.indexOf('@') < 0) {
+            if (email) { email.style.borderColor = '#ED1C6C'; email.focus(); }
+            return false;
+        }
+        email.style.borderColor = '';
+
         var items = ynjBasket.getItems();
+        if (!items.length) return false;
+        for (var i = 0; i < items.length; i++) {
+            if ((items[i].amount_pence || 0) < 100) {
+                alert('Each item must be at least \u00A31.');
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // ════════════════════════════════════════════
+    //  RENDER — STEP 1: REVIEW
+    // ════════════════════════════════════════════
+
+    function renderStep1() {
+        var items = ynjBasket.getItems();
+        var $items = document.getElementById('uc-step1-items');
+        if (!$items) return;
+
         if (!items.length) {
-            showEmptyState();
+            showEmpty();
             return;
         }
 
-        var html = '';
-        for (var i = 0; i < items.length; i++) {
-            html += renderCartItem(items[i]);
-        }
-        $cartItems.innerHTML = html;
+        // Show main UI, hide empty
+        document.getElementById('uc-checkout-main').style.display = '';
+        var emptyEl = document.getElementById('uc-empty-state');
+        if (emptyEl) emptyEl.style.display = 'none';
 
-        // Show details + tip + summary
-        $detailsCard.style.display = '';
-        $tipCard.style.display = '';
-        $summaryCard.style.display = '';
-        $continueBtn.style.display = '';
+        // Render items in the sidebar summary
+        renderSummaryItems();
+
+        // Render items in step 1 "Your Items" card
+        var html = '';
+        items.forEach(function (item) {
+            var isRecurring = item.frequency && item.frequency !== 'once';
+            html += '<div class="uc-cart-item" data-cart-id="' + item.id + '">';
+            html += '<div class="uc-cart-item__info">';
+            html += '<div class="uc-cart-item__label">' + esc(item.item_label || typeLabel(item.item_type)) + '</div>';
+            html += '<div class="uc-cart-item__sub">' + esc(item.mosque_name || typeLabel(item.item_type));
+            if (isRecurring) html += ' &bull; ' + esc(item.frequency);
+            html += '</div></div>';
+            html += '<span class="uc-cart-item__price">' + pence(item.amount_pence) + '</span>';
+            html += '<button type="button" class="uc-cart-item__remove" data-remove="' + item.id + '">&times;</button>';
+            html += '</div>';
+        });
+        $items.innerHTML = html;
 
         // Bind remove buttons
-        $cartItems.querySelectorAll('.uc-cart-item__remove').forEach(function (btn) {
+        $items.querySelectorAll('.uc-cart-item__remove').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 ynjBasket.removeItem(this.dataset.remove);
-                renderItems();
+                renderStep1();
                 updateSummary();
             });
         });
 
-        // Bind editable fields
-        $cartItems.querySelectorAll('[data-field]').forEach(function (el) {
-            el.addEventListener('change', function () {
-                var cartId = this.dataset.cartId;
-                var field = this.dataset.field;
-                var val = this.value;
-
-                if (field.startsWith('meta.')) {
-                    var metaKey = field.split('.')[1];
-                    var item = findItem(cartId);
-                    if (item) {
-                        var meta = item.meta || {};
-                        meta[metaKey] = val;
-                        ynjBasket.updateItem(cartId, { meta: meta });
-                    }
-                } else {
-                    var update = {};
-                    update[field] = val;
-                    ynjBasket.updateItem(cartId, update);
-                }
-            });
-        });
-
-        // Show split notice if mixed
-        var splitNotice = document.getElementById('uc-split-notice');
-        if (splitNotice) {
-            splitNotice.style.display = ynjBasket.isMixed() ? '' : 'none';
+        // Fund selector (if donation items and funds available)
+        var fundEl = document.getElementById('uc-fund-select');
+        if (fundEl && FUNDS.length > 1) {
+            fundEl.style.display = '';
+            var select = fundEl.querySelector('select');
+            if (select && !select.options.length) {
+                FUNDS.forEach(function (f) {
+                    var opt = document.createElement('option');
+                    opt.value = f.slug; opt.textContent = f.label;
+                    select.appendChild(opt);
+                });
+            }
         }
 
         updateSummary();
     }
 
-    function findItem(cartId) {
+    function showEmpty() {
+        var main = document.getElementById('uc-checkout-main');
+        var empty = document.getElementById('uc-empty-state');
+        if (main) main.style.display = 'none';
+        if (empty) empty.style.display = '';
+    }
+
+    // ════════════════════════════════════════════
+    //  RENDER — SIDEBAR SUMMARY
+    // ════════════════════════════════════════════
+
+    function renderSummaryItems() {
         var items = ynjBasket.getItems();
-        for (var i = 0; i < items.length; i++) {
-            if (items[i].id === cartId) return items[i];
-        }
-        return null;
-    }
+        var $el = document.getElementById('uc-summary-items');
+        if (!$el) return;
 
-    function showEmptyState() {
-        var mosqueId = CFG.mosqueId || 0;
-        $cartItems.innerHTML =
-            '<div class="uc-empty">' +
-            '<div class="uc-empty__icon">&#x1F6D2;</div>' +
-            '<div class="uc-empty__text">Your cart is empty</div>' +
-            '<div class="uc-empty-grid">' +
-            emptyItem('donation', mosqueId, 'Donation', '&#x1F49D;', 'general', '') +
-            emptyItem('sadaqah', mosqueId, 'Sadaqah', '&#x1F4B0;', 'sadaqah', '') +
-            emptyItem('patron', mosqueId, 'Become Patron', '&#x1F3C5;', '', 'monthly') +
-            emptyItem('tip', 0, 'Support YJ', '&#x1F932;', '', '') +
-            '</div></div>';
-
-        $detailsCard.style.display = 'none';
-        $tipCard.style.display = 'none';
-        $summaryCard.style.display = 'none';
-        $continueBtn.style.display = 'none';
-        $paymentCard.style.display = 'none';
-    }
-
-    function emptyItem(type, mosqueId, label, icon, fund, freq) {
-        var params = '?type=' + type + '&mosque_id=' + mosqueId + '&label=' + encodeURIComponent(label);
-        if (fund) params += '&fund=' + fund;
-        if (freq) params += '&frequency=' + freq;
-        return '<a href="' + params + '" class="uc-empty-item"><span>' + icon + '</span><strong>' + esc(label) + '</strong></a>';
-    }
-
-    // ════════════════════════════════════════════
-    //  SUMMARY
-    // ════════════════════════════════════════════
-
-    function getTipPence() {
-        return Math.round(ynjBasket.getSubtotal() * tipPercent / 100);
-    }
-
-    function getTotalPence() {
-        return ynjBasket.getSubtotal() + getTipPence();
+        var html = '';
+        items.forEach(function (item) {
+            html += '<div class="uc-summary__line">';
+            html += '<span>' + esc(item.item_label || typeLabel(item.item_type)) + '</span>';
+            html += '<span>' + pence(item.amount_pence) + '</span>';
+            html += '</div>';
+            if (item.mosque_name) {
+                html += '<div class="uc-summary__line--sub">&nbsp;&nbsp;' + esc(item.mosque_name) + '</div>';
+            }
+        });
+        $el.innerHTML = html;
     }
 
     function updateSummary() {
-        var items = ynjBasket.getItems();
-        var $summary = document.getElementById('uc-summary-lines');
-        if (!$summary) return;
+        var sub = getSubtotal();
+        var total = getTotal();
 
-        var html = '';
-        for (var i = 0; i < items.length; i++) {
-            var lbl = items[i].item_label || typeLabel(items[i].item_type);
-            html += '<div class="uc-summary-row"><span>' + esc(lbl) + '</span><span>' + pence(items[i].amount_pence) + '</span></div>';
-        }
-        html += '<div class="uc-summary-row"><span>YourJannah tip</span><span id="uc-sum-tip">' + pence(getTipPence()) + '</span></div>';
-        html += '<div class="uc-summary-total"><span>Total</span><span id="uc-sum-total">' + pence(getTotalPence()) + '</span></div>';
-        $summary.innerHTML = html;
+        var dueEl = document.getElementById('uc-sum-due');
+        var tipEl = document.getElementById('uc-sum-tip');
+        var causeEl = document.getElementById('uc-sum-cause');
+        var totalEl = document.getElementById('uc-sum-total');
 
-        // Update pay button text
-        if ($payBtn) {
+        if (dueEl) dueEl.textContent = pence(sub);
+        if (tipEl) tipEl.textContent = pence(tipPence);
+        if (causeEl) causeEl.textContent = pence(causePence);
+        if (totalEl) totalEl.textContent = pence(total);
+
+        // Update submit button
+        var submitBtn = document.getElementById('uc-submit-btn');
+        if (submitBtn) submitBtn.textContent = 'Complete Payment \u2014 ' + pence(total);
+
+        // Step 1 continue button
+        var s1btn = document.getElementById('uc-s1-continue');
+        if (s1btn) {
             var groups = ynjBasket.groupByFrequency();
-            var label = '\uD83E\uDD32 Pay ' + pence(getTotalPence());
-            if (groups.recurring.length && !groups.once.length) {
-                label += freqLabel(groups.recurring[0].frequency);
-            }
-            $payBtn.textContent = label;
+            var label = 'Continue \u2192';
+            if (sub > 0) label = pence(sub) + ' \u2014 Continue \u2192';
+            s1btn.textContent = label;
         }
     }
 
     // ════════════════════════════════════════════
-    //  PAYMENT FLOW
+    //  STEP 2: SUPPORT — Platform Tip Tiers
     // ════════════════════════════════════════════
 
-    function continueToPayment() {
+    function initStep2() {
+        // Tip tiers
+        var tiers = document.querySelectorAll('.uc-tier[data-tip]');
+        tiers.forEach(function (tier) {
+            tier.addEventListener('click', function () {
+                tiers.forEach(function (t) { t.classList.remove('uc-tier--active'); });
+                this.classList.add('uc-tier--active');
+                tipPence = parseInt(this.dataset.tip, 10);
+                updateSummary();
+            });
+        });
+
+        // Cause buttons (Fund Our Mission)
+        var causeBtns = document.querySelectorAll('.uc-tier[data-cause]');
+        causeBtns.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                causeBtns.forEach(function (b) { b.classList.remove('uc-tier--active'); });
+                this.classList.add('uc-tier--active');
+                causePence = parseInt(this.dataset.cause, 10);
+                updateSummary();
+            });
+        });
+    }
+
+    // ════════════════════════════════════════════
+    //  STEP 3: PAYMENT — Stripe
+    // ════════════════════════════════════════════
+
+    function initStripe() {
+        if (!PK || typeof Stripe === 'undefined') return;
+
+        // Create the intent first
         var email = document.getElementById('uc-email').value.trim();
-        if (!email || email.indexOf('@') < 0) {
-            document.getElementById('uc-email').style.borderColor = '#dc2626';
-            document.getElementById('uc-email').focus();
-            return;
-        }
-
-        var items = ynjBasket.getItems();
-        if (!items.length) return;
-
-        for (var i = 0; i < items.length; i++) {
-            if (items[i].amount_pence < 100) {
-                alert('Each item must be at least \u00A31. Please check your amounts.');
-                return;
-            }
-        }
-
-        if (processing) return;
-        processing = true;
-        $continueBtn.disabled = true;
-        $continueBtn.textContent = 'Setting up payment...';
+        var name = document.getElementById('uc-name').value.trim();
+        var phone = document.getElementById('uc-phone') ? document.getElementById('uc-phone').value.trim() : '';
 
         var payload = {
             email: email,
-            name: document.getElementById('uc-name').value.trim(),
-            tip_pence: getTipPence(),
+            name: name,
+            phone: phone,
+            tip_pence: tipPence + causePence,
             items: ynjBasket.toApiPayload(),
             source: 'checkout_page'
         };
+
+        document.getElementById('uc-processing').style.display = '';
+        document.getElementById('uc-payment-section').style.display = 'none';
 
         fetch(API + 'unified-checkout/create-intent', {
             method: 'POST',
@@ -352,48 +319,38 @@
         })
         .then(function (r) { return r.json(); })
         .then(function (data) {
-            processing = false;
+            document.getElementById('uc-processing').style.display = 'none';
 
             if (!data.ok) {
-                $continueBtn.disabled = false;
-                $continueBtn.textContent = 'Continue to Payment \u2192';
-                alert(data.error || 'Failed to set up payment');
+                showError(data.error || 'Failed to set up payment.');
                 return;
             }
 
             if (data.mode === 'redirect') {
-                // All recurring: redirect to Stripe Checkout
                 ynjBasket.clear();
                 window.location.href = data.url;
                 return;
             }
 
             if (data.mode === 'split') {
-                // Mixed: handle one-off first, then redirect for recurring
                 txnId = data.one_off.transaction_id;
-                mountStripeElements(data.one_off.client_secret);
-                // Store recurring URL for after one-off completes
                 window._ynjRecurringUrl = data.recurring.url;
-                window._ynjRecurringTxnId = data.recurring.transaction_id;
+                mountStripe(data.one_off.client_secret);
                 return;
             }
 
-            // All one-off: mount inline Stripe Elements
+            // elements mode
             txnId = data.transaction_id;
-            mountStripeElements(data.client_secret);
+            mountStripe(data.client_secret);
         })
         .catch(function () {
-            processing = false;
-            $continueBtn.disabled = false;
-            $continueBtn.textContent = 'Continue to Payment \u2192';
-            alert('Network error. Please try again.');
+            document.getElementById('uc-processing').style.display = 'none';
+            showError('Network error. Please try again.');
         });
     }
 
-    function mountStripeElements(clientSecret) {
-        $continueBtn.style.display = 'none';
-        $paymentCard.style.display = '';
-        updateSummary();
+    function mountStripe(clientSecret) {
+        document.getElementById('uc-payment-section').style.display = '';
 
         stripe = Stripe(PK);
         elements = stripe.elements({
@@ -410,22 +367,23 @@
         paymentElement = elements.create('payment', { layout: 'tabs' });
         paymentElement.mount('#uc-payment-element');
         paymentElement.on('change', function (e) {
-            $payBtn.disabled = !e.complete;
-            if (e.error) {
-                $errorEl.textContent = e.error.message;
-                $errorEl.style.display = '';
-            } else {
-                $errorEl.style.display = 'none';
-            }
+            cardReady = e.complete;
+            var submitBtn = document.getElementById('uc-submit-btn');
+            if (submitBtn) submitBtn.disabled = !e.complete;
+            if (e.error) showError(e.error.message);
+            else hideError();
         });
     }
 
-    function payNow() {
-        if (processing) return;
+    function submitPayment() {
+        if (!cardReady || processing) return;
         processing = true;
-        $payBtn.disabled = true;
-        $payBtn.textContent = 'Processing...';
-        $errorEl.style.display = 'none';
+
+        var submitBtn = document.getElementById('uc-submit-btn');
+        var procEl = document.getElementById('uc-processing');
+        submitBtn.style.display = 'none';
+        procEl.style.display = '';
+        hideError();
 
         stripe.confirmPayment({
             elements: elements,
@@ -433,16 +391,15 @@
             redirect: 'if_required'
         }).then(function (result) {
             if (result.error) {
-                $errorEl.textContent = result.error.message;
-                $errorEl.style.display = '';
-                $payBtn.disabled = false;
+                showError(result.error.message);
+                submitBtn.style.display = '';
+                procEl.style.display = 'none';
                 processing = false;
-                updateSummary();
                 return;
             }
 
-            // Payment succeeded — confirm with backend
-            $payBtn.textContent = 'Confirming...';
+            // Confirm with backend
+            procEl.querySelector('span').textContent = 'Confirming...';
             fetch(API + 'unified-checkout/confirm', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -452,7 +409,6 @@
                 })
             }).then(function () {
                 ynjBasket.clear();
-                // If split mode, redirect to recurring checkout
                 if (window._ynjRecurringUrl) {
                     window.location.href = window._ynjRecurringUrl;
                 } else {
@@ -465,61 +421,63 @@
         });
     }
 
+    function showError(msg) {
+        var el = document.getElementById('uc-error');
+        if (el) { el.textContent = msg; el.style.display = ''; }
+    }
+    function hideError() {
+        var el = document.getElementById('uc-error');
+        if (el) el.style.display = 'none';
+    }
+
     // ════════════════════════════════════════════
     //  INIT
     // ════════════════════════════════════════════
 
     function init() {
-        // Don't init on success page
         if (new URLSearchParams(window.location.search).get('success')) return;
 
-        // Handle URL params (backwards compat)
         handleUrlParams();
 
-        // Get DOM refs
-        $cartItems   = document.getElementById('uc-cart-items');
-        $detailsCard = document.getElementById('uc-details-card');
-        $tipCard     = document.getElementById('uc-tip-card');
-        $summaryCard = document.getElementById('uc-summary-card');
-        $paymentCard = document.getElementById('uc-payment-card');
-        $continueBtn = document.getElementById('uc-continue-btn');
-        $payBtn      = document.getElementById('uc-pay-btn');
-        $errorEl     = document.getElementById('uc-error');
+        var items = ynjBasket.getItems();
+        if (!items.length && !new URLSearchParams(window.location.search).get('type')) {
+            showEmpty();
+            return;
+        }
 
-        if (!$cartItems) return;
-
-        // Pre-fill email/name
+        // Pre-fill
         var emailEl = document.getElementById('uc-email');
-        var nameEl  = document.getElementById('uc-name');
+        var nameEl = document.getElementById('uc-name');
         if (emailEl && CFG.userEmail) emailEl.value = CFG.userEmail;
         if (nameEl && CFG.userName) nameEl.value = CFG.userName;
 
-        // Tip slider
-        var tipRange = document.getElementById('uc-tip-range');
-        var tipVal   = document.getElementById('uc-tip-val');
-        if (tipRange) {
-            tipRange.addEventListener('input', function () {
-                tipPercent = parseInt(this.value, 10);
-                if (tipVal) tipVal.textContent = tipPercent + '%';
-                updateSummary();
-            });
-        }
+        // Step 1 continue
+        var s1btn = document.getElementById('uc-s1-continue');
+        if (s1btn) s1btn.addEventListener('click', function () { goStep(2); });
 
-        // Continue button
-        if ($continueBtn) $continueBtn.addEventListener('click', continueToPayment);
+        // Step 2 continue
+        var s2btn = document.getElementById('uc-s2-continue');
+        if (s2btn) s2btn.addEventListener('click', function () { goStep(3); });
 
-        // Pay button
-        if ($payBtn) $payBtn.addEventListener('click', payNow);
+        // Submit payment
+        var submitBtn = document.getElementById('uc-submit-btn');
+        if (submitBtn) submitBtn.addEventListener('click', submitPayment);
 
-        // Initial render
-        renderItems();
+        // Back button
+        var backBtn = document.getElementById('uc-steps-back');
+        if (backBtn) backBtn.addEventListener('click', function () { goStep(currentStep - 1); });
+
+        // Init step 2 tier listeners
+        initStep2();
+
+        // Render
+        renderStep1();
+        goStep(1);
     }
 
-    // Run
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
     }
-
 })();
