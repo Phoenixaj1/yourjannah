@@ -848,23 +848,21 @@
                 var id = parseInt(bar.getAttribute('data-id'));
                 if (!type || !id) return;
 
-                // INSTANT visual feedback before API call
+                // Reactions are PERMANENT — once you react, it stays
                 var isActive = btn.classList.contains('ynj-react-btn--active');
                 var countEl = btn.querySelector('.ynj-react-count');
                 var currentCount = parseInt(countEl.textContent) || 0;
 
                 if (isActive) {
-                    // Removing reaction
-                    btn.classList.remove('ynj-react-btn--active');
-                    countEl.textContent = Math.max(0, currentCount - 1) || '';
-                } else {
-                    // Adding reaction — pop animation + highlight
-                    btn.classList.add('ynj-react-btn--active');
-                    countEl.textContent = currentCount + 1;
-                    // Quick scale pop
-                    btn.style.transform = 'scale(1.2)';
-                    setTimeout(function() { btn.style.transform = ''; }, 200);
+                    // Already reacted — do nothing (reactions are permanent)
+                    return;
                 }
+
+                // Adding reaction — pop animation + highlight
+                btn.classList.add('ynj-react-btn--active');
+                countEl.textContent = currentCount + 1;
+                btn.style.transform = 'scale(1.2)';
+                setTimeout(function() { btn.style.transform = ''; }, 200);
 
                 // Also track interest via old transient system (for backward compat)
                 if (reaction === 'interested') {

@@ -14,11 +14,15 @@ class YNJ_API_Patrons {
 
     public static function register() {
 
-        // POST /patrons/checkout — Create patron subscription checkout (user auth)
+        // POST /patrons/checkout — Create patron subscription checkout (user auth OR WP cookie)
         register_rest_route( self::NS, '/patrons/checkout', [
             'methods'             => 'POST',
             'callback'            => [ __CLASS__, 'checkout' ],
-            'permission_callback' => [ 'YNJ_User_Auth', 'user_check' ],
+            'permission_callback' => function( $request ) {
+                // Accept Bearer token OR WordPress cookie auth
+                if ( is_user_logged_in() ) return true;
+                return class_exists( 'YNJ_User_Auth' ) ? YNJ_User_Auth::user_check( $request ) : false;
+            },
         ] );
 
         // GET /patrons/me — Get current user's patron status (user auth)
@@ -73,6 +77,24 @@ class YNJ_API_Patrons {
 
     public static function checkout( \WP_REST_Request $request ) {
         $user = $request->get_param( '_ynj_user' );
+
+        // Fallback: build user from WP cookie auth if Bearer token wasn't used
+        if ( ! $user && is_user_logged_in() ) {
+            $wp_user = wp_get_current_user();
+            $ynj_uid = (int) get_user_meta( $wp_user->ID, 'ynj_user_id', true );
+            if ( $ynj_uid ) {
+                $user = (object) [
+                    'id'    => $ynj_uid,
+                    'name'  => $wp_user->display_name,
+                    'email' => $wp_user->user_email,
+                ];
+            }
+        }
+
+        if ( ! $user || empty( $user->id ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Authentication required.' ], 401 );
+        }
+
         $data = $request->get_json_params();
 
         $mosque_id = absint( $data['mosque_id'] ?? 0 );

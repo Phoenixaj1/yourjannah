@@ -158,9 +158,17 @@ $mosque_status = $mosque ? $mosque->status : '';
         btn.textContent = '<?php echo esc_js( __( 'Redirecting to checkout...', 'yourjannah' ) ); ?>';
 
         try {
+            // Try Bearer token first, fall back to WP nonce (cookie auth)
+            var headers = { 'Content-Type': 'application/json' };
+            if (token) {
+                headers['Authorization'] = 'Bearer ' + token;
+            } else {
+                headers['X-WP-Nonce'] = '<?php echo wp_create_nonce( "wp_rest" ); ?>';
+            }
             const res = await fetch(API + 'patrons/checkout', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                headers: headers,
+                credentials: 'same-origin',
                 body: JSON.stringify({ mosque_slug: slug, tier: selectedTier })
             });
             const data = await res.json();

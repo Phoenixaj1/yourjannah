@@ -338,8 +338,8 @@ class YNJ_API_Mosques {
         ) );
 
         if ( $exists ) {
-            $wpdb->delete( $rt, [ 'id' => $exists ] );
-            $action = 'removed';
+            // Reaction already exists — keep it (reactions are permanent, not toggleable)
+            $action = 'already';
         } else {
             $wpdb->insert( $rt, [
                 'user_id'      => $user_id,
