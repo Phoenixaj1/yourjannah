@@ -1348,6 +1348,9 @@ function ynjCloseJoinModal() {
         <a href="<?php echo esc_url( home_url( '/dashboard?section=settings' ) ); ?>" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;background:#f9fafb;border-radius:10px;text-decoration:none;color:#333;font-size:11px;font-weight:600;text-align:center;">
             <span style="font-size:20px;">⚙️</span>Settings
         </a>
+        <a href="#ynj-cover-wrap" onclick="document.getElementById('ynj-admin-menu').style.display='none';document.getElementById('ynj-cover-wrap').scrollIntoView({behavior:'smooth'})" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;background:#f9fafb;border-radius:10px;text-decoration:none;color:#333;font-size:11px;font-weight:600;text-align:center;">
+            <span style="font-size:20px;">📷</span>Edit Photos
+        </a>
     </div>
 </div>
 <script>
