@@ -222,7 +222,7 @@ if ( $_hp_mosque_id ) {
 <div id="ynj-onboard" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);overflow-y:auto;align-items:center;justify-content:center;padding:20px;">
     <div style="max-width:420px;width:100%;background:linear-gradient(180deg,#0a1628 0%,#1a3a5c 60%,#00ADEF 100%);color:#fff;border-radius:24px;padding:36px 28px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);position:relative;">
         <img src="<?php echo esc_url( YNJ_THEME_URI . '/assets/icons/logo2.png' ); ?>" alt="YourJannah" style="height:40px;width:auto;margin:0 auto 12px;">
-        <h1 style="font-size:20px;font-weight:800;margin-bottom:4px;">Join Your Masjid Community</h1>
+        <h1 style="font-size:20px;font-weight:800;margin-bottom:4px;"><?php esc_html_e( 'Follow Your Masjid Community', 'yourjannah' ); ?></h1>
         <p style="font-size:13px;opacity:.6;margin-bottom:20px;">Prayer times, events & community — all in one place</p>
 
         <!-- Mosque list first: auto-loads from GPS with spinner -->
@@ -612,29 +612,29 @@ if ( $_hp_mosque_id && is_user_logged_in() ) {
   <div class="ynj-desktop-grid">
     <div class="ynj-desktop-grid__left">
 
-    <!-- Join This Masjid + Member Count -->
+    <!-- Follow This Masjid + Follower Count -->
     <?php if ( $_hp_mosque_id ) : ?>
     <div class="ynj-join-bar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border-radius:14px;padding:12px 16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
         <div style="display:flex;align-items:center;gap:8px;">
             <span style="font-size:18px;">🕌</span>
             <span style="font-size:14px;font-weight:600;color:#333;">
-                <?php echo number_format( $_hp_member_count ); ?> <?php echo $_hp_member_count === 1 ? 'member' : 'members'; ?>
+                <?php echo number_format( $_hp_member_count ); ?> <?php echo $_hp_member_count === 1 ? 'follower' : 'followers'; ?>
             </span>
         </div>
         <?php if ( $_hp_is_member ) : ?>
             <div style="display:flex;align-items:center;gap:8px;">
                 <?php if ( $_hp_is_primary ) : ?>
-                    <span style="font-size:11px;color:#666;background:#f0f0f0;padding:2px 8px;border-radius:12px;">Primary</span>
+                    <span style="font-size:11px;color:#666;background:#f0f0f0;padding:2px 8px;border-radius:12px;"><?php esc_html_e( 'Primary', 'yourjannah' ); ?></span>
                 <?php endif; ?>
-                <span style="color:#27ae60;font-weight:600;font-size:13px;">✓ Joined</span>
+                <span style="color:#27ae60;font-weight:600;font-size:13px;">&#x2713; <?php esc_html_e( 'Following', 'yourjannah' ); ?></span>
             </div>
         <?php elseif ( is_user_logged_in() ) : ?>
             <button onclick="ynjJoinMosqueHP(<?php echo $_hp_mosque_id; ?>)" class="ynj-btn" style="background:#27ae60;color:#fff;padding:8px 20px;border-radius:24px;font-size:13px;font-weight:700;border:none;cursor:pointer;">
-                Join This Masjid
+                <?php esc_html_e( 'Follow This Masjid', 'yourjannah' ); ?>
             </button>
         <?php else : ?>
             <a href="<?php echo esc_url( home_url( '/register/' ) ); ?>" class="ynj-btn" style="background:#27ae60;color:#fff;padding:8px 20px;border-radius:24px;font-size:13px;font-weight:700;border:none;cursor:pointer;text-decoration:none;">
-                Join This Masjid
+                <?php esc_html_e( 'Follow This Masjid', 'yourjannah' ); ?>
             </a>
         <?php endif; ?>
     </div>

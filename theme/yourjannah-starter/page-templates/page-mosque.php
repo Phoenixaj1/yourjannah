@@ -316,31 +316,31 @@ if ( $mosque && is_user_logged_in() && class_exists( 'YNJ_Mosques' ) ) {
   <div class="ynj-desktop-grid">
     <div class="ynj-desktop-grid__left">
 
-    <!-- Join This Masjid + Member Count -->
+    <!-- Follow This Masjid + Follower Count -->
     <div class="ynj-join-bar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border-radius:14px;padding:12px 16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
         <div style="display:flex;align-items:center;gap:8px;">
             <span style="font-size:18px;">🕌</span>
             <span style="font-size:14px;font-weight:600;color:#333;">
-                <?php echo number_format( $_ynj_member_count ); ?> <?php echo $_ynj_member_count === 1 ? 'member' : 'members'; ?>
+                <?php echo number_format( $_ynj_member_count ); ?> <?php echo $_ynj_member_count === 1 ? 'follower' : 'followers'; ?>
             </span>
         </div>
         <?php if ( $_ynj_is_member ) : ?>
             <div style="display:flex;align-items:center;gap:8px;">
                 <?php if ( $_ynj_is_primary ) : ?>
-                    <span style="font-size:11px;color:#666;background:#f0f0f0;padding:2px 8px;border-radius:12px;">Primary</span>
+                    <span style="font-size:11px;color:#666;background:#f0f0f0;padding:2px 8px;border-radius:12px;"><?php esc_html_e( 'Primary', 'yourjannah' ); ?></span>
                 <?php else : ?>
-                    <button onclick="ynjSetPrimary(<?php echo (int) $mosque->id; ?>)" style="font-size:11px;color:#00ADEF;background:none;border:1px solid #00ADEF;padding:2px 8px;border-radius:12px;cursor:pointer;">Set as Primary</button>
+                    <button onclick="ynjSetPrimary(<?php echo (int) $mosque->id; ?>)" style="font-size:11px;color:#00ADEF;background:none;border:1px solid #00ADEF;padding:2px 8px;border-radius:12px;cursor:pointer;"><?php esc_html_e( 'Set as Primary', 'yourjannah' ); ?></button>
                 <?php endif; ?>
-                <span style="color:#27ae60;font-weight:600;font-size:13px;">✓ Joined</span>
-                <button onclick="ynjLeaveMosque(<?php echo (int) $mosque->id; ?>)" style="font-size:11px;color:#999;background:none;border:none;cursor:pointer;text-decoration:underline;">Leave</button>
+                <span style="color:#27ae60;font-weight:600;font-size:13px;">&#x2713; <?php esc_html_e( 'Following', 'yourjannah' ); ?></span>
+                <button onclick="ynjLeaveMosque(<?php echo (int) $mosque->id; ?>)" style="font-size:11px;color:#999;background:none;border:none;cursor:pointer;text-decoration:underline;"><?php esc_html_e( 'Unfollow', 'yourjannah' ); ?></button>
             </div>
         <?php elseif ( is_user_logged_in() ) : ?>
             <button onclick="ynjJoinMosque(<?php echo (int) $mosque->id; ?>)" class="ynj-btn" style="background:#27ae60;color:#fff;padding:8px 20px;border-radius:24px;font-size:13px;font-weight:700;border:none;cursor:pointer;">
-                Join This Masjid
+                <?php esc_html_e( 'Follow This Masjid', 'yourjannah' ); ?>
             </button>
         <?php else : ?>
             <button onclick="ynjShowJoinLogin()" class="ynj-btn" style="background:#27ae60;color:#fff;padding:8px 20px;border-radius:24px;font-size:13px;font-weight:700;border:none;cursor:pointer;">
-                Join This Masjid
+                <?php esc_html_e( 'Follow This Masjid', 'yourjannah' ); ?>
             </button>
         <?php endif; ?>
     </div>
@@ -991,13 +991,13 @@ async function ynjJoinMosque(mosqueId) {
         if (data.ok) {
             location.reload();
         } else {
-            alert(data.error || 'Failed to join. Please try again.');
+            alert(data.error || 'Failed to follow. Please try again.');
         }
     } catch(e) { alert('Network error. Please try again.'); }
 }
 
 async function ynjLeaveMosque(mosqueId) {
-    if (!confirm('Are you sure you want to leave this masjid?')) return;
+    if (!confirm('Are you sure you want to unfollow this masjid?')) return;
     try {
         const res = await fetch('/wp-json/ynj/v1/auth/leave-mosque', {
             method: 'POST',
@@ -1040,8 +1040,8 @@ function ynjCloseJoinModal() {
 <div id="ynj-join-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:20px;padding:28px 24px;max-width:380px;width:100%;text-align:center;position:relative;">
         <button onclick="ynjCloseJoinModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#999;">&times;</button>
-        <h2 style="font-size:20px;font-weight:800;margin-bottom:4px;">Join <?php echo esc_html( $mosque_name ); ?></h2>
-        <p style="font-size:13px;color:#666;margin-bottom:20px;">Sign in to become a member of this masjid</p>
+        <h2 style="font-size:20px;font-weight:800;margin-bottom:4px;"><?php printf( esc_html__( 'Follow %s', 'yourjannah' ), esc_html( $mosque_name ) ); ?></h2>
+        <p style="font-size:13px;color:#666;margin-bottom:20px;"><?php esc_html_e( 'Sign in to follow this masjid and get updates', 'yourjannah' ); ?></p>
 
         <?php if ( $google_url ) : ?>
         <a href="<?php echo esc_url( $google_url ); ?>" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;font-size:14px;font-weight:600;color:#333;text-decoration:none;margin-bottom:10px;background:#fff;">
