@@ -146,27 +146,21 @@ class YNJ_API_Patrons {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Failed to create patron record.' ], 500 );
         }
 
-        $base = home_url( "/mosque/" . $mosque->slug );
-
-        $session = YNJ_Stripe::create_patron_subscription(
-            $patron_id,
-            $tier_config['amount'],
-            $tier,
-            $mosque->name,
-            $base . '/patron?payment=success',
-            $base . '/patron?payment=cancelled',
-            [ 'mosque_id' => $mosque_id, 'user_id' => $user->id, 'tier' => $tier, 'patron_id' => $patron_id ]
-        );
-
-        if ( is_wp_error( $session ) ) {
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => $session->get_error_message() ], 500 );
-        }
-
+        // Return cart_item for unified checkout
         return new \WP_REST_Response( [
-            'ok'           => true,
-            'checkout_url' => $session->url,
-            'session_id'   => $session->id,
-            'patron_id'    => $patron_id,
+            'ok'        => true,
+            'patron_id' => $patron_id,
+            'cart_item' => [
+                'item_type'    => 'patron',
+                'item_id'      => $patron_id,
+                'item_label'   => $tier_config['label'] . ' — ' . $mosque->name,
+                'mosque_id'    => $mosque_id,
+                'mosque_name'  => $mosque->name,
+                'amount_pence' => $tier_config['amount'],
+                'fund_type'    => 'patron',
+                'frequency'    => 'monthly',
+                'meta'         => [ 'tier' => $tier, 'patron_id' => $patron_id ],
+            ],
         ] );
     }
 

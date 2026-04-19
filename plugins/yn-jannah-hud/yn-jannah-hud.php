@@ -56,6 +56,35 @@ add_action( 'plugins_loaded', function() {
         // Pass HUD data to JS
         $hud_data = YNJ_HUD::get_js_data();
         wp_localize_script( 'ynj-hud', 'ynjHudData', $hud_data );
+
+        // Cart badge listener — syncs HUD badge with ynjBasket
+        wp_add_inline_script( 'ynj-hud', '
+(function(){
+    function updateCartBadge(){
+        var btn = document.getElementById("hud-cart-btn");
+        var badge = document.getElementById("hud-cart-badge");
+        if(!btn||!badge||typeof ynjBasket==="undefined") return;
+        var c = ynjBasket.getCount();
+        badge.textContent = c;
+        btn.style.display = c > 0 ? "" : "none";
+    }
+    document.addEventListener("ynjBasketUpdated", function(e){
+        updateCartBadge();
+        var btn = document.getElementById("hud-cart-btn");
+        if(btn && e.detail && e.detail.action === "add"){
+            btn.classList.remove("ynj-hud__cart--bounce");
+            void btn.offsetWidth;
+            btn.classList.add("ynj-hud__cart--bounce");
+        }
+    });
+    // Init on load (basket may already have items from localStorage)
+    if(document.readyState==="loading"){
+        document.addEventListener("DOMContentLoaded", updateCartBadge);
+    } else {
+        updateCartBadge();
+    }
+})();
+' );
     } );
 
 }, 20 ); // After core (10) and gamification (15)

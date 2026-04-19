@@ -173,28 +173,19 @@ class YNJ_API_Events {
         ) );
         if ( ! $event ) return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Event not found.' ], 404 );
 
-        $mosque = $wpdb->get_row( $wpdb->prepare(
-            "SELECT slug FROM " . YNJ_DB::table( 'mosques' ) . " WHERE id = %d", $event->mosque_id
-        ) );
-        $base = home_url( "/mosque/" . ( $mosque->slug ?? '' ) );
-
-        $session = YNJ_Stripe::create_checkout(
-            'event_donation',
-            $id,
-            $amount,
-            'Donation: ' . $event->title,
-            $base . '/events/' . $id . '?donated=1',
-            $base . '/events/' . $id,
-            [ 'mosque_id' => $event->mosque_id, 'event_id' => $id ]
-        );
-
-        if ( is_wp_error( $session ) ) {
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => $session->get_error_message() ], 500 );
-        }
-
+        // Return cart_item for unified checkout
         return new \WP_REST_Response( [
-            'ok'           => true,
-            'checkout_url' => $session->url,
+            'ok'        => true,
+            'cart_item' => [
+                'item_type'    => 'event_donation',
+                'item_id'      => $id,
+                'item_label'   => 'Donation: ' . $event->title,
+                'mosque_id'    => (int) $event->mosque_id,
+                'amount_pence' => $amount,
+                'fund_type'    => 'event',
+                'frequency'    => 'once',
+                'meta'         => [ 'event_id' => $id, 'event_date' => $event->event_date ],
+            ],
         ] );
     }
 

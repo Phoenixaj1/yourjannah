@@ -58,6 +58,13 @@
 .ynj-hud__dhikr--done{background:rgba(40,126,97,.15);box-shadow:none;cursor:default;animation:none;}
 .ynj-hud__dhikr--done:hover{transform:none;}
 
+/* ── Cart Button ── */
+.ynj-hud__cart{display:flex;align-items:center;gap:3px;padding:4px 10px;background:rgba(40,126,97,.15);border:1px solid rgba(40,126,97,.25);border-radius:10px;color:#34d399;font-size:14px;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .2s;position:relative;}
+.ynj-hud__cart:hover{background:rgba(40,126,97,.25);transform:translateY(-1px);}
+.ynj-hud__cart-badge{display:flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;line-height:1;}
+.ynj-hud__cart--bounce{animation:ynj-cart-bounce .4s ease-out;}
+@keyframes ynj-cart-bounce{0%{transform:scale(1);}40%{transform:scale(1.2);}100%{transform:scale(1);}}
+
 /* ── Info Button ── */
 .ynj-hud__info-btn{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5);font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;transition:all .2s;font-family:inherit;}
 .ynj-hud__info-btn:hover{background:rgba(255,255,255,.2);color:#fff;}

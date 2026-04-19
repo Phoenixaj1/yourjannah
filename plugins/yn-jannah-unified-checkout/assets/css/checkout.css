@@ -1,0 +1,106 @@
+/* YourJannah Unified Checkout — v2.0.0 (multi-item basket) */
+
+/* ── Reset + Base ── */
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',system-ui,sans-serif;background:#f8f9fa;color:#1a1a1a;min-height:100vh;}
+
+/* ── Layout ── */
+.uc-wrap{max-width:480px;margin:0 auto;padding:20px 16px 40px;}
+
+/* ── Header ── */
+.uc-header{text-align:center;margin-bottom:24px;}
+.uc-header img{height:32px;margin-bottom:8px;}
+.uc-header h1{font-size:20px;font-weight:800;}
+.uc-header p{font-size:13px;color:#666;margin-top:4px;}
+
+/* ── Back Link ── */
+.uc-back{display:inline-flex;align-items:center;gap:6px;color:#287e61;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:16px;}
+
+/* ── Card ── */
+.uc-card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.06);margin-bottom:16px;}
+
+/* ── Label ── */
+.uc-label{font-size:12px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+
+/* ── Cart Items ── */
+.uc-cart-item{position:relative;background:#fff;border-radius:16px;padding:16px 20px;box-shadow:0 1px 4px rgba(0,0,0,0.06);margin-bottom:12px;border-left:4px solid #287e61;}
+.uc-cart-item__header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.uc-cart-item__type{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#287e61;background:rgba(40,126,97,.08);padding:2px 8px;border-radius:6px;}
+.uc-cart-item__type--recurring{color:#7c3aed;background:rgba(124,58,237,.08);}
+.uc-cart-item__remove{background:none;border:none;color:#999;font-size:18px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:all .15s;line-height:1;}
+.uc-cart-item__remove:hover{background:#fef2f2;color:#dc2626;}
+.uc-cart-item__label{font-size:15px;font-weight:700;margin-bottom:2px;}
+.uc-cart-item__mosque{font-size:12px;color:#666;}
+.uc-cart-item__amount{font-size:18px;font-weight:800;color:#287e61;margin-top:6px;}
+.uc-cart-item__freq{font-size:11px;color:#7c3aed;font-weight:600;margin-left:4px;}
+.uc-cart-item__meta{margin-top:8px;font-size:12px;color:#666;}
+
+/* Item type accents */
+.uc-cart-item--patron{border-left-color:#7c3aed;}
+.uc-cart-item--store{border-left-color:#f59e0b;}
+.uc-cart-item--event_ticket,.uc-cart-item--event_donation{border-left-color:#3b82f6;}
+.uc-cart-item--room_booking{border-left-color:#06b6d4;}
+.uc-cart-item--class_enrolment{border-left-color:#8b5cf6;}
+.uc-cart-item--sponsor,.uc-cart-item--business_sponsor{border-left-color:#f97316;}
+.uc-cart-item--service,.uc-cart-item--professional_service{border-left-color:#14b8a6;}
+
+/* ── Editable fields inside cart items ── */
+.uc-cart-item__field{margin-top:8px;}
+.uc-cart-item__field label{display:block;font-size:11px;font-weight:600;color:#999;margin-bottom:3px;}
+.uc-cart-item__field select,
+.uc-cart-item__field input,
+.uc-cart-item__field textarea{width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;}
+.uc-cart-item__field select:focus,
+.uc-cart-item__field input:focus,
+.uc-cart-item__field textarea:focus{outline:none;border-color:#287e61;}
+
+/* ── Empty State ── */
+.uc-empty{text-align:center;padding:40px 20px;}
+.uc-empty__icon{font-size:48px;margin-bottom:12px;}
+.uc-empty__text{font-size:16px;font-weight:600;color:#666;margin-bottom:20px;}
+.uc-empty-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.uc-empty-item{display:flex;flex-direction:column;align-items:center;gap:6px;padding:20px 12px;background:#fff;border:2px solid #e5e7eb;border-radius:14px;cursor:pointer;transition:all .15s;text-decoration:none;color:#1a1a1a;}
+.uc-empty-item:hover{border-color:#287e61;background:#f0fdf4;}
+.uc-empty-item span{font-size:28px;}
+.uc-empty-item strong{font-size:13px;font-weight:700;}
+
+/* ── Details Card ── */
+.uc-input{width:100%;padding:12px 14px;border:1px solid #ddd;border-radius:10px;font-size:14px;font-family:inherit;margin-bottom:8px;}
+.uc-input:focus{outline:none;border-color:#287e61;}
+
+/* ── Tip Card ── */
+.uc-tip{display:flex;align-items:center;gap:12px;padding:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px;margin-bottom:12px;}
+.uc-tip input[type=range]{flex:1;accent-color:#287e61;}
+.uc-tip-val{font-size:14px;font-weight:700;min-width:40px;text-align:right;}
+
+/* ── Summary Card ── */
+.uc-summary{border-top:1px solid #eee;padding-top:12px;margin-top:4px;}
+.uc-summary-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;color:#666;}
+.uc-summary-total{display:flex;justify-content:space-between;font-size:18px;font-weight:800;padding:8px 0 0;border-top:1px solid #eee;margin-top:4px;}
+
+/* ── Payment Card ── */
+.uc-stripe{min-height:44px;padding:12px;border:1px solid #ddd;border-radius:10px;margin-bottom:12px;}
+.uc-error{color:#dc2626;font-size:13px;margin-bottom:8px;display:none;}
+.uc-secure{text-align:center;font-size:11px;color:#999;margin-top:12px;}
+
+/* ── Buttons ── */
+.uc-pay{width:100%;padding:16px;background:#287e61;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:12px;transition:all .15s;}
+.uc-pay:hover{background:#1a5c43;}
+.uc-pay:disabled{opacity:.5;cursor:not-allowed;}
+
+/* ── Split Mode Notice ── */
+.uc-split-notice{background:#f0f4ff;border:1px solid #c7d2fe;border-radius:12px;padding:14px;margin-bottom:16px;font-size:13px;color:#4338ca;line-height:1.5;}
+.uc-split-notice strong{font-weight:700;}
+
+/* ── Success ── */
+.uc-success{text-align:center;padding:40px 20px;}
+.uc-success h2{font-size:24px;margin:12px 0 4px;}
+
+/* ── Mobile ── */
+@media(max-width:480px){
+    .uc-wrap{padding:12px 10px 32px;}
+    .uc-card{padding:16px;border-radius:14px;}
+    .uc-cart-item{padding:14px 16px;}
+    .uc-cart-item__amount{font-size:16px;}
+    .uc-empty-grid{grid-template-columns:1fr 1fr;gap:6px;}
+}

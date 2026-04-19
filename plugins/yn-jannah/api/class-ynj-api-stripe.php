@@ -210,6 +210,14 @@ class YNJ_API_Stripe {
                     ] );
                 }
                 break;
+
+            case 'ynj_unified_checkout':
+                $uc_txn_id = $meta->transaction_id ?? '';
+                if ( $uc_txn_id && class_exists( 'YNJ_UC_API' ) ) {
+                    YNJ_UC_API::on_webhook_succeeded( $uc_txn_id );
+                }
+                error_log( "[YNJ Webhook] Unified checkout: $uc_txn_id" );
+                return; // Ledger is recorded inside fire_item_hooks, skip generic ledger below
         }
 
         // Record in pool ledger for all payment types
@@ -455,33 +463,20 @@ class YNJ_API_Stripe {
             'phone'            => sanitize_text_field( $data['phone'] ?? '' ),
         ] );
 
-        // Get mosque slug for redirect URLs
-        $mosque = $wpdb->get_row( $wpdb->prepare(
-            "SELECT slug FROM " . YNJ_DB::table( 'mosques' ) . " WHERE id = %d", $mosque_id
-        ) );
-        $base = home_url( "/mosque/" . ( $mosque->slug ?? '' ) );
-
-        $session = YNJ_Stripe::create_subscription(
-            'business_sponsor',
-            $biz_id,
-            $tier_config['amount'],
-            $tier_config['label'] . ' — ' . $name,
-            $base . '/sponsors?payment=success',
-            $base . '/sponsors?payment=cancelled',
-            [ 'mosque_id' => $mosque_id, 'tier' => $tier ]
-        );
-
-        if ( is_wp_error( $session ) ) {
-            // Clean up the pending record
-            $wpdb->delete( $table, [ 'id' => $biz_id ] );
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => $session->get_error_message() ], 500 );
-        }
-
+        // Return cart_item for unified checkout
         return new \WP_REST_Response( [
-            'ok'           => true,
-            'checkout_url' => $session->url,
-            'session_id'   => $session->id,
-            'business_id'  => $biz_id,
+            'ok'          => true,
+            'business_id' => $biz_id,
+            'cart_item'   => [
+                'item_type'    => 'business_sponsor',
+                'item_id'      => $biz_id,
+                'item_label'   => $tier_config['label'] . ' — ' . $name,
+                'mosque_id'    => $mosque_id,
+                'amount_pence' => $tier_config['amount'],
+                'fund_type'    => 'sponsor',
+                'frequency'    => 'monthly',
+                'meta'         => [ 'tier' => $tier, 'business_name' => $name ],
+            ],
         ] );
     }
 
@@ -531,31 +526,20 @@ class YNJ_API_Stripe {
             'area_covered'  => sanitize_text_field( $data['area_covered'] ?? '' ),
         ] );
 
-        $mosque = $wpdb->get_row( $wpdb->prepare(
-            "SELECT slug FROM " . YNJ_DB::table( 'mosques' ) . " WHERE id = %d", $mosque_id
-        ) );
-        $base = home_url( "/mosque/" . ( $mosque->slug ?? '' ) );
-
-        $session = YNJ_Stripe::create_subscription(
-            'professional_service',
-            $svc_id,
-            1000,
-            'Professional Service Listing (£10/mo) — ' . $provider,
-            $base . '/services?payment=success',
-            $base . '/services?payment=cancelled',
-            [ 'mosque_id' => $mosque_id ]
-        );
-
-        if ( is_wp_error( $session ) ) {
-            $wpdb->delete( $table, [ 'id' => $svc_id ] );
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => $session->get_error_message() ], 500 );
-        }
-
+        // Return cart_item for unified checkout
         return new \WP_REST_Response( [
-            'ok'           => true,
-            'checkout_url' => $session->url,
-            'session_id'   => $session->id,
-            'service_id'   => $svc_id,
+            'ok'         => true,
+            'service_id' => $svc_id,
+            'cart_item'  => [
+                'item_type'    => 'professional_service',
+                'item_id'      => $svc_id,
+                'item_label'   => 'Service Listing (£10/mo) — ' . $provider,
+                'mosque_id'    => $mosque_id,
+                'amount_pence' => 1000,
+                'fund_type'    => 'service',
+                'frequency'    => 'monthly',
+                'meta'         => [ 'service_type' => $type, 'provider_name' => $provider ],
+            ],
         ] );
     }
 
@@ -636,31 +620,24 @@ class YNJ_API_Stripe {
 
         $booking_id = (int) $wpdb->insert_id;
 
-        $mosque = $wpdb->get_row( $wpdb->prepare(
-            "SELECT slug FROM " . YNJ_DB::table( 'mosques' ) . " WHERE id = %d", $room->mosque_id
-        ) );
-        $base = home_url( "/mosque/" . ( $mosque->slug ?? '' ) );
-
-        $session = YNJ_Stripe::create_checkout(
-            'room_booking',
-            $booking_id,
-            $amount,
-            $room->name . ' — ' . $hours . 'hr' . ( $hours > 1 ? 's' : '' ),
-            $base . '/rooms?payment=success',
-            $base . '/rooms?payment=cancelled',
-            [ 'mosque_id' => $room->mosque_id, 'room_id' => $room_id ]
-        );
-
-        if ( is_wp_error( $session ) ) {
-            $wpdb->delete( $book_table, [ 'id' => $booking_id ] );
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => $session->get_error_message() ], 500 );
-        }
-
+        // Return cart_item for unified checkout
         return new \WP_REST_Response( [
-            'ok'           => true,
-            'checkout_url' => $session->url,
-            'session_id'   => $session->id,
-            'booking_id'   => $booking_id,
+            'ok'         => true,
+            'booking_id' => $booking_id,
+            'cart_item'  => [
+                'item_type'    => 'room_booking',
+                'item_id'      => $booking_id,
+                'item_label'   => $room->name . ' — ' . $hours . 'hr' . ( $hours > 1 ? 's' : '' ),
+                'mosque_id'    => (int) $room->mosque_id,
+                'amount_pence' => $amount,
+                'fund_type'    => 'room',
+                'frequency'    => 'once',
+                'meta'         => [
+                    'room_id'      => $room_id,
+                    'booking_date' => sanitize_text_field( $data['booking_date'] ?? '' ),
+                    'time_slot'    => sanitize_text_field( $data['start_time'] ?? '' ) . ' - ' . sanitize_text_field( $data['end_time'] ?? '' ),
+                ],
+            ],
         ] );
     }
 
@@ -732,32 +709,23 @@ class YNJ_API_Stripe {
             ], 201 );
         }
 
-        // Paid event — Stripe checkout
-        $mosque = $wpdb->get_row( $wpdb->prepare(
-            "SELECT slug FROM " . YNJ_DB::table( 'mosques' ) . " WHERE id = %d", $event->mosque_id
-        ) );
-        $base = home_url( "/mosque/" . ( $mosque->slug ?? '' ) );
-
-        $session = YNJ_Stripe::create_checkout(
-            'event_ticket',
-            $booking_id,
-            $event->ticket_price_pence,
-            'Event Ticket: ' . $event->title,
-            $base . '/events?payment=success',
-            $base . '/events?payment=cancelled',
-            [ 'mosque_id' => $event->mosque_id, 'event_id' => $event_id ]
-        );
-
-        if ( is_wp_error( $session ) ) {
-            // Don't delete booking, just leave as pending
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => $session->get_error_message() ], 500 );
-        }
-
+        // Return cart_item for unified checkout
         return new \WP_REST_Response( [
-            'ok'           => true,
-            'checkout_url' => $session->url,
-            'session_id'   => $session->id,
-            'booking_id'   => $booking_id,
+            'ok'         => true,
+            'booking_id' => $booking_id,
+            'cart_item'  => [
+                'item_type'    => 'event_ticket',
+                'item_id'      => $booking_id,
+                'item_label'   => 'Event Ticket: ' . $event->title,
+                'mosque_id'    => (int) $event->mosque_id,
+                'amount_pence' => (int) $event->ticket_price_pence,
+                'fund_type'    => 'event',
+                'frequency'    => 'once',
+                'meta'         => [
+                    'event_id'   => $event_id,
+                    'event_date' => $event->event_date,
+                ],
+            ],
         ] );
     }
 
@@ -824,33 +792,25 @@ class YNJ_API_Stripe {
             "SELECT * FROM $mosque_table WHERE id = %d", $class->mosque_id
         ) );
 
+        // Return cart_item for unified checkout
         $price_label = $class->price_type === 'per_session' ? '/session' : ( $class->price_type === 'monthly' ? '/month' : '' );
-        $success_url = home_url( '/mosque/' . ( $mosque->slug ?? '' ) . '/classes?enrolled=1' );
-        $cancel_url  = home_url( '/mosque/' . ( $mosque->slug ?? '' ) . '/classes' );
-
-        $session = YNJ_Stripe::create_checkout(
-            'class_enrolment',
-            $enrolment_id,
-            $class->price_pence,
-            $class->title . ' — Class Enrolment' . $price_label,
-            $success_url,
-            $cancel_url,
-            [
-                'class_id'      => (string) $class_id,
-                'mosque_id'     => (string) $class->mosque_id,
-                'user_email'    => $user_email,
-            ]
-        );
-
-        if ( is_wp_error( $session ) ) {
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => $session->get_error_message() ], 500 );
-        }
 
         return new \WP_REST_Response( [
             'ok'           => true,
-            'checkout_url' => $session->url,
-            'session_id'   => $session->id,
             'enrolment_id' => $enrolment_id,
+            'cart_item'    => [
+                'item_type'    => 'class_enrolment',
+                'item_id'      => $enrolment_id,
+                'item_label'   => $class->title . ' — Class Enrolment' . $price_label,
+                'mosque_id'    => (int) $class->mosque_id,
+                'amount_pence' => (int) $class->price_pence,
+                'fund_type'    => 'class',
+                'frequency'    => 'once',
+                'meta'         => [
+                    'class_id'   => $class_id,
+                    'class_name' => $class->title,
+                ],
+            ],
         ] );
     }
 }

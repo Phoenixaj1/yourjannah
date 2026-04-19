@@ -124,37 +124,22 @@ class YNJ_API_Donations {
             return new \WP_Error( 'db_error', 'Could not create donation record.', [ 'status' => 500 ] );
         }
 
-        // Create Stripe PaymentIntent
-        YNJ_Stripe::init();
-        try {
-            $pi = \Stripe\PaymentIntent::create( [
-                'amount'               => $amount,
-                'currency'             => $currency,
-                'receipt_email'        => $email,
-                'description'          => $fund_label . ' — ' . $mosque_name,
-                'metadata'             => [
-                    'type'        => 'mosque_donation',
-                    'item_id'     => $donation_id,
-                    'mosque_id'   => $mosque_id,
-                    'fund_type'   => $fund,
-                    'donor_email' => $email,
-                ],
-            ] );
-
-            $wpdb->update( $dt, [
-                'stripe_payment_intent' => $pi->id,
-            ], [ 'id' => $donation_id ] );
-
-            return new \WP_REST_Response( [
-                'ok'            => true,
-                'client_secret' => $pi->client_secret,
-                'donation_id'   => $donation_id,
-            ] );
-
-        } catch ( \Exception $e ) {
-            $wpdb->update( $dt, [ 'status' => 'failed' ], [ 'id' => $donation_id ] );
-            return new \WP_Error( 'stripe_error', $e->getMessage(), [ 'status' => 500 ] );
-        }
+        // Return cart_item for unified checkout
+        return new \WP_REST_Response( [
+            'ok'          => true,
+            'donation_id' => $donation_id,
+            'cart_item'   => [
+                'item_type'    => 'donation',
+                'item_id'      => $donation_id,
+                'item_label'   => $fund_label . ' — ' . $mosque_name,
+                'mosque_id'    => $mosque_id,
+                'mosque_name'  => $mosque_name,
+                'amount_pence' => $amount,
+                'fund_type'    => $fund,
+                'frequency'    => 'once',
+                'meta'         => [],
+            ],
+        ] );
     }
 
     /**
@@ -203,65 +188,24 @@ class YNJ_API_Donations {
         ] );
         $donation_id = $wpdb->insert_id;
 
-        YNJ_Stripe::init();
-        try {
-            // Find or create customer
-            $customers = \Stripe\Customer::search( [ 'query' => "email:'{$email}'" ] );
-            if ( ! empty( $customers->data ) ) {
-                $customer = $customers->data[0];
-            } else {
-                $customer = \Stripe\Customer::create( [
-                    'email' => $email,
-                    'name'  => $name ?: null,
-                    'metadata' => [ 'source' => 'yourjannah_niyyah_bar' ],
-                ] );
-            }
+        // Return cart_item for unified checkout
+        $freq_label = $interval === 'week' ? 'weekly' : 'monthly';
 
-            // Create inline price
-            $price = \Stripe\Price::create( [
-                'unit_amount' => $amount,
-                'currency'    => $currency,
-                'recurring'   => [ 'interval' => $interval ],
-                'product_data' => [
-                    'name' => $fund_label . ' — ' . $mosque_name . ' (' . ( $interval === 'week' ? 'Weekly' : 'Monthly' ) . ')',
-                ],
-            ] );
-
-            // Create subscription with incomplete payment
-            $sub = \Stripe\Subscription::create( [
-                'customer'               => $customer->id,
-                'items'                  => [ [ 'price' => $price->id ] ],
-                'payment_behavior'       => 'default_incomplete',
-                'payment_settings'       => [ 'save_default_payment_method' => 'on_subscription' ],
-                'expand'                 => [ 'latest_invoice.payment_intent' ],
-                'metadata'               => [
-                    'type'        => 'mosque_donation',
-                    'item_id'     => $donation_id,
-                    'mosque_id'   => $mosque_id,
-                    'fund_type'   => $fund,
-                    'donor_email' => $email,
-                ],
-            ] );
-
-            $client_secret = $sub->latest_invoice->payment_intent->client_secret ?? '';
-
-            $wpdb->update( $dt, [
-                'stripe_customer_id'     => $customer->id,
-                'stripe_subscription_id' => $sub->id,
-                'stripe_payment_intent'  => $sub->latest_invoice->payment_intent->id ?? '',
-            ], [ 'id' => $donation_id ] );
-
-            return new \WP_REST_Response( [
-                'ok'              => true,
-                'client_secret'   => $client_secret,
-                'donation_id'     => $donation_id,
-                'subscription_id' => $sub->id,
-            ] );
-
-        } catch ( \Exception $e ) {
-            $wpdb->update( $dt, [ 'status' => 'failed' ], [ 'id' => $donation_id ] );
-            return new \WP_Error( 'stripe_error', $e->getMessage(), [ 'status' => 500 ] );
-        }
+        return new \WP_REST_Response( [
+            'ok'          => true,
+            'donation_id' => $donation_id,
+            'cart_item'   => [
+                'item_type'    => 'donation',
+                'item_id'      => $donation_id,
+                'item_label'   => $fund_label . ' — ' . $mosque_name . ' (' . ucfirst( $freq_label ) . ')',
+                'mosque_id'    => $mosque_id,
+                'mosque_name'  => $mosque_name,
+                'amount_pence' => $amount,
+                'fund_type'    => $fund,
+                'frequency'    => $freq_label,
+                'meta'         => [],
+            ],
+        ] );
     }
 
     /**

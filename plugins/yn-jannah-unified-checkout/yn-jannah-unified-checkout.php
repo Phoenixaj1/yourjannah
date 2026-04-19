@@ -50,6 +50,17 @@ add_action( 'plugins_loaded', function() {
     }
 }, 10 );
 
+// ── Enqueue basket script globally (needed on every page for HUD badge) ──
+add_action( 'wp_enqueue_scripts', function() {
+    wp_enqueue_script(
+        'ynj-basket',
+        YNJ_UC_URL . 'assets/js/ynj-basket.js',
+        [],
+        YNJ_UC_VERSION,
+        true
+    );
+} );
+
 // ── Render checkout page ──
 add_action( 'template_redirect', function() {
     if ( get_query_var( 'ynj_checkout' ) ) {

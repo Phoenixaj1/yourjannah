@@ -69,6 +69,12 @@ if ( ! defined( 'ABSPATH' ) ) exit;
         </div>
         <?php endif; ?>
 
+        <!-- Cart -->
+        <button type="button" class="ynj-hud__cart" id="hud-cart-btn"
+                onclick="window.location.href='<?php echo esc_url( home_url( '/checkout/' ) ); ?>'" style="display:none;">
+            &#x1F6D2;<span class="ynj-hud__cart-badge" id="hud-cart-badge">0</span>
+        </button>
+
         <!-- Quick Dhikr -->
         <?php if ( ! empty( $data['five_dhikr'] ) ) : ?>
         <button type="button" class="ynj-hud__dhikr<?php echo $data['all_done'] ? ' ynj-hud__dhikr--done' : ''; ?>" id="hud-dhikr-btn" onclick="ynjHudDhikrToggle()">
