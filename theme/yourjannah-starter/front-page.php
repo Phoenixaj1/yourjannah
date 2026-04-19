@@ -652,6 +652,38 @@ if ( $_hp_mosque_id && is_user_logged_in() ) {
     <!-- Ramadan banner (shown automatically during Ramadan) -->
     <div id="ramadan-banner" style="display:none;background:linear-gradient(135deg,#1a1628,#2d1b69);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:10px;"></div>
 
+    <!-- Go Live button (broadcasters only) -->
+    <?php
+    $_hp_live_broadcast = null;
+    $_hp_can_broadcast = false;
+    if ( $_hp_mosque_id && class_exists( 'YNJ_Broadcast' ) ) {
+        $_hp_live_broadcast = YNJ_Broadcast::get_live( $_hp_mosque_id );
+        if ( is_user_logged_in() ) {
+            $_hp_bc_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+            $_hp_can_broadcast = $_hp_bc_uid && YNJ_Broadcast::can_broadcast( $_hp_bc_uid, $_hp_mosque_id );
+        }
+    }
+    ?>
+    <?php if ( $_hp_live_broadcast ) : ?>
+    <div style="background:linear-gradient(135deg,#dc2626,#991b1b);border-radius:14px;padding:16px;margin-bottom:10px;color:#fff;">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span style="display:inline-block;width:10px;height:10px;background:#fff;border-radius:50%;animation:ynj-live-pulse 1.5s infinite;"></span>
+            <span style="font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:1px;">LIVE NOW</span>
+            <span style="font-size:13px;opacity:.8;margin-left:auto;"><?php echo esc_html( $_hp_live_broadcast->title ); ?></span>
+        </div>
+        <?php if ( $_hp_live_broadcast->youtube_video_id ) : ?>
+        <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:10px;margin-top:10px;">
+            <iframe src="https://www.youtube.com/embed/<?php echo esc_attr( $_hp_live_broadcast->youtube_video_id ); ?>?autoplay=1&mute=1" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allow="autoplay;fullscreen" allowfullscreen></iframe>
+        </div>
+        <?php endif; ?>
+    </div>
+    <style>@keyframes ynj-live-pulse{0%,100%{opacity:1;}50%{opacity:.3;}}</style>
+    <?php elseif ( $_hp_can_broadcast ) : ?>
+    <a href="<?php echo esc_url( home_url( '/mosque/' . $_hp_slug . '#go-live' ) ); ?>" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#dc2626,#991b1b);border:none;border-radius:14px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px;text-decoration:none;">
+        🔴 <?php esc_html_e( 'Go Live', 'yourjannah' ); ?>
+    </a>
+    <?php endif; ?>
+
     <!-- Patron Membership -->
     <?php
     $patron_tiers = class_exists( 'YNJ_API_Patrons' ) ? YNJ_API_Patrons::get_tiers() : [];
@@ -859,6 +891,28 @@ if ( $_hp_mosque_id && is_user_logged_in() ) {
     <!-- ═══ GRATITUDE ═══ -->
     <?php if ( $_hp_mosque_id && is_user_logged_in() ) : ?>
     <button type="button" onclick="ynjPostGratitude()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;border-radius:14px;font-size:14px;font-weight:700;color:#9d174d;cursor:pointer;font-family:inherit;margin-bottom:10px;">💖 <?php esc_html_e( 'Thank Your Mosque', 'yourjannah' ); ?></button>
+    <?php endif; ?>
+
+    <!-- ═══ PURIFY YOUR RIZQ — Daily sadaqah ═══ -->
+    <?php if ( $_hp_mosque_id && is_user_logged_in() ) : ?>
+    <div class="ynj-card" style="padding:16px;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:2px solid #6ee7b7;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div>
+                <div style="font-size:15px;font-weight:800;color:#065f46;">&#x1F4B0; <?php esc_html_e( 'Purify Your Rizq', 'yourjannah' ); ?></div>
+                <div style="font-size:12px;color:#047857;"><?php esc_html_e( 'A small sadaqah each day cleanses your wealth', 'yourjannah' ); ?></div>
+            </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+            <?php foreach ( [ 100 => '£1', 300 => '£3', 500 => '£5' ] as $pence => $label ) : ?>
+            <a href="<?php echo esc_url( home_url( '/mosque/' . $_hp_slug . '/#purify-rizq' ) ); ?>" style="flex:1;padding:12px 0;border-radius:12px;border:2px solid #10b981;background:#fff;color:#065f46;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none;">
+                <?php echo esc_html( $label ); ?>
+            </a>
+            <?php endforeach; ?>
+        </div>
+        <p style="font-size:11px;color:#047857;margin:8px 0 0;text-align:center;">
+            <?php esc_html_e( 'Distributed to dawah, masjid building & international aid', 'yourjannah' ); ?>
+        </p>
+    </div>
     <?php endif; ?>
 
     <!-- Hadith -->
