@@ -363,9 +363,10 @@ if ( $_nb_id && $_nb_pk ) :
                 return;
             }
 
-            // Add to cart and go to checkout
+            // Add to cart — drawer auto-opens via ynjBasketUpdated event
             if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(data.cart_item);
-            window.location.href = '/checkout/';
+            payBtn.disabled = false;
+            updatePayBtn();
 
         } catch(e) {
             errEl.textContent = 'Something went wrong. Please try again.';

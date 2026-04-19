@@ -183,7 +183,6 @@ get_header();
             var data = await res.json();
             if (data.ok && data.cart_item) {
                 if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(data.cart_item);
-                window.location.href = '/checkout/';
             } else {
                 msg.style.display = ''; msg.style.color = '#dc2626';
                 msg.textContent = data.error || '<?php echo esc_js( __( 'Something went wrong.', 'yourjannah' ) ); ?>';

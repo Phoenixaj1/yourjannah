@@ -745,7 +745,17 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
 
     <script>
     function ynjPurifySadaqah(amountPence) {
-        window.location.href = '/checkout/?type=sadaqah&amount=' + amountPence + '&mosque_id=<?php echo (int) $mosque->id; ?>&label=Purify+Your+Rizq&fund=sadaqah';
+        if (typeof ynjBasket !== 'undefined') {
+            ynjBasket.addItem({
+                item_type: 'sadaqah',
+                amount_pence: amountPence,
+                mosque_id: <?php echo (int) $mosque->id; ?>,
+                mosque_name: <?php echo wp_json_encode( $mosque->name ); ?>,
+                item_label: 'Purify Your Rizq',
+                fund_type: 'sadaqah',
+                frequency: 'once'
+            });
+        }
     }
     </script>
 

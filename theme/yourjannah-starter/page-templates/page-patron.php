@@ -174,7 +174,6 @@ $mosque_status = $mosque ? $mosque->status : '';
             const data = await res.json();
             if (data.ok && data.cart_item) {
                 if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(data.cart_item);
-                window.location.href = '/checkout/';
             } else {
                 alert(data.error || '<?php echo esc_js( __( 'Something went wrong.', 'yourjannah' ) ); ?>');
                 btn.disabled = false;

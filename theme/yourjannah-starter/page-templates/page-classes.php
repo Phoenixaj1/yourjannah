@@ -301,7 +301,7 @@ if ( $mosque_id ) {
                 body: JSON.stringify({user_name:name, user_email:email})
             });
             var data = await resp.json();
-            if (data.ok && data.cart_item) { if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(data.cart_item); window.location.href = '/checkout/'; }
+            if (data.ok && data.cart_item) { if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(data.cart_item); }
             else if (data.ok && data.free) window.location.href = <?php echo wp_json_encode( home_url( '/mosque/' . $slug . '/classes?enrolled=1' ) ); ?>;
             else { document.getElementById('enrol-error').textContent = data.error || 'Could not enrol.'; btn.disabled = false; btn.textContent = 'Enrol Now'; }
         } catch(e) { document.getElementById('enrol-error').textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Enrol Now'; }
