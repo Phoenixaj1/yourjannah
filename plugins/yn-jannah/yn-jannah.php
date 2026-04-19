@@ -845,7 +845,13 @@ add_action('rest_api_init', function() {
                         ) );
 
                         if ( $donation && $donation->status !== 'succeeded' ) {
-                            $wpdb->update( $dt, [ 'status' => 'succeeded' ], [ 'id' => $donation->id ] );
+                            // Use mark_succeeded() so ynj_donation_succeeded hook fires
+                            // (enables revenue share, analytics, etc.)
+                            if ( class_exists( 'YNJ_Donations' ) ) {
+                                YNJ_Donations::mark_succeeded( (int) $donation->id );
+                            } else {
+                                $wpdb->update( $dt, [ 'status' => 'succeeded' ], [ 'id' => $donation->id ] );
+                            }
 
                             // Record in pool ledger
                             if ( class_exists( 'YNJ_Pool_Ledger' ) ) {

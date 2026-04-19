@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '3.7.0';
+    const SCHEMA_VERSION = '3.8.0';
 
     /**
      * Return the full table name for a given short name.
@@ -1226,6 +1226,41 @@ class YNJ_DB {
             PRIMARY KEY  (id),
             UNIQUE KEY user_content_reaction (user_id, content_type, content_id, reaction),
             KEY content_type_id (content_type, content_id)
+        ) $charset_collate;";
+
+        // Revenue Shares — 5% of charitable donations credited to masjid
+        $tables[] = "CREATE TABLE {$t('revenue_shares')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL,
+            donation_id bigint(20) unsigned NOT NULL,
+            donor_user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            donation_amount_pence int(11) NOT NULL DEFAULT 0,
+            share_amount_pence int(11) NOT NULL DEFAULT 0,
+            cause varchar(50) NOT NULL DEFAULT 'general',
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            paid_at datetime DEFAULT NULL,
+            payout_id bigint(20) unsigned DEFAULT NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY donation_id (donation_id),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // Revenue Payouts — monthly batch payouts to mosques
+        $tables[] = "CREATE TABLE {$t('revenue_payouts')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL,
+            amount_pence int(11) NOT NULL DEFAULT 0,
+            shares_count int(11) NOT NULL DEFAULT 0,
+            payment_method varchar(20) NOT NULL DEFAULT 'bank_transfer',
+            payment_reference varchar(255) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            completed_at datetime DEFAULT NULL,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status)
         ) $charset_collate;";
 
         return $tables;
