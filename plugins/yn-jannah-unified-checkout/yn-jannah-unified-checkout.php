@@ -8,7 +8,7 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YNJ_UC_VERSION', '1.0.0' );
+define( 'YNJ_UC_VERSION', '3.0.0' );
 define( 'YNJ_UC_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YNJ_UC_URL', plugin_dir_url( __FILE__ ) );
 

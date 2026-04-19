@@ -11,7 +11,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YNJ_HUD_VERSION', '1.0.0' );
+define( 'YNJ_HUD_VERSION', '1.1.0' );
 define( 'YNJ_HUD_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YNJ_HUD_URL', plugin_dir_url( __FILE__ ) );
 
@@ -40,7 +40,7 @@ add_action( 'plugins_loaded', function() {
         wp_enqueue_script(
             'ynj-hud',
             YNJ_HUD_URL . 'assets/js/hud.js',
-            [],
+            [ 'ynj-basket' ],
             YNJ_HUD_VERSION,
             true
         );
