@@ -1038,7 +1038,7 @@
                 var html = '';
                 var adIdx = Math.floor(Math.random() * Math.max(1, sponsors.length));
                 function sponsorTier(fee) {
-                    if (fee >= 10000) return {
+                    if (fee >= 5000) return {
                         label:'Gold Sponsor',
                         ribbon:'background:linear-gradient(135deg,#d4a017 0%,#f5c842 50%,#d4a017 100%);color:#3d2c00;',
                         card:'background:linear-gradient(165deg,#fef9e7 0%,#fdf5d6 40%,#fff8e1 100%);border:2px solid #d4a017;box-shadow:0 4px 20px rgba(212,160,23,.25),inset 0 1px 0 rgba(255,255,255,.8);',
@@ -1046,7 +1046,7 @@
                         logo:'background:linear-gradient(135deg,#d4a017,#f5c842);',
                         freq:1 /* show every 2 items */
                     };
-                    if (fee >= 5000) return {
+                    if (fee >= 3000) return {
                         label:'Silver Sponsor',
                         ribbon:'background:linear-gradient(135deg,#8e99a4 0%,#c0c7ce 50%,#8e99a4 100%);color:#1a2530;',
                         card:'background:linear-gradient(165deg,#f5f7f9 0%,#eef1f4 40%,#f8f9fb 100%);border:2px solid #a0aab4;box-shadow:0 4px 16px rgba(160,170,180,.2),inset 0 1px 0 rgba(255,255,255,.9);',
@@ -1067,16 +1067,27 @@
                 // Sort sponsors by fee (highest first = gold gets most exposure)
                 sponsors.sort(function(a,b){ return (b.monthly_fee_pence||0) - (a.monthly_fee_pence||0); });
 
+                // Build weighted sponsor pool — gold appears 3x, silver 2x, bronze 1x
+                var sponsorPool = [];
+                sponsors.forEach(function(sp) {
+                    var fee = sp.monthly_fee_pence || 0;
+                    var weight = fee >= 10000 ? 3 : (fee >= 5000 ? 2 : 1);
+                    for (var w = 0; w < weight; w++) sponsorPool.push(sp);
+                });
+                // Shuffle pool so it's not always the same order within tiers
+                for (var si = sponsorPool.length - 1; si > 0; si--) {
+                    var sj = Math.floor(Math.random() * (si + 1));
+                    var tmp = sponsorPool[si]; sponsorPool[si] = sponsorPool[sj]; sponsorPool[sj] = tmp;
+                }
+
                 for (var fi = 0; fi < items.length; fi++) {
                     html += renderFeedCard(items[fi]);
 
-                    // Insert sponsor plaques — gold more frequent than silver, silver more than bronze
-                    if (sponsors.length > 0) {
-                        var sp = sponsors[adIdx % sponsors.length];
+                    // Show a sponsor plaque every 2 feed items
+                    if (sponsorPool.length > 0 && (fi + 1) % 2 === 0) {
+                        var sp = sponsorPool[adIdx % sponsorPool.length];
+                        adIdx++;
                         var tier = sponsorTier(sp.monthly_fee_pence || 0);
-                        // Show based on frequency: gold=every 2, silver=every 4, bronze=every 6
-                        if ((fi + 1) % (tier.freq * 2) === 0) {
-                            adIdx++;
                             var initial = (sp.business_name || 'S').charAt(0).toUpperCase();
                             var logoImg = sp.logo_url
                                 ? '<img src="' + sp.logo_url + '" style="width:100%;height:100%;object-fit:cover;border-radius:10px;" alt="">'
@@ -1093,7 +1104,6 @@
                                     '<div style="font-size:11px;font-weight:700;' + tier.text + 'white-space:nowrap;">View →</div>' +
                                 '</div>' +
                             '</a>';
-                        }
                     }
                 }
                 el.innerHTML = '<div class="ynj-feed">' + html + '</div>';
