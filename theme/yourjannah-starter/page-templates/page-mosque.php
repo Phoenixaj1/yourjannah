@@ -745,6 +745,9 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
 
     <script>
     function ynjPurifySadaqah(amountPence) {
+        window.location.href = '/checkout/?type=sadaqah&amount=' + amountPence + '&mosque_id=<?php echo (int) $mosque->id; ?>&label=Purify+Your+Rizq&fund=sadaqah';
+        return;
+        // Legacy API call (kept for reference)
         const btn = event.currentTarget;
         btn.disabled = true;
         btn.textContent = '...';

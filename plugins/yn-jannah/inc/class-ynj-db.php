@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '3.9.0';
+    const SCHEMA_VERSION = '4.0.0';
 
     /**
      * Return the full table name for a given short name.
@@ -1226,6 +1226,40 @@ class YNJ_DB {
             PRIMARY KEY  (id),
             UNIQUE KEY user_content_reaction (user_id, content_type, content_id, reaction),
             KEY content_type_id (content_type, content_id)
+        ) $charset_collate;";
+
+        // Unified Transactions — single table for ALL payment types
+        $tables[] = "CREATE TABLE {$t('transactions')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            transaction_id varchar(40) NOT NULL DEFAULT '',
+            mosque_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            donor_name varchar(255) NOT NULL DEFAULT '',
+            donor_email varchar(255) NOT NULL DEFAULT '',
+            donor_phone varchar(30) NOT NULL DEFAULT '',
+            item_type varchar(30) NOT NULL DEFAULT 'donation',
+            item_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            item_label varchar(255) NOT NULL DEFAULT '',
+            amount_pence int(11) NOT NULL DEFAULT 0,
+            tip_pence int(11) NOT NULL DEFAULT 0,
+            total_pence int(11) NOT NULL DEFAULT 0,
+            currency varchar(5) NOT NULL DEFAULT 'gbp',
+            frequency varchar(10) NOT NULL DEFAULT 'once',
+            fund_type varchar(30) NOT NULL DEFAULT 'general',
+            stripe_payment_intent varchar(100) NOT NULL DEFAULT '',
+            stripe_session_id varchar(100) NOT NULL DEFAULT '',
+            stripe_subscription_id varchar(100) NOT NULL DEFAULT '',
+            items_json text,
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            source varchar(50) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            completed_at datetime DEFAULT NULL,
+            PRIMARY KEY  (id),
+            UNIQUE KEY transaction_id (transaction_id),
+            KEY mosque_id (mosque_id),
+            KEY donor_email (donor_email),
+            KEY item_type (item_type),
+            KEY status (status),
+            KEY stripe_payment_intent (stripe_payment_intent)
         ) $charset_collate;";
 
         // Broadcasts — live streams from mosques via YourJannah YouTube
