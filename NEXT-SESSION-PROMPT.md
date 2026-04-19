@@ -59,6 +59,25 @@ The checkout at `/checkout/` (plugin: `yn-jannah-unified-checkout`) works but ha
 | `class` | Class enrolment details (class name, instructor, schedule) |
 | `event` | Event ticket details (event name, date, location) |
 
+### CRITICAL: 9 front-end flows STILL bypass the unified checkout
+
+Every one of these must be rewired to redirect to `/checkout/` with the right params:
+
+| File | Flow | Current API | Redirect to |
+|------|------|-------------|-------------|
+| `footer.php:387` | Niyyah bar donation (inline Stripe card) | `donate` + `confirmCardPayment` | `/checkout/?type=donation&mosque_id=X&amount=Y&frequency=Z` |
+| `page-patron.php:168` | Become Patron button | `patrons/checkout` → Stripe hosted | `/checkout/?type=patron&mosque_id=X&tier=Y&amount=Z&frequency=monthly` |
+| `page-register.php:373` | Patron during signup | `patrons/checkout` → Stripe hosted | `/checkout/?type=patron&mosque_id=X&tier=Y&frequency=monthly` |
+| `page-sponsor-join.php:116` | Business sponsor signup | `stripe/checkout/business` → Stripe hosted | `/checkout/?type=sponsor&mosque_id=X&amount=Y&frequency=monthly` |
+| `page-sponsor-yourjannah.php:178` | Sponsor YJ platform | `sponsor-yj/checkout` → Stripe hosted | `/checkout/?type=platform_sponsor&amount=Y&frequency=monthly` |
+| `page-booking.php:277` | Paid room booking | `stripe/checkout/room` → Stripe hosted | `/checkout/?type=room&mosque_id=X&item_id=Y&amount=Z` |
+| `page-event-detail.php:171` | Event ticket purchase | `stripe/checkout/event` → Stripe hosted | `/checkout/?type=event&mosque_id=X&item_id=Y&amount=Z` |
+| `page-appeals.php:128` | Charity appeal donation | Raw cURL to Stripe | `/checkout/?type=appeal&item_id=Y&amount=Z` |
+| `footer.php:470` | Love YourJannah tip (disabled) | `platform-donate` → Stripe hosted | `/checkout/?type=tip&amount=Y` |
+
+For each: change the JS `fetch()` call to a `window.location.href = '/checkout/?...'` redirect.
+The niyyah bar in footer.php is the biggest one — it has its own inline Stripe card input that needs replacing with a redirect to /checkout/.
+
 ### Backend is solid — only frontend needs redesign:
 - `yn-jannah-unified-checkout/inc/class-ynj-uc-api.php` — create-intent + confirm endpoints work
 - `yn-jannah-unified-checkout/inc/class-ynj-uc-page.php` — THIS needs rewriting
