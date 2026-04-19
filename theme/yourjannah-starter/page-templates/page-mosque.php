@@ -319,12 +319,29 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
 <!-- ═══ MOSQUE COVER BANNER + PROFILE ═══ -->
 <div class="ynj-mosque-banner" style="position:relative;width:100%;max-width:1200px;margin:0 auto 0;">
     <!-- Cover Image -->
-    <div id="ynj-cover-wrap" style="position:relative;width:100%;height:220px;border-radius:0 0 18px 18px;overflow:hidden;background:<?php echo $_ynj_cover_url ? 'url(' . esc_url( $_ynj_cover_url ) . ') center/cover no-repeat' : 'linear-gradient(135deg,#1a3a2a,#2d6a4f,#40916c)'; ?>;">
+    <?php
+    $_ynj_cover_pos = get_option( 'ynj_mosque_cover_pos_' . (int) $mosque->id, '50' );
+    ?>
+    <div id="ynj-cover-wrap" style="position:relative;width:100%;height:220px;border-radius:0 0 18px 18px;overflow:hidden;background:<?php echo $_ynj_cover_url ? 'url(' . esc_url( $_ynj_cover_url ) . ') center ' . (int) $_ynj_cover_pos . '% / cover no-repeat' : 'linear-gradient(135deg,#1a3a2a,#2d6a4f,#40916c)'; ?>;">
         <?php if ( $_ynj_can_edit ) : ?>
-        <!-- Admin: Change Cover button -->
-        <label for="ynj-cover-input" style="position:absolute;bottom:12px;right:12px;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.6);color:#fff;padding:8px 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;backdrop-filter:blur(4px);transition:background .15s;" onmouseover="this.style.background='rgba(0,0,0,0.8)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'">
-            &#x1F4F7; <?php esc_html_e( 'Change Cover', 'yourjannah' ); ?>
-        </label>
+        <div id="ynj-cover-buttons" style="position:absolute;bottom:12px;right:12px;display:flex;gap:6px;">
+            <label for="ynj-cover-input" style="display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.6);color:#fff;padding:8px 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;backdrop-filter:blur(4px);">
+                &#x1F4F7; <?php esc_html_e( 'Change Cover', 'yourjannah' ); ?>
+            </label>
+            <?php if ( $_ynj_cover_url ) : ?>
+            <button type="button" onclick="ynjStartReposition()" style="display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.6);color:#fff;padding:8px 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:inherit;backdrop-filter:blur(4px);">
+                ↕ <?php esc_html_e( 'Reposition', 'yourjannah' ); ?>
+            </button>
+            <?php endif; ?>
+        </div>
+        <!-- Reposition controls (hidden until activated) -->
+        <div id="ynj-reposition-bar" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;cursor:grab;background:rgba(0,0,0,0.3);">
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.7);color:#fff;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;pointer-events:none;">↕ <?php esc_html_e( 'Drag to reposition', 'yourjannah' ); ?></div>
+            <div style="position:absolute;bottom:12px;right:12px;display:flex;gap:6px;">
+                <button type="button" onclick="ynjSaveReposition()" style="background:#287e61;color:#fff;padding:8px 18px;border-radius:10px;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:inherit;"><?php esc_html_e( 'Save', 'yourjannah' ); ?></button>
+                <button type="button" onclick="ynjCancelReposition()" style="background:rgba(255,255,255,0.9);color:#333;padding:8px 18px;border-radius:10px;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:inherit;"><?php esc_html_e( 'Cancel', 'yourjannah' ); ?></button>
+            </div>
+        </div>
         <input type="file" id="ynj-cover-input" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="ynjUploadMosqueImage(this,'cover')">
         <?php endif; ?>
     </div>
@@ -759,6 +776,12 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
 
     <?php if ( $_ynj_can_edit ) : ?>
     <script>
+    var _ynjCoverPosY = <?php echo (int) $_ynj_cover_pos; ?>;
+    var _ynjCoverOrigPos = _ynjCoverPosY;
+    var _ynjDragging = false;
+    var _ynjDragStartY = 0;
+    var _ynjDragStartPos = 0;
+
     function ynjUploadMosqueImage(input, type) {
         const file = input.files[0];
         if (!file) return;
@@ -769,7 +792,6 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
         fd.append('type', type);
 
         const wrap = type === 'cover' ? document.getElementById('ynj-cover-wrap') : document.getElementById('ynj-profile-img');
-        const origBg = wrap.style.background;
         wrap.style.opacity = '0.5';
 
         fetch('<?php echo esc_url( rest_url( 'ynj/v1/mosques/' . (int) $mosque->id . '/image' ) ); ?>', {
@@ -777,17 +799,21 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
             headers: { 'X-WP-Nonce': '<?php echo wp_create_nonce( 'wp_rest' ); ?>' },
             body: fd
         })
-        .then(r => r.json())
-        .then(data => {
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
             wrap.style.opacity = '1';
             if (data.ok && data.url) {
                 if (type === 'cover') {
-                    wrap.style.background = 'url(' + data.url + ') center/cover no-repeat';
-                    const nameOverlay = wrap.querySelector('div');
-                    if (nameOverlay) nameOverlay.style.display = 'none';
+                    _ynjCoverPosY = 50;
+                    wrap.style.backgroundImage = 'url(' + data.url + ')';
+                    wrap.style.backgroundSize = 'cover';
+                    wrap.style.backgroundRepeat = 'no-repeat';
+                    wrap.style.backgroundPosition = 'center 50%';
+                    // Auto-enter reposition mode after cover upload
+                    setTimeout(ynjStartReposition, 300);
                 } else {
                     wrap.style.background = 'url(' + data.url + ') center/cover no-repeat';
-                    const emoji = wrap.querySelector('span');
+                    var emoji = wrap.querySelector('span');
                     if (emoji) emoji.style.display = 'none';
                 }
             } else {
@@ -795,7 +821,58 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
             }
             input.value = '';
         })
-        .catch(() => { wrap.style.opacity = '1'; alert('Upload failed — please try again'); input.value = ''; });
+        .catch(function() { wrap.style.opacity = '1'; alert('Upload failed'); input.value = ''; });
+    }
+
+    // ── Cover photo reposition (drag to adjust vertical position) ──
+    function ynjStartReposition() {
+        _ynjCoverOrigPos = _ynjCoverPosY;
+        document.getElementById('ynj-cover-buttons').style.display = 'none';
+        document.getElementById('ynj-reposition-bar').style.display = '';
+        var bar = document.getElementById('ynj-reposition-bar');
+        bar.addEventListener('mousedown', ynjDragStart);
+        bar.addEventListener('touchstart', ynjDragStart, {passive:false});
+        document.addEventListener('mousemove', ynjDragMove);
+        document.addEventListener('touchmove', ynjDragMove, {passive:false});
+        document.addEventListener('mouseup', ynjDragEnd);
+        document.addEventListener('touchend', ynjDragEnd);
+    }
+    function ynjDragStart(e) {
+        _ynjDragging = true;
+        _ynjDragStartY = e.touches ? e.touches[0].clientY : e.clientY;
+        _ynjDragStartPos = _ynjCoverPosY;
+        e.preventDefault();
+        document.getElementById('ynj-reposition-bar').style.cursor = 'grabbing';
+    }
+    function ynjDragMove(e) {
+        if (!_ynjDragging) return;
+        var y = e.touches ? e.touches[0].clientY : e.clientY;
+        var delta = y - _ynjDragStartY;
+        // Convert px to % (220px height, ~0.45%/px)
+        _ynjCoverPosY = Math.max(0, Math.min(100, _ynjDragStartPos - delta * 0.45));
+        document.getElementById('ynj-cover-wrap').style.backgroundPosition = 'center ' + _ynjCoverPosY + '%';
+        e.preventDefault();
+    }
+    function ynjDragEnd() {
+        _ynjDragging = false;
+        document.getElementById('ynj-reposition-bar').style.cursor = 'grab';
+    }
+    function ynjSaveReposition() {
+        // Save position to server
+        fetch('<?php echo esc_url( rest_url( 'ynj/v1/mosques/' . (int) $mosque->id . '/cover-position' ) ); ?>', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': '<?php echo wp_create_nonce( 'wp_rest' ); ?>' },
+            body: JSON.stringify({ position: Math.round(_ynjCoverPosY) })
+        }).then(function() {
+            document.getElementById('ynj-reposition-bar').style.display = 'none';
+            document.getElementById('ynj-cover-buttons').style.display = 'flex';
+        }).catch(function() {});
+    }
+    function ynjCancelReposition() {
+        _ynjCoverPosY = _ynjCoverOrigPos;
+        document.getElementById('ynj-cover-wrap').style.backgroundPosition = 'center ' + _ynjCoverPosY + '%';
+        document.getElementById('ynj-reposition-bar').style.display = 'none';
+        document.getElementById('ynj-cover-buttons').style.display = 'flex';
     }
     </script>
     <?php endif; ?>

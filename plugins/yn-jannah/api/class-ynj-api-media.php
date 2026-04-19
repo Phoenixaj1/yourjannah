@@ -22,6 +22,18 @@ class YNJ_API_Media {
             'permission_callback' => [ 'YNJ_Auth', 'bearer_check' ],
         ] );
 
+        // POST /mosques/{id}/cover-position — Save cover photo vertical position
+        register_rest_route( self::NS, '/mosques/(?P<id>\d+)/cover-position', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'save_cover_position' ],
+            'permission_callback' => function() {
+                return is_user_logged_in() && (
+                    current_user_can( 'manage_options' ) ||
+                    in_array( 'ynj_mosque_admin', (array) wp_get_current_user()->roles, true )
+                );
+            },
+        ] );
+
         // POST /mosques/{id}/image — Upload mosque cover/profile photo (WP cookie auth)
         register_rest_route( self::NS, '/mosques/(?P<id>\d+)/image', [
             'methods'             => 'POST',
@@ -104,6 +116,17 @@ class YNJ_API_Media {
             'url'           => $sizes['full'],
             'sizes'         => $sizes,
         ], 201 );
+    }
+
+    /**
+     * POST /mosques/{id}/cover-position — Save cover photo vertical position (0-100%).
+     */
+    public static function save_cover_position( \WP_REST_Request $request ) {
+        $mosque_id = absint( $request->get_param( 'id' ) );
+        $data = $request->get_json_params();
+        $position = max( 0, min( 100, (int) ( $data['position'] ?? 50 ) ) );
+        update_option( 'ynj_mosque_cover_pos_' . $mosque_id, $position );
+        return new \WP_REST_Response( [ 'ok' => true, 'position' => $position ] );
     }
 
     /**
