@@ -87,6 +87,13 @@ class YNJ_API_Mosques {
             'callback'            => [ __CLASS__, 'create_gratitude' ],
             'permission_callback' => function() { return is_user_logged_in(); },
         ]);
+
+        // POST /mosques/{id}/image — Upload cover or profile image (admin only)
+        register_rest_route( self::NS, '/mosques/(?P<id>\d+)/image', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'upload_image' ],
+            'permission_callback' => function() { return is_user_logged_in(); },
+        ]);
     }
 
     // ================================================================
@@ -515,5 +522,86 @@ class YNJ_API_Mosques {
         ] );
 
         return new \WP_REST_Response( [ 'ok' => true ] );
+    }
+
+    // ================================================================
+    // MOSQUE IMAGE UPLOAD (Cover / Profile)
+    // ================================================================
+
+    public static function upload_image( \WP_REST_Request $request ) {
+        $mosque_id = (int) $request->get_param( 'id' );
+        $type      = sanitize_text_field( $request->get_param( 'type' ) ?: '' );
+
+        if ( ! $mosque_id || ! in_array( $type, [ 'cover', 'profile' ], true ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Valid mosque id and type (cover/profile) required.' ], 400 );
+        }
+
+        // Admin check: must be mosque admin/imam or WP super-admin
+        $wp_uid         = get_current_user_id();
+        $user_mosque_id = (int) get_user_meta( $wp_uid, 'ynj_mosque_id', true );
+        $is_admin       = current_user_can( 'manage_options' ) ||
+                          ( $user_mosque_id === $mosque_id && current_user_can( 'ynj_manage_mosque' ) );
+        $is_imam        = $user_mosque_id === $mosque_id &&
+                          in_array( 'ynj_imam', (array) wp_get_current_user()->roles, true );
+
+        if ( ! $is_admin && ! $is_imam ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Not authorised.' ], 403 );
+        }
+
+        // Check file upload
+        $files = $request->get_file_params();
+        if ( empty( $files['file'] ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'No file uploaded.' ], 400 );
+        }
+
+        $file = $files['file'];
+
+        // Validate MIME type
+        $allowed = [ 'image/jpeg', 'image/png', 'image/webp', 'image/gif' ];
+        if ( ! in_array( $file['type'], $allowed, true ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Only JPEG, PNG, WebP and GIF images allowed.' ], 400 );
+        }
+
+        // Max 5MB
+        if ( $file['size'] > 5 * 1024 * 1024 ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Image must be under 5MB.' ], 400 );
+        }
+
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+
+        $upload = wp_handle_upload( $file, [ 'test_form' => false ] );
+
+        if ( isset( $upload['error'] ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => $upload['error'] ], 500 );
+        }
+
+        // Create attachment in WordPress media library
+        $attachment = [
+            'post_mime_type' => $upload['type'],
+            'post_title'     => sanitize_file_name( $file['name'] ),
+            'post_content'   => '',
+            'post_status'    => 'inherit',
+        ];
+
+        $attach_id = wp_insert_attachment( $attachment, $upload['file'] );
+        if ( is_wp_error( $attach_id ) ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Failed to save to media library.' ], 500 );
+        }
+
+        // Generate thumbnails
+        $metadata = wp_generate_attachment_metadata( $attach_id, $upload['file'] );
+        wp_update_attachment_metadata( $attach_id, $metadata );
+
+        // Store as option: ynj_mosque_cover_{id} or ynj_mosque_profile_{id}
+        $option_key = 'ynj_mosque_' . $type . '_' . $mosque_id;
+        update_option( $option_key, $upload['url'], false );
+
+        return new \WP_REST_Response( [
+            'ok'  => true,
+            'url' => $upload['url'],
+            'type' => $type,
+        ] );
     }
 }

@@ -310,7 +310,49 @@ if ( $mosque && is_user_logged_in() && class_exists( 'YNJ_Mosques' ) ) {
         }
     }
 }
+
+// ── Load mosque cover & profile images ──
+$_ynj_cover_url   = get_option( 'ynj_mosque_cover_' . (int) $mosque->id, '' );
+$_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
 ?>
+
+<!-- ═══ MOSQUE COVER BANNER + PROFILE ═══ -->
+<div class="ynj-mosque-banner" style="position:relative;width:100%;max-width:1200px;margin:0 auto 0;">
+    <!-- Cover Image -->
+    <div id="ynj-cover-wrap" style="position:relative;width:100%;height:220px;border-radius:0 0 18px 18px;overflow:hidden;background:<?php echo $_ynj_cover_url ? 'url(' . esc_url( $_ynj_cover_url ) . ') center/cover no-repeat' : 'linear-gradient(135deg,#1a3a2a,#2d6a4f,#40916c)'; ?>;">
+        <?php if ( $_ynj_can_edit ) : ?>
+        <!-- Admin: Change Cover button -->
+        <label for="ynj-cover-input" style="position:absolute;bottom:12px;right:12px;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.6);color:#fff;padding:8px 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;backdrop-filter:blur(4px);transition:background .15s;" onmouseover="this.style.background='rgba(0,0,0,0.8)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'">
+            &#x1F4F7; <?php esc_html_e( 'Change Cover', 'yourjannah' ); ?>
+        </label>
+        <input type="file" id="ynj-cover-input" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="ynjUploadMosqueImage(this,'cover')">
+        <?php endif; ?>
+    </div>
+
+    <!-- Profile Picture (outside overflow:hidden so it extends below the banner) -->
+    <div style="position:absolute;bottom:-40px;left:20px;z-index:2;">
+        <div id="ynj-profile-wrap" style="position:relative;width:100px;height:100px;">
+            <div id="ynj-profile-img" style="width:100px;height:100px;border-radius:50%;border:4px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.15);background:<?php echo $_ynj_profile_url ? 'url(' . esc_url( $_ynj_profile_url ) . ') center/cover no-repeat' : 'linear-gradient(135deg,#065f46,#10b981)'; ?>;display:flex;align-items:center;justify-content:center;">
+                <?php if ( ! $_ynj_profile_url ) : ?>
+                <span style="font-size:40px;">🕌</span>
+                <?php endif; ?>
+            </div>
+            <?php if ( $_ynj_can_edit ) : ?>
+            <label for="ynj-profile-input" style="position:absolute;bottom:2px;right:2px;width:30px;height:30px;border-radius:50%;background:#fff;border:2px solid #e5e7eb;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.15);font-size:14px;" title="<?php esc_attr_e( 'Change profile picture', 'yourjannah' ); ?>">&#x1F4F7;</label>
+            <input type="file" id="ynj-profile-input" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="ynjUploadMosqueImage(this,'profile')">
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<!-- Mosque name row (always visible, beside profile pic) -->
+<div style="max-width:1200px;margin:0 auto;padding:8px 16px 0 136px;min-height:48px;display:flex;align-items:center;">
+    <div>
+        <h1 style="margin:0;font-size:20px;font-weight:800;color:#1a1a1a;"><?php echo esc_html( $mosque_name ); ?></h1>
+        <?php if ( $mosque_address ) : ?>
+        <p style="margin:2px 0 0;font-size:13px;color:#666;"><?php echo esc_html( $mosque_address ); ?></p>
+        <?php endif; ?>
+    </div>
+</div>
 
 <main class="ynj-main">
   <div class="ynj-desktop-grid">
@@ -714,6 +756,49 @@ if ( $mosque && is_user_logged_in() && class_exists( 'YNJ_Mosques' ) ) {
         .catch(() => { btn.disabled = false; btn.textContent = '£' + (amountPence / 100); });
     }
     </script>
+
+    <?php if ( $_ynj_can_edit ) : ?>
+    <script>
+    function ynjUploadMosqueImage(input, type) {
+        const file = input.files[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5MB'); input.value = ''; return; }
+
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('type', type);
+
+        const wrap = type === 'cover' ? document.getElementById('ynj-cover-wrap') : document.getElementById('ynj-profile-img');
+        const origBg = wrap.style.background;
+        wrap.style.opacity = '0.5';
+
+        fetch('<?php echo esc_url( rest_url( 'ynj/v1/mosques/' . (int) $mosque->id . '/image' ) ); ?>', {
+            method: 'POST',
+            headers: { 'X-WP-Nonce': '<?php echo wp_create_nonce( 'wp_rest' ); ?>' },
+            body: fd
+        })
+        .then(r => r.json())
+        .then(data => {
+            wrap.style.opacity = '1';
+            if (data.ok && data.url) {
+                if (type === 'cover') {
+                    wrap.style.background = 'url(' + data.url + ') center/cover no-repeat';
+                    const nameOverlay = wrap.querySelector('div');
+                    if (nameOverlay) nameOverlay.style.display = 'none';
+                } else {
+                    wrap.style.background = 'url(' + data.url + ') center/cover no-repeat';
+                    const emoji = wrap.querySelector('span');
+                    if (emoji) emoji.style.display = 'none';
+                }
+            } else {
+                alert(data.error || 'Upload failed');
+            }
+            input.value = '';
+        })
+        .catch(() => { wrap.style.opacity = '1'; alert('Upload failed — please try again'); input.value = ''; });
+    }
+    </script>
+    <?php endif; ?>
 
     <!-- Hadith -->
     <p class="ynj-hadith" id="hadith-line">
