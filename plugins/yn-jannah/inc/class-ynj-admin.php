@@ -14,6 +14,7 @@ class YNJ_Admin {
         add_submenu_page('yn-jannah', 'Businesses', 'Businesses', 'manage_options', 'ynj-businesses', [__CLASS__, 'page_businesses']);
         add_submenu_page('yn-jannah', 'Enquiries', 'Enquiries', 'manage_options', 'ynj-enquiries', [__CLASS__, 'page_enquiries']);
         add_submenu_page('yn-jannah', 'Settings', 'Settings', 'manage_options', 'ynj-settings', [__CLASS__, 'page_settings']);
+        add_submenu_page('yn-jannah', 'Sponsors', 'Sponsors', 'manage_options', 'ynj-sponsors', [__CLASS__, 'page_sponsors']);
         add_submenu_page('yn-jannah', 'Seed Data', 'Seed Data', 'manage_options', 'ynj-seed', [__CLASS__, 'page_seed']);
     }
 
@@ -538,6 +539,66 @@ class YNJ_Admin {
                 </tbody>
             </table>
         </div>
+        <?php
+    }
+
+    // ================================================================
+    // SPONSORS — 5 charity logos for "YourJannah is sponsored by"
+    // ================================================================
+
+    public static function page_sponsors() {
+        // Save
+        if ( isset( $_POST['ynj_sponsors_save'] ) && wp_verify_nonce( $_POST['_wpnonce'] ?? '', 'ynj_sponsors' ) ) {
+            for ( $i = 1; $i <= 5; $i++ ) {
+                $url = esc_url_raw( $_POST["ynj_sponsor_logo_{$i}"] ?? '' );
+                update_option( "ynj_sponsor_logo_{$i}", $url );
+            }
+            echo '<div class="notice notice-success"><p>Sponsors saved.</p></div>';
+        }
+
+        wp_enqueue_media();
+        ?>
+        <div class="wrap">
+            <h1>Platform Sponsors</h1>
+            <p>Upload logos for up to 5 charities. These appear in the "YourJannah is sponsored by" strip across the site.</p>
+
+            <form method="post">
+                <?php wp_nonce_field( 'ynj_sponsors' ); ?>
+                <table class="form-table">
+                    <?php for ( $i = 1; $i <= 5; $i++ ) :
+                        $logo = get_option( "ynj_sponsor_logo_{$i}", '' );
+                    ?>
+                    <tr>
+                        <th>Charity <?php echo $i; ?></th>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <input type="text" name="ynj_sponsor_logo_<?php echo $i; ?>" id="ynj-sp-<?php echo $i; ?>" value="<?php echo esc_attr( $logo ); ?>" class="regular-text" placeholder="Logo URL">
+                                <button type="button" class="button" onclick="ynjPickLogo(<?php echo $i; ?>)">Choose Image</button>
+                                <?php if ( $logo ) : ?>
+                                <img src="<?php echo esc_url( $logo ); ?>" style="height:40px;width:auto;border-radius:6px;border:1px solid #ddd;">
+                                <button type="button" class="button" onclick="document.getElementById('ynj-sp-<?php echo $i; ?>').value='';this.previousElementSibling.remove();this.remove();">Remove</button>
+                                <?php endif; ?>
+                            </div>
+                        </td>
+                    </tr>
+                    <?php endfor; ?>
+                </table>
+                <p class="submit">
+                    <button type="submit" name="ynj_sponsors_save" class="button button-primary">Save Sponsors</button>
+                </p>
+            </form>
+        </div>
+
+        <script>
+        function ynjPickLogo(n) {
+            var frame = wp.media({ title: 'Select Charity Logo', library: { type: 'image' }, multiple: false });
+            frame.on('select', function() {
+                var url = frame.state().get('selection').first().toJSON().url;
+                document.getElementById('ynj-sp-' + n).value = url;
+            });
+            frame.open();
+        }
+        </script>
         <?php
     }
 }

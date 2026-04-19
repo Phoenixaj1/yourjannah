@@ -502,6 +502,24 @@ if ( $_nb_id && $_nb_pk ) :
 </script>
 <?php endif; /* end disabled Love YourJannah block */ ?>
 
+<?php
+// ── "YourJannah is sponsored by" — 5 charity logos from admin ──
+$_sp_logos = [];
+for ( $i = 1; $i <= 5; $i++ ) {
+    $url = get_option( "ynj_sponsor_logo_{$i}", '' );
+    if ( $url ) $_sp_logos[] = $url;
+}
+if ( ! empty( $_sp_logos ) ) : ?>
+<div style="background:#f8f9fa;border-top:1px solid #e5e7eb;padding:16px 12px;text-align:center;margin-bottom:60px;">
+    <div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">YourJannah is sponsored by</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;">
+        <?php foreach ( $_sp_logos as $logo ) : ?>
+        <img src="<?php echo esc_url( $logo ); ?>" alt="" style="height:36px;width:auto;object-fit:contain;filter:grayscale(30%);opacity:.8;transition:all .2s;" onmouseover="this.style.opacity='1';this.style.filter='none'" onmouseout="this.style.opacity='.8';this.style.filter='grayscale(30%)'">
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php wp_footer(); ?>
 </body>
 </html>
