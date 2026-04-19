@@ -207,15 +207,20 @@ if ( $_hp_mosque_id ) {
     $_hp_classes = class_exists( 'YNJ_Madrassah' ) ? YNJ_Madrassah::get_classes( $_hp_mosque_id ) : [];
     if ( ! is_array( $_hp_classes ) ) $_hp_classes = [];
 
-    // User points (if logged in)
-    // TODO: move to plugin — no YNJ_Gamification::get_user_points() method yet
-    if ( is_user_logged_in() && class_exists( 'YNJ_DB' ) ) {
+    // User points via plugin
+    if ( is_user_logged_in() ) {
         $ynj_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
-        if ( $ynj_uid ) {
-            global $wpdb;
-            $ut = YNJ_DB::table( 'users' );
-            $pts = (int) $wpdb->get_var( $wpdb->prepare( "SELECT total_points FROM $ut WHERE id = %d", $ynj_uid ) );
-            $_hp_points = [ 'ok' => true, 'total' => $pts ];
+        if ( $ynj_uid && class_exists( 'YNJ_People' ) ) {
+            $_hp_points = [ 'ok' => true, 'total' => YNJ_People::get_total_points( $ynj_uid ) ];
+        }
+    }
+
+    // Patron status check
+    $_hp_patron_status = null;
+    if ( is_user_logged_in() && $_hp_mosque_id ) {
+        $_hp_p_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+        if ( $_hp_p_uid && class_exists( 'YNJ_Donations' ) ) {
+            $_hp_patron_status = YNJ_Donations::get_patron_status( $_hp_p_uid, $_hp_mosque_id );
         }
     }
 }
@@ -647,9 +652,19 @@ if ( $_hp_mosque_id && is_user_logged_in() ) {
     <!-- Ramadan banner (shown automatically during Ramadan) -->
     <div id="ramadan-banner" style="display:none;background:linear-gradient(135deg,#1a1628,#2d1b69);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:10px;"></div>
 
-    <!-- Patron Membership CTA -->
+    <!-- Patron Membership -->
+    <?php
+    $patron_tiers = class_exists( 'YNJ_API_Patrons' ) ? YNJ_API_Patrons::get_tiers() : [];
+    $_hp_slug = $_ynj_mosque_for_prayer ? $_ynj_mosque_for_prayer->slug : '';
+    ?>
+    <?php if ( $_hp_patron_status ) : ?>
+    <div class="ynj-patron-bar" id="patron-hero" style="background:linear-gradient(135deg,#287e61,#1a5c43) !important;">
+        <a href="<?php echo esc_url( home_url( '/mosque/' . $_hp_slug . '/patron' ) ); ?>" class="ynj-patron-bar__label">🏅 <strong><?php printf( esc_html__( "You're a %s Patron — JazakAllah Khayr", 'yourjannah' ), esc_html( $patron_tiers[ $_hp_patron_status->tier ]['label'] ?? ucfirst( $_hp_patron_status->tier ) ) ); ?></strong></a>
+        <a href="<?php echo esc_url( home_url( '/mosque/' . $_hp_slug . '/patron' ) ); ?>" class="ynj-patron-chip" style="background:rgba(255,255,255,.2);"><?php esc_html_e( 'Manage', 'yourjannah' ); ?></a>
+    </div>
+    <?php else : ?>
     <div class="ynj-patron-bar" id="patron-hero">
-        <a href="#" class="ynj-patron-bar__label" data-nav-mosque="/mosque/{slug}/patron">🏅 <strong id="patron-bar-text"><?php esc_html_e( 'Become a Patron', 'yourjannah' ); ?></strong></a>
+        <a href="#" class="ynj-patron-bar__label" data-nav-mosque="/mosque/{slug}/patron">🏅 <strong id="patron-bar-text"><?php printf( esc_html__( 'Become a Patron of %s', 'yourjannah' ), esc_html( $_hp_mosque_name ) ); ?></strong></a>
         <div class="ynj-patron-bar__tiers">
             <a href="#" class="ynj-patron-chip" data-nav-mosque="/mosque/{slug}/patron">£5</a>
             <a href="#" class="ynj-patron-chip" data-nav-mosque="/mosque/{slug}/patron">£10</a>
@@ -657,6 +672,7 @@ if ( $_hp_mosque_id && is_user_logged_in() ) {
             <a href="#" class="ynj-patron-chip" data-nav-mosque="/mosque/{slug}/patron">£50</a>
         </div>
     </div>
+    <?php endif; ?>
 
     <!-- Sponsor Ticker -->
     <div class="ynj-ticker" id="sponsor-ticker" style="display:none;">
@@ -781,6 +797,49 @@ if ( $_hp_mosque_id && is_user_logged_in() ) {
         <div class="ynj-jumuah-card__header">🕌 <?php esc_html_e( 'Jumu\'ah', 'yourjannah' ); ?></div>
         <div id="jumuah-slots"></div>
     </section>
+
+    <!-- ═══ DHIKR CTA ═══ -->
+    <?php if ( is_user_logged_in() && $_hp_mosque_id ) :
+        $_hp_cta_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+        $_hp_cta_streak = 0;
+        $_hp_cta_done = 0;
+        if ( $_hp_cta_uid ) {
+            if ( class_exists( 'YNJ_Streaks' ) ) {
+                $_hp_cta_streak = YNJ_Streaks::get_user_streak( $_hp_cta_uid );
+            }
+            for ( $i = 0; $i < 5; $i++ ) {
+                if ( get_transient( 'ynj_dhikr_' . $_hp_cta_uid . '_' . date( 'Y-m-d' ) . '_' . $i ) ) $_hp_cta_done++;
+            }
+        }
+        $_hp_cta_hours = 24 - (int) date( 'G' );
+        $_hp_cta_complete = $_hp_cta_done >= 5;
+        $_hp_cta_bg = $_hp_cta_complete ? 'background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;'
+            : ( $_hp_cta_hours <= 3 ? 'background:linear-gradient(135deg,#fef2f2,#fee2e2);border:2px solid #ef4444;'
+            : 'background:linear-gradient(135deg,#fefce8,#fef9c3);border:2px solid #fde68a;' );
+    ?>
+    <a href="<?php echo esc_url( home_url( '/profile#ibadah' ) ); ?>" class="ynj-card" style="display:block;text-decoration:none;padding:16px;<?php echo $_hp_cta_bg; ?>">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+                <?php if ( $_hp_cta_complete ) : ?>
+                    <div style="font-size:14px;font-weight:800;color:#166534;">&#x2705; <?php esc_html_e( 'All 5 dhikr done today!', 'yourjannah' ); ?></div>
+                    <div style="font-size:12px;color:#15803d;"><?php esc_html_e( 'MashaAllah! Come back tomorrow.', 'yourjannah' ); ?></div>
+                <?php elseif ( $_hp_cta_done > 0 ) : ?>
+                    <div style="font-size:14px;font-weight:800;color:#92400e;">&#x1F3AF; <?php printf( esc_html__( '%d of 5 done — %d more for +200 bonus!', 'yourjannah' ), $_hp_cta_done, 5 - $_hp_cta_done ); ?></div>
+                    <div style="font-size:12px;color:#a16207;"><?php echo (int) $_hp_cta_hours; ?>h <?php esc_html_e( 'left', 'yourjannah' ); ?><?php if ( $_hp_cta_streak > 0 ) : ?> &middot; &#x1F525; <?php echo (int) $_hp_cta_streak; ?> <?php esc_html_e( 'day streak', 'yourjannah' ); ?><?php endif; ?></div>
+                <?php else : ?>
+                    <div style="font-size:14px;font-weight:800;color:#92400e;">&#x1F4FF; <?php esc_html_e( 'Say your daily dhikr', 'yourjannah' ); ?></div>
+                    <div style="font-size:12px;color:#a16207;"><?php echo (int) $_hp_cta_hours; ?>h <?php esc_html_e( 'left', 'yourjannah' ); ?> &middot; 5 dhikr = <?php esc_html_e( '+200 bonus pts', 'yourjannah' ); ?></div>
+                <?php endif; ?>
+            </div>
+            <div style="font-size:24px;font-weight:900;color:<?php echo $_hp_cta_complete ? '#166534' : '#d97706'; ?>;"><?php echo $_hp_cta_done; ?>/5</div>
+        </div>
+    </a>
+    <?php endif; ?>
+
+    <!-- ═══ GRATITUDE ═══ -->
+    <?php if ( $_hp_mosque_id && is_user_logged_in() ) : ?>
+    <button type="button" onclick="ynjPostGratitude()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;border-radius:14px;font-size:14px;font-weight:700;color:#9d174d;cursor:pointer;font-family:inherit;margin-bottom:10px;">💖 <?php esc_html_e( 'Thank Your Mosque', 'yourjannah' ); ?></button>
+    <?php endif; ?>
 
     <!-- Hadith -->
     <p class="ynj-hadith" id="hadith-line">
