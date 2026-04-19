@@ -959,7 +959,7 @@
             function processFeedData(aData, eData, cData, slug, silent) {
                     allFeedItems = [];
                     (aData.announcements || []).forEach(a => {
-                        allFeedItems.push({ type:'announcement', id:a.id, title:a.title, body:a.body, date:a.published_at||'', pinned:a.pinned, views:a.views||0, reactions:a.reactions||{} });
+                        allFeedItems.push({ type:'announcement', id:a.id, title:a.title, body:a.body, date:a.published_at||'', pinned:a.pinned, views:a.views||0, reactions:a.reactions||{}, user_reacted:a.user_reacted||[] });
                     });
                     (eData.events || []).forEach(e => {
                         const time = e.start_time ? String(e.start_time).replace(/:\d{2}$/,'') : '';
