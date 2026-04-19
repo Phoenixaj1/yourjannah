@@ -17,7 +17,7 @@ class YNJ_DB {
     /**
      * Current schema version.
      */
-    const SCHEMA_VERSION = '3.8.0';
+    const SCHEMA_VERSION = '3.9.0';
 
     /**
      * Return the full table name for a given short name.
@@ -1226,6 +1226,42 @@ class YNJ_DB {
             PRIMARY KEY  (id),
             UNIQUE KEY user_content_reaction (user_id, content_type, content_id, reaction),
             KEY content_type_id (content_type, content_id)
+        ) $charset_collate;";
+
+        // Broadcasts — live streams from mosques via YourJannah YouTube
+        $tables[] = "CREATE TABLE {$t('broadcasts')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL,
+            broadcaster_user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            title varchar(255) NOT NULL DEFAULT '',
+            youtube_video_id varchar(20) NOT NULL DEFAULT '',
+            youtube_playlist_id varchar(40) NOT NULL DEFAULT '',
+            stream_type varchar(20) NOT NULL DEFAULT 'prayer',
+            status varchar(20) NOT NULL DEFAULT 'scheduled',
+            viewer_count int(11) NOT NULL DEFAULT 0,
+            peak_viewers int(11) NOT NULL DEFAULT 0,
+            started_at datetime DEFAULT NULL,
+            ended_at datetime DEFAULT NULL,
+            duration_seconds int(11) NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY mosque_id (mosque_id),
+            KEY status (status),
+            KEY youtube_video_id (youtube_video_id)
+        ) $charset_collate;";
+
+        // Broadcaster roles — who can stream for each mosque
+        $tables[] = "CREATE TABLE {$t('broadcasters')} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            mosque_id bigint(20) unsigned NOT NULL,
+            user_id bigint(20) unsigned NOT NULL,
+            role varchar(20) NOT NULL DEFAULT 'broadcaster',
+            added_by bigint(20) unsigned NOT NULL DEFAULT 0,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY mosque_user (mosque_id, user_id),
+            KEY user_id (user_id)
         ) $charset_collate;";
 
         // Revenue Shares — 5% of charitable donations credited to masjid

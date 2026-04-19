@@ -885,6 +885,41 @@ if ( $mosque && is_user_logged_in() && class_exists( 'YNJ_Mosques' ) ) {
     </div><!-- end left column -->
     <div class="ynj-desktop-grid__right">
 
+    <!-- Live Broadcast Banner -->
+    <?php
+    $_ynj_live_broadcast = null;
+    $_ynj_can_broadcast = false;
+    if ( $mosque && class_exists( 'YNJ_Broadcast' ) ) {
+        $_ynj_live_broadcast = YNJ_Broadcast::get_live( (int) $mosque->id );
+        if ( is_user_logged_in() ) {
+            $ynj_uid_bc = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+            $_ynj_can_broadcast = $ynj_uid_bc && YNJ_Broadcast::can_broadcast( $ynj_uid_bc, (int) $mosque->id );
+        }
+    }
+    ?>
+    <?php if ( $_ynj_live_broadcast ) : ?>
+    <div id="ynj-live-banner" style="background:linear-gradient(135deg,#dc2626,#991b1b);border-radius:14px;padding:16px;margin-bottom:10px;color:#fff;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+            <span style="display:inline-block;width:10px;height:10px;background:#fff;border-radius:50%;animation:ynj-live-pulse 1.5s infinite;"></span>
+            <span style="font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:1px;"><?php esc_html_e( 'LIVE NOW', 'yourjannah' ); ?></span>
+            <span style="font-size:13px;opacity:.8;margin-left:auto;"><?php echo esc_html( $_ynj_live_broadcast->title ); ?></span>
+        </div>
+        <?php if ( $_ynj_live_broadcast->youtube_video_id ) : ?>
+        <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:10px;">
+            <iframe src="https://www.youtube.com/embed/<?php echo esc_attr( $_ynj_live_broadcast->youtube_video_id ); ?>?autoplay=1&mute=1" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allow="autoplay;fullscreen" allowfullscreen></iframe>
+        </div>
+        <?php endif; ?>
+        <?php if ( $_ynj_can_broadcast ) : ?>
+        <button onclick="ynjEndBroadcast(<?php echo (int) $_ynj_live_broadcast->id; ?>)" style="margin-top:10px;width:100%;padding:10px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;"><?php esc_html_e( 'End Stream', 'yourjannah' ); ?></button>
+        <?php endif; ?>
+    </div>
+    <style>@keyframes ynj-live-pulse{0%,100%{opacity:1;}50%{opacity:.3;}}</style>
+    <?php elseif ( $_ynj_can_broadcast ) : ?>
+    <button id="ynj-go-live-btn" onclick="ynjGoLive()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#dc2626,#991b1b);border:none;border-radius:14px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px;">
+        🔴 <?php esc_html_e( 'Go Live', 'yourjannah' ); ?>
+    </button>
+    <?php endif; ?>
+
     <!-- Feed -->
     <section id="feed-section">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
@@ -1368,6 +1403,44 @@ function ynjQpTab(tab) {
     document.getElementById('qp-tab-event').className = 'ynj-qp-tab' + (tab === 'event' ? ' ynj-qp-tab--active' : '');
     var imamTab = document.getElementById('qp-tab-imam');
     if (imamTab) imamTab.className = 'ynj-qp-tab' + (tab === 'imam' ? ' ynj-qp-tab--active' : '');
+}
+
+// Go Live — start a broadcast
+function ynjGoLive() {
+    var streamType = prompt('What are you streaming?\n\nOptions: fajr, dhuhr, asr, maghrib, isha, jumuah, taraweeh, lecture, event, other', 'jumuah');
+    if (!streamType) return;
+    var ytId = prompt('Enter YouTube Video ID (or leave blank):', '');
+    var btn = document.getElementById('ynj-go-live-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Starting...'; }
+    fetch(<?php echo wp_json_encode( rest_url( 'ynj/v1/broadcast/start' ) ); ?>, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': <?php echo wp_json_encode( wp_create_nonce( 'wp_rest' ) ); ?> },
+        body: JSON.stringify({
+            mosque_id: <?php echo (int) $mosque->id; ?>,
+            stream_type: streamType,
+            youtube_video_id: ytId || '',
+            title: streamType.charAt(0).toUpperCase() + streamType.slice(1) + ' at <?php echo esc_js( $mosque_name ); ?>'
+        })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) { location.reload(); }
+        else { alert(data.error || 'Failed to start'); if (btn) { btn.disabled = false; btn.textContent = '🔴 Go Live'; } }
+    })
+    .catch(function() { if (btn) { btn.disabled = false; btn.textContent = '🔴 Go Live'; } });
+}
+
+// End broadcast
+function ynjEndBroadcast(broadcastId) {
+    if (!confirm('End this live stream?')) return;
+    fetch(<?php echo wp_json_encode( rest_url( 'ynj/v1/broadcast/end' ) ); ?>, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': <?php echo wp_json_encode( wp_create_nonce( 'wp_rest' ) ); ?> },
+        body: JSON.stringify({ broadcast_id: broadcastId })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) { if (data.ok) location.reload(); else alert(data.error || 'Failed'); })
+    .catch(function() {});
 }
 
 // Post Imam Message via REST API
