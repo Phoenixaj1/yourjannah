@@ -39,7 +39,13 @@ $show_fb     = class_exists( 'YNJ_Social_Auth' ) && YNJ_Social_Auth::is_facebook
 .ynj-auth-field label{display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;}
 .ynj-auth-field input{width:100%;padding:14px 16px;border:2px solid #e5e7eb;border-radius:14px;font-size:16px;font-family:inherit;background:#f9fafb;transition:border-color .2s;box-sizing:border-box;}
 .ynj-auth-field input:focus{outline:none;border-color:#287e61;background:#fff;}
-.ynj-auth-pin{font-size:32px !important;letter-spacing:14px;text-align:center;font-weight:900 !important;padding:18px 16px !important;}
+/* 4-box PIN input */
+.ynj-pin-boxes{display:flex;gap:10px;justify-content:center;margin:8px 0;}
+.ynj-pin-box{width:56px;height:64px;border:2px solid #e5e7eb;border-radius:14px;background:#f9fafb;font-size:28px;font-weight:900;text-align:center;font-family:inherit;transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;-moz-appearance:textfield;}
+.ynj-pin-box:focus{outline:none;border-color:#287e61;background:#fff;box-shadow:0 0 0 4px rgba(40,126,97,.12);}
+.ynj-pin-box::-webkit-outer-spin-button,.ynj-pin-box::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.ynj-pin-attempts{font-size:11px;color:#f59e0b;text-align:center;margin-top:6px;}
+.ynj-pin-locked{font-size:13px;color:#dc2626;text-align:center;padding:16px;background:#fef2f2;border-radius:12px;margin-bottom:12px;}
 .ynj-auth-hint{font-size:11px;color:#6b8fa3;text-align:center;margin-top:6px;}
 .ynj-auth-btn{display:flex;align-items:center;justify-content:center;width:100%;padding:16px;border-radius:14px;background:linear-gradient(135deg,#287e61,#1a5c43);color:#fff;font-size:16px;font-weight:800;border:none;cursor:pointer;transition:all .15s;box-shadow:0 4px 16px rgba(40,126,97,.25);font-family:inherit;margin-top:8px;}
 .ynj-auth-btn:hover{box-shadow:0 6px 24px rgba(40,126,97,.35);transform:translateY(-1px);}
@@ -98,12 +104,19 @@ $show_fb     = class_exists( 'YNJ_Social_Auth' ) && YNJ_Social_Auth::is_facebook
             <div class="ynj-auth-error" id="email-error"></div>
         </div>
 
-        <!-- ═══ STEP 2a: Enter PIN (existing user) ═══ -->
+        <!-- ═══ STEP 2a: Enter PIN (existing user) — 4 separate boxes ═══ -->
         <div class="ynj-auth-step" id="step-pin-login">
             <div class="ynj-auth-email-show" id="login-email-show"></div>
+            <div id="pin-locked-msg" class="ynj-pin-locked" style="display:none;"><?php esc_html_e( 'Too many attempts. Check your email for a PIN reset link.', 'yourjannah' ); ?></div>
             <div class="ynj-auth-field">
-                <label><?php esc_html_e( 'Enter your PIN', 'yourjannah' ); ?></label>
-                <input type="tel" id="auth-pin-login" class="ynj-auth-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="off">
+                <label style="text-align:center;"><?php esc_html_e( 'Enter your 4-digit PIN', 'yourjannah' ); ?></label>
+                <div class="ynj-pin-boxes" id="pin-login-boxes">
+                    <input type="number" class="ynj-pin-box" data-pin="0" inputmode="numeric" min="0" max="9" autocomplete="off">
+                    <input type="number" class="ynj-pin-box" data-pin="1" inputmode="numeric" min="0" max="9" autocomplete="off">
+                    <input type="number" class="ynj-pin-box" data-pin="2" inputmode="numeric" min="0" max="9" autocomplete="off">
+                    <input type="number" class="ynj-pin-box" data-pin="3" inputmode="numeric" min="0" max="9" autocomplete="off">
+                </div>
+                <div class="ynj-pin-attempts" id="pin-attempts-left" style="display:none;"></div>
             </div>
             <button type="button" class="ynj-auth-btn" id="btn-pin-login"><?php esc_html_e( 'Sign In', 'yourjannah' ); ?></button>
             <div class="ynj-auth-error" id="pin-login-error"></div>
@@ -111,18 +124,28 @@ $show_fb     = class_exists( 'YNJ_Social_Auth' ) && YNJ_Social_Auth::is_facebook
             <button type="button" class="ynj-auth-btn ynj-auth-btn--back" onclick="showStep('email')">&#8592; <?php esc_html_e( 'Change email', 'yourjannah' ); ?></button>
         </div>
 
-        <!-- ═══ STEP 2b: Create PIN (new user) ═══ -->
+        <!-- ═══ STEP 2b: Create PIN (new user) — 4 separate boxes ═══ -->
         <div class="ynj-auth-step" id="step-pin-create">
             <div class="ynj-auth-email-show" id="create-email-show"></div>
             <p style="text-align:center;font-size:13px;color:#6b8fa3;margin-bottom:16px;"><?php esc_html_e( "You're new! Set a 4-digit PIN to secure your account.", 'yourjannah' ); ?></p>
             <div class="ynj-auth-field">
-                <label><?php esc_html_e( 'Choose a PIN', 'yourjannah' ); ?></label>
-                <input type="tel" id="auth-pin-new" class="ynj-auth-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="off">
+                <label style="text-align:center;"><?php esc_html_e( 'Choose a PIN', 'yourjannah' ); ?></label>
+                <div class="ynj-pin-boxes" id="pin-create-boxes">
+                    <input type="number" class="ynj-pin-box" data-pin="0" inputmode="numeric" min="0" max="9" autocomplete="off">
+                    <input type="number" class="ynj-pin-box" data-pin="1" inputmode="numeric" min="0" max="9" autocomplete="off">
+                    <input type="number" class="ynj-pin-box" data-pin="2" inputmode="numeric" min="0" max="9" autocomplete="off">
+                    <input type="number" class="ynj-pin-box" data-pin="3" inputmode="numeric" min="0" max="9" autocomplete="off">
+                </div>
                 <div class="ynj-auth-hint"><?php esc_html_e( '4 digits, like a bank PIN', 'yourjannah' ); ?></div>
             </div>
             <div class="ynj-auth-field">
-                <label><?php esc_html_e( 'Confirm PIN', 'yourjannah' ); ?></label>
-                <input type="tel" id="auth-pin-confirm" class="ynj-auth-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="off">
+                <label style="text-align:center;"><?php esc_html_e( 'Confirm PIN', 'yourjannah' ); ?></label>
+                <div class="ynj-pin-boxes" id="pin-confirm-boxes">
+                    <input type="number" class="ynj-pin-box" data-pin="0" inputmode="numeric" min="0" max="9" autocomplete="off">
+                    <input type="number" class="ynj-pin-box" data-pin="1" inputmode="numeric" min="0" max="9" autocomplete="off">
+                    <input type="number" class="ynj-pin-box" data-pin="2" inputmode="numeric" min="0" max="9" autocomplete="off">
+                    <input type="number" class="ynj-pin-box" data-pin="3" inputmode="numeric" min="0" max="9" autocomplete="off">
+                </div>
             </div>
             <button type="button" class="ynj-auth-btn" id="btn-pin-create">&#x1F54C; <?php esc_html_e( 'Create Account', 'yourjannah' ); ?></button>
             <div class="ynj-auth-error" id="pin-create-error"></div>
@@ -189,20 +212,20 @@ $show_fb     = class_exists( 'YNJ_Social_Auth' ) && YNJ_Social_Auth::is_facebook
                 // Existing user with PIN → enter it
                 document.getElementById('login-email-show').textContent = email;
                 showStep('pin-login');
-                document.getElementById('auth-pin-login').focus();
+                document.querySelector('#pin-login-boxes .ynj-pin-box').focus(); checkLocked();
             } else if (data.exists && !data.has_pin) {
                 // Existing user WITHOUT PIN → set one
                 document.getElementById('create-email-show').textContent = email;
                 document.querySelector('#step-pin-create p').textContent = <?php echo wp_json_encode( __( "Set a PIN to secure your account. You'll use this instead of a password.", 'yourjannah' ) ); ?>;
                 window._setPinForExisting = true;
                 showStep('pin-create');
-                document.getElementById('auth-pin-new').focus();
+                document.querySelector('#pin-create-boxes .ynj-pin-box').focus();
             } else {
                 // New user → create PIN
                 window._setPinForExisting = false;
                 document.getElementById('create-email-show').textContent = email;
                 showStep('pin-create');
-                document.getElementById('auth-pin-new').focus();
+                document.querySelector('#pin-create-boxes .ynj-pin-box').focus();
             }
         } catch(e) {
             err.textContent = <?php echo wp_json_encode( __( 'Network error. Please try again.', 'yourjannah' ) ); ?>;
@@ -215,15 +238,88 @@ $show_fb     = class_exists( 'YNJ_Social_Auth' ) && YNJ_Social_Auth::is_facebook
         if (e.key === 'Enter') document.getElementById('btn-email-next').click();
     });
 
+    // ── PIN Box auto-advance logic ──
+    function setupPinBoxes(containerId) {
+        var boxes = document.querySelectorAll('#' + containerId + ' .ynj-pin-box');
+        boxes.forEach(function(box, i) {
+            box.addEventListener('input', function() {
+                // Only allow single digit
+                if (this.value.length > 1) this.value = this.value.slice(-1);
+                // Auto-advance to next box
+                if (this.value.length === 1 && i < 3) {
+                    boxes[i + 1].focus();
+                }
+            });
+            box.addEventListener('keydown', function(e) {
+                // Backspace: clear and go back
+                if (e.key === 'Backspace' && !this.value && i > 0) {
+                    boxes[i - 1].focus();
+                    boxes[i - 1].value = '';
+                }
+                // Enter on last box: submit
+                if (e.key === 'Enter' && i === 3) {
+                    var btn = containerId === 'pin-login-boxes' ? document.getElementById('btn-pin-login') :
+                              containerId === 'pin-create-boxes' ? document.getElementById('btn-pin-create') : null;
+                    if (btn) btn.click();
+                }
+            });
+            // Select all on focus for easy replacement
+            box.addEventListener('focus', function() { this.select(); });
+        });
+    }
+    function getPinFromBoxes(containerId) {
+        var boxes = document.querySelectorAll('#' + containerId + ' .ynj-pin-box');
+        var pin = '';
+        boxes.forEach(function(b) { pin += b.value; });
+        return pin;
+    }
+    function clearPinBoxes(containerId) {
+        document.querySelectorAll('#' + containerId + ' .ynj-pin-box').forEach(function(b) { b.value = ''; });
+        var first = document.querySelector('#' + containerId + ' .ynj-pin-box');
+        if (first) first.focus();
+    }
+
+    setupPinBoxes('pin-login-boxes');
+    setupPinBoxes('pin-create-boxes');
+    setupPinBoxes('pin-confirm-boxes');
+
+    // ── Attempt tracking (10 max, then lock + email reset) ──
+    var MAX_ATTEMPTS = 10;
+    var attemptKey = 'ynj_pin_attempts_' + (savedEmail || '');
+    var attempts = parseInt(localStorage.getItem(attemptKey) || '0');
+
+    function checkLocked() {
+        if (attempts >= MAX_ATTEMPTS) {
+            document.getElementById('pin-locked-msg').style.display = 'block';
+            document.getElementById('btn-pin-login').disabled = true;
+            // Trigger server-side PIN reset email
+            fetch(API + 'auth/forgot-pin', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: savedEmail})
+            }).catch(function(){});
+            return true;
+        }
+        if (attempts > 0) {
+            var el = document.getElementById('pin-attempts-left');
+            el.style.display = 'block';
+            el.textContent = (MAX_ATTEMPTS - attempts) + ' attempts remaining';
+        }
+        return false;
+    }
+
     // ── STEP 2a: Login with PIN ──
     document.getElementById('btn-pin-login').addEventListener('click', async function() {
         var btn = this;
-        var pin = document.getElementById('auth-pin-login').value.trim();
+        var pin = getPinFromBoxes('pin-login-boxes');
         var err = document.getElementById('pin-login-error');
         err.textContent = '';
 
+        if (checkLocked()) return;
+
         if (!pin || pin.length < 4) {
-            err.textContent = <?php echo wp_json_encode( __( 'PIN must be at least 4 digits.', 'yourjannah' ) ); ?>;
+            err.textContent = <?php echo wp_json_encode( __( 'Enter all 4 digits.', 'yourjannah' ) ); ?>;
+            clearPinBoxes('pin-login-boxes');
             return;
         }
 
@@ -238,15 +334,21 @@ $show_fb     = class_exists( 'YNJ_Social_Auth' ) && YNJ_Social_Auth::is_facebook
             var data = await resp.json();
 
             if (data.ok && data.token) {
+                // Success — reset attempts
+                localStorage.removeItem(attemptKey);
                 localStorage.setItem('ynj_user_token', data.token);
                 if (data.user) localStorage.setItem('ynj_user', JSON.stringify(data.user));
-                // Redirect through server-side cookie setter (bulletproof)
                 var params = new URLSearchParams(window.location.search);
                 var dest = params.get('redirect');
                 if (!dest) { var s = localStorage.getItem('ynj_mosque_slug'); dest = s ? '/mosque/' + s : '/'; }
                 window.location.href = '/?ynj_autologin=' + (data.wp_user_id || '') + '&ynj_token=' + encodeURIComponent(data.token) + '&redirect=' + encodeURIComponent(dest);
             } else {
+                // Failed — increment attempts
+                attempts++;
+                localStorage.setItem(attemptKey, attempts);
+                if (checkLocked()) return;
                 err.textContent = data.error || <?php echo wp_json_encode( __( 'Invalid PIN. Please try again.', 'yourjannah' ) ); ?>;
+                clearPinBoxes('pin-login-boxes');
                 btn.disabled = false; btn.textContent = <?php echo wp_json_encode( __( 'Sign In', 'yourjannah' ) ); ?>;
             }
         } catch(e) {
@@ -255,33 +357,27 @@ $show_fb     = class_exists( 'YNJ_Social_Auth' ) && YNJ_Social_Auth::is_facebook
         }
     });
 
-    // Allow Enter key on PIN login field
-    document.getElementById('auth-pin-login').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') document.getElementById('btn-pin-login').click();
-    });
-
     // ── STEP 2b: Create account with PIN ──
     document.getElementById('btn-pin-create').addEventListener('click', async function() {
         var btn = this;
-        var pin = document.getElementById('auth-pin-new').value.trim();
-        var pinConfirm = document.getElementById('auth-pin-confirm').value.trim();
+        var pin = getPinFromBoxes('pin-create-boxes');
+        var pinConfirm = getPinFromBoxes('pin-confirm-boxes');
         var err = document.getElementById('pin-create-error');
         err.textContent = '';
 
         if (!pin || pin.length < 4) {
             err.textContent = <?php echo wp_json_encode( __( 'PIN must be at least 4 digits.', 'yourjannah' ) ); ?>;
-            document.getElementById('auth-pin-new').focus();
+            document.querySelector('#pin-create-boxes .ynj-pin-box').focus();
             return;
         }
         if (!/^\d+$/.test(pin)) {
             err.textContent = <?php echo wp_json_encode( __( 'PIN must be numbers only.', 'yourjannah' ) ); ?>;
-            document.getElementById('auth-pin-new').focus();
+            document.querySelector('#pin-create-boxes .ynj-pin-box').focus();
             return;
         }
         if (pin !== pinConfirm) {
             err.textContent = <?php echo wp_json_encode( __( "PINs don't match. Try again.", 'yourjannah' ) ); ?>;
-            document.getElementById('auth-pin-confirm').value = '';
-            document.getElementById('auth-pin-confirm').focus();
+            clearPinBoxes('pin-confirm-boxes');
             return;
         }
 
@@ -328,7 +424,9 @@ $show_fb     = class_exists( 'YNJ_Social_Auth' ) && YNJ_Social_Auth::is_facebook
     });
 
     // Allow Enter on confirm PIN field
-    document.getElementById('auth-pin-confirm').addEventListener('keydown', function(e) {
+    // Enter on last confirm box triggers create
+    var lastConfirmBox = document.querySelector('#pin-confirm-boxes .ynj-pin-box[data-pin="3"]');
+    if (lastConfirmBox) lastConfirmBox.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') document.getElementById('btn-pin-create').click();
     });
 })();
