@@ -45,6 +45,7 @@ class YNJ_Checkout {
             'food'          => [ 'label' => 'Food Aid',             'icon' => '🍞' ],
             'emergency'     => [ 'label' => 'Emergency Relief',     'icon' => '🚨' ],
             'masjid_build'  => [ 'label' => 'Build a Masjid',       'icon' => '🕌' ],
+            'sadaqah'       => [ 'label' => 'Purify Your Rizq',     'icon' => '💰' ],
         ];
     }
 

@@ -602,6 +602,97 @@ if ( $mosque && is_user_logged_in() && class_exists( 'YNJ_Mosques' ) ) {
     <button type="button" onclick="ynjPostGratitude()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;border-radius:14px;font-size:14px;font-weight:700;color:#9d174d;cursor:pointer;font-family:inherit;margin-bottom:10px;">💖 <?php esc_html_e( 'Thank Your Mosque', 'yourjannah' ); ?></button>
     <?php endif; ?>
 
+    <!-- ═══ PURIFY YOUR RIZQ — Daily sadaqah habit ═══ -->
+    <?php if ( $mosque && is_user_logged_in() ) :
+        $_sadaqah_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+        // Check if user donated sadaqah today (donations table)
+        $_sadaqah_done_today = false;
+        $_sadaqah_streak = 0;
+        if ( $_sadaqah_uid && class_exists( 'YNJ_DB' ) ) {
+            global $wpdb;
+            $dt = YNJ_DB::table( 'donations' );
+            $_sadaqah_done_today = (bool) $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(*) FROM $dt WHERE donor_email = %s AND fund_type = 'sadaqah' AND status = 'succeeded' AND DATE(created_at) = CURDATE()",
+                $wp_user->user_email ?? ''
+            ) );
+            // Sadaqah streak (consecutive days)
+            $sadaqah_dates = $wpdb->get_col( $wpdb->prepare(
+                "SELECT DISTINCT DATE(created_at) AS d FROM $dt WHERE donor_email = %s AND fund_type = 'sadaqah' AND status = 'succeeded' ORDER BY d DESC LIMIT 120",
+                $wp_user->user_email ?? ''
+            ) );
+            $expected = date( 'Y-m-d' );
+            foreach ( $sadaqah_dates as $sd ) {
+                if ( $sd === $expected ) { $_sadaqah_streak++; $expected = date( 'Y-m-d', strtotime( "$expected -1 day" ) ); }
+                elseif ( $_sadaqah_streak === 0 && $sd === date( 'Y-m-d', strtotime( '-1 day' ) ) ) { $_sadaqah_streak = 1; $expected = date( 'Y-m-d', strtotime( "$sd -1 day" ) ); }
+                else break;
+            }
+        }
+    ?>
+    <div id="purify-rizq" class="ynj-card" style="padding:16px;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:2px solid #6ee7b7;<?php if ( $_sadaqah_done_today ) echo 'display:none;'; ?>">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div>
+                <div style="font-size:15px;font-weight:800;color:#065f46;">&#x1F4B0; <?php esc_html_e( 'Purify Your Rizq', 'yourjannah' ); ?></div>
+                <div style="font-size:12px;color:#047857;"><?php esc_html_e( 'A small sadaqah each day cleanses your wealth', 'yourjannah' ); ?></div>
+            </div>
+            <?php if ( $_sadaqah_streak > 0 ) : ?>
+            <div style="text-align:center;background:#065f46;color:#fff;border-radius:12px;padding:4px 10px;">
+                <div style="font-size:16px;font-weight:800;">&#x1F525; <?php echo (int) $_sadaqah_streak; ?></div>
+                <div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;"><?php esc_html_e( 'days', 'yourjannah' ); ?></div>
+            </div>
+            <?php endif; ?>
+        </div>
+        <div style="display:flex;gap:8px;">
+            <?php foreach ( [ 100 => '£1', 300 => '£3', 500 => '£5' ] as $pence => $label ) : ?>
+            <button onclick="ynjPurifySadaqah(<?php echo $pence; ?>)" style="flex:1;padding:12px 0;border-radius:12px;border:2px solid #10b981;background:#fff;color:#065f46;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;">
+                <?php echo esc_html( $label ); ?>
+            </button>
+            <?php endforeach; ?>
+        </div>
+        <p style="font-size:11px;color:#047857;margin:8px 0 0;text-align:center;">
+            <?php esc_html_e( 'Distributed to dawah, masjid building & international aid', 'yourjannah' ); ?>
+        </p>
+    </div>
+    <?php if ( $_sadaqah_done_today ) : ?>
+    <div class="ynj-card" style="padding:14px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;text-align:center;">
+        <div style="font-size:14px;font-weight:700;color:#166534;">&#x2705; <?php esc_html_e( 'Sadaqah given today — Barakallahu feek!', 'yourjannah' ); ?></div>
+        <?php if ( $_sadaqah_streak > 1 ) : ?>
+        <div style="font-size:12px;color:#15803d;margin-top:4px;">&#x1F525; <?php printf( esc_html__( '%d day streak — keep it going!', 'yourjannah' ), $_sadaqah_streak ); ?></div>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+    <?php endif; ?>
+
+    <script>
+    function ynjPurifySadaqah(amountPence) {
+        const btn = event.currentTarget;
+        btn.disabled = true;
+        btn.textContent = '...';
+        fetch('<?php echo esc_url( rest_url( 'ynj/v1/checkout/donate' ) ); ?>', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': '<?php echo wp_create_nonce( 'wp_rest' ); ?>' },
+            body: JSON.stringify({
+                amount_pence: amountPence,
+                mosque_id: <?php echo (int) $mosque->id; ?>,
+                fund_type: 'sadaqah',
+                name: <?php echo wp_json_encode( wp_get_current_user()->display_name ); ?>,
+                email: <?php echo wp_json_encode( wp_get_current_user()->user_email ); ?>,
+                cause: 'sadaqah'
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                btn.disabled = false;
+                btn.textContent = '£' + (amountPence / 100);
+                alert(data.error || 'Something went wrong');
+            }
+        })
+        .catch(() => { btn.disabled = false; btn.textContent = '£' + (amountPence / 100); });
+    }
+    </script>
+
     <!-- Hadith -->
     <p class="ynj-hadith" id="hadith-line">
         <em>&ldquo;<?php esc_html_e( 'Prayer in congregation is twenty-seven times more virtuous than prayer offered alone.', 'yourjannah' ); ?>&rdquo;</em>
