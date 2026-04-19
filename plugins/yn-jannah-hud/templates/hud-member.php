@@ -71,7 +71,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
         <!-- Cart -->
         <button type="button" class="ynj-hud__cart" id="hud-cart-btn"
-                onclick="window.location.href='<?php echo esc_url( home_url( '/checkout/' ) ); ?>'" style="display:none;">
+                onclick="ynjCartDrawerToggle()" style="display:none;">
             &#x1F6D2;<span class="ynj-hud__cart-badge" id="hud-cart-badge">0</span>
         </button>
 

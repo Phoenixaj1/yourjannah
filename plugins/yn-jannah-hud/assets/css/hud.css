@@ -110,6 +110,36 @@
 }
 
 /* ════════════════════════════════════════════
+   CART DRAWER — slide-in side panel
+   ════════════════════════════════════════════ */
+.ynj-cart-backdrop{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10002;background:rgba(10,22,40,.5);backdrop-filter:blur(3px);}
+.ynj-cart-drawer{position:fixed;top:0;right:-380px;width:370px;max-width:90vw;height:100vh;z-index:10003;background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,.15);display:flex;flex-direction:column;transition:right .3s ease-out;overflow:hidden;}
+.ynj-cart-drawer--open{right:0;}
+.ynj-cart-drawer__header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #f0f0f0;flex-shrink:0;}
+.ynj-cart-drawer__header h3{font-size:18px;font-weight:800;color:#1a1a2e;}
+.ynj-cart-drawer__close{background:none;border:none;font-size:28px;color:#999;cursor:pointer;padding:4px 8px;line-height:1;border-radius:6px;}
+.ynj-cart-drawer__close:hover{background:#f5f5f5;color:#333;}
+.ynj-cart-drawer__empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 20px;color:#666;font-size:14px;font-weight:600;}
+.ynj-cart-drawer__items{flex:1;overflow-y:auto;padding:12px 20px;-webkit-overflow-scrolling:touch;}
+.ynj-cart-drawer__item{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #f0f0f0;}
+.ynj-cart-drawer__item:last-child{border-bottom:none;}
+.ynj-cart-drawer__item-icon{font-size:20px;flex-shrink:0;}
+.ynj-cart-drawer__item-info{flex:1;min-width:0;}
+.ynj-cart-drawer__item-label{font-size:14px;font-weight:700;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ynj-cart-drawer__item-sub{font-size:11px;color:#999;margin-top:1px;}
+.ynj-cart-drawer__item-price{font-size:15px;font-weight:800;color:#287e61;white-space:nowrap;}
+.ynj-cart-drawer__item-remove{background:none;border:none;color:#ccc;font-size:16px;cursor:pointer;padding:4px;line-height:1;flex-shrink:0;}
+.ynj-cart-drawer__item-remove:hover{color:#dc2626;}
+.ynj-cart-drawer__subtotal{display:flex;justify-content:space-between;padding:14px 20px;border-top:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#287e61;flex-shrink:0;}
+.ynj-cart-drawer__subtotal span:last-child{font-size:16px;font-weight:900;}
+.ynj-cart-drawer__cta{padding:12px 20px 20px;flex-shrink:0;}
+.ynj-cart-drawer__btn{display:block;width:100%;padding:16px;background:linear-gradient(135deg,#ED1C6C,#d4175f);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;font-family:'Inter',system-ui,sans-serif;text-align:center;text-decoration:none;box-shadow:0 4px 14px rgba(237,28,108,.3);transition:all .15s;}
+.ynj-cart-drawer__btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(237,28,108,.4);}
+@media(max-width:480px){
+    .ynj-cart-drawer{width:100%;max-width:100vw;right:-100%;}
+}
+
+/* ════════════════════════════════════════════
    SACRED DHIKR POPUP — The doorway to the Divine
    ════════════════════════════════════════════ */
 .ynj-hud-popup{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10003;display:flex;align-items:flex-start;justify-content:center;padding-top:50px;background:rgba(10,22,40,.7);backdrop-filter:blur(6px);}

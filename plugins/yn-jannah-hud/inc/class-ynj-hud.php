@@ -22,6 +22,9 @@ class YNJ_HUD {
             include YNJ_HUD_DIR . 'templates/hud-popups.php';
         }
 
+        // Cart drawer (both guest + member)
+        include YNJ_HUD_DIR . 'templates/cart-drawer.php';
+
         // Mosque selector modal (both guest + member)
         include YNJ_HUD_DIR . 'templates/mosque-modal.php';
 
