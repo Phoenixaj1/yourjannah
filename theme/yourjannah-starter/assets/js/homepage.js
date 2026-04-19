@@ -1038,26 +1038,62 @@
                 var html = '';
                 var adIdx = Math.floor(Math.random() * Math.max(1, sponsors.length));
                 function sponsorTier(fee) {
-                    if (fee >= 10000) return {icon:'🥇',label:'Gold Sponsor',bg:'linear-gradient(135deg,#fef3c7,#fde68a)',border:'#f59e0b',color:'#92400e'};
-                    if (fee >= 5000) return {icon:'🥈',label:'Silver Sponsor',bg:'linear-gradient(135deg,#f1f5f9,#e2e8f0)',border:'#94a3b8',color:'#475569'};
-                    return {icon:'🥉',label:'Bronze Sponsor',bg:'linear-gradient(135deg,#fef2f2,#fce8e8)',border:'#d97706',color:'#78350f'};
+                    if (fee >= 10000) return {
+                        label:'Gold Sponsor',
+                        ribbon:'background:linear-gradient(135deg,#d4a017 0%,#f5c842 50%,#d4a017 100%);color:#3d2c00;',
+                        card:'background:linear-gradient(165deg,#fef9e7 0%,#fdf5d6 40%,#fff8e1 100%);border:2px solid #d4a017;box-shadow:0 4px 20px rgba(212,160,23,.25),inset 0 1px 0 rgba(255,255,255,.8);',
+                        text:'color:#6b4f00;',
+                        logo:'background:linear-gradient(135deg,#d4a017,#f5c842);',
+                        freq:1 /* show every 2 items */
+                    };
+                    if (fee >= 5000) return {
+                        label:'Silver Sponsor',
+                        ribbon:'background:linear-gradient(135deg,#8e99a4 0%,#c0c7ce 50%,#8e99a4 100%);color:#1a2530;',
+                        card:'background:linear-gradient(165deg,#f5f7f9 0%,#eef1f4 40%,#f8f9fb 100%);border:2px solid #a0aab4;box-shadow:0 4px 16px rgba(160,170,180,.2),inset 0 1px 0 rgba(255,255,255,.9);',
+                        text:'color:#374151;',
+                        logo:'background:linear-gradient(135deg,#8e99a4,#c0c7ce);',
+                        freq:2 /* show every 4 items */
+                    };
+                    return {
+                        label:'Bronze Sponsor',
+                        ribbon:'background:linear-gradient(135deg,#b87333 0%,#daa06d 50%,#b87333 100%);color:#3d1f00;',
+                        card:'background:linear-gradient(165deg,#fdf4ec 0%,#faebd7 40%,#fef6ee 100%);border:2px solid #cd7f32;box-shadow:0 4px 14px rgba(205,127,50,.15),inset 0 1px 0 rgba(255,255,255,.8);',
+                        text:'color:#78350f;',
+                        logo:'background:linear-gradient(135deg,#b87333,#daa06d);',
+                        freq:3 /* show every 6 items */
+                    };
                 }
+
+                // Sort sponsors by fee (highest first = gold gets most exposure)
+                sponsors.sort(function(a,b){ return (b.monthly_fee_pence||0) - (a.monthly_fee_pence||0); });
+
                 for (var fi = 0; fi < items.length; fi++) {
                     html += renderFeedCard(items[fi]);
-                    if (sponsors.length > 0 && (fi + 1) % 2 === 0) {
+
+                    // Insert sponsor plaques — gold more frequent than silver, silver more than bronze
+                    if (sponsors.length > 0) {
                         var sp = sponsors[adIdx % sponsors.length];
-                        adIdx++;
                         var tier = sponsorTier(sp.monthly_fee_pence || 0);
-                        html += '<div style="border-radius:14px;padding:14px;margin-bottom:10px;background:' + tier.bg + ';border:1px solid ' + tier.border + ';">' +
-                            '<div style="display:flex;align-items:center;gap:10px;">' +
-                                '<div style="width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">' + tier.icon + '</div>' +
-                                '<div style="flex:1;min-width:0;">' +
-                                    '<div style="font-size:14px;font-weight:800;color:' + tier.color + ';">' + (sp.business_name || 'Sponsor') + '</div>' +
-                                    '<div style="font-size:11px;color:' + tier.color + ';opacity:.7;">' + (sp.category || 'Business') + '</div>' +
+                        // Show based on frequency: gold=every 2, silver=every 4, bronze=every 6
+                        if ((fi + 1) % (tier.freq * 2) === 0) {
+                            adIdx++;
+                            var initial = (sp.business_name || 'S').charAt(0).toUpperCase();
+                            var logoImg = sp.logo_url
+                                ? '<img src="' + sp.logo_url + '" style="width:100%;height:100%;object-fit:cover;border-radius:10px;" alt="">'
+                                : '<span style="font-size:18px;font-weight:900;color:#fff;">' + initial + '</span>';
+
+                            html += '<a href="/mosque/' + sponsorSlug + '/sponsors" style="text-decoration:none;display:block;border-radius:16px;padding:0;margin-bottom:10px;overflow:hidden;' + tier.card + 'transition:transform .2s,box-shadow .2s;" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'\'">' +
+                                '<div style="padding:6px 14px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;text-shadow:0 1px 0 rgba(255,255,255,.3);' + tier.ribbon + '">' + tier.label + '</div>' +
+                                '<div style="display:flex;align-items:center;gap:12px;padding:14px 16px;">' +
+                                    '<div style="width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;' + tier.logo + '">' + logoImg + '</div>' +
+                                    '<div style="flex:1;min-width:0;">' +
+                                        '<div style="font-size:15px;font-weight:800;' + tier.text + '">' + (sp.business_name || 'Sponsor') + '</div>' +
+                                        '<div style="font-size:11px;opacity:.7;' + tier.text + '">' + (sp.category || 'Business') + '</div>' +
+                                    '</div>' +
+                                    '<div style="font-size:11px;font-weight:700;' + tier.text + 'white-space:nowrap;">View →</div>' +
                                 '</div>' +
-                                '<a href="/mosque/' + sponsorSlug + '/sponsors" style="font-size:11px;font-weight:700;color:' + tier.color + ';text-decoration:none;white-space:nowrap;">View →</a>' +
-                            '</div>' +
-                        '</div>';
+                            '</a>';
+                        }
                     }
                 }
                 el.innerHTML = '<div class="ynj-feed">' + html + '</div>';
