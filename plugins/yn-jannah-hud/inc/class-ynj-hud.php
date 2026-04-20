@@ -121,10 +121,15 @@ class YNJ_HUD {
             ) );
         }
 
-        // Dhikr done flags (for popup)
-        if ( $ynj_uid && ! empty( $data['five_dhikr'] ) ) {
+        // Dhikr done flags (from user meta — persists reliably)
+        if ( $wp_uid && ! empty( $data['five_dhikr'] ) ) {
+            $today = date( 'Y-m-d' );
+            $done_json = get_user_meta( $wp_uid, 'ynj_dhikr_done_' . $today, true );
+            $done_arr  = $done_json ? json_decode( $done_json, true ) : [];
+            if ( ! is_array( $done_arr ) ) $done_arr = [];
+
             for ( $i = 0; $i < 5; $i++ ) {
-                $data['done_flags'][ $i ] = (bool) get_transient( 'ynj_dhikr_' . $ynj_uid . '_' . date( 'Y-m-d' ) . '_' . $i );
+                $data['done_flags'][ $i ] = in_array( $i, $done_arr );
                 if ( $data['done_flags'][ $i ] ) $data['done_count']++;
             }
             $data['all_done'] = $data['done_count'] >= 5;

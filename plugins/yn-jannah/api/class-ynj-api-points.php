@@ -1017,18 +1017,23 @@ class YNJ_API_Points {
         // Set 1-minute cooldown
         set_transient( $cooldown_key, 1, 60 );
 
-        // Track first completion of each of the 5 daily dhikr (for all-5 bonus)
-        $first_key = 'ynj_dhikr_' . $ynj_uid . '_' . $today . '_' . $index;
-        $is_first = ! get_transient( $first_key );
-        if ( $is_first ) {
-            set_transient( $first_key, 1, DAY_IN_SECONDS );
+        // Track first completion of each of the 5 daily dhikr (persistent via user meta)
+        $wp_uid = get_current_user_id();
+        $meta_key = 'ynj_dhikr_done_' . $today;
+        $done_arr = $wp_uid ? json_decode( get_user_meta( $wp_uid, $meta_key, true ) ?: '[]', true ) : [];
+        if ( ! is_array( $done_arr ) ) $done_arr = [];
+        $is_first = ! in_array( $index, $done_arr );
+        if ( $is_first && $wp_uid ) {
+            $done_arr[] = $index;
+            update_user_meta( $wp_uid, $meta_key, wp_json_encode( array_unique( $done_arr ) ) );
         }
 
+        // Also set transient for backward compat
+        $first_key = 'ynj_dhikr_' . $ynj_uid . '_' . $today . '_' . $index;
+        if ( $is_first ) set_transient( $first_key, 1, DAY_IN_SECONDS );
+
         // Count how many of 5 unique dhikr are done today
-        $done_count = 0;
-        for ( $i = 0; $i < 5; $i++ ) {
-            if ( get_transient( 'ynj_dhikr_' . $ynj_uid . '_' . $today . '_' . $i ) ) $done_count++;
-        }
+        $done_count = count( array_unique( $done_arr ) );
 
         $total = (int) $wpdb->get_var( $wpdb->prepare(
             "SELECT total_points FROM " . YNJ_DB::table( 'users' ) . " WHERE id = %d", $ynj_uid
