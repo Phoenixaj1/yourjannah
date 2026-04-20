@@ -669,14 +669,23 @@ function ynj_plugin_active() {
 // XML SITEMAP — Dynamic mosque sitemap for Google
 // ================================================================
 
-add_action( 'init', function() {
-    add_rewrite_rule( '^sitemap-mosques\.xml$', 'index.php?ynj_sitemap=mosques', 'top' );
-    add_rewrite_tag( '%ynj_sitemap%', '([a-z]+)' );
-} );
-
+// Intercept sitemap URLs directly — no rewrite rules needed
 add_action( 'template_redirect', function() {
-    $sitemap = get_query_var( 'ynj_sitemap' );
-    if ( ! $sitemap ) return;
+    $uri = trim( $_SERVER['REQUEST_URI'] ?? '', '/' );
+    if ( $uri === 'sitemap-mosques.xml' ) $sitemap = 'mosques';
+    elseif ( $uri === 'sitemap-index.xml' ) $sitemap = 'index';
+    else return;
+
+    // Handle index sitemap
+    if ( $sitemap === 'index' ) {
+        header( 'Content-Type: application/xml; charset=utf-8' );
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+        echo "  <sitemap>\n    <loc>" . esc_url( home_url( '/sitemap-mosques.xml' ) ) . "</loc>\n    <lastmod>" . date( 'Y-m-d' ) . "</lastmod>\n  </sitemap>\n";
+        echo "  <sitemap>\n    <loc>" . esc_url( home_url( '/wp-sitemap.xml' ) ) . "</loc>\n    <lastmod>" . date( 'Y-m-d' ) . "</lastmod>\n  </sitemap>\n";
+        echo '</sitemapindex>';
+        exit;
+    }
 
     if ( ! class_exists( 'YNJ_DB' ) ) { status_header( 503 ); exit; }
 
@@ -729,29 +738,7 @@ add_filter( 'robots_txt', function( $output, $public ) {
     return $output;
 }, 10, 2 );
 
-// Also add a sitemap index that includes our mosque sitemap
-add_action( 'init', function() {
-    add_rewrite_rule( '^sitemap-index\.xml$', 'index.php?ynj_sitemap=index', 'top' );
-} );
-
-add_action( 'template_redirect', function() {
-    if ( get_query_var( 'ynj_sitemap' ) !== 'index' ) return;
-
-    header( 'Content-Type: application/xml; charset=utf-8' );
-    echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-    echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
-    echo "  <sitemap>\n";
-    echo "    <loc>" . esc_url( home_url( '/sitemap-mosques.xml' ) ) . "</loc>\n";
-    echo "    <lastmod>" . date( 'Y-m-d' ) . "</lastmod>\n";
-    echo "  </sitemap>\n";
-    // WordPress default sitemap
-    echo "  <sitemap>\n";
-    echo "    <loc>" . esc_url( home_url( '/wp-sitemap.xml' ) ) . "</loc>\n";
-    echo "    <lastmod>" . date( 'Y-m-d' ) . "</lastmod>\n";
-    echo "  </sitemap>\n";
-    echo '</sitemapindex>';
-    exit;
-}, 5 );
+// (Index sitemap handled in the same template_redirect above)
 
 // Remove WP site icon in favour of our SVG favicon
 add_action( 'wp_head', function() { remove_action( 'wp_head', 'wp_site_icon', 99 ); }, 1 );
