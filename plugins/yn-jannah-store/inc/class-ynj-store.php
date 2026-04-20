@@ -26,7 +26,7 @@ class YNJ_Store {
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:<?php echo $is_scroll ? '10' : '12'; ?>px;">
                 <div>
                     <div style="font-size:15px;font-weight:800;color:#1a1a1a;">📣 <?php esc_html_e( 'Share Glad Tidings', 'yourjannah' ); ?></div>
-                    <div style="font-size:12px;color:#666;"><?php esc_html_e( 'Announce to the congregation — £5', 'yourjannah' ); ?></div>
+                    <div style="font-size:12px;color:#666;"><?php esc_html_e( 'Announce to the congregation — £5 · proceeds help the masjid', 'yourjannah' ); ?></div>
                 </div>
             </div>
             <?php if ( $is_scroll ) : ?>

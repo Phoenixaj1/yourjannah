@@ -106,29 +106,60 @@ if ( $_nb_id && class_exists( 'YNJ_DB' ) ) {
         <button type="button" class="ynj-hud-popup__close" onclick="ynjSuperchatClose()">&times;</button>
         <div id="ynj-sc-icon" style="font-size:48px;margin:8px 0 6px;"></div>
         <h3 id="ynj-sc-title" style="font-size:20px;font-weight:900;color:#1a1a2e;margin-bottom:4px;"></h3>
-        <p id="ynj-sc-desc" style="font-size:12px;color:#666;margin-bottom:16px;"></p>
-        <p style="font-size:11px;color:#999;margin-bottom:16px;">£5 — All proceeds go to the Masjid and Islamic Projects</p>
+        <p id="ynj-sc-desc" style="font-size:12px;color:#666;margin-bottom:14px;"></p>
+        <div style="display:flex;gap:6px;margin-bottom:10px;justify-content:center;" id="ynj-sc-amounts">
+            <button type="button" onclick="ynjScSetAmt(500)" class="ynj-sc-amt ynj-sc-amt--active" style="padding:8px 14px;border:2px solid #f59e0b;border-radius:10px;background:#fffbeb;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#92400e;">£5</button>
+            <button type="button" onclick="ynjScSetAmt(1000)" class="ynj-sc-amt" style="padding:8px 14px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">£10</button>
+            <button type="button" onclick="ynjScSetAmt(2000)" class="ynj-sc-amt" style="padding:8px 14px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">£20</button>
+            <button type="button" onclick="ynjScSetAmt(5000)" class="ynj-sc-amt" style="padding:8px 14px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">£50</button>
+        </div>
+        <input type="number" id="ynj-sc-custom" min="1" placeholder="Or enter any amount (£)" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;text-align:center;font-family:inherit;margin-bottom:12px;box-sizing:border-box;">
+        <p style="font-size:11px;color:#999;margin-bottom:14px;">🔒 Amounts are hidden — no one will see how much you gave.<br>All proceeds help the masjid.</p>
         <button type="button" id="ynj-sc-send" onclick="ynjSuperchatSend()" style="width:100%;padding:14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(245,158,11,.3);transition:all .15s;">Share with the Congregation — £5</button>
     </div>
 </div>
 <script>
-var _scKey='',_scTitle='',_scIcon='';
+var _scKey='',_scTitle='',_scIcon='',_scAmt=500;
+window.ynjScSetAmt = function(p) {
+    _scAmt = p;
+    document.getElementById('ynj-sc-custom').value = '';
+    document.querySelectorAll('.ynj-sc-amt').forEach(function(b){
+        var bp = parseInt(b.textContent.replace('£','')) * 100;
+        b.style.borderColor = bp===p ? '#f59e0b' : '#e5e7eb';
+        b.style.background = bp===p ? '#fffbeb' : '#fff';
+        b.style.color = bp===p ? '#92400e' : '';
+        b.classList.toggle('ynj-sc-amt--active', bp===p);
+    });
+    document.getElementById('ynj-sc-send').textContent = 'Share with the Congregation — \u00A3' + (p/100);
+};
+document.getElementById('ynj-sc-custom').addEventListener('input', function(){
+    var v = parseFloat(this.value);
+    if (v > 0) {
+        _scAmt = Math.round(v * 100);
+        document.querySelectorAll('.ynj-sc-amt').forEach(function(b){ b.style.borderColor='#e5e7eb'; b.style.background='#fff'; b.style.color=''; b.classList.remove('ynj-sc-amt--active'); });
+        document.getElementById('ynj-sc-send').textContent = 'Share with the Congregation — \u00A3' + v;
+    }
+});
 window.ynjSuperchatOpen = function(key, title, icon, desc) {
-    _scKey = key; _scTitle = title; _scIcon = icon;
+    _scKey = key; _scTitle = title; _scIcon = icon; _scAmt = 500;
     document.getElementById('ynj-sc-icon').textContent = icon;
     document.getElementById('ynj-sc-title').textContent = title;
     document.getElementById('ynj-sc-desc').textContent = desc || '';
+    document.getElementById('ynj-sc-custom').value = '';
+    document.getElementById('ynj-sc-send').textContent = 'Share with the Congregation — \u00A35';
+    ynjScSetAmt(500);
     document.getElementById('ynj-superchat-popup').style.display = 'flex';
 };
 window.ynjSuperchatClose = function() {
     document.getElementById('ynj-superchat-popup').style.display = 'none';
 };
 window.ynjSuperchatSend = function() {
+    if (_scAmt < 100) { alert('Minimum is \u00A31'); return; }
     document.getElementById('ynj-superchat-popup').style.display = 'none';
     if (typeof ynjNiyyahBarOpen === 'function') {
         ynjNiyyahBarOpen({
             mode: 'store', item_type: 'store', icon: _scIcon,
-            amount_pence: 500,
+            amount_pence: _scAmt,
             item_label: _scTitle,
             fund_type: _scKey,
             frequency: 'once',
@@ -136,7 +167,6 @@ window.ynjSuperchatSend = function() {
         });
     }
 };
-// Legacy alias
 window.ynjSuperchat = function(key, title, icon, desc) { ynjSuperchatOpen(key, title, icon, desc); };
 </script>
 
