@@ -660,8 +660,24 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
 
 
     <!-- ═══ GRATITUDE ═══ -->
-    <?php if ( $mosque && is_user_logged_in() ) : ?>
-    <button type="button" onclick="ynjPostGratitude()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;border-radius:14px;font-size:14px;font-weight:700;color:#9d174d;cursor:pointer;font-family:inherit;margin-bottom:10px;">💖 <?php esc_html_e( 'Thank Your Mosque', 'yourjannah' ); ?></button>
+    <?php if ( $mosque ) :
+        $_grat_count = 0;
+        $_grat_done_today = false;
+        if ( class_exists( 'YNJ_DB' ) ) {
+            global $wpdb;
+            $gt = YNJ_DB::table( 'gratitude_posts' );
+            $_grat_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $gt WHERE mosque_id = %d", $mosque->id ) );
+            if ( is_user_logged_in() ) {
+                $ynj_uid_g = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+                if ( $ynj_uid_g ) {
+                    $_grat_done_today = (bool) $wpdb->get_var( $wpdb->prepare(
+                        "SELECT COUNT(*) FROM $gt WHERE user_id = %d AND DATE(created_at) = CURDATE()", $ynj_uid_g
+                    ) );
+                }
+            }
+        }
+    ?>
+    <button type="button" id="gratitude-btn" onclick="ynjPostGratitude()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:<?php echo $_grat_done_today ? 'linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac' : 'linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4'; ?>;border-radius:14px;font-size:14px;font-weight:700;color:<?php echo $_grat_done_today ? '#166534' : '#9d174d'; ?>;cursor:pointer;font-family:inherit;margin-bottom:10px;transition:all .2s;"><?php echo $_grat_done_today ? '✅' : '💖'; ?> <?php esc_html_e( 'Thank Your Mosque', 'yourjannah' ); ?> <span style="font-size:12px;opacity:.7;margin-left:4px;" id="gratitude-count"><?php echo $_grat_count ? number_format( $_grat_count ) : ''; ?></span></button>
     <?php endif; ?>
 
     <!-- ═══ PURIFY YOUR RIZQ — Daily sadaqah habit ═══ -->
@@ -1166,14 +1182,29 @@ if (window.ynjPreloaded.jumuahSlots && window.ynjPreloaded.jumuahSlots.length > 
     if (!mosqueId) return;
     var nonce = function(){ return typeof wpApiSettings !== 'undefined' ? wpApiSettings.nonce : ''; };
     window.ynjPostGratitude = function() {
-        var btn = event ? event.target : null;
-        if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+        var btn = document.getElementById('gratitude-btn');
+        if (!btn || btn.disabled) return;
+        btn.disabled = true;
         fetch('/wp-json/ynj/v1/gratitude/create', {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce() },
             credentials: 'same-origin', body: JSON.stringify({ message: 'JazakAllah Khayr', mosque_id: mosqueId })
         }).then(function(r){ return r.json(); }).then(function(d){
-            if (btn) { btn.textContent = d.ok ? '💖 JazakAllah Khayr sent!' : '💖 Thank Your Mosque'; btn.disabled = false; }
-        }).catch(function(){ if (btn) { btn.textContent = '💖 Thank Your Mosque'; btn.disabled = false; } });
+            if (d.ok) {
+                // Update count
+                var countEl = document.getElementById('gratitude-count');
+                if (countEl && d.total) countEl.textContent = d.total.toLocaleString();
+                // Switch to green done state
+                btn.style.background = 'linear-gradient(135deg,#f0fdf4,#dcfce7)';
+                btn.style.borderColor = '#86efac';
+                btn.style.color = '#166534';
+                btn.innerHTML = '✅ JazakAllah Khayr!' + (d.points ? ' <span style="font-size:12px;opacity:.7;">+' + d.points + ' pts</span>' : '') + ' <span style="font-size:12px;opacity:.7;margin-left:4px;">' + (d.total || '') + '</span>';
+                // Update HUD points
+                var ptsEl = document.getElementById('hud-pts-num');
+                if (ptsEl && d.total_points) ptsEl.textContent = d.total_points.toLocaleString();
+            } else {
+                btn.disabled = false;
+            }
+        }).catch(function(){ btn.disabled = false; });
     };
 })();
 

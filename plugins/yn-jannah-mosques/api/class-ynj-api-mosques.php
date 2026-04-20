@@ -496,32 +496,42 @@ class YNJ_API_Mosques {
     }
 
     public static function create_gratitude( \WP_REST_Request $request ) {
-        $message = sanitize_text_field( $request->get_param( 'message' ) ?: '' );
-        if ( ! $message || strlen( $message ) < 3 ) {
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Please write a message' ], 400 );
-        }
-
         $ynj_uid   = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
         $mosque_id = (int) ( $request->get_param( 'mosque_id' ) ?: get_user_meta( get_current_user_id(), 'ynj_mosque_id', true ) );
-        if ( ! $ynj_uid ) return new \WP_REST_Response( [ 'ok' => false ], 400 );
-
-        // Rate limit: 1 per day
-        global $wpdb;
-        $gt = YNJ_DB::table( 'gratitude_posts' );
-        $today = (int) $wpdb->get_var( $wpdb->prepare(
-            "SELECT COUNT(*) FROM $gt WHERE user_id = %d AND DATE(created_at) = CURDATE()", $ynj_uid
-        ) );
-        if ( $today >= 1 ) {
-            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'You can post one gratitude per day' ], 429 );
+        if ( ! $ynj_uid || ! $mosque_id ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Please sign in first.' ], 400 );
         }
 
+        global $wpdb;
+        $gt = YNJ_DB::table( 'gratitude_posts' );
+
+        // Rate limit: 1 per day
+        $today_count = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM $gt WHERE user_id = %d AND DATE(created_at) = CURDATE()", $ynj_uid
+        ) );
+        if ( $today_count >= 1 ) {
+            // Already thanked today — return count so UI updates
+            $total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $gt WHERE mosque_id = %d", $mosque_id ) );
+            return new \WP_REST_Response( [ 'ok' => true, 'already' => true, 'total' => $total ] );
+        }
+
+        $message = sanitize_text_field( $request->get_param( 'message' ) ?: 'JazakAllah Khayr' );
         $wpdb->insert( $gt, [
             'mosque_id' => $mosque_id,
             'user_id'   => $ynj_uid,
             'message'   => mb_substr( $message, 0, 300 ),
         ] );
 
-        return new \WP_REST_Response( [ 'ok' => true ] );
+        // Award 25 points for thanking the masjid
+        $ut = YNJ_DB::table( 'users' );
+        $wpdb->query( $wpdb->prepare(
+            "UPDATE $ut SET total_points = total_points + 25 WHERE id = %d", $ynj_uid
+        ) );
+        $new_pts = (int) $wpdb->get_var( $wpdb->prepare( "SELECT total_points FROM $ut WHERE id = %d", $ynj_uid ) );
+
+        $total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $gt WHERE mosque_id = %d", $mosque_id ) );
+
+        return new \WP_REST_Response( [ 'ok' => true, 'total' => $total, 'points' => 25, 'total_points' => $new_pts ] );
     }
 
     // ================================================================
