@@ -1265,7 +1265,7 @@ async function ynjSetPrimary(mosqueId) {
 
 // Auth modal now rendered by HUD plugin (auth-modal.php)
 function ynjShowJoinLogin() {
-    if (typeof ynjAuthModalOpen === 'function') ynjAuthModalOpen();
+    if (typeof ynjAuthModalOpen === 'function') ynjAuthModalOpen({mosque_slug:'<?php echo esc_js($slug); ?>',mosque_name:'<?php echo esc_js($mosque_name); ?>'});
 }
 </script>
 

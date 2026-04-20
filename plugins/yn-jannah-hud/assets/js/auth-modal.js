@@ -13,7 +13,8 @@
     var API = (typeof ynjHudData !== 'undefined' && ynjHudData.apiUrl) ? ynjHudData.apiUrl : '/wp-json/ynj/v1/';
 
     // ── Open / Close ──
-    window.ynjAuthModalOpen = function() {
+    // opts: { mosque_slug, mosque_name } — prefill mosque, skip GPS
+    window.ynjAuthModalOpen = function(opts) {
         var el = document.getElementById('ynj-onboard');
         if (!el) return;
         el.style.display = 'flex';
@@ -23,7 +24,25 @@
         document.getElementById('ob-submit').style.display = 'none';
         document.getElementById('ob-cta-buttons').style.display = '';
         document.getElementById('ob-error').textContent = '';
-        obAutoGps();
+
+        if (opts && opts.mosque_slug && opts.mosque_name) {
+            // Prefill mosque — skip GPS
+            obSelectedSlug = opts.mosque_slug;
+            obSelectedName = opts.mosque_name;
+            localStorage.setItem('ynj_mosque_slug', opts.mosque_slug);
+            localStorage.setItem('ynj_mosque_name', opts.mosque_name);
+            var listEl = document.getElementById('ob-mosque-list');
+            if (listEl) {
+                listEl.innerHTML = '<div style="padding:10px 12px;background:rgba(0,173,239,.2);border-radius:8px;border:2px solid #00ADEF;display:flex;justify-content:space-between;align-items:center;">'
+                    + '<div><div style="font-weight:600;font-size:13px;">' + opts.mosque_name + '</div>'
+                    + '<div style="font-size:11px;opacity:.5;">Your selected masjid</div></div>'
+                    + '<span style="font-size:11px;opacity:.5;">&#x2705;</span></div>';
+            }
+            // Focus email
+            setTimeout(function(){ var e = document.getElementById('ob-email'); if(e) e.focus(); }, 200);
+        } else {
+            obAutoGps();
+        }
     };
     window.ynjAuthModalClose = function() {
         var el = document.getElementById('ynj-onboard');
