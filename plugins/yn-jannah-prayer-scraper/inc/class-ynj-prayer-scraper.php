@@ -47,31 +47,49 @@ class YNJ_Prayer_Scraper {
         preg_match_all( '/<a[^>]+href=["\']([^"\']+)["\'][^>]*>/i', $html, $matches );
         $links = $matches[1] ?? [];
 
-        // Also check for embedded PDFs
-        preg_match_all( '/(?:src|data|href)=["\']([^"\']+\.pdf[^"\']*)["\']/', $html, $pdf_matches );
-        $links = array_merge( $links, $pdf_matches[1] ?? [] );
+        // Also check for embedded PDFs and images
+        preg_match_all( '/(?:src|data|href)=["\']([^"\']+\.(?:pdf|png|jpg|jpeg|webp)[^"\']*)["\']/', $html, $file_matches );
+        $links = array_merge( $links, $file_matches[1] ?? [] );
+
+        // Find images inside the page (timetable images)
+        preg_match_all( '/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $html, $img_matches );
+        $all_imgs = $img_matches[1] ?? [];
 
         // Keywords that indicate a prayer timetable
-        $keywords = [ 'timetable', 'prayer', 'salah', 'salat', 'namaz', 'jumuah', 'jummah', 'jumu', 'ramadan', 'times' ];
+        $keywords = [ 'timetable', 'prayer', 'salah', 'salat', 'namaz', 'jumuah', 'jummah', 'jumu', 'ramadan', 'times', 'iqamah', 'iqama', 'jamat' ];
 
         foreach ( $links as $link ) {
             $link_lower = strtolower( $link );
 
-            // Must be a PDF or link text suggests timetable
-            $is_pdf = strpos( $link_lower, '.pdf' ) !== false;
+            $is_file = (bool) preg_match( '/\.(pdf|png|jpg|jpeg|webp)(\?|$)/i', $link_lower );
             $has_keyword = false;
             foreach ( $keywords as $kw ) {
                 if ( strpos( $link_lower, $kw ) !== false ) { $has_keyword = true; break; }
             }
 
-            if ( $is_pdf || $has_keyword ) {
-                // Resolve relative URLs
+            if ( $is_file || $has_keyword ) {
                 if ( strpos( $link, 'http' ) !== 0 ) {
                     $parsed = parse_url( $website_url );
                     $base = $parsed['scheme'] . '://' . $parsed['host'];
                     $link = $base . '/' . ltrim( $link, '/' );
                 }
                 $found[] = $link;
+            }
+        }
+
+        // Check images with timetable keywords in src/alt
+        foreach ( $all_imgs as $img ) {
+            $img_lower = strtolower( $img );
+            foreach ( $keywords as $kw ) {
+                if ( strpos( $img_lower, $kw ) !== false ) {
+                    if ( strpos( $img, 'http' ) !== 0 ) {
+                        $parsed = parse_url( $website_url );
+                        $base = $parsed['scheme'] . '://' . $parsed['host'];
+                        $img = $base . '/' . ltrim( $img, '/' );
+                    }
+                    $found[] = $img;
+                    break;
+                }
             }
         }
 
@@ -92,9 +110,9 @@ class YNJ_Prayer_Scraper {
     }
 
     /**
-     * Step 2: Download PDF and convert to base64 for Claude API.
+     * Step 2: Download file (PDF or image) and return base64 + media type.
      */
-    private static function download_pdf( $url ) {
+    private static function download_file( $url ) {
         $response = wp_remote_get( $url, [
             'timeout'    => 30,
             'user-agent' => 'YourJannah Prayer Times Bot/1.0',
@@ -106,15 +124,41 @@ class YNJ_Prayer_Scraper {
         if ( $code !== 200 ) return null;
 
         $body = wp_remote_retrieve_body( $response );
-        if ( ! $body || strlen( $body ) > 10 * 1024 * 1024 ) return null; // Max 10MB
+        if ( ! $body || strlen( $body ) > 10 * 1024 * 1024 ) return null;
 
-        return base64_encode( $body );
+        // Detect media type
+        $content_type = wp_remote_retrieve_header( $response, 'content-type' );
+        $url_lower = strtolower( $url );
+
+        if ( strpos( $content_type, 'pdf' ) !== false || strpos( $url_lower, '.pdf' ) !== false ) {
+            $media_type = 'application/pdf';
+            $source_type = 'document';
+        } elseif ( strpos( $content_type, 'png' ) !== false || strpos( $url_lower, '.png' ) !== false ) {
+            $media_type = 'image/png';
+            $source_type = 'image';
+        } elseif ( strpos( $content_type, 'webp' ) !== false || strpos( $url_lower, '.webp' ) !== false ) {
+            $media_type = 'image/webp';
+            $source_type = 'image';
+        } else {
+            $media_type = 'image/jpeg';
+            $source_type = 'image';
+        }
+
+        return [
+            'base64'      => base64_encode( $body ),
+            'media_type'  => $media_type,
+            'source_type' => $source_type,
+        ];
     }
 
     /**
      * Step 3: Send PDF to Claude API for extraction.
      */
-    public static function extract_with_claude( $pdf_base64, $mosque_name ) {
+    public static function extract_with_claude( $file_data, $mosque_name ) {
+        // Accept both old format (string = base64 PDF) and new format (array with base64 + media_type)
+        if ( is_string( $file_data ) ) {
+            $file_data = [ 'base64' => $file_data, 'media_type' => 'application/pdf', 'source_type' => 'document' ];
+        }
         $api_key = self::claude_key();
         if ( ! $api_key ) return [ 'error' => 'Claude API key not set. Add ynj_claude_api_key in WP options.' ];
 
@@ -157,11 +201,11 @@ class YNJ_Prayer_Scraper {
                     'role'    => 'user',
                     'content' => [
                         [
-                            'type'   => 'document',
+                            'type'   => $file_data['source_type'],
                             'source' => [
                                 'type'       => 'base64',
-                                'media_type' => 'application/pdf',
-                                'data'       => $pdf_base64,
+                                'media_type' => $file_data['media_type'],
+                                'data'       => $file_data['base64'],
                             ],
                         ],
                         [
@@ -262,6 +306,56 @@ class YNJ_Prayer_Scraper {
     }
 
     /**
+     * Search Google for a mosque's timetable when their website doesn't have one.
+     */
+    private static function google_search_timetable( $mosque_name, $website ) {
+        $found = [];
+        $query = urlencode( $mosque_name . ' prayer timetable filetype:pdf' );
+        $url = 'https://www.google.com/search?q=' . $query . '&num=5';
+
+        $response = wp_remote_get( $url, [
+            'timeout'    => 10,
+            'user-agent' => 'Mozilla/5.0 (compatible; YourJannah/1.0)',
+            'sslverify'  => false,
+        ] );
+
+        if ( is_wp_error( $response ) ) return $found;
+        $html = wp_remote_retrieve_body( $response );
+
+        // Extract URLs from Google results
+        preg_match_all( '/href="\/url\?q=([^"&]+)/', $html, $matches );
+        foreach ( $matches[1] ?? [] as $result_url ) {
+            $result_url = urldecode( $result_url );
+            $lower = strtolower( $result_url );
+            if ( strpos( $lower, '.pdf' ) !== false || strpos( $lower, 'timetable' ) !== false || strpos( $lower, 'prayer' ) !== false ) {
+                $found[] = $result_url;
+            }
+        }
+
+        // Also try image search
+        $query2 = urlencode( $mosque_name . ' prayer timetable' );
+        $img_url = 'https://www.google.com/search?q=' . $query2 . '&tbm=isch&num=5';
+        $img_response = wp_remote_get( $img_url, [
+            'timeout'    => 10,
+            'user-agent' => 'Mozilla/5.0 (compatible; YourJannah/1.0)',
+            'sslverify'  => false,
+        ] );
+
+        if ( ! is_wp_error( $img_response ) ) {
+            $img_html = wp_remote_retrieve_body( $img_response );
+            // Extract image URLs from Google Images
+            preg_match_all( '/"(https?:\/\/[^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"/', $img_html, $img_matches );
+            foreach ( array_slice( $img_matches[1] ?? [], 0, 3 ) as $img ) {
+                if ( strpos( $img, 'google' ) === false && strpos( $img, 'gstatic' ) === false ) {
+                    $found[] = $img;
+                }
+            }
+        }
+
+        return array_slice( array_unique( $found ), 0, 5 );
+    }
+
+    /**
      * Full pipeline: scrape → extract → save for one mosque.
      */
     public static function process_mosque( $mosque_id ) {
@@ -270,30 +364,40 @@ class YNJ_Prayer_Scraper {
             "SELECT id, name, website FROM " . YNJ_DB::table( 'mosques' ) . " WHERE id = %d", $mosque_id
         ) );
 
-        if ( ! $mosque || ! $mosque->website ) {
-            return [ 'ok' => false, 'error' => 'No website URL for this mosque' ];
+        if ( ! $mosque ) {
+            return [ 'ok' => false, 'error' => 'Mosque not found' ];
         }
 
-        // Step 1: Find timetable URLs
-        $urls = self::find_timetable_urls( $mosque->website );
+        // Step 1: Find timetable URLs on mosque website
+        $urls = [];
+        if ( $mosque->website ) {
+            $urls = self::find_timetable_urls( $mosque->website );
+        }
+
+        // Step 1b: If nothing found on website (or no website), try Google search
         if ( empty( $urls ) ) {
-            return [ 'ok' => false, 'error' => 'No timetable PDFs found on ' . $mosque->website, 'urls_checked' => $mosque->website ];
+            $google_urls = self::google_search_timetable( $mosque->name, $mosque->website ?: '' );
+            $urls = array_merge( $urls, $google_urls );
         }
 
-        // Step 2: Try each URL until we get a valid PDF
-        $pdf_base64 = null;
+        if ( empty( $urls ) ) {
+            return [ 'ok' => false, 'error' => 'No timetable found on website or via Google', 'website' => $mosque->website ];
+        }
+
+        // Step 2: Try each URL until we get a valid file (PDF or image)
+        $file_data = null;
         $used_url = '';
         foreach ( $urls as $url ) {
-            $pdf_base64 = self::download_pdf( $url );
-            if ( $pdf_base64 ) { $used_url = $url; break; }
+            $file_data = self::download_file( $url );
+            if ( $file_data ) { $used_url = $url; break; }
         }
 
-        if ( ! $pdf_base64 ) {
-            return [ 'ok' => false, 'error' => 'Could not download any timetable PDF', 'urls_found' => $urls ];
+        if ( ! $file_data ) {
+            return [ 'ok' => false, 'error' => 'Could not download any timetable file', 'urls_found' => $urls ];
         }
 
         // Step 3: Extract with Claude
-        $data = self::extract_with_claude( $pdf_base64, $mosque->name );
+        $data = self::extract_with_claude( $file_data, $mosque->name );
         if ( isset( $data['error'] ) ) {
             return [ 'ok' => false, 'error' => $data['error'], 'pdf_url' => $used_url ];
         }
@@ -339,9 +443,9 @@ class YNJ_Prayer_Scraper {
         global $wpdb;
         $mt = YNJ_DB::table( 'mosques' );
 
-        $total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $mt WHERE status = 'active' AND website != ''" );
+        $total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $mt WHERE status = 'active'" );
         $mosques = $wpdb->get_results( $wpdb->prepare(
-            "SELECT id, name, website, city FROM $mt WHERE status = 'active' AND website != '' ORDER BY member_count DESC LIMIT %d OFFSET %d",
+            "SELECT id, name, website, city FROM $mt WHERE status = 'active' ORDER BY website != '' DESC, member_count DESC LIMIT %d OFFSET %d",
             $limit, $offset
         ) ) ?: [];
 
