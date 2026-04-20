@@ -10,65 +10,69 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 ?>
 
-<!-- ════ Quick Dhikr Popup — ALL 5 ════ -->
+<!-- ════ Quick Dhikr Popup — ONE AT A TIME ════ -->
 <?php if ( ! empty( $data['five_dhikr'] ) ) : ?>
-<div class="ynj-hud-popup" id="hud-dhikr-popup" style="display:none;">
-    <div class="ynj-hud-popup__card" id="hud-popup-card">
+<div class="ynj-hud-popup" id="hud-dhikr-popup" style="display:none;" onclick="if(event.target===this)ynjHudDhikrToggle()">
+    <div class="ynj-hud-popup__card" id="hud-popup-card" style="max-width:380px;">
         <button type="button" class="ynj-hud-popup__close" onclick="ynjHudDhikrToggle()">&times;</button>
 
-        <div class="ynj-popup-header">
+        <!-- Progress bar + counter -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div style="font-size:12px;font-weight:700;color:#6b8fa3;" id="dhikr-progress-text"><?php echo $data['done_count']; ?>/5</div>
+            <div style="flex:1;margin:0 10px;height:6px;background:rgba(0,0,0,.06);border-radius:3px;overflow:hidden;">
+                <div id="dhikr-progress-bar" style="height:100%;background:linear-gradient(90deg,#287e61,#34d399);border-radius:3px;transition:width .6s ease-out;width:<?php echo $data['done_count'] * 20; ?>%;"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;">
+                <span style="font-size:12px;">&#x2B50;</span>
+                <span style="font-size:14px;font-weight:900;color:#92400e;" id="dhikr-pts-live"><?php echo number_format( $data['points'] ); ?></span>
+            </div>
+        </div>
+
+        <!-- Single dhikr card (JS swaps content) -->
+        <div id="dhikr-card">
             <?php if ( $data['all_done'] ) : ?>
-                <div class="ynj-popup-header__complete">
-                    <div style="font-size:14px;font-weight:700;color:#166534;margin-bottom:4px;"><?php esc_html_e( 'Alhamdulillah', 'yourjannah' ); ?></div>
-                    <div style="font-size:12px;color:#15803d;font-style:italic;"><?php esc_html_e( 'Truly, in the remembrance of Allah do hearts find rest.', 'yourjannah' ); ?> <span style="opacity:.6;">&mdash; 13:28</span></div>
-                </div>
-            <?php else : ?>
-                <div style="font-size:12px;color:#6b8fa3;text-align:center;margin-bottom:6px;">
-                    <?php if ( $data['done_count'] === 0 ) : ?>
-                        <?php esc_html_e( "Today's remembrances are waiting for you", 'yourjannah' ); ?>
-                    <?php else : ?>
-                        <?php printf( esc_html__( '%d of 5 remembrances offered today', 'yourjannah' ), $data['done_count'] ); ?>
-                    <?php endif; ?>
-                </div>
-                <div class="ynj-popup-progress">
-                    <div class="ynj-popup-progress__fill" id="hud-popup-progress" style="width:<?php echo $data['done_count'] * 20; ?>%"></div>
-                </div>
+            <div id="dhikr-complete" style="text-align:center;padding:24px 0;">
+                <div style="font-size:40px;margin-bottom:8px;">&#x2705;</div>
+                <div style="font-size:18px;font-weight:800;color:#166534;margin-bottom:6px;">Alhamdulillah</div>
+                <div style="font-size:13px;color:#15803d;font-style:italic;line-height:1.6;">Truly, in the remembrance of Allah do hearts find rest.</div>
+                <div style="font-size:10px;color:rgba(0,0,0,.3);margin-top:4px;">Quran 13:28</div>
+            </div>
             <?php endif; ?>
         </div>
 
-        <div class="ynj-popup-scroll" id="hud-popup-scroll">
-        <?php foreach ( $data['five_dhikr'] as $i => $hd ) :
-            $hd_done = $data['done_flags'][ $i ] ?? false;
-            $hd_legendary = ( $hd['tier'] ?? '' ) === 'legendary';
-        ?>
-            <div class="ynj-dhikr-item<?php echo $hd_done ? ' ynj-dhikr-item--done' : ''; ?><?php echo $hd_legendary ? ' ynj-dhikr-item--legendary' : ''; ?>" id="hud-dhikr-item-<?php echo $i; ?>">
-                <?php if ( ! $hd_done ) : ?>
-                    <div class="ynj-dhikr-item__arabic" dir="rtl"><?php echo esc_html( $hd['arabic'] ); ?></div>
-                    <div class="ynj-dhikr-item__english"><?php echo esc_html( $hd['english'] ); ?></div>
-                    <div class="ynj-dhikr-item__reward"><?php echo esc_html( $hd['reward'] ); ?></div>
-                    <div class="ynj-dhikr-item__source"><?php echo esc_html( $hd['source'] ); ?></div>
-                    <button type="button" class="ynj-dhikr-item__btn<?php echo $hd_legendary ? ' ynj-dhikr-item__btn--legendary' : ''; ?>" data-index="<?php echo $i; ?>" data-reward="<?php echo esc_attr( $hd['reward'] ); ?>" onclick="ynjHudAmeen(this, <?php echo $i; ?>)">
-                        <?php echo esc_html( $hd['action_text'] ); ?>
-                    </button>
-                <?php else : ?>
-                    <div class="ynj-dhikr-item__arabic" dir="rtl" style="opacity:.45;font-size:16px;"><?php echo esc_html( $hd['arabic'] ); ?></div>
-                    <div style="text-align:center;font-size:11px;color:#287e61;font-weight:600;padding:4px 0;">&#x2714; <?php esc_html_e( 'Said', 'yourjannah' ); ?></div>
-                <?php endif; ?>
-            </div>
-        <?php endforeach; ?>
-        </div>
-
-        <?php if ( $data['mosque'] && $data['streak'] > 0 ) : ?>
-        <div class="ynj-popup-footer">
-            <?php printf( esc_html__( '%d days your community has remembered Allah together', 'yourjannah' ), $data['streak'] ); ?>
-        </div>
-        <?php elseif ( $data['mosque'] ) : ?>
-        <div class="ynj-popup-footer">
-            <?php printf( esc_html__( 'Be the one who starts the remembrance at %s today', 'yourjannah' ), esc_html( $data['mosque']->name ) ); ?>
+        <!-- Masjid context -->
+        <?php if ( $data['mosque'] ) : ?>
+        <div style="text-align:center;font-size:11px;color:#6b8fa3;margin-top:10px;font-style:italic;">
+            <?php if ( $data['level'] ) : ?>
+            <?php echo $data['level']['icon']; ?> <?php echo esc_html( $data['mosque']->name ); ?> &middot; Lv<?php echo (int) $data['level']['level']; ?>
+            <?php else : ?>
+            &#x1F54C; <?php echo esc_html( $data['mosque']->name ); ?>
+            <?php endif; ?>
+            <?php if ( $data['streak'] > 0 ) : ?>
+            &middot; &#x1F525; <?php echo (int) $data['streak']; ?> day streak
+            <?php endif; ?>
         </div>
         <?php endif; ?>
     </div>
 </div>
+
+<!-- Dhikr data for JS -->
+<script>
+window._ynjDhikrData = <?php echo wp_json_encode( array_map( function( $hd, $i ) use ( $data ) {
+    return [
+        'index'       => $i,
+        'arabic'      => $hd['arabic'],
+        'english'     => $hd['english'],
+        'reward'      => $hd['reward'],
+        'source'      => $hd['source'],
+        'action_text' => $hd['action_text'],
+        'tier'        => $hd['tier'] ?? 'normal',
+        'done'        => ! empty( $data['done_flags'][ $i ] ),
+    ];
+}, $data['five_dhikr'], array_keys( $data['five_dhikr'] ) ) ); ?>;
+window._ynjDhikrDone = <?php echo (int) $data['done_count']; ?>;
+window._ynjDhikrPts = <?php echo (int) $data['points']; ?>;
+</script>
 <?php endif; ?>
 
 <!-- ════ LEAGUE TABLE MODAL ════ -->

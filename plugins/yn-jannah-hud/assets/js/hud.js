@@ -135,13 +135,62 @@ var ynjHudData = window.ynjHudData || {};
     /* ════════════════════════════════════════════════
        SACRED AMEEN — The breath, the reflection, the peace
        ════════════════════════════════════════════════ */
-    window.ynjHudAmeen = function(btn, index) {
-        if (typeof index === 'undefined') index = parseInt(btn.getAttribute('data-index') || '0');
+    // ── Dhikr stepper: one at a time ──
+    var _dhikrList = window._ynjDhikrData || [];
+    var _dhikrDone = window._ynjDhikrDone || 0;
+    var _dhikrPts  = window._ynjDhikrPts || 0;
+
+    function dhikrFindNext() {
+        for (var i = 0; i < _dhikrList.length; i++) {
+            if (!_dhikrList[i].done) return i;
+        }
+        return -1; // all done
+    }
+
+    function dhikrRenderCard() {
+        var card = document.getElementById('dhikr-card');
+        if (!card) return;
+
+        var idx = dhikrFindNext();
+        if (idx === -1) {
+            // All done
+            card.innerHTML = '<div style="text-align:center;padding:24px 0;animation:ynj-popup-in .5s;">'
+                + '<div style="font-size:40px;margin-bottom:8px;">\u2705</div>'
+                + '<div style="font-size:18px;font-weight:800;color:#166534;margin-bottom:6px;">Alhamdulillah</div>'
+                + '<div style="font-size:13px;color:#15803d;font-style:italic;line-height:1.6;">Truly, in the remembrance of Allah do hearts find rest.</div>'
+                + '<div style="font-size:10px;color:rgba(0,0,0,.3);margin-top:4px;">Quran 13:28</div>'
+                + '</div>';
+            var hudBtn = document.getElementById('hud-dhikr-btn');
+            if (hudBtn) hudBtn.innerHTML = '\u2705 <span>5/5</span>';
+            return;
+        }
+
+        var hd = _dhikrList[idx];
+        var isLegendary = hd.tier === 'legendary';
+        var cardClass = isLegendary ? 'ynj-dhikr-item ynj-dhikr-item--legendary' : 'ynj-dhikr-item';
+
+        card.innerHTML = '<div class="' + cardClass + '" style="animation:ynj-popup-in .4s;">'
+            + '<div class="ynj-dhikr-item__arabic" dir="rtl">' + esc(hd.arabic) + '</div>'
+            + '<div class="ynj-dhikr-item__english">' + esc(hd.english) + '</div>'
+            + '<div class="ynj-dhikr-item__reward">' + esc(hd.reward) + '</div>'
+            + '<div class="ynj-dhikr-item__source">' + esc(hd.source) + '</div>'
+            + '<button type="button" class="ynj-dhikr-item__btn' + (isLegendary ? ' ynj-dhikr-item__btn--legendary' : '') + '" id="dhikr-say-btn">'
+            + esc(hd.action_text)
+            + '</button>'
+            + '</div>';
+
+        document.getElementById('dhikr-say-btn').addEventListener('click', function(){ dhikrSay(idx); });
+    }
+
+    function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    function dhikrSay(idx) {
+        var btn = document.getElementById('dhikr-say-btn');
+        if (!btn || btn.disabled) return;
         btn.disabled = true;
         btn.style.opacity = '.6';
-        var reward = btn.getAttribute('data-reward') || '';
+        btn.textContent = 'Saving...';
 
-        // Warm haptic — long, gentle (not sharp buzz)
         if (navigator.vibrate) navigator.vibrate(200);
 
         var nonce = typeof ynjData !== 'undefined' ? ynjData.nonce : '';
@@ -149,99 +198,81 @@ var ynjHudData = window.ynjHudData || {};
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
             credentials: 'same-origin',
-            body: JSON.stringify({ index: index })
-        }).then(function(r){return r.json();}).then(function(d){
+            body: JSON.stringify({ index: idx })
+        }).then(function(r){ return r.json(); }).then(function(d) {
             if (d.cooldown) {
-                btn.disabled = false;
-                btn.innerHTML = '<span style="font-size:11px;color:#6b8fa3;">Wait a moment...</span>';
-                setTimeout(function(){ btn.innerHTML = '\uD83E\uDD32 Say Again'; btn.disabled = false; }, 2000);
+                btn.textContent = 'Wait a moment...';
+                setTimeout(function(){ btn.textContent = _dhikrList[idx].action_text; btn.disabled = false; btn.style.opacity = ''; }, 2000);
                 return;
             }
-            if (d.ok && d.points > 0) {
-                var item = document.getElementById('hud-dhikr-item-' + index);
+            if (d.ok) {
+                _dhikrList[idx].done = true;
+                _dhikrDone = d.done_count || (_dhikrDone + 1);
+                _dhikrPts = d.total || _dhikrPts;
 
-                // ── THE BREATH: 2s of stillness ──
-                // Card transitions to reflecting state — Arabic glows softly
-                if (item) item.classList.add('ynj-dhikr-item--reflecting');
+                // Update progress bar
+                var prog = document.getElementById('dhikr-progress-bar');
+                var progText = document.getElementById('dhikr-progress-text');
+                if (prog) prog.style.width = (_dhikrDone * 20) + '%';
+                if (progText) progText.textContent = _dhikrDone + '/5';
 
-                // Remove the button, show the hadith reward as the reflection
-                btn.outerHTML = '<div style="text-align:center;padding:12px 0;animation:ynj-popup-in .5s;">'
-                    + '<div style="font-size:12px;color:#287e61;font-style:italic;line-height:1.5;">' + (reward || 'May Allah accept') + '</div>'
+                // Live points counter — animate up
+                var ptsEl = document.getElementById('dhikr-pts-live');
+                if (ptsEl) animatePoints(ptsEl, parseInt(ptsEl.textContent.replace(/,/g,'')) || 0, _dhikrPts);
+
+                // Update HUD points
+                var hudPts = document.getElementById('hud-pts-num');
+                if (hudPts) hudPts.textContent = _dhikrPts.toLocaleString();
+                var hudBtn = document.getElementById('hud-dhikr-btn');
+                if (hudBtn && _dhikrDone < 5) hudBtn.innerHTML = '\uD83D\uDCFF <span>' + _dhikrDone + '/5</span>';
+
+                // XP bar pulse
+                var xpFill = document.querySelector('.ynj-hud__xp-fill');
+                if (xpFill) { xpFill.style.boxShadow='0 0 12px rgba(40,126,97,.5)'; setTimeout(function(){xpFill.style.boxShadow='';},1000); }
+
+                // Show reward briefly, then advance
+                var card = document.getElementById('dhikr-card');
+                var reward = _dhikrList[idx].reward || 'May Allah accept';
+                card.innerHTML = '<div style="text-align:center;padding:20px 0;animation:ynj-popup-in .4s;">'
+                    + '<div style="font-size:28px;margin-bottom:8px;">\u2714\uFE0F</div>'
+                    + '<div style="font-size:13px;color:#287e61;font-style:italic;line-height:1.5;">' + esc(reward) + '</div>'
+                    + '<div style="font-size:12px;color:#92400e;font-weight:800;margin-top:8px;">+' + (d.points || 0) + ' pts</div>'
                     + '</div>';
 
-                // Points update SILENTLY in the HUD — no golden flash during sacred moment
-                var ptsEl = document.getElementById('hud-pts-num');
-                if (ptsEl) {
-                    var oldPts = parseInt(ptsEl.textContent.replace(/,/g,'')) || 0;
-                    ptsEl.textContent = d.total.toLocaleString();
-                }
-                var heroPts = document.getElementById('hero-pts');
-                if (heroPts) heroPts.textContent = d.total.toLocaleString();
-
-                // ── AFTER THE BREATH (2.5s): gentle transition to done ──
+                // After 2s, show next dhikr or completion
                 setTimeout(function(){
-                    if (item) {
-                        item.classList.remove('ynj-dhikr-item--reflecting');
-                        item.classList.add('ynj-dhikr-item--done');
-                        // Simplify to just the Arabic + "Said"
-                        var arabic = item.querySelector('.ynj-dhikr-item__arabic');
-                        if (arabic) arabic.style.opacity = '.45';
-                        // Remove reward/source text, replace with quiet confirmation
-                        var extras = item.querySelectorAll('.ynj-dhikr-item__reward, .ynj-dhikr-item__source, .ynj-dhikr-item__english');
-                        extras.forEach(function(el){ el.remove(); });
-                        // Add the "Said" marker
-                        var doneDiv = item.querySelector('div[style*="animation"]');
-                        if (doneDiv) doneDiv.innerHTML = '<span style="color:#287e61;font-size:11px;font-weight:600;">\u2714 Said</span>'
-                            + ' <button type="button" onclick="ynjHudDhikrSay(this,' + index + ',\'\',\'\',\'\');return false;" style="margin-left:8px;padding:4px 10px;border:1px solid #287e61;border-radius:8px;background:none;color:#287e61;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Say Again</button>';
-                    }
-
-                    // Update progress bar
-                    var prog = document.getElementById('hud-popup-progress');
-                    if (prog && d.done_count) prog.style.width = (d.done_count * 20) + '%';
-
-                    // Update HUD button count
-                    var hudBtn = document.getElementById('hud-dhikr-btn');
-                    if (hudBtn && d.done_count < 5) {
-                        hudBtn.innerHTML = '\uD83D\uDCFF <span>' + d.done_count + '/5</span>';
-                    }
-
-                    // Subtle XP bar pulse
-                    var xpFill = document.querySelector('.ynj-hud__xp-fill');
-                    if (xpFill) { xpFill.style.boxShadow='0 0 12px rgba(40,126,97,.5)'; setTimeout(function(){xpFill.style.boxShadow='';},1000); }
-                }, 2500);
-
-                // ── ALL 5 COMPLETE: moment of peace, not victory ──
-                if (d.all_five_bonus && d.all_five_bonus > 0) {
-                    setTimeout(function(){
-                        // Transform the popup into a state of peace
-                        var card = document.getElementById('hud-popup-card');
-                        if (card) {
-                            var header = card.querySelector('.ynj-popup-header');
-                            if (header) {
-                                header.innerHTML = '<div style="text-align:center;padding:16px 0;animation:ynj-popup-in .6s;">'
-                                    + '<div style="font-size:13px;color:#287e61;font-weight:700;margin-bottom:8px;">Alhamdulillah</div>'
-                                    + '<div style="font-size:14px;color:#4a3728;font-style:italic;line-height:1.6;">'
-                                    + (ynjHudData.quranVerse || 'Truly, in the remembrance of Allah do hearts find rest.')
-                                    + '</div>'
-                                    + '<div style="font-size:10px;color:rgba(0,0,0,.3);margin-top:4px;">' + (ynjHudData.quranRef || 'Quran 13:28') + '</div>'
-                                    + '</div>';
-                            }
-                        }
-                        // Single warm haptic
+                    dhikrRenderCard();
+                    if (d.all_five_bonus && d.all_five_bonus > 0) {
                         if (navigator.vibrate) navigator.vibrate(300);
-                        // Keep dhikr button active — unlimited dhikr
-                        if (hudBtn) { hudBtn.innerHTML = '\uD83D\uDCFF <span>5/5 \u2714</span>'; }
-                        // Update points with the bonus silently
-                        if (ptsEl) ptsEl.textContent = d.total.toLocaleString();
-                    }, 4000);
-                }
+                    }
+                }, 2000);
             }
         }).catch(function(){
             btn.disabled = false;
-            var actionText = ynjHudData.dhikrActionText || 'Ameen';
-            var pts = ynjHudData.dhikrPoints || 0;
-            btn.innerHTML = actionText + '<span>+' + pts + ' pts</span>';
+            btn.style.opacity = '';
+            btn.textContent = _dhikrList[idx].action_text;
         });
+    }
+
+    function animatePoints(el, from, to) {
+        var diff = to - from;
+        if (diff <= 0) { el.textContent = to.toLocaleString(); return; }
+        var steps = 20;
+        var step = Math.ceil(diff / steps);
+        var current = from;
+        var interval = setInterval(function(){
+            current += step;
+            if (current >= to) { current = to; clearInterval(interval); }
+            el.textContent = current.toLocaleString();
+        }, 40);
+    }
+
+    // Render first card when popup opens
+    var _origDhikrToggle = window.ynjHudDhikrToggle;
+    window.ynjHudDhikrToggle = function() {
+        _origDhikrToggle();
+        var popup = document.getElementById('hud-dhikr-popup');
+        if (popup && popup.style.display !== 'none') dhikrRenderCard();
     };
 
     /* ── Rank-up detection (compare localStorage) ── */
