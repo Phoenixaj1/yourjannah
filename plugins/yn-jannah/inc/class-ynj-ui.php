@@ -58,7 +58,11 @@ class YNJ_UI {
      *
      * @param string $mosque_slug Mosque slug for "New Post" link
      */
-    public static function render_admin_toolbar( $mosque_slug ) {
+    /**
+     * @param string $mosque_slug
+     * @param string $new_post_onclick Optional JS onclick for "New Post" (e.g. open modal). If empty, links to mosque page.
+     */
+    public static function render_admin_toolbar( $mosque_slug, $new_post_onclick = '' ) {
         if ( ! current_user_can( 'edit_posts' ) ) return;
         $menu_id = 'ynj-admin-menu-' . wp_unique_id();
         ?>
@@ -73,7 +77,11 @@ class YNJ_UI {
         .ynj-atb-bug:hover{background:#fee2e2 !important;}
         </style>
         <div class="ynj-admin-toolbar" title="Admin Tools">
+            <?php if ( $new_post_onclick ) : ?>
+            <button type="button" onclick="<?php echo esc_attr( $new_post_onclick ); ?>" class="ynj-atb-primary" title="New Post">📢</button>
+            <?php else : ?>
             <a href="<?php echo esc_url( home_url( '/mosque/' . $mosque_slug ) ); ?>" class="ynj-atb-primary" title="New Post">📢</a>
+            <?php endif; ?>
             <a href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>" class="ynj-atb-outline" title="Dashboard">📊</a>
             <button type="button" onclick="var m=document.getElementById('<?php echo esc_js( $menu_id ); ?>');m.style.display=m.style.display==='block'?'none':'block'" class="ynj-atb-outline" title="Quick Menu">⚡</button>
             <a href="mailto:bugs@yourjannah.com?subject=Bug%20Report%20-%20<?php echo esc_attr( $mosque_slug ); ?>&body=Page:%20<?php echo esc_attr( home_url( $_SERVER['REQUEST_URI'] ?? '/' ) ); ?>%0A%0ADescribe the issue:%0A" class="ynj-atb-bug" title="Report a Bug">🐛</a>

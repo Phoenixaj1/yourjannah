@@ -1279,12 +1279,6 @@ function ynjShowJoinLogin() {
 .ynj-admin-edit{position:absolute;top:8px;right:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.9);border-radius:50%;font-size:14px;text-decoration:none;z-index:5;box-shadow:0 1px 4px rgba(0,0,0,.15);-webkit-tap-highlight-color:transparent;}
 .ynj-admin-edit:hover{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.2);}
 
-/* Admin floating toolbar */
-.ynj-admin-toolbar{position:fixed;bottom:12px;left:12px;display:flex;gap:6px;padding:8px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:900;}
-.ynj-admin-toolbar a,.ynj-admin-toolbar button{display:flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;border:none;cursor:pointer;min-height:44px;font-family:inherit;}
-.ynj-atb-primary{background:#287e61;color:#fff;}
-.ynj-atb-outline{background:#f3f4f6;color:#1a1a1a;border:1px solid #e5e7eb;}
-
 /* Quick Post Modal */
 .ynj-qp-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;-webkit-tap-highlight-color:transparent;}
 .ynj-qp-modal{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;padding:0;animation:ynj-slide-up .25s ease-out;}
@@ -1330,59 +1324,8 @@ function ynjShowJoinLogin() {
 <div class="ynj-toast" id="ynj-toast" style="background:#92400e;">Submitted for admin approval</div>
 <?php endif; ?>
 
-<!-- Admin Floating Toolbar -->
-<div class="ynj-admin-toolbar">
-    <button type="button" onclick="document.getElementById('ynj-quick-post-modal').style.display='flex'" class="ynj-atb-primary">📢 <?php esc_html_e( 'New Post', 'yourjannah' ); ?></button>
-    <a href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>" class="ynj-atb-outline">📊 <?php esc_html_e( 'Dashboard', 'yourjannah' ); ?></a>
-    <button type="button" onclick="document.getElementById('ynj-admin-menu').style.display=document.getElementById('ynj-admin-menu').style.display==='block'?'none':'block'" class="ynj-atb-outline">⚡ <?php esc_html_e( 'Quick Menu', 'yourjannah' ); ?></button>
-</div>
-
-<!-- Admin Quick Menu (expandable) -->
-<div id="ynj-admin-menu" style="display:none;position:fixed;bottom:64px;left:12px;background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:12px;z-index:901;width:320px;max-width:90vw;">
-    <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding:0 4px;">Quick Menu</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
-        <a href="<?php echo esc_url( home_url( '/dashboard?section=announcements' ) ); ?>" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;background:#f9fafb;border-radius:10px;text-decoration:none;color:#333;font-size:11px;font-weight:600;text-align:center;">
-            <span style="font-size:20px;">📢</span>Posts
-        </a>
-        <a href="<?php echo esc_url( home_url( '/dashboard?section=events' ) ); ?>" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;background:#f9fafb;border-radius:10px;text-decoration:none;color:#333;font-size:11px;font-weight:600;text-align:center;">
-            <span style="font-size:20px;">📅</span>Events
-        </a>
-        <a href="<?php echo esc_url( home_url( '/dashboard?section=prayers' ) ); ?>" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;background:#f9fafb;border-radius:10px;text-decoration:none;color:#333;font-size:11px;font-weight:600;text-align:center;">
-            <span style="font-size:20px;">🕐</span>Prayers
-        </a>
-        <a href="<?php echo esc_url( home_url( '/dashboard?section=subscribers' ) ); ?>" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;background:#f9fafb;border-radius:10px;text-decoration:none;color:#333;font-size:11px;font-weight:600;text-align:center;">
-            <span style="font-size:20px;">👥</span>Followers
-        </a>
-        <a href="<?php echo esc_url( home_url( '/dashboard?section=patrons' ) ); ?>" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;background:#f9fafb;border-radius:10px;text-decoration:none;color:#333;font-size:11px;font-weight:600;text-align:center;">
-            <span style="font-size:20px;">🏅</span>Patrons
-        </a>
-        <a href="<?php echo esc_url( home_url( '/dashboard?section=broadcast' ) ); ?>" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;background:#f9fafb;border-radius:10px;text-decoration:none;color:#333;font-size:11px;font-weight:600;text-align:center;">
-            <span style="font-size:20px;">📤</span>Broadcast
-        </a>
-        <a href="<?php echo esc_url( home_url( '/dashboard?section=classes' ) ); ?>" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;background:#f9fafb;border-radius:10px;text-decoration:none;color:#333;font-size:11px;font-weight:600;text-align:center;">
-            <span style="font-size:20px;">🎓</span>Classes
-        </a>
-        <a href="<?php echo esc_url( home_url( '/dashboard?section=bookings' ) ); ?>" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;background:#f9fafb;border-radius:10px;text-decoration:none;color:#333;font-size:11px;font-weight:600;text-align:center;">
-            <span style="font-size:20px;">📋</span>Bookings
-        </a>
-        <a href="<?php echo esc_url( home_url( '/dashboard?section=settings' ) ); ?>" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;background:#f9fafb;border-radius:10px;text-decoration:none;color:#333;font-size:11px;font-weight:600;text-align:center;">
-            <span style="font-size:20px;">⚙️</span>Settings
-        </a>
-        <a href="#ynj-cover-wrap" onclick="document.getElementById('ynj-admin-menu').style.display='none';document.getElementById('ynj-cover-wrap').scrollIntoView({behavior:'smooth'})" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;background:#f9fafb;border-radius:10px;text-decoration:none;color:#333;font-size:11px;font-weight:600;text-align:center;">
-            <span style="font-size:20px;">📷</span>Edit Photos
-        </a>
-    </div>
-</div>
-<script>
-// Close admin menu when clicking outside
-document.addEventListener('click', function(e) {
-    var menu = document.getElementById('ynj-admin-menu');
-    if (!menu) return;
-    if (menu.style.display === 'block' && !menu.contains(e.target) && !e.target.closest('.ynj-admin-toolbar')) {
-        menu.style.display = 'none';
-    }
-});
-</script>
+<!-- Admin Toolbar (rendered by plugin — right-side rail) -->
+<?php if ( class_exists( 'YNJ_UI' ) ) YNJ_UI::render_admin_toolbar( $slug, "document.getElementById('ynj-quick-post-modal').style.display='flex'" ); ?>
 
 <!-- Quick Post Modal -->
 <div class="ynj-qp-overlay" id="ynj-quick-post-modal" onclick="if(event.target===this)this.style.display='none'">
