@@ -38,18 +38,74 @@ if ( is_user_logged_in() ) return; // Only for guests
 
         <!-- PIN (existing user) -->
         <div id="ob-pin-row" style="display:none;margin-bottom:14px;text-align:left;">
-            <label style="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);display:block;margin-bottom:5px;"><?php esc_html_e( 'Enter your PIN', 'yourjannah' ); ?></label>
-            <input type="tel" id="ob-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="&#x2022; &#x2022; &#x2022; &#x2022;" autocomplete="off" style="width:100%;padding:16px;border:1.5px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:32px;font-weight:900;letter-spacing:14px;text-align:center;font-family:inherit;outline:none;box-sizing:border-box;">
-            <a href="<?php echo esc_url( home_url( '/forgot-password' ) ); ?>" style="font-size:11px;color:rgba(255,255,255,.45);margin-top:5px;display:block;"><?php esc_html_e( 'Forgot PIN?', 'yourjannah' ); ?></a>
+            <label style="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);display:block;margin-bottom:8px;"><?php esc_html_e( 'Enter your PIN', 'yourjannah' ); ?></label>
+            <div style="display:flex;gap:10px;justify-content:center;">
+                <input type="tel" inputmode="numeric" maxlength="1" class="ob-pin-box" data-pin="ob-pin" data-idx="0" style="width:56px;height:64px;border:2px solid rgba(255,255,255,.3);border-radius:14px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;text-align:center;font-family:inherit;outline:none;" onfocus="this.style.borderColor='#00ADEF';this.style.background='rgba(0,173,239,.15)'" onblur="this.style.borderColor='rgba(255,255,255,.3)';this.style.background='rgba(255,255,255,.1)'">
+                <input type="tel" inputmode="numeric" maxlength="1" class="ob-pin-box" data-pin="ob-pin" data-idx="1" style="width:56px;height:64px;border:2px solid rgba(255,255,255,.3);border-radius:14px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;text-align:center;font-family:inherit;outline:none;" onfocus="this.style.borderColor='#00ADEF';this.style.background='rgba(0,173,239,.15)'" onblur="this.style.borderColor='rgba(255,255,255,.3)';this.style.background='rgba(255,255,255,.1)'">
+                <input type="tel" inputmode="numeric" maxlength="1" class="ob-pin-box" data-pin="ob-pin" data-idx="2" style="width:56px;height:64px;border:2px solid rgba(255,255,255,.3);border-radius:14px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;text-align:center;font-family:inherit;outline:none;" onfocus="this.style.borderColor='#00ADEF';this.style.background='rgba(0,173,239,.15)'" onblur="this.style.borderColor='rgba(255,255,255,.3)';this.style.background='rgba(255,255,255,.1)'">
+                <input type="tel" inputmode="numeric" maxlength="1" class="ob-pin-box" data-pin="ob-pin" data-idx="3" style="width:56px;height:64px;border:2px solid rgba(255,255,255,.3);border-radius:14px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;text-align:center;font-family:inherit;outline:none;" onfocus="this.style.borderColor='#00ADEF';this.style.background='rgba(0,173,239,.15)'" onblur="this.style.borderColor='rgba(255,255,255,.3)';this.style.background='rgba(255,255,255,.1)'">
+            </div>
+            <input type="hidden" id="ob-pin">
+            <a href="<?php echo esc_url( home_url( '/forgot-password' ) ); ?>" style="font-size:11px;color:rgba(255,255,255,.45);margin-top:8px;display:block;text-align:center;"><?php esc_html_e( 'Forgot PIN?', 'yourjannah' ); ?></a>
         </div>
 
         <!-- Create PIN (new user) -->
         <div id="ob-newpin-row" style="display:none;margin-bottom:14px;text-align:left;">
-            <label style="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);display:block;margin-bottom:5px;"><?php esc_html_e( 'Choose a 4-digit PIN', 'yourjannah' ); ?></label>
-            <input type="tel" id="ob-newpin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="&#x2022; &#x2022; &#x2022; &#x2022;" autocomplete="off" style="width:100%;padding:16px;border:1.5px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:32px;font-weight:900;letter-spacing:14px;text-align:center;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:10px;">
-            <label style="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);display:block;margin-bottom:5px;"><?php esc_html_e( 'Confirm PIN', 'yourjannah' ); ?></label>
-            <input type="tel" id="ob-newpin2" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="&#x2022; &#x2022; &#x2022; &#x2022;" autocomplete="off" style="width:100%;padding:16px;border:1.5px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:32px;font-weight:900;letter-spacing:14px;text-align:center;font-family:inherit;outline:none;box-sizing:border-box;">
+            <label style="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);display:block;margin-bottom:8px;"><?php esc_html_e( 'Choose a 4-digit PIN', 'yourjannah' ); ?></label>
+            <div style="display:flex;gap:10px;justify-content:center;margin-bottom:12px;">
+                <input type="tel" inputmode="numeric" maxlength="1" class="ob-pin-box" data-pin="ob-newpin" data-idx="0" style="width:56px;height:64px;border:2px solid rgba(255,255,255,.3);border-radius:14px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;text-align:center;font-family:inherit;outline:none;" onfocus="this.style.borderColor='#00ADEF';this.style.background='rgba(0,173,239,.15)'" onblur="this.style.borderColor='rgba(255,255,255,.3)';this.style.background='rgba(255,255,255,.1)'">
+                <input type="tel" inputmode="numeric" maxlength="1" class="ob-pin-box" data-pin="ob-newpin" data-idx="1" style="width:56px;height:64px;border:2px solid rgba(255,255,255,.3);border-radius:14px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;text-align:center;font-family:inherit;outline:none;" onfocus="this.style.borderColor='#00ADEF';this.style.background='rgba(0,173,239,.15)'" onblur="this.style.borderColor='rgba(255,255,255,.3)';this.style.background='rgba(255,255,255,.1)'">
+                <input type="tel" inputmode="numeric" maxlength="1" class="ob-pin-box" data-pin="ob-newpin" data-idx="2" style="width:56px;height:64px;border:2px solid rgba(255,255,255,.3);border-radius:14px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;text-align:center;font-family:inherit;outline:none;" onfocus="this.style.borderColor='#00ADEF';this.style.background='rgba(0,173,239,.15)'" onblur="this.style.borderColor='rgba(255,255,255,.3)';this.style.background='rgba(255,255,255,.1)'">
+                <input type="tel" inputmode="numeric" maxlength="1" class="ob-pin-box" data-pin="ob-newpin" data-idx="3" style="width:56px;height:64px;border:2px solid rgba(255,255,255,.3);border-radius:14px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;text-align:center;font-family:inherit;outline:none;" onfocus="this.style.borderColor='#00ADEF';this.style.background='rgba(0,173,239,.15)'" onblur="this.style.borderColor='rgba(255,255,255,.3)';this.style.background='rgba(255,255,255,.1)'">
+            </div>
+            <input type="hidden" id="ob-newpin">
+            <label style="font-size:12px;font-weight:700;color:rgba(255,255,255,.8);display:block;margin-bottom:8px;"><?php esc_html_e( 'Confirm PIN', 'yourjannah' ); ?></label>
+            <div style="display:flex;gap:10px;justify-content:center;">
+                <input type="tel" inputmode="numeric" maxlength="1" class="ob-pin-box" data-pin="ob-newpin2" data-idx="0" style="width:56px;height:64px;border:2px solid rgba(255,255,255,.3);border-radius:14px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;text-align:center;font-family:inherit;outline:none;" onfocus="this.style.borderColor='#00ADEF';this.style.background='rgba(0,173,239,.15)'" onblur="this.style.borderColor='rgba(255,255,255,.3)';this.style.background='rgba(255,255,255,.1)'">
+                <input type="tel" inputmode="numeric" maxlength="1" class="ob-pin-box" data-pin="ob-newpin2" data-idx="1" style="width:56px;height:64px;border:2px solid rgba(255,255,255,.3);border-radius:14px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;text-align:center;font-family:inherit;outline:none;" onfocus="this.style.borderColor='#00ADEF';this.style.background='rgba(0,173,239,.15)'" onblur="this.style.borderColor='rgba(255,255,255,.3)';this.style.background='rgba(255,255,255,.1)'">
+                <input type="tel" inputmode="numeric" maxlength="1" class="ob-pin-box" data-pin="ob-newpin2" data-idx="2" style="width:56px;height:64px;border:2px solid rgba(255,255,255,.3);border-radius:14px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;text-align:center;font-family:inherit;outline:none;" onfocus="this.style.borderColor='#00ADEF';this.style.background='rgba(0,173,239,.15)'" onblur="this.style.borderColor='rgba(255,255,255,.3)';this.style.background='rgba(255,255,255,.1)'">
+                <input type="tel" inputmode="numeric" maxlength="1" class="ob-pin-box" data-pin="ob-newpin2" data-idx="3" style="width:56px;height:64px;border:2px solid rgba(255,255,255,.3);border-radius:14px;background:rgba(255,255,255,.1);color:#fff;font-size:28px;font-weight:900;text-align:center;font-family:inherit;outline:none;" onfocus="this.style.borderColor='#00ADEF';this.style.background='rgba(0,173,239,.15)'" onblur="this.style.borderColor='rgba(255,255,255,.3)';this.style.background='rgba(255,255,255,.1)'">
+            </div>
+            <input type="hidden" id="ob-newpin2">
         </div>
+
+        <!-- PIN box auto-advance JS -->
+        <script>
+        document.querySelectorAll('.ob-pin-box').forEach(function(box){
+            box.addEventListener('input',function(){
+                var v = this.value.replace(/\D/g,'');
+                this.value = v.slice(0,1);
+                // Sync to hidden field
+                var pinId = this.dataset.pin;
+                var boxes = document.querySelectorAll('.ob-pin-box[data-pin="'+pinId+'"]');
+                var combined = '';
+                boxes.forEach(function(b){ combined += b.value; });
+                document.getElementById(pinId).value = combined;
+                // Auto-advance
+                if (v && parseInt(this.dataset.idx) < 3) {
+                    var next = document.querySelector('.ob-pin-box[data-pin="'+pinId+'"][data-idx="'+(parseInt(this.dataset.idx)+1)+'"]');
+                    if (next) next.focus();
+                }
+            });
+            box.addEventListener('keydown',function(e){
+                if (e.key === 'Backspace' && !this.value && parseInt(this.dataset.idx) > 0) {
+                    var prev = document.querySelector('.ob-pin-box[data-pin="'+this.dataset.pin+'"][data-idx="'+(parseInt(this.dataset.idx)-1)+'"]');
+                    if (prev) { prev.focus(); prev.value = ''; }
+                }
+            });
+            // Prevent pasting more than 1 digit per box (handle full paste into first box)
+            box.addEventListener('paste',function(e){
+                e.preventDefault();
+                var paste = (e.clipboardData||window.clipboardData).getData('text').replace(/\D/g,'').slice(0,4);
+                var pinId = this.dataset.pin;
+                var boxes = document.querySelectorAll('.ob-pin-box[data-pin="'+pinId+'"]');
+                for(var i=0;i<paste.length&&i<4;i++){ boxes[i].value=paste[i]; }
+                var combined=''; boxes.forEach(function(b){combined+=b.value;});
+                document.getElementById(pinId).value=combined;
+                if(paste.length>=4) boxes[3].focus(); else if(boxes[paste.length]) boxes[paste.length].focus();
+            });
+        });
+        </script>
 
         <!-- Action button -->
         <button id="ob-submit" style="display:none;width:100%;padding:14px;border:none;border-radius:12px;background:#fff;color:#0a1628;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;"></button>
