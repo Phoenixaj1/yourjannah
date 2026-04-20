@@ -50,26 +50,32 @@ add_action( 'plugins_loaded', function() {
     }
 }, 10 );
 
-// ── Test mode toggle: ?ynj_test_mode=on / off (admin only) ──
+// ── Cash Payment Mode (admin-controlled, site-wide) ──
+// Toggle from WP Admin: Settings > General > YourJannah Cash Mode
+// Or via URL: ?ynj_cash_mode=on / off (admin only)
 add_action( 'init', function() {
     if ( ! is_user_logged_in() || ! current_user_can( 'manage_options' ) ) return;
-    $mode = sanitize_text_field( $_GET['ynj_test_mode'] ?? '' );
+    $mode = sanitize_text_field( $_GET['ynj_cash_mode'] ?? '' );
     if ( $mode === 'on' ) {
-        update_user_meta( get_current_user_id(), 'ynj_payment_test_mode', 1 );
-        wp_safe_redirect( remove_query_arg( 'ynj_test_mode' ) );
+        update_option( 'ynj_cash_payment_mode', 1 );
+        wp_safe_redirect( remove_query_arg( 'ynj_cash_mode' ) );
         exit;
     } elseif ( $mode === 'off' ) {
-        delete_user_meta( get_current_user_id(), 'ynj_payment_test_mode' );
-        wp_safe_redirect( remove_query_arg( 'ynj_test_mode' ) );
+        delete_option( 'ynj_cash_payment_mode' );
+        wp_safe_redirect( remove_query_arg( 'ynj_cash_mode' ) );
         exit;
     }
+    // Also support old test mode URL for backwards compat
+    $test = sanitize_text_field( $_GET['ynj_test_mode'] ?? '' );
+    if ( $test === 'on' ) { update_option( 'ynj_cash_payment_mode', 1 ); wp_safe_redirect( remove_query_arg( 'ynj_test_mode' ) ); exit; }
+    if ( $test === 'off' ) { delete_option( 'ynj_cash_payment_mode' ); wp_safe_redirect( remove_query_arg( 'ynj_test_mode' ) ); exit; }
 } );
 
-// ── Show test mode banner ──
+// ── Show cash mode banner ──
 add_action( 'wp_footer', function() {
-    if ( ! is_user_logged_in() ) return;
-    if ( ! get_user_meta( get_current_user_id(), 'ynj_payment_test_mode', true ) ) return;
-    echo '<div style="position:fixed;top:40px;left:50%;transform:translateX(-50%);z-index:99999;background:#dc2626;color:#fff;padding:6px 20px;border-radius:20px;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(220,38,38,.3);">⚠️ PAYMENT TEST MODE — <a href="?ynj_test_mode=off" style="color:#fca5a5;text-decoration:underline;">Disable</a></div>';
+    if ( ! get_option( 'ynj_cash_payment_mode' ) ) return;
+    if ( ! is_user_logged_in() || ! current_user_can( 'manage_options' ) ) return;
+    echo '<div style="position:fixed;top:40px;left:50%;transform:translateX(-50%);z-index:99999;background:#f59e0b;color:#1a1a2e;padding:8px 24px;border-radius:20px;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(245,158,11,.3);">💵 CASH MODE ON — all payments bypass Stripe — <a href="?ynj_cash_mode=off" style="color:#92400e;text-decoration:underline;font-weight:800;">Turn Off</a></div>';
 } );
 
 // ── Enqueue basket script globally (needed on every page for HUD badge) ──

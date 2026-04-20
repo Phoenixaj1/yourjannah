@@ -12,13 +12,12 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class YNJ_UC_API {
 
     /**
-     * Check if current user has test mode enabled.
-     * Enable: update_user_meta( $user_id, 'ynj_payment_test_mode', 1 );
-     * Disable: delete_user_meta( $user_id, 'ynj_payment_test_mode' );
+     * Check if cash/test payment mode is active (site-wide).
+     * Enable: update_option( 'ynj_cash_payment_mode', 1 )
+     * Or visit: ?ynj_cash_mode=on
      */
     public static function is_test_mode() {
-        if ( ! is_user_logged_in() ) return false;
-        return (bool) get_user_meta( get_current_user_id(), 'ynj_payment_test_mode', true );
+        return (bool) get_option( 'ynj_cash_payment_mode' );
     }
 
     /**

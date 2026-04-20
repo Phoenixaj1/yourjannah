@@ -272,11 +272,15 @@ if ( $_nb_id && $_nb_pk ) :
             <button type="button" class="ynj-nb-back" onclick="nbSetStep(1)">&larr; Back</button>
 
             <?php if ( $_nb_logged_in ) : ?>
-            <!-- Logged in: instant Stripe payment -->
+            <!-- Logged in: Stripe payment or Cash mode -->
             <div id="nb-stripe-wrap">
+                <?php if ( get_option( 'ynj_cash_payment_mode' ) ) : ?>
+                <div style="text-align:center;padding:12px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);border-radius:10px;margin-bottom:10px;font-size:12px;color:#f59e0b;">💵 Cash Mode Active</div>
+                <?php else : ?>
                 <div class="ynj-nb-card" id="nb-card-element"></div>
+                <?php endif; ?>
                 <div class="ynj-nb-error" id="nb-card-error"></div>
-                <button type="button" class="ynj-nb-pay" id="nb-pay-btn" disabled onclick="nbPay()">Donate</button>
+                <button type="button" class="ynj-nb-pay" id="nb-pay-btn" <?php echo get_option( 'ynj_cash_payment_mode' ) ? '' : 'disabled'; ?> onclick="nbPay()">Donate</button>
                 <div class="ynj-nb-secure">🔒 Secured by Stripe</div>
             </div>
             <?php else : ?>
@@ -312,6 +316,7 @@ if ( $_nb_id && $_nb_pk ) :
     var userEmail = <?php echo wp_json_encode( $_nb_user_email ); ?>;
     var userName = <?php echo wp_json_encode( $_nb_user_name ); ?>;
     var isLoggedIn = <?php echo $_nb_logged_in ? 'true' : 'false'; ?>;
+    var isCashMode = <?php echo get_option( 'ynj_cash_payment_mode' ) ? 'true' : 'false'; ?>;
 
     var selectedFreq = 'once';
     var selectedAmount = 0;
@@ -368,7 +373,8 @@ if ( $_nb_id && $_nb_pk ) :
 
     // Create PaymentIntent and mount Stripe Elements
     function initStripe() {
-        if (!PK || !selectedAmount || processing) return;
+        if (!selectedAmount || processing) return;
+        if (!PK && !isCashMode) return;
         processing = true;
 
         var payBtn = document.getElementById('nb-pay-btn');
