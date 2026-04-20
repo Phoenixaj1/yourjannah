@@ -153,13 +153,38 @@ var ynjHudData = window.ynjHudData || {};
 
         var idx = dhikrFindNext();
         if (idx === -1) {
-            // All done
-            card.innerHTML = '<div style="text-align:center;padding:24px 0;animation:ynj-popup-in .5s;">'
-                + '<div style="font-size:40px;margin-bottom:8px;">\u2705</div>'
-                + '<div style="font-size:18px;font-weight:800;color:#166534;margin-bottom:6px;">Alhamdulillah</div>'
-                + '<div style="font-size:13px;color:#15803d;font-style:italic;line-height:1.6;">Truly, in the remembrance of Allah do hearts find rest.</div>'
-                + '<div style="font-size:10px;color:rgba(0,0,0,.3);margin-top:4px;">Quran 13:28</div>'
+            // All done — show stats + almsgiving CTA
+            var mosqueName = (ynjHudData && ynjHudData.mosqueName) || '';
+            var rank = (ynjHudData && ynjHudData.currentRank) || 0;
+
+            card.innerHTML = '<div style="text-align:center;padding:16px 0;animation:ynj-popup-in .5s;">'
+                + '<div style="font-size:40px;margin-bottom:6px;">\u2705</div>'
+                + '<div style="font-size:20px;font-weight:900;color:#166534;margin-bottom:4px;">Alhamdulillah</div>'
+                + '<div style="font-size:13px;color:#15803d;font-style:italic;line-height:1.5;">Truly, in the remembrance of Allah do hearts find rest.</div>'
+                + '<div style="font-size:10px;color:#94a3b8;margin-top:2px;">Quran 13:28</div>'
+
+                // Stats row
+                + '<div style="display:flex;gap:8px;margin-top:16px;">'
+                + '<div style="flex:1;padding:12px 8px;background:#f0fdf4;border-radius:12px;border:1px solid #dcfce7;">'
+                + '<div style="font-size:20px;font-weight:900;color:#16a34a;">' + _dhikrPts.toLocaleString() + '</div>'
+                + '<div style="font-size:10px;color:#166534;font-weight:600;">Total Points</div>'
+                + '</div>'
+                + (rank > 0 ? '<div style="flex:1;padding:12px 8px;background:#ede9fe;border-radius:12px;border:1px solid #ddd6fe;">'
+                + '<div style="font-size:20px;font-weight:900;color:#7c3aed;">#' + rank + '</div>'
+                + '<div style="font-size:10px;color:#5b21b6;font-weight:600;">Masjid Rank</div>'
+                + '</div>' : '')
+                + '<div style="flex:1;padding:12px 8px;background:#fef3c7;border-radius:12px;border:1px solid #fde68a;">'
+                + '<div style="font-size:20px;font-weight:900;color:#92400e;">5/5</div>'
+                + '<div style="font-size:10px;color:#78350f;font-weight:600;">Dhikr Done</div>'
+                + '</div>'
+                + '</div>'
+
+                // Almsgiving CTA
+                + '<button type="button" onclick="ynjHudDhikrToggle();if(typeof ynjNiyyahBarOpen===\'function\')ynjNiyyahBarOpen({mode:\'donation\',icon:\'\uD83D\uDC9D\',frequency:\'once\'});" style="width:100%;margin-top:14px;padding:14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(22,163,74,.25);transition:all .15s;">'
+                + '\uD83E\uDD32 Give Alms — Support Your Masjid</button>'
+
                 + '</div>';
+
             var hudBtn = document.getElementById('hud-dhikr-btn');
             if (hudBtn) hudBtn.innerHTML = '\u2705 <span>5/5</span>';
             return;
