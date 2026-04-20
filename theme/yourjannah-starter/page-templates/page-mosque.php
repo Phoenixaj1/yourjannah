@@ -677,7 +677,11 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
             }
         }
     ?>
-    <button type="button" id="gratitude-btn" onclick="ynjPostGratitude()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:<?php echo $_grat_done_today ? 'linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac' : 'linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4'; ?>;border-radius:14px;font-size:14px;font-weight:700;color:<?php echo $_grat_done_today ? '#166534' : '#9d174d'; ?>;cursor:pointer;font-family:inherit;margin-bottom:10px;transition:all .2s;"><?php echo $_grat_done_today ? '✅' : '💖'; ?> <?php esc_html_e( 'Thank Your Mosque', 'yourjannah' ); ?> <span style="font-size:12px;opacity:.7;margin-left:4px;" id="gratitude-count"><?php echo $_grat_count ? number_format( $_grat_count ) : ''; ?></span></button>
+    <?php if ( $_grat_done_today ) : ?>
+    <div id="gratitude-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:14px;font-size:14px;font-weight:700;color:#166534;margin-bottom:10px;">💚 <?php esc_html_e( 'You thanked your masjid today', 'yourjannah' ); ?> <span style="font-size:12px;opacity:.7;margin-left:4px;" id="gratitude-count"><?php echo $_grat_count ? number_format( $_grat_count ) : ''; ?></span></div>
+    <?php else : ?>
+    <button type="button" id="gratitude-btn" onclick="ynjPostGratitude()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;border-radius:14px;font-size:14px;font-weight:700;color:#9d174d;cursor:pointer;font-family:inherit;margin-bottom:10px;transition:all .2s;">💖 <?php esc_html_e( 'Thank Your Mosque', 'yourjannah' ); ?> <span style="font-size:12px;opacity:.7;margin-left:4px;" id="gratitude-count"><?php echo $_grat_count ? number_format( $_grat_count ) : ''; ?></span></button>
+    <?php endif; ?>
     <?php endif; ?>
 
     <!-- ═══ PURIFY YOUR RIZQ — Daily sadaqah habit ═══ -->
