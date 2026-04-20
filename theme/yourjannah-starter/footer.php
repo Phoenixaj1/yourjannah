@@ -179,9 +179,9 @@ if ( $_nb_id && $_nb_pk ) :
         <!-- STEP 1: Frequency + Amount -->
         <div id="nb-step1">
             <div class="ynj-nb-freq">
-                <button type="button" class="ynj-nb-freq__btn ynj-nb-freq__btn--active" data-freq="week">Every Friday</button>
+                <button type="button" class="ynj-nb-freq__btn" data-freq="week">Every Friday</button>
                 <button type="button" class="ynj-nb-freq__btn" data-freq="month">Monthly</button>
-                <button type="button" class="ynj-nb-freq__btn" data-freq="once">One-off</button>
+                <button type="button" class="ynj-nb-freq__btn ynj-nb-freq__btn--active" data-freq="once">One-off</button>
             </div>
             <div class="ynj-nb-amounts">
                 <button type="button" class="ynj-nb-amt" data-amount="500">&pound;5</button>
@@ -241,7 +241,7 @@ if ( $_nb_id && $_nb_pk ) :
     var userName = <?php echo wp_json_encode( $_nb_user_name ); ?>;
     var isLoggedIn = <?php echo $_nb_logged_in ? 'true' : 'false'; ?>;
 
-    var selectedFreq = 'week';
+    var selectedFreq = 'once';
     var selectedAmount = 0;
     var txnId = '';
     var stripe = null;
