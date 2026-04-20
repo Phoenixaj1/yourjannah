@@ -665,6 +665,94 @@ function ynj_plugin_active() {
 // WP LOGIN/LOGOUT BRANDING — YourJannah logo + styling
 // ================================================================
 
+// ================================================================
+// XML SITEMAP — Dynamic mosque sitemap for Google
+// ================================================================
+
+add_action( 'init', function() {
+    add_rewrite_rule( '^sitemap-mosques\.xml$', 'index.php?ynj_sitemap=mosques', 'top' );
+    add_rewrite_tag( '%ynj_sitemap%', '([a-z]+)' );
+} );
+
+add_action( 'template_redirect', function() {
+    $sitemap = get_query_var( 'ynj_sitemap' );
+    if ( ! $sitemap ) return;
+
+    if ( ! class_exists( 'YNJ_DB' ) ) { status_header( 503 ); exit; }
+
+    global $wpdb;
+    $base = home_url( '' );
+
+    header( 'Content-Type: application/xml; charset=utf-8' );
+    header( 'X-Robots-Tag: noindex' ); // Sitemap itself shouldn't be indexed
+
+    echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+    echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+
+    if ( $sitemap === 'mosques' ) {
+        $mosques = $wpdb->get_results(
+            "SELECT slug, name, city, updated_at FROM " . YNJ_DB::table( 'mosques' ) . " WHERE status = 'active' ORDER BY member_count DESC"
+        ) ?: [];
+
+        $subpages = [ '', '/events', '/classes', '/sponsors', '/prayers', '/patron' ];
+
+        foreach ( $mosques as $m ) {
+            foreach ( $subpages as $sub ) {
+                $url  = $base . '/mosque/' . $m->slug . $sub . '/';
+                $mod  = substr( $m->updated_at, 0, 10 );
+                $pri  = $sub === '' ? '0.8' : '0.5';
+                $freq = $sub === '' ? 'daily' : 'weekly';
+                echo "  <url>\n";
+                echo "    <loc>" . esc_url( $url ) . "</loc>\n";
+                echo "    <lastmod>" . esc_html( $mod ) . "</lastmod>\n";
+                echo "    <changefreq>" . $freq . "</changefreq>\n";
+                echo "    <priority>" . $pri . "</priority>\n";
+                echo "  </url>\n";
+            }
+        }
+    }
+
+    echo '</urlset>';
+    exit;
+} );
+
+// Add mosque sitemap to the WordPress sitemap index
+add_filter( 'wp_sitemaps_add_provider', function( $provider, $name ) {
+    return $provider; // Keep default providers
+}, 10, 2 );
+
+// Register our sitemap in robots.txt
+add_filter( 'robots_txt', function( $output, $public ) {
+    if ( $public ) {
+        $output .= "\nSitemap: " . home_url( '/sitemap-mosques.xml' ) . "\n";
+    }
+    return $output;
+}, 10, 2 );
+
+// Also add a sitemap index that includes our mosque sitemap
+add_action( 'init', function() {
+    add_rewrite_rule( '^sitemap-index\.xml$', 'index.php?ynj_sitemap=index', 'top' );
+} );
+
+add_action( 'template_redirect', function() {
+    if ( get_query_var( 'ynj_sitemap' ) !== 'index' ) return;
+
+    header( 'Content-Type: application/xml; charset=utf-8' );
+    echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+    echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+    echo "  <sitemap>\n";
+    echo "    <loc>" . esc_url( home_url( '/sitemap-mosques.xml' ) ) . "</loc>\n";
+    echo "    <lastmod>" . date( 'Y-m-d' ) . "</lastmod>\n";
+    echo "  </sitemap>\n";
+    // WordPress default sitemap
+    echo "  <sitemap>\n";
+    echo "    <loc>" . esc_url( home_url( '/wp-sitemap.xml' ) ) . "</loc>\n";
+    echo "    <lastmod>" . date( 'Y-m-d' ) . "</lastmod>\n";
+    echo "  </sitemap>\n";
+    echo '</sitemapindex>';
+    exit;
+}, 5 );
+
 // Remove WP site icon in favour of our SVG favicon
 add_action( 'wp_head', function() { remove_action( 'wp_head', 'wp_site_icon', 99 ); }, 1 );
 
