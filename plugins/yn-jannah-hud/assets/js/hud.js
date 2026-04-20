@@ -182,6 +182,7 @@ var ynjHudData = window.ynjHudData || {};
                 // Almsgiving CTA
                 + '<button type="button" onclick="ynjHudDhikrToggle();if(typeof ynjNiyyahBarOpen===\'function\')ynjNiyyahBarOpen({mode:\'donation\',icon:\'\uD83D\uDC9D\',frequency:\'once\'});" style="width:100%;margin-top:14px;padding:14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(22,163,74,.25);transition:all .15s;">'
                 + '\uD83E\uDD32 Give Alms — Support Your Masjid</button>'
+                + '<button type="button" onclick="ynjHudDhikrToggle()" style="width:100%;margin-top:8px;padding:10px;background:none;border:none;color:#94a3b8;font-size:13px;cursor:pointer;font-family:inherit;">I\'ll do this later</button>'
 
                 + '</div>';
 
