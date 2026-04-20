@@ -1011,14 +1011,33 @@ if ( $fav_mosque_id && $ynj_uid && class_exists( 'YNJ_Streaks' ) ) {
             <p class="ynj-empty"><?php esc_html_e( 'No favourite mosque set.', 'yourjannah' ); ?> <a href="<?php echo esc_url( home_url( '/' ) ); ?>" style="color:#00ADEF;font-weight:600;"><?php esc_html_e( 'Find your masjid', 'yourjannah' ); ?></a></p>
         <?php endif; ?>
 
-        <?php if ( $patron ) : ?>
-            <div style="margin-top:12px;padding:12px;background:linear-gradient(135deg,#0a1628,#1a3a5c);border-radius:10px;color:#fff;">
-                <div style="font-size:13px;font-weight:700;">&#x1F3C5; <?php echo esc_html( $patron_tier ); ?> <?php esc_html_e( 'Patron', 'yourjannah' ); ?> &middot; &pound;<?php echo esc_html( $patron_amount ); ?>/mo</div>
-                <?php if ( $patron->mosque_slug ) : ?>
-                <div style="margin-top:6px;display:flex;gap:12px;">
-                    <a href="<?php echo esc_url( home_url( '/mosque/' . $patron->mosque_slug . '/patron' ) ); ?>" style="font-size:12px;color:rgba(255,255,255,.7);text-decoration:underline;"><?php esc_html_e( 'Manage', 'yourjannah' ); ?></a>
+        <?php if ( $patron ) :
+            $pt_tiers = [
+                'supporter' => [ 500,  'Bronze' ],
+                'guardian'  => [ 1000, 'Silver' ],
+                'champion'  => [ 2000, 'Gold' ],
+                'platinum'  => [ 5000, 'Platinum' ],
+            ];
+            $current_tk = $patron->tier ?? 'supporter';
+            $m_name = $patron->mosque_name ?? $mosque_name;
+            $m_slug = $patron->mosque_slug ?? ( $fav_mosque ? $fav_mosque->slug : '' );
+        ?>
+            <div style="margin-top:12px;padding:14px;background:linear-gradient(135deg,#0a1628,#1a3a5c);border-radius:12px;color:#fff;">
+                <div style="font-size:13px;font-weight:700;margin-bottom:10px;">🏅 <?php echo esc_html( $patron_tier ); ?> <?php esc_html_e( 'Patron', 'yourjannah' ); ?> — £<?php echo esc_html( $patron_amount ); ?>/mo</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <?php foreach ( $pt_tiers as $tk => $tp ) :
+                        if ( $tk === $current_tk ) : ?>
+                            <span style="padding:6px 12px;border-radius:8px;background:rgba(255,255,255,.2);font-size:11px;font-weight:700;opacity:.6;">£<?php echo $tp[0]/100; ?> ✓</span>
+                        <?php else :
+                            $label = (int)$tp[0] > (int)($pt_tiers[$current_tk][0] ?? 0) ? 'Upgrade' : 'Change';
+                        ?>
+                            <button type="button" onclick="if(typeof ynjNiyyahBarOpen==='function')ynjNiyyahBarOpen({mode:'patron',item_type:'patron',icon:'🏅',amount_pence:<?php echo $tp[0]; ?>,item_label:'<?php echo esc_js( $tp[1] . ' Patron — ' . $m_name ); ?>',frequency:'monthly',meta:{tier:'<?php echo esc_js( $tk ); ?>'}})" style="padding:6px 12px;border-radius:8px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">£<?php echo $tp[0]/100; ?></button>
+                        <?php endif;
+                    endforeach; ?>
                 </div>
-                <?php endif; ?>
+                <div style="margin-top:10px;display:flex;gap:12px;align-items:center;">
+                    <button type="button" onclick="if(confirm('Cancel your patronage?')){fetch('/wp-json/ynj/v1/patrons/cancel',{method:'POST',headers:{'Content-Type':'application/json','X-WP-Nonce':'<?php echo wp_create_nonce('wp_rest'); ?>'},credentials:'same-origin',body:JSON.stringify({mosque_id:<?php echo (int)($patron->mosque_id ?? 0); ?>})}).then(function(r){return r.json()}).then(function(d){if(d.ok)location.reload();else alert(d.error||'Failed')})}" style="font-size:11px;color:rgba(255,255,255,.4);background:none;border:none;cursor:pointer;text-decoration:underline;font-family:inherit;"><?php esc_html_e( 'Cancel patronage', 'yourjannah' ); ?></button>
+                </div>
             </div>
         <?php endif; ?>
     </div>
