@@ -231,7 +231,7 @@ if ( $_nb_id && $_nb_pk ) :
 <div class="ynj-niyyah" id="ynj-niyyah-bar">
     <!-- Toggle bar -->
     <div class="ynj-niyyah__bar" onclick="var b=document.getElementById('ynj-niyyah-bar');b.classList.toggle('ynj-niyyah--open');">
-        <span class="ynj-niyyah__bar-label">🕌 Donate</span>
+        <span class="ynj-niyyah__bar-label">🕌 Almsgiving</span>
         <select class="ynj-niyyah__bar-fund" id="nb-fund" onclick="event.stopPropagation()">
             <?php foreach ( $_nb_funds as $f ) : ?>
             <option value="<?php echo esc_attr( $f->slug ); ?>"><?php echo esc_html( $f->label ); ?></option>
@@ -535,7 +535,7 @@ if ( $_nb_id && $_nb_pk ) :
             if (barLabel) barLabel.textContent = (opts.icon || '🛒') + ' ' + opts.item_label;
             if (mosqueLabel) mosqueLabel.textContent = opts.item_label;
         } else {
-            if (barLabel) barLabel.textContent = '🕌 Donate';
+            if (barLabel) barLabel.textContent = '🕌 Almsgiving';
             if (mosqueLabel) mosqueLabel.textContent = '🕌 <?php echo esc_js( $_nb_name ); ?>';
         }
 
@@ -575,7 +575,7 @@ if ( $_nb_id && $_nb_pk ) :
             // Bar is closing — reset to donation mode
             currentItem = null;
             var barLabel = document.querySelector('.ynj-niyyah__bar-label');
-            if (barLabel) barLabel.textContent = '🕌 Donate';
+            if (barLabel) barLabel.textContent = '🕌 Almsgiving';
             var freqBar = bar.querySelector('.ynj-nb-freq');
             if (freqBar) freqBar.style.display = '';
             var fundBarSelect = document.querySelector('.ynj-niyyah__bar-fund');
@@ -739,7 +739,7 @@ function ynj_default_mobile_nav() {
         [ 'label' => 'Masjid Info','href' => '/mosque/' . $slug,                    'icon' => '🕌' ],
         [ 'label' => 'Madrassah',  'href' => '/mosque/' . $slug . '/madrassah',      'icon' => '📚' ],
         [ 'label' => 'Patron',     'href' => '/mosque/' . $slug . '/patron',        'icon' => '🏅' ],
-        [ 'label' => 'Donate',     'href' => '/mosque/' . $slug . '/donate',        'icon' => '💝' ],
+        [ 'label' => 'Almsgiving', 'href' => '/mosque/' . $slug . '/donate',        'icon' => '💝' ],
         [ 'label' => 'Profile',    'href' => '/profile',                            'icon' => '👤' ],
         [ 'label' => 'Login',      'href' => '/login',                              'icon' => '🔑' ],
         [ 'label' => 'Sponsor YourJannah','href' => '/sponsor-yourjannah',           'icon' => '🤲' ],

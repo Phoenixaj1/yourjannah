@@ -848,9 +848,9 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
     </p>
 
     <!-- Donate button -->
-    <button type="button" class="ynj-donate-btn" id="donate-btn" onclick="if(typeof ynjNiyyahBarOpen==='function'){ynjNiyyahBarOpen({mode:'donation',icon:'💝',item_label:'Donate to <?php echo esc_js($mosque_name); ?>',frequency:'once'});}">
+    <button type="button" class="ynj-donate-btn" id="donate-btn" onclick="if(typeof ynjNiyyahBarOpen==='function'){ynjNiyyahBarOpen({mode:'donation',icon:'💝',item_label:'Almsgiving — <?php echo esc_js($mosque_name); ?>',frequency:'once'});}">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-        <?php esc_html_e( 'Donate to Masjid', 'yourjannah' ); ?>
+        <?php esc_html_e( 'Almsgiving', 'yourjannah' ); ?>
     </button>
 
     <!-- Check-in + Points (logged-in users only) -->
