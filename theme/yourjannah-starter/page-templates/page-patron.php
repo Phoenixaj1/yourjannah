@@ -149,13 +149,17 @@ $mosque_status = $mosque ? $mosque->status : '';
     selectTier(selectedTier);
 
     async function becomePerson() {
-        if (!token) {
-            window.location.href = '<?php echo esc_js( home_url( '/login?redirect=' ) ); ?>' + encodeURIComponent(window.location.pathname);
-            return;
+        <?php if ( ! is_user_logged_in() ) : ?>
+        // Guest: open auth modal instead of redirecting
+        if (typeof ynjAuthModalOpen === 'function') {
+            ynjAuthModalOpen({mosque_slug: slug, mosque_name: <?php echo wp_json_encode( $mosque_name ); ?>});
         }
+        return;
+        <?php endif; ?>
+
         const btn = document.getElementById('patron-btn');
         btn.disabled = true;
-        btn.textContent = '<?php echo esc_js( __( 'Redirecting to checkout...', 'yourjannah' ) ); ?>';
+        btn.textContent = '<?php echo esc_js( __( 'Setting up...', 'yourjannah' ) ); ?>';
 
         try {
             // Try Bearer token first, fall back to WP nonce (cookie auth)

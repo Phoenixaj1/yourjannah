@@ -21,19 +21,39 @@ class YNJ_UI {
         $patron_tiers = class_exists( 'YNJ_API_Patrons' ) ? YNJ_API_Patrons::get_tiers() : [];
         $patron_url = home_url( '/mosque/' . $slug . '/patron' );
 
-        if ( $patron_status ) : ?>
+        <?php
+        $is_logged_in = is_user_logged_in();
+        $tier_map = [
+            'supporter' => [ 500,  'Bronze' ],
+            'guardian'  => [ 1000, 'Silver' ],
+            'champion'  => [ 2000, 'Gold' ],
+            'platinum'  => [ 5000, 'Platinum' ],
+        ];
+        ?>
+        <?php if ( $patron_status ) : ?>
         <div class="ynj-patron-bar" id="patron-hero" style="background:linear-gradient(135deg,#287e61,#1a5c43) !important;">
             <a href="<?php echo esc_url( $patron_url ); ?>" class="ynj-patron-bar__label">🏅 <strong><?php printf( esc_html__( "You're a %s Patron — JazakAllah Khayr", 'yourjannah' ), esc_html( $patron_tiers[ $patron_status->tier ]['label'] ?? ucfirst( $patron_status->tier ) ) ); ?></strong></a>
             <a href="<?php echo esc_url( $patron_url ); ?>" class="ynj-patron-chip" style="background:rgba(255,255,255,.2);"><?php esc_html_e( 'Manage', 'yourjannah' ); ?></a>
         </div>
         <?php else : ?>
         <div class="ynj-patron-bar" id="patron-hero">
-            <a href="<?php echo esc_url( $patron_url ); ?>" class="ynj-patron-bar__label">🏅 <strong id="patron-bar-text"><?php printf( esc_html__( 'Become a Patron of %s', 'yourjannah' ), esc_html( $mosque_name ) ); ?></strong></a>
+            <span class="ynj-patron-bar__label">🏅 <strong id="patron-bar-text"><?php printf( esc_html__( 'Become a Patron of %s', 'yourjannah' ), esc_html( $mosque_name ) ); ?></strong></span>
             <div class="ynj-patron-bar__tiers">
-                <a href="<?php echo esc_url( $patron_url ); ?>" class="ynj-patron-chip">£5</a>
-                <a href="<?php echo esc_url( $patron_url ); ?>" class="ynj-patron-chip">£10</a>
-                <a href="<?php echo esc_url( $patron_url ); ?>" class="ynj-patron-chip ynj-patron-chip--popular"><span class="ynj-patron-chip__pop"><?php esc_html_e( 'Popular', 'yourjannah' ); ?></span>£20</a>
-                <a href="<?php echo esc_url( $patron_url ); ?>" class="ynj-patron-chip">£50</a>
+                <?php foreach ( [ 'supporter' => '£5', 'guardian' => '£10', 'champion' => '£20', 'platinum' => '£50' ] as $tk => $tl ) :
+                    $tp = $tier_map[ $tk ];
+                    $popular = $tk === 'champion' ? ' ynj-patron-chip--popular' : '';
+                    if ( $is_logged_in ) : ?>
+                <button type="button" class="ynj-patron-chip<?php echo $popular; ?>" onclick="if(typeof ynjNiyyahBarOpen==='function')ynjNiyyahBarOpen({mode:'patron',item_type:'patron',icon:'🏅',amount_pence:<?php echo $tp[0]; ?>,item_label:'<?php echo esc_js( $tp[1] ); ?> Patron — <?php echo esc_js( $mosque_name ); ?>',frequency:'monthly',meta:{tier:'<?php echo esc_js( $tk ); ?>'}})">
+                    <?php if ( $popular ) : ?><span class="ynj-patron-chip__pop"><?php esc_html_e( 'Popular', 'yourjannah' ); ?></span><?php endif; ?>
+                    <?php echo $tl; ?>
+                </button>
+                    <?php else : ?>
+                <button type="button" class="ynj-patron-chip<?php echo $popular; ?>" onclick="if(typeof ynjAuthModalOpen==='function')ynjAuthModalOpen({mosque_slug:'<?php echo esc_js( $slug ); ?>',mosque_name:'<?php echo esc_js( $mosque_name ); ?>'})">
+                    <?php if ( $popular ) : ?><span class="ynj-patron-chip__pop"><?php esc_html_e( 'Popular', 'yourjannah' ); ?></span><?php endif; ?>
+                    <?php echo $tl; ?>
+                </button>
+                    <?php endif; ?>
+                <?php endforeach; ?>
             </div>
         </div>
         <?php endif;
