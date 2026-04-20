@@ -27,11 +27,8 @@ class YNJ_Mosque_Enricher {
             . ');'
             . 'out center tags;';
 
-        $url = 'https://overpass-api.de/api/interpreter';
-        $response = wp_remote_post( $url, [
-            'timeout' => 90,
-            'body'    => [ 'data' => $query ],
-        ] );
+        $url = 'https://overpass-api.de/api/interpreter?data=' . urlencode( $query );
+        $response = wp_remote_get( $url, [ 'timeout' => 90, 'sslverify' => false ] );
 
         if ( is_wp_error( $response ) ) {
             return [ 'error' => 'Overpass API failed: ' . $response->get_error_message() ];
@@ -77,30 +74,59 @@ class YNJ_Mosque_Enricher {
     }
 
     /**
-     * Search for ALL UK mosques using Overpass (single query for entire country).
+     * Search for ALL UK mosques using Overpass (split into regional queries).
      */
     public static function search_all_uk() {
-        // Use bounding box for UK: SW corner (49.8,-8.2) to NE corner (60.9,1.8)
-        $bbox = '49.8,-8.2,60.9,1.8';
-        $query = '[out:json][timeout:180];'
-            . '('
-            . 'node["amenity"="place_of_worship"]["religion"="muslim"](' . $bbox . ');'
-            . 'way["amenity"="place_of_worship"]["religion"="muslim"](' . $bbox . ');'
-            . ');'
-            . 'out center tags;';
+        // Split UK into regional bounding boxes to avoid timeout
+        $regions = [
+            'London'          => '51.2,-0.5,51.7,0.3',
+            'South East'      => '50.7,-1.5,51.5,1.5',
+            'Midlands'        => '52.0,-2.5,53.0,0.0',
+            'North West'      => '53.0,-3.2,54.0,-1.5',
+            'Yorkshire'       => '53.3,-2.0,54.2,0.0',
+            'North East'      => '54.2,-2.5,55.5,0.0',
+            'South West'      => '50.0,-5.8,51.5,-1.5',
+            'East'            => '51.5,0.0,52.8,1.8',
+            'Wales'           => '51.3,-5.5,53.5,-2.5',
+            'Scotland'        => '55.0,-6.5,58.8,0.0',
+        ];
 
-        $url = 'https://overpass-api.de/api/interpreter';
-        $response = wp_remote_post( $url, [
-            'timeout' => 180,
-            'body'    => [ 'data' => $query ],
-        ] );
+        $all_mosques = [];
+        $seen_ids = [];
 
-        if ( is_wp_error( $response ) ) {
-            return [ 'error' => 'Overpass API failed: ' . $response->get_error_message() ];
+        foreach ( $regions as $name => $bbox ) {
+            $query = '[out:json][timeout:60];'
+                . '('
+                . 'node["amenity"="place_of_worship"]["religion"="muslim"](' . $bbox . ');'
+                . 'way["amenity"="place_of_worship"]["religion"="muslim"](' . $bbox . ');'
+                . ');'
+                . 'out center tags;';
+
+            // Use GET with URL encoding (more reliable than POST)
+            $url = 'https://overpass-api.de/api/interpreter?data=' . urlencode( $query );
+            $response = wp_remote_get( $url, [ 'timeout' => 90, 'sslverify' => false ] );
+
+            if ( is_wp_error( $response ) ) continue;
+
+            $body = wp_remote_retrieve_body( $response );
+            if ( ! $body || $body[0] !== '{' ) continue; // Skip non-JSON responses
+
+            $data = json_decode( $body, true );
+            $parsed = self::parse_osm_results( $data['elements'] ?? [] );
+
+            // Deduplicate by OSM ID
+            foreach ( $parsed as $m ) {
+                if ( ! isset( $seen_ids[ $m['osm_id'] ] ) ) {
+                    $seen_ids[ $m['osm_id'] ] = true;
+                    $all_mosques[] = $m;
+                }
+            }
+
+            // Rate limit: 1 second between requests to be nice to Overpass
+            sleep( 1 );
         }
 
-        $data = json_decode( wp_remote_retrieve_body( $response ), true );
-        return self::parse_osm_results( $data['elements'] ?? [] );
+        return $all_mosques;
     }
 
     private static function parse_osm_results( $elements ) {
@@ -200,6 +226,7 @@ class YNJ_Mosque_Enricher {
      * REST: Search and import ALL UK mosques from OpenStreetMap.
      */
     public static function api_import_all_uk( \WP_REST_Request $request ) {
+        @set_time_limit( 600 ); // 10 minutes
         $mosques = self::search_all_uk();
         if ( isset( $mosques['error'] ) ) return new \WP_REST_Response( $mosques, 500 );
 
