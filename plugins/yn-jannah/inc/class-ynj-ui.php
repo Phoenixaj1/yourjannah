@@ -68,6 +68,43 @@ class YNJ_UI {
     }
 
     /**
+     * Render the Thank Your Mosque button.
+     *
+     * @param int $mosque_id
+     */
+    public static function render_gratitude_button( $mosque_id ) {
+        if ( ! $mosque_id || ! class_exists( 'YNJ_DB' ) ) return;
+
+        global $wpdb;
+        $gt = YNJ_DB::table( 'gratitude_posts' );
+        $count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $gt WHERE mosque_id = %d", $mosque_id ) );
+
+        $done_today = false;
+        if ( is_user_logged_in() ) {
+            $ynj_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+            $wp_uid  = get_current_user_id();
+            if ( $ynj_uid ) {
+                $done_today = (bool) $wpdb->get_var( $wpdb->prepare(
+                    "SELECT COUNT(*) FROM $gt WHERE user_id = %d AND DATE(created_at) = CURDATE()", $ynj_uid
+                ) );
+            }
+            if ( ! $done_today && $wp_uid ) {
+                $done_today = (bool) $wpdb->get_var( $wpdb->prepare(
+                    "SELECT COUNT(*) FROM $gt WHERE user_id = %d AND DATE(created_at) = CURDATE()", $wp_uid
+                ) );
+            }
+        }
+
+        $count_html = $count ? ' <span style="font-size:12px;opacity:.7;margin-left:4px;" id="gratitude-count">' . number_format( $count ) . '</span>' : '<span id="gratitude-count"></span>';
+
+        if ( $done_today ) {
+            echo '<div id="gratitude-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:14px;font-size:14px;font-weight:700;color:#166534;margin-bottom:10px;">💚 ' . esc_html__( 'You thanked your masjid today', 'yourjannah' ) . $count_html . '</div>';
+        } else {
+            echo '<button type="button" id="gratitude-btn" onclick="ynjPostGratitude()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;border-radius:14px;font-size:14px;font-weight:700;color:#9d174d;cursor:pointer;font-family:inherit;margin-bottom:10px;transition:all .2s;">💖 ' . esc_html__( 'Thank Your Mosque', 'yourjannah' ) . $count_html . '</button>';
+        }
+    }
+
+    /**
      * Render the Sponsor Ticker.
      */
     public static function render_sponsor_ticker() {

@@ -892,10 +892,8 @@ $_hp_mosque_addr = $_ynj_mosque_for_prayer ? ( $_ynj_mosque_for_prayer->address 
     </a>
     <?php endif; ?>
 
-    <!-- ═══ GRATITUDE ═══ -->
-    <?php if ( $_hp_mosque_id && is_user_logged_in() ) : ?>
-    <button type="button" onclick="ynjPostGratitude()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;border-radius:14px;font-size:14px;font-weight:700;color:#9d174d;cursor:pointer;font-family:inherit;margin-bottom:10px;">💖 <?php esc_html_e( 'Thank Your Mosque', 'yourjannah' ); ?></button>
-    <?php endif; ?>
+    <!-- Gratitude (rendered by plugin) -->
+    <?php if ( class_exists( 'YNJ_UI' ) ) YNJ_UI::render_gratitude_button( $_hp_mosque_id ); ?>
 
     <!-- ═══ PURIFY YOUR RIZQ — Daily sadaqah ═══ -->
     <?php if ( $_hp_mosque_id && is_user_logged_in() ) : ?>
