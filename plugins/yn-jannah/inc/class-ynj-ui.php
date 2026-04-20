@@ -20,17 +20,8 @@ class YNJ_UI {
     public static function render_patron_bar( $slug, $mosque_name, $patron_status = null ) {
         $patron_tiers = class_exists( 'YNJ_API_Patrons' ) ? YNJ_API_Patrons::get_tiers() : [];
         $patron_url = home_url( '/mosque/' . $slug . '/patron' );
-
-        <?php
         $is_logged_in = is_user_logged_in();
-        $tier_map = [
-            'supporter' => [ 500,  'Bronze' ],
-            'guardian'  => [ 1000, 'Silver' ],
-            'champion'  => [ 2000, 'Gold' ],
-            'platinum'  => [ 5000, 'Platinum' ],
-        ];
-        ?>
-        <?php
+
         if ( $patron_status ) {
             $tier_label = $patron_tiers[ $patron_status->tier ]['label'] ?? ucfirst( $patron_status->tier ?? 'supporter' );
             echo '<div class="ynj-patron-bar" id="patron-hero" style="background:linear-gradient(135deg,#287e61,#1a5c43) !important;">';
@@ -59,7 +50,6 @@ class YNJ_UI {
             }
             echo '</div></div>';
         }
-        ?>
     }
 
     /**
