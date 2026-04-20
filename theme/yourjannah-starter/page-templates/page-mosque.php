@@ -1263,56 +1263,11 @@ async function ynjSetPrimary(mosqueId) {
     } catch(e) { alert('Network error.'); }
 }
 
+// Auth modal now rendered by HUD plugin (auth-modal.php)
 function ynjShowJoinLogin() {
-    document.getElementById('ynj-join-modal').style.display = 'flex';
-}
-function ynjCloseJoinModal() {
-    document.getElementById('ynj-join-modal').style.display = 'none';
+    if (typeof ynjAuthModalOpen === 'function') ynjAuthModalOpen();
 }
 </script>
-
-<!-- Social Login Modal (for non-logged-in users) -->
-<?php if ( ! is_user_logged_in() && $mosque ) :
-    $return_to = '/mosque/' . $slug;
-    $google_url = class_exists('YNJ_Social_Auth') && YNJ_Social_Auth::is_google_configured() ? YNJ_Social_Auth::get_login_url( 'google', $return_to, $slug, $slug ) : '';
-    $facebook_url = class_exists('YNJ_Social_Auth') && YNJ_Social_Auth::is_facebook_configured() ? YNJ_Social_Auth::get_login_url( 'facebook', $return_to, $slug, $slug ) : '';
-?>
-<div id="ynj-join-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#fff;border-radius:20px;padding:28px 24px;max-width:380px;width:100%;text-align:center;position:relative;">
-        <button onclick="ynjCloseJoinModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#999;">&times;</button>
-        <h2 style="font-size:20px;font-weight:800;margin-bottom:4px;"><?php printf( esc_html__( 'Follow %s', 'yourjannah' ), esc_html( $mosque_name ) ); ?></h2>
-        <p style="font-size:13px;color:#666;margin-bottom:20px;"><?php esc_html_e( 'Sign in to follow this masjid and get updates', 'yourjannah' ); ?></p>
-
-        <?php if ( $google_url ) : ?>
-        <a href="<?php echo esc_url( $google_url ); ?>" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;font-size:14px;font-weight:600;color:#333;text-decoration:none;margin-bottom:10px;background:#fff;">
-            <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-            Continue with Google
-        </a>
-        <?php endif; ?>
-
-        <?php if ( $facebook_url ) : ?>
-        <a href="<?php echo esc_url( $facebook_url ); ?>" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;font-size:14px;font-weight:600;color:#333;text-decoration:none;margin-bottom:10px;background:#fff;">
-            <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#1877F2" d="M48 24C48 10.745 37.255 0 24 0S0 10.745 0 24c0 11.979 8.776 21.908 20.25 23.708v-16.77h-6.094V24h6.094v-5.288c0-6.014 3.583-9.337 9.065-9.337 2.625 0 5.372.469 5.372.469v5.906h-3.026c-2.981 0-3.911 1.85-3.911 3.75V24h6.656l-1.064 6.938H27.75v16.77C39.224 45.908 48 35.979 48 24z"/></svg>
-            Continue with Facebook
-        </a>
-        <?php endif; ?>
-
-        <div style="display:flex;align-items:center;gap:12px;margin:16px 0;">
-            <div style="flex:1;height:1px;background:#e0e0e0;"></div>
-            <span style="font-size:12px;color:#999;">or</span>
-            <div style="flex:1;height:1px;background:#e0e0e0;"></div>
-        </div>
-
-        <a href="<?php echo esc_url( home_url( '/register/?redirect=' . urlencode( '/mosque/' . $slug ) . '&join_mosque=' . $slug ) ); ?>" style="display:block;width:100%;padding:12px;background:#00ADEF;color:#fff;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;">
-            Sign up with Email
-        </a>
-
-        <p style="font-size:12px;color:#999;margin-top:16px;">
-            Already have an account? <a href="<?php echo esc_url( home_url( '/login/?redirect=' . urlencode( '/mosque/' . $slug ) ) ); ?>" style="color:#00ADEF;font-weight:600;">Sign in</a>
-        </p>
-    </div>
-</div>
-<?php endif; ?>
 
 <?php // ── Admin Tools: FAB, Quick Post Modal, Edit Shortcuts, Toast ── ?>
 <?php if ( $mosque && $_ynj_can_edit ) :

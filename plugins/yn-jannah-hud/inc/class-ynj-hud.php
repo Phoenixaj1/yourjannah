@@ -25,6 +25,9 @@ class YNJ_HUD {
         // Cart drawer (both guest + member)
         include YNJ_HUD_DIR . 'templates/cart-drawer.php';
 
+        // Auth modal (guests only — blue onboard with GPS + PIN)
+        include YNJ_HUD_DIR . 'templates/auth-modal.php';
+
         // Mosque selector modal (both guest + member)
         include YNJ_HUD_DIR . 'templates/mosque-modal.php';
 

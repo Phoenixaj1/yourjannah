@@ -53,6 +53,17 @@ add_action( 'plugins_loaded', function() {
             true
         );
 
+        // Auth modal JS (guests only)
+        if ( ! is_user_logged_in() ) {
+            wp_enqueue_script(
+                'ynj-auth-modal',
+                YNJ_HUD_URL . 'assets/js/auth-modal.js',
+                [],
+                YNJ_HUD_VERSION,
+                true
+            );
+        }
+
         // Pass HUD data to JS
         $hud_data = YNJ_HUD::get_js_data();
         wp_localize_script( 'ynj-hud', 'ynjHudData', $hud_data );

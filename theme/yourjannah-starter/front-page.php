@@ -226,9 +226,10 @@ if ( $_hp_mosque_id ) {
 }
 ?>
 
-<!-- Smart onboarding: GPS → Masjid → Email → In (always in DOM, JS controls visibility) -->
-<style>.ob-search-ph::placeholder{color:rgba(255,255,255,.6);}</style>
-<div id="ynj-onboard" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);overflow-y:auto;align-items:center;justify-content:center;padding:20px;">
+<!-- Auth modal now rendered by HUD plugin (auth-modal.php) -->
+<?php /* OLD ONBOARD MODAL REMOVED — now in yn-jannah-hud plugin */ ?>
+<?php if ( false ) : /* kept for reference — delete after confirming plugin works */ ?>
+<div id="ynj-onboard-old" style="display:none;">
     <div style="max-width:420px;width:100%;background:linear-gradient(180deg,#0a1628 0%,#1a3a5c 60%,#00ADEF 100%);color:#fff;border-radius:24px;padding:36px 28px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);position:relative;">
         <img src="<?php echo esc_url( YNJ_THEME_URI . '/assets/icons/logo2.png' ); ?>" alt="YourJannah" style="height:40px;width:auto;margin:0 auto 12px;">
         <h1 style="font-size:20px;font-weight:800;margin-bottom:4px;"><?php esc_html_e( 'Follow Your Masjid Community', 'yourjannah' ); ?></h1>
@@ -587,6 +588,7 @@ if ( $_hp_mosque_id ) {
     }
 })();
 </script>
+<?php endif; ?>
 
 <?php
 // ── Homepage membership status check ──
