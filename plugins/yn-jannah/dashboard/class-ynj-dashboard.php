@@ -1999,12 +1999,55 @@ async function renderSettings() {
         '</div></div>' +
         '<div>' +
         '<div class="d-card" style="margin-bottom:16px"><h3>Mosque Page</h3><p style="margin-top:8px"><a href="/mosque/' + esc(mosque?.slug||'') + '" target="_blank" style="color:var(--primary);font-weight:700">yourjannah.com/mosque/' + esc(mosque?.slug||'') + '</a></p></div>' +
+        '<div class="d-card" style="margin-bottom:16px" id="stripe-connect-card"><h3 style="margin-bottom:8px">\ud83d\udcb3 Stripe Payments</h3><p style="font-size:12px;color:var(--text-dim);margin-bottom:12px">Connect your Stripe account so donations go directly to your masjid.</p><div id="stripe-connect-status"><p style="color:var(--text-dim);font-size:12px">Checking...</p></div></div>' +
         '<div class="d-card"><h3 style="margin-bottom:12px">\ud83d\udc65 Admin Team</h3><div id="admin-list"><p style="color:var(--text-dim)">Loading...</p></div>' +
         '<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px"><p style="font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:8px">INVITE ADMIN</p>' +
         '<div style="display:flex;gap:8px"><input type="email" id="invite-email" placeholder="email@example.com" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px"><button class="d-btn d-btn--primary d-btn--sm" onclick="inviteAdmin()">Invite</button></div></div>' +
         '</div></div></div>'
     ));
 }
+
+// Load Stripe Connect status on settings page
+(async function loadStripeConnect() {
+    setTimeout(async function() {
+        var el = document.getElementById('stripe-connect-status');
+        if (!el || !mosque) return;
+        try {
+            var res = await fetch(apiBase + 'stripe-connect/status?mosque_id=' + mosque.id, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            }).then(function(r){ return r.json(); });
+            if (res.connected) {
+                el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;margin-bottom:8px"><span style="color:#16a34a;font-weight:700;">\u2705 Connected</span><span style="font-size:11px;color:#666;">' + esc(res.account_id) + '</span></div>' +
+                    '<div style="display:flex;gap:8px;align-items:center"><span style="font-size:12px;color:var(--text-dim)">Platform fee: ' + res.fee_pct + '%</span>' +
+                    '<button class="d-btn d-btn--sm" style="font-size:11px;color:#dc2626;border-color:#fca5a5" onclick="disconnectStripe()">Disconnect</button></div>';
+            } else {
+                el.innerHTML = '<div style="padding:10px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;margin-bottom:8px;font-size:12px;color:#92400e">\u26a0\ufe0f Not connected — donations go through YourJannah\'s account</div>' +
+                    '<button class="d-btn d-btn--primary" onclick="connectStripe()">\ud83d\udd17 Connect Stripe Account</button>';
+            }
+        } catch(e) {
+            el.innerHTML = '<p style="color:var(--text-dim);font-size:12px">Could not check Stripe status.</p>';
+        }
+    }, 200);
+})();
+
+window.connectStripe = async function() {
+    if (!mosque) return;
+    var res = await fetch(apiBase + 'stripe-connect/url?mosque_id=' + mosque.id, {
+        headers: { 'Authorization': 'Bearer ' + token }
+    }).then(function(r){ return r.json(); });
+    if (res.ok && res.url) { window.location.href = res.url; }
+    else { toast(res.error || 'Could not generate connect link', 'error'); }
+};
+
+window.disconnectStripe = async function() {
+    if (!confirm('Disconnect Stripe? Future payments will go through YourJannah\u2019s account until reconnected.')) return;
+    await fetch(apiBase + 'stripe-connect/disconnect', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ mosque_id: mosque.id })
+    });
+    toast('Stripe disconnected');
+    renderSettings();
+};
 
 // Load admin list on settings page
 (async function loadAdminList() {

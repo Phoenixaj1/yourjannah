@@ -194,7 +194,7 @@ class YNJ_UC_API {
                     'source'       => $source,
                 ] );
 
-                $pi = \Stripe\PaymentIntent::create( [
+                $pi_params = [
                     'amount'                     => $total_pence,
                     'currency'                   => $currency,
                     'description'                => $primary_label,
@@ -206,7 +206,11 @@ class YNJ_UC_API {
                         'type'           => 'ynj_unified_checkout',
                     ],
                     'automatic_payment_methods'  => [ 'enabled' => true ],
-                ] );
+                ];
+                // Stripe Connect: add destination + fee if mosque has connected account
+                $pi_params = apply_filters( 'ynj_payment_params', $pi_params, $primary_mosque, $total_pence );
+
+                $pi = \Stripe\PaymentIntent::create( $pi_params );
 
                 $wpdb->update( $t, [ 'stripe_payment_intent' => $pi->id ], [ 'transaction_id' => $txn_id ] );
 
@@ -265,7 +269,7 @@ class YNJ_UC_API {
                     'product_data' => [ 'name' => $primary_label ],
                 ] );
 
-                $sub = \Stripe\Subscription::create( [
+                $sub_params = [
                     'customer'               => $customer->id,
                     'items'                  => [ [ 'price' => $price->id ] ],
                     'payment_behavior'       => 'default_incomplete',
@@ -277,7 +281,17 @@ class YNJ_UC_API {
                         'item_type'      => $primary_type,
                         'type'           => 'ynj_unified_checkout',
                     ],
-                ] );
+                ];
+                // Stripe Connect: for subscriptions, use application_fee_percent + transfer_data on subscription
+                if ( class_exists( 'YNJ_Stripe_Connect' ) ) {
+                    $acct = YNJ_Stripe_Connect::get_account_id( $primary_mosque );
+                    if ( $acct ) {
+                        $sub_params['application_fee_percent'] = YNJ_Stripe_Connect::get_fee_pct( $primary_mosque );
+                        $sub_params['transfer_data'] = [ 'destination' => $acct ];
+                    }
+                }
+
+                $sub = \Stripe\Subscription::create( $sub_params );
 
                 $client_secret = $sub->latest_invoice->payment_intent->client_secret ?? '';
                 $pi_id = $sub->latest_invoice->payment_intent->id ?? '';
@@ -317,7 +331,7 @@ class YNJ_UC_API {
                 'source'       => $source,
             ] );
 
-            $pi = \Stripe\PaymentIntent::create( [
+            $pi_params2 = [
                 'amount'                     => $once_total_with_tip,
                 'currency'                   => $currency,
                 'description'                => 'YourJannah Checkout (one-off)',
@@ -329,7 +343,10 @@ class YNJ_UC_API {
                     'type'           => 'ynj_unified_checkout',
                 ],
                 'automatic_payment_methods'  => [ 'enabled' => true ],
-            ] );
+            ];
+            $pi_params2 = apply_filters( 'ynj_payment_params', $pi_params2, $primary_mosque, $once_total_with_tip );
+
+            $pi = \Stripe\PaymentIntent::create( $pi_params2 );
 
             $wpdb->update( $t, [ 'stripe_payment_intent' => $pi->id ], [ 'transaction_id' => $txn_once ] );
 
