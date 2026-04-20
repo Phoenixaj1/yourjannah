@@ -660,3 +660,80 @@ function ynj_mosque_slug() {
 function ynj_plugin_active() {
     return class_exists( 'YNJ_DB' );
 }
+
+// ================================================================
+// WP LOGIN/LOGOUT BRANDING — YourJannah logo + styling
+// ================================================================
+
+// Custom logo on login page
+add_action( 'login_enqueue_scripts', function() {
+    $logo_url = YNJ_THEME_URI . '/assets/icons/logo2.png';
+    ?>
+    <style>
+        body.login {
+            background: linear-gradient(135deg, #0a1628 0%, #1a3a5c 50%, #00ADEF 100%) !important;
+        }
+        #login h1 a {
+            background-image: url('<?php echo esc_url( $logo_url ); ?>') !important;
+            background-size: contain !important;
+            width: 200px !important;
+            height: 60px !important;
+            margin-bottom: 16px !important;
+        }
+        .login form {
+            border-radius: 16px !important;
+            box-shadow: 0 20px 60px rgba(0,0,0,.3) !important;
+            border: none !important;
+        }
+        .login form .input {
+            border-radius: 10px !important;
+            padding: 10px 14px !important;
+        }
+        .login #backtoblog a, .login #nav a {
+            color: rgba(255,255,255,.6) !important;
+        }
+        .login #backtoblog a:hover, .login #nav a:hover {
+            color: #fff !important;
+        }
+        .login .message, .login .success {
+            border-radius: 10px !important;
+            border-left-color: #00ADEF !important;
+        }
+        #loginform .button-primary {
+            background: linear-gradient(135deg, #00ADEF, #0088cc) !important;
+            border: none !important;
+            border-radius: 10px !important;
+            padding: 8px 24px !important;
+            font-weight: 700 !important;
+            box-shadow: 0 4px 12px rgba(0,173,239,.3) !important;
+        }
+        .login .privacy-policy-page-link {
+            color: rgba(255,255,255,.4) !important;
+        }
+        .wp-die-message { font-family: 'Inter', system-ui, sans-serif; }
+    </style>
+    <?php
+} );
+
+// Logo link → homepage (not wordpress.org)
+add_filter( 'login_headerurl', function() { return home_url( '/' ); } );
+add_filter( 'login_headertext', function() { return 'YourJannah'; } );
+
+// Custom logout redirect → homepage
+add_action( 'wp_logout', function() {
+    wp_safe_redirect( home_url( '/' ) );
+    exit;
+} );
+
+// Rebrand admin bar logo
+add_action( 'admin_head', function() {
+    $logo = YNJ_THEME_URI . '/assets/icons/logo2.png';
+    echo '<style>
+        #wpadminbar #wp-admin-bar-wp-logo > .ab-item .ab-icon::before { content: "" !important; background: url(' . esc_url( $logo ) . ') no-repeat center/contain !important; width: 20px !important; height: 20px !important; }
+        #wpadminbar #wp-admin-bar-wp-logo > a.ab-item { pointer-events: none; }
+    </style>';
+} );
+
+// Rebrand admin footer
+add_filter( 'admin_footer_text', function() { return '<span style="font-size:12px;color:#999;">Powered by <strong>YourJannah</strong></span>'; } );
+add_filter( 'update_footer', function() { return ''; }, 11 );

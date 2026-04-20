@@ -731,10 +731,11 @@ class YNJ_UC_API {
                 case 'sponsor':
                     if ( $item_id ) {
                         $wpdb->update( YNJ_DB::table( 'businesses' ), [
-                            'status'   => 'active',
-                            'verified' => 1,
+                            'status'   => 'pending_review',
+                            'verified' => 0,
                         ], [ 'id' => $item_id ] );
                         do_action( 'ynj_payment_received', $mosque_id, 'business_sponsor', $item_id );
+                        // Mosque admin will review and approve via dashboard
                     }
                     break;
 
@@ -763,5 +764,43 @@ class YNJ_UC_API {
                 ] );
             }
         }
+
+        // Send email receipt
+        self::send_receipt( $txn );
+    }
+
+    /**
+     * Send a simple email receipt after successful payment.
+     */
+    private static function send_receipt( $txn ) {
+        if ( ! $txn || ! $txn->donor_email ) return;
+
+        $is_cash = strpos( $txn->stripe_payment_intent ?? '', 'test_' ) === 0;
+        $amount = '£' . number_format( $txn->total_pence / 100, 2 );
+        $label = $txn->item_label ?: ucfirst( str_replace( '_', ' ', $txn->item_type ) );
+        $freq = $txn->frequency && $txn->frequency !== 'once' ? ' (' . ucfirst( $txn->frequency ) . ')' : '';
+
+        $mosque_name = '';
+        if ( $txn->mosque_id ) {
+            global $wpdb;
+            $mosque_name = $wpdb->get_var( $wpdb->prepare(
+                "SELECT name FROM " . YNJ_DB::table( 'mosques' ) . " WHERE id = %d", $txn->mosque_id
+            ) ) ?: '';
+        }
+
+        $subject = 'JazakAllah Khayr — ' . $label . ' ' . $amount;
+        $body = "Assalamu Alaikum" . ( $txn->donor_name ? ' ' . $txn->donor_name : '' ) . ",\n\n";
+        $body .= "Your contribution has been confirmed:\n\n";
+        $body .= "  " . $label . $freq . "\n";
+        $body .= "  Amount: " . $amount . "\n";
+        if ( $mosque_name ) $body .= "  Masjid: " . $mosque_name . "\n";
+        $body .= "  Transaction: " . $txn->transaction_id . "\n";
+        $body .= "  Date: " . ( $txn->completed_at ?: $txn->created_at ) . "\n";
+        if ( $is_cash ) $body .= "  Method: Cash\n";
+        $body .= "\nMay Allah accept it from you and multiply your reward.\n\n";
+        $body .= "— YourJannah\n";
+        $body .= home_url( '/' );
+
+        wp_mail( $txn->donor_email, $subject, $body );
     }
 }

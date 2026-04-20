@@ -482,6 +482,17 @@ if ( $_nb_id && $_nb_pk ) :
             }
         }
         nbSetStep(3);
+
+        // Live update patron bar if this was a patron payment
+        if (currentItem && currentItem.mode === 'patron' && currentItem.meta && currentItem.meta.tier) {
+            var patronBar = document.getElementById('patron-hero');
+            if (patronBar) {
+                var tierNames = {supporter:'Bronze',guardian:'Silver',champion:'Gold',platinum:'Platinum'};
+                var tierName = tierNames[currentItem.meta.tier] || currentItem.meta.tier;
+                patronBar.style.background = 'linear-gradient(135deg,#287e61,#1a5c43)';
+                patronBar.innerHTML = '<span class="ynj-patron-bar__label">\uD83C\uDFC5 <strong>You\'re a ' + tierName + ' (\u00A3' + (selectedAmount/100) + '/mo) Patron</strong></span>';
+            }
+        }
     }
 
     function updatePayBtn() {

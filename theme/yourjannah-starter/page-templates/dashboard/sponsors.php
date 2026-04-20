@@ -47,7 +47,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_ynj_nonc
 
 $businesses = $wpdb->get_results( $wpdb->prepare(
     "SELECT id, business_name, owner_name, category, monthly_fee_pence, featured_position, status, verified, created_at
-     FROM $bt WHERE mosque_id=%d ORDER BY FIELD(status,'pending','active','rejected','removed'), monthly_fee_pence DESC LIMIT 50",
+     FROM $bt WHERE mosque_id=%d ORDER BY FIELD(status,'pending_review','pending_payment','pending','active','rejected','removed'), monthly_fee_pence DESC LIMIT 50",
     $mosque_id
 ) ) ?: [];
 
@@ -57,7 +57,7 @@ $services_list = $wpdb->get_results( $wpdb->prepare(
     $mosque_id
 ) ) ?: [];
 
-$pending_biz = array_filter( $businesses, function( $b ) { return $b->status === 'pending'; } );
+$pending_biz = array_filter( $businesses, function( $b ) { return in_array( $b->status, [ 'pending', 'pending_review', 'pending_payment' ], true ); } );
 $active_biz  = array_filter( $businesses, function( $b ) { return $b->status === 'active'; } );
 $other_biz   = array_filter( $businesses, function( $b ) { return ! in_array( $b->status, [ 'pending', 'active' ], true ); } );
 $active_svc  = array_filter( $services_list, function( $s ) { return $s->status === 'active'; } );
