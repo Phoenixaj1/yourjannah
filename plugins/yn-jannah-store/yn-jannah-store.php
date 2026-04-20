@@ -46,20 +46,27 @@ register_activation_hook( __FILE__, function() {
     $count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $t" );
     if ( $count === 0 ) {
         $defaults = [
-            [ 'jumuah_mubarak', "Jumu'ah Mubarak", 'Send Jumuah Mubarak to the entire congregation', '🕌', 300, 500, 1000, 500, '#287e61', "Jumu'ah Mubarak", "🕌 Jumu'ah Mubarak from {name} to the entire congregation of {mosque}! May Allah accept our prayers." ],
-            [ 'eid_mubarak', 'Eid Mubarak', 'Wish Eid Mubarak to the whole community', '🌙', 500, 1000, 2000, 1000, '#7c3aed', 'Eid Mubarak', '🌙 Eid Mubarak from {name} to the entire congregation of {mosque}! Taqabbal Allahu minna wa minkum.' ],
-            [ 'khatam_quran', 'Khatam al-Quran', 'Announce a Quran completion to the congregation', '📗', 1000, 2000, 5000, 2000, '#0369a1', 'Quran Khatam', '📗 MashaAllah! {name} has completed the Quran — Khatam Mubarak! May Allah reward them. Please make dua.' ],
-            [ 'hajj_mubarak', 'Hajj Mubarak', 'Congratulate someone who completed Hajj', '🕋', 1000, 2000, 5000, 2000, '#92400e', 'Hajj Mubarak', '🕋 Hajj Mubarak! {name} has completed Hajj. May Allah accept their pilgrimage.' ],
-            [ 'nikah_mubarak', 'Nikah Mubarak', 'Announce a marriage blessing to the community', '💍', 1000, 2000, 5000, 2000, '#be185d', 'Nikah Mubarak', '💍 Nikah Mubarak! {name} — may Allah bless this union with love, mercy, and barakah.' ],
-            [ 'new_baby', 'New Baby Mubarak', 'Share the joy of a new arrival', '👶', 500, 1000, 2000, 1000, '#059669', 'New Baby', '👶 MashaAllah! {name} has been blessed with a new baby! May Allah make the child a source of joy.' ],
-            [ 'dua_request', 'Community Dua Request', 'Ask the entire congregation to make dua for you', '🤲', 300, 500, 1000, 500, '#1e40af', 'Dua Request', '🤲 {name} is asking the congregation of {mosque} for dua. {message}' ],
-            [ 'thank_you', 'Thank You Message', 'Thank the masjid and its community publicly', '💖', 300, 500, 1000, 300, '#9d174d', 'Thank You', '💖 {name} says JazakAllah Khayr to the community of {mosque}. {message}' ],
-            [ 'umrah_mubarak', 'Umrah Mubarak', 'Congratulate someone who completed Umrah', '🕋', 500, 1000, 2000, 500, '#92400e', 'Umrah Mubarak', '🕋 Umrah Mubarak! {name} has completed Umrah. May Allah accept it and grant them ease.' ],
-            [ 'ramadan_mubarak', 'Ramadan Mubarak', 'Send Ramadan greetings to the congregation', '🌙', 300, 500, 1000, 500, '#7c3aed', 'Ramadan Mubarak', '🌙 Ramadan Mubarak from {name} to the entire congregation of {mosque}! May this blessed month bring you closer to Allah.' ],
-            [ 'condolence', 'Inna Lillahi', 'Send condolences to a family in the community', '🕊️', 500, 1000, 2000, 500, '#4b5563', 'Condolence', '🕊️ Inna lillahi wa inna ilayhi rajiun. {name} sends condolences. {message} May Allah grant patience and forgive the deceased.' ],
-            [ 'shahada', 'Welcome to Islam', 'Celebrate a revert joining the Muslim community', '☪️', 500, 1000, 2000, 500, '#16a34a', 'Shahada', '☪️ Allahu Akbar! {name} celebrates a new Muslim joining the community of {mosque}. {message} May Allah keep them steadfast.' ],
-            [ 'get_well', 'Get Well / Shifa', 'Send healing wishes and dua for recovery', '💚', 300, 500, 1000, 500, '#059669', 'Get Well', '💚 {name} is making dua for shifa (healing) for a member of {mosque}. {message} Ya Allah, grant them complete recovery.' ],
-            [ 'graduation', 'Graduation Mubarak', 'Celebrate an academic achievement', '🎓', 500, 1000, 2000, 500, '#7c3aed', 'Graduation', '🎓 MashaAllah! {name} celebrates a graduation from the community of {mosque}. {message} May Allah bless their knowledge.' ],
+            // ── Glad Tidings (Announcements) ──
+            [ 'hajj_completion', 'Announce Hajj Completion', 'Share that someone has returned from Hajj', '🕋', 500, 500, 500, 500, '#92400e', 'Hajj Completion', '🕋 Alhamdulillah! {name} announces a Hajj completion from the congregation of {mosque}. Hajj Mabroor — may Allah accept the pilgrimage and grant Jannatul Firdaus.' ],
+            [ 'umrah_completion', 'Announce Umrah Completion', 'Share that someone has completed Umrah', '🕋', 500, 500, 500, 500, '#92400e', 'Umrah Completion', '🕋 Alhamdulillah! {name} announces an Umrah completion from the congregation of {mosque}. Umrah Mubarak — may Allah accept it.' ],
+            [ 'quran_khatam', 'Announce Quran Khatam', 'Share that someone has completed the Quran', '📗', 500, 500, 500, 500, '#0369a1', 'Quran Khatam', '📗 MashaAllah! {name} announces a Quran completion from the congregation of {mosque}. May Allah elevate them and make them among the people of the Quran.' ],
+            [ 'nikah_announcement', 'Announce a Nikah', 'Share a marriage with the congregation', '💍', 500, 500, 500, 500, '#be185d', 'Nikah Announcement', '💍 Alhamdulillah! {name} announces a Nikah from the congregation of {mosque}. Barakallahu lakuma wa baraka alaikuma — may Allah bless this union.' ],
+            [ 'new_baby', 'Announce a New Baby', 'Share the arrival of a newborn', '👶', 500, 500, 500, 500, '#059669', 'New Baby', '👶 MashaAllah! {name} announces the arrival of a new baby from the congregation of {mosque}. May Allah make the child a coolness for the eyes and a source of joy.' ],
+            [ 'shahada', 'Announce a New Shahada', 'Welcome a new Muslim into the community', '☪️', 500, 500, 500, 500, '#16a34a', 'New Shahada', '☪️ Allahu Akbar! {name} announces that a new Muslim has taken their Shahada at {mosque}. May Allah keep them steadfast on the straight path.' ],
+            [ 'graduation', 'Announce a Graduation', 'Celebrate an academic achievement', '🎓', 500, 500, 500, 500, '#7c3aed', 'Graduation', '🎓 MashaAllah! {name} announces a graduation from the congregation of {mosque}. May Allah put barakah in their knowledge and make it beneficial.' ],
+
+            // ── Seasonal Greetings ──
+            [ 'jumuah_mubarak', "Jumu'ah Mubarak", 'Send blessed Friday greetings to the congregation', '🕌', 500, 500, 500, 500, '#287e61', "Jumu'ah Mubarak", "🕌 Jumu'ah Mubarak from {name} to the entire congregation of {mosque}! May Allah accept our prayers and grant us goodness on this blessed day." ],
+            [ 'eid_mubarak', 'Eid Mubarak', 'Send Eid greetings to the whole community', '🌙', 500, 500, 500, 500, '#7c3aed', 'Eid Mubarak', '🌙 Eid Mubarak from {name} to the entire congregation of {mosque}! Taqabbal Allahu minna wa minkum — may Allah accept from us and from you.' ],
+            [ 'ramadan_mubarak', 'Ramadan Mubarak', 'Send Ramadan greetings to the congregation', '🌙', 500, 500, 500, 500, '#7c3aed', 'Ramadan Mubarak', '🌙 Ramadan Mubarak from {name} to the entire congregation of {mosque}! May this blessed month bring you closer to Allah and fill your home with barakah.' ],
+
+            // ── Requests ──
+            [ 'dua_request', 'Request Dua', 'Ask the congregation to make dua', '🤲', 500, 500, 500, 500, '#1e40af', 'Dua Request', '🤲 {name} from the congregation of {mosque} is humbly requesting dua. Please remember them in your prayers.' ],
+            [ 'shifa_request', 'Request Shifa', 'Ask the congregation for healing dua', '💚', 500, 500, 500, 500, '#059669', 'Shifa Request', '💚 {name} from the congregation of {mosque} is requesting dua for shifa (healing). Ya Allah, grant them complete recovery and ease their suffering.' ],
+            [ 'inna_lillahi', 'Inna Lillahi wa Inna Ilayhi Rajiun', 'Share news of a passing with the congregation', '🕊️', 500, 500, 500, 500, '#4b5563', 'Inna Lillahi', '🕊️ Inna lillahi wa inna ilayhi rajiun. {name} shares news of a passing from the congregation of {mosque}. May Allah forgive the deceased, expand their grave, and grant patience to the family.' ],
+
+            // ── Gratitude ──
+            [ 'jazakallah', 'JazakAllah Khayr', 'Thank the masjid and its community', '💖', 500, 500, 500, 500, '#9d174d', 'JazakAllah Khayr', '💖 {name} says JazakAllah Khayr to the community of {mosque}. May Allah reward you all with the best of rewards.' ],
         ];
         foreach ( $defaults as $i => $d ) {
             $wpdb->insert( $t, [
@@ -74,37 +81,49 @@ register_activation_hook( __FILE__, function() {
     update_option( 'ynj_store_db_version', YNJ_STORE_DB_VERSION );
 } );
 
-// ── Seed new glad tidings for existing installs ──
+// ── v3: Restructure superchat items for existing installs ──
+// Renames items from response-style to announcement-style perspective
 add_action( 'plugins_loaded', function() {
     if ( ! class_exists( 'YNJ_DB' ) ) return;
-    if ( get_option( 'ynj_store_glad_tidings_v2' ) ) return;
+    if ( get_option( 'ynj_store_v3_announcements' ) ) return;
 
     global $wpdb;
     $t = YNJ_DB::table( 'store_items' );
     if ( ! $wpdb->get_var( "SHOW TABLES LIKE '$t'" ) ) return;
 
-    $new_items = [
-        [ 'umrah_mubarak', 'Umrah Mubarak', 'Congratulate someone who completed Umrah', '🕋', 500, '#92400e', 'Umrah Mubarak', '🕋 Umrah Mubarak! {name} has completed Umrah. May Allah accept it and grant them ease.' ],
-        [ 'ramadan_mubarak', 'Ramadan Mubarak', 'Send Ramadan greetings to the congregation', '🌙', 500, '#7c3aed', 'Ramadan Mubarak', '🌙 Ramadan Mubarak from {name} to the entire congregation of {mosque}! May this blessed month bring you closer to Allah.' ],
-        [ 'condolence', 'Inna Lillahi', 'Send condolences to a family in the community', '🕊️', 500, '#4b5563', 'Condolence', '🕊️ Inna lillahi wa inna ilayhi rajiun. {name} sends condolences. {message} May Allah grant patience and forgive the deceased.' ],
-        [ 'shahada', 'Welcome to Islam', 'Celebrate a revert joining the Muslim community', '☪️', 500, '#16a34a', 'Shahada', '☪️ Allahu Akbar! {name} celebrates a new Muslim joining the community of {mosque}. {message} May Allah keep them steadfast.' ],
-        [ 'get_well', 'Get Well / Shifa', 'Send healing wishes and dua for recovery', '💚', 500, '#059669', 'Get Well', '💚 {name} is making dua for shifa (healing) for a member of {mosque}. {message} Ya Allah, grant them complete recovery.' ],
-        [ 'graduation', 'Graduation Mubarak', 'Celebrate an academic achievement', '🎓', 500, '#7c3aed', 'Graduation', '🎓 MashaAllah! {name} celebrates a graduation from the community of {mosque}. {message} May Allah bless their knowledge.' ],
+    // Rename existing items to announcement perspective
+    $renames = [
+        'hajj_mubarak'    => [ 'hajj_completion', 'Announce Hajj Completion', 'Share that someone has returned from Hajj', 'Hajj Completion', '🕋 Alhamdulillah! {name} announces a Hajj completion from the congregation of {mosque}. Hajj Mabroor — may Allah accept the pilgrimage and grant Jannatul Firdaus.' ],
+        'khatam_quran'    => [ 'quran_khatam', 'Announce Quran Khatam', 'Share that someone has completed the Quran', 'Quran Khatam', '📗 MashaAllah! {name} announces a Quran completion from the congregation of {mosque}. May Allah elevate them and make them among the people of the Quran.' ],
+        'nikah_mubarak'   => [ 'nikah_announcement', 'Announce a Nikah', 'Share a marriage with the congregation', 'Nikah Announcement', '💍 Alhamdulillah! {name} announces a Nikah from the congregation of {mosque}. Barakallahu lakuma wa baraka alaikuma — may Allah bless this union.' ],
+        'new_baby'        => [ 'new_baby', 'Announce a New Baby', 'Share the arrival of a newborn', 'New Baby', '👶 MashaAllah! {name} announces the arrival of a new baby from the congregation of {mosque}. May Allah make the child a coolness for the eyes and a source of joy.' ],
+        'umrah_mubarak'   => [ 'umrah_completion', 'Announce Umrah Completion', 'Share that someone has completed Umrah', 'Umrah Completion', '🕋 Alhamdulillah! {name} announces an Umrah completion from the congregation of {mosque}. Umrah Mubarak — may Allah accept it.' ],
+        'shahada'         => [ 'shahada', 'Announce a New Shahada', 'Welcome a new Muslim into the community', 'New Shahada', '☪️ Allahu Akbar! {name} announces that a new Muslim has taken their Shahada at {mosque}. May Allah keep them steadfast on the straight path.' ],
+        'graduation'      => [ 'graduation', 'Announce a Graduation', 'Celebrate an academic achievement', 'Graduation', '🎓 MashaAllah! {name} announces a graduation from the congregation of {mosque}. May Allah put barakah in their knowledge and make it beneficial.' ],
+        'dua_request'     => [ 'dua_request', 'Request Dua', 'Ask the congregation to make dua', 'Dua Request', '🤲 {name} from the congregation of {mosque} is humbly requesting dua. Please remember them in your prayers.' ],
+        'get_well'        => [ 'shifa_request', 'Request Shifa', 'Ask the congregation for healing dua', 'Shifa Request', '💚 {name} from the congregation of {mosque} is requesting dua for shifa (healing). Ya Allah, grant them complete recovery and ease their suffering.' ],
+        'condolence'      => [ 'inna_lillahi', 'Inna Lillahi wa Inna Ilayhi Rajiun', 'Share news of a passing with the congregation', 'Inna Lillahi', '🕊️ Inna lillahi wa inna ilayhi rajiun. {name} shares news of a passing from the congregation of {mosque}. May Allah forgive the deceased, expand their grave, and grant patience to the family.' ],
+        'thank_you'       => [ 'jazakallah', 'JazakAllah Khayr', 'Thank the masjid and its community', 'JazakAllah Khayr', '💖 {name} says JazakAllah Khayr to the community of {mosque}. May Allah reward you all with the best of rewards.' ],
     ];
 
-    $max_sort = (int) $wpdb->get_var( "SELECT MAX(sort_order) FROM $t" );
-    foreach ( $new_items as $i => $d ) {
-        $exists = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $t WHERE item_key = %s", $d[0] ) );
-        if ( ! $exists ) {
-            $wpdb->insert( $t, [
-                'item_key' => $d[0], 'title' => $d[1], 'description' => $d[2], 'icon' => $d[3],
-                'price_1' => $d[4], 'price_2' => $d[4], 'price_3' => $d[4], 'default_price' => $d[4],
-                'badge_color' => $d[5], 'badge_text' => $d[6], 'announcement_template' => $d[7],
-                'sort_order' => $max_sort + $i + 1,
-            ] );
+    foreach ( $renames as $old_key => $new ) {
+        $exists = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM $t WHERE item_key = %s", $old_key ) );
+        if ( $exists ) {
+            $wpdb->update( $t, [
+                'item_key'              => $new[0],
+                'title'                 => $new[1],
+                'description'           => $new[2],
+                'badge_text'            => $new[3],
+                'announcement_template' => $new[4],
+                'default_price'         => 500,
+                'price_1'               => 500,
+                'price_2'               => 500,
+                'price_3'               => 500,
+            ], [ 'id' => $exists->id ] );
         }
     }
-    update_option( 'ynj_store_glad_tidings_v2', 1 );
+
+    update_option( 'ynj_store_v3_announcements', 1 );
 }, 10 );
 
 add_action( 'plugins_loaded', function() {

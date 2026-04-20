@@ -25,14 +25,14 @@ class YNJ_Store {
         <div class="ynj-card" style="padding:16px;<?php echo $is_scroll ? 'margin-bottom:12px;' : ''; ?>">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:<?php echo $is_scroll ? '10' : '12'; ?>px;">
                 <div>
-                    <div style="font-size:15px;font-weight:800;color:#1a1a1a;">💬 <?php esc_html_e( 'Superchats', 'yourjannah' ); ?></div>
-                    <div style="font-size:12px;color:#666;"><?php esc_html_e( 'Send glad tidings to the congregation — £5 each', 'yourjannah' ); ?></div>
+                    <div style="font-size:15px;font-weight:800;color:#1a1a1a;">📣 <?php esc_html_e( 'Share Glad Tidings', 'yourjannah' ); ?></div>
+                    <div style="font-size:12px;color:#666;"><?php esc_html_e( 'Announce to the congregation — £5', 'yourjannah' ); ?></div>
                 </div>
             </div>
             <?php if ( $is_scroll ) : ?>
             <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;">
                 <?php foreach ( $items as $si ) : ?>
-                <button type="button" onclick="ynjSuperchat('<?php echo esc_js( $si->item_key ); ?>','<?php echo esc_js( $si->title ); ?>','<?php echo esc_js( $si->icon ); ?>')" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid #e5e7eb;border-radius:12px;color:#1a1a1a;background:#fff;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;transition:all .15s;" onmouseover="this.style.borderColor='<?php echo esc_attr( $si->badge_color ); ?>';this.style.background='<?php echo esc_attr( $si->badge_color ); ?>10'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#fff'">
+                <button type="button" onclick="ynjSuperchat('<?php echo esc_js( $si->item_key ); ?>','<?php echo esc_js( $si->title ); ?>','<?php echo esc_js( $si->icon ); ?>','<?php echo esc_js( $si->description ); ?>')" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid #e5e7eb;border-radius:12px;color:#1a1a1a;background:#fff;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;transition:all .15s;" onmouseover="this.style.borderColor='<?php echo esc_attr( $si->badge_color ); ?>';this.style.background='<?php echo esc_attr( $si->badge_color ); ?>10'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#fff'">
                     <span style="font-size:18px;"><?php echo esc_html( $si->icon ); ?></span>
                     <span style="font-size:12px;font-weight:700;"><?php echo esc_html( $si->title ); ?></span>
                     <span style="font-size:11px;color:#16a34a;font-weight:600;">&pound;5</span>
@@ -42,7 +42,7 @@ class YNJ_Store {
             <?php else : ?>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <?php foreach ( $items as $si ) : ?>
-                <button type="button" onclick="ynjSuperchat('<?php echo esc_js( $si->item_key ); ?>','<?php echo esc_js( $si->title ); ?>','<?php echo esc_js( $si->icon ); ?>')" style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #e5e7eb;border-radius:12px;color:#1a1a1a;transition:all .15s;background:#fff;cursor:pointer;font-family:inherit;text-align:left;width:100%;" onmouseover="this.style.borderColor='<?php echo esc_attr( $si->badge_color ); ?>';this.style.background='<?php echo esc_attr( $si->badge_color ); ?>10'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#fff'">
+                <button type="button" onclick="ynjSuperchat('<?php echo esc_js( $si->item_key ); ?>','<?php echo esc_js( $si->title ); ?>','<?php echo esc_js( $si->icon ); ?>','<?php echo esc_js( $si->description ); ?>')" style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #e5e7eb;border-radius:12px;color:#1a1a1a;transition:all .15s;background:#fff;cursor:pointer;font-family:inherit;text-align:left;width:100%;" onmouseover="this.style.borderColor='<?php echo esc_attr( $si->badge_color ); ?>';this.style.background='<?php echo esc_attr( $si->badge_color ); ?>10'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#fff'">
                     <?php if ( $si->image_url ) : ?>
                     <img src="<?php echo esc_url( $si->image_url ); ?>" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;">
                     <?php else : ?>
@@ -133,7 +133,7 @@ class YNJ_Store {
     }
 
     /** Private item keys — announcements for these go to admin only, not community feed. */
-    const PRIVATE_ITEMS = [ 'dua_request', 'condolence' ];
+    const PRIVATE_ITEMS = [ 'dua_request', 'inna_lillahi' ];
 
     /**
      * When a store item payment succeeds, auto-post announcement.
