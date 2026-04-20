@@ -533,9 +533,13 @@ if ( $ynj_uid && class_exists( 'YNJ_API_Points' ) ) {
 $todays_five = class_exists( 'YNJ_API_Points' ) ? YNJ_API_Points::get_todays_five() : [];
 $done_flags = [];
 $done_count = 0;
-if ( $ynj_uid ) {
+if ( $wp_uid ) {
+    $today = date( 'Y-m-d' );
+    $done_json = get_user_meta( $wp_uid, 'ynj_dhikr_done_' . $today, true );
+    $done_arr  = $done_json ? json_decode( $done_json, true ) : [];
+    if ( ! is_array( $done_arr ) ) $done_arr = [];
     for ( $i = 0; $i < 5; $i++ ) {
-        $done_flags[ $i ] = (bool) get_transient( 'ynj_dhikr_' . $ynj_uid . '_' . date( 'Y-m-d' ) . '_' . $i );
+        $done_flags[ $i ] = in_array( $i, $done_arr );
         if ( $done_flags[ $i ] ) $done_count++;
     }
 }

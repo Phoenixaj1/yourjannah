@@ -863,9 +863,9 @@ $_hp_mosque_addr = $_ynj_mosque_for_prayer ? ( $_ynj_mosque_for_prayer->address 
             if ( class_exists( 'YNJ_Streaks' ) ) {
                 $_hp_cta_streak = YNJ_Streaks::get_user_streak( $_hp_cta_uid );
             }
-            for ( $i = 0; $i < 5; $i++ ) {
-                if ( get_transient( 'ynj_dhikr_' . $_hp_cta_uid . '_' . date( 'Y-m-d' ) . '_' . $i ) ) $_hp_cta_done++;
-            }
+            $done_json = get_user_meta( get_current_user_id(), 'ynj_dhikr_done_' . date( 'Y-m-d' ), true );
+            $done_arr  = $done_json ? json_decode( $done_json, true ) : [];
+            $_hp_cta_done = is_array( $done_arr ) ? count( $done_arr ) : 0;
         }
         $_hp_cta_hours = 24 - (int) date( 'G' );
         $_hp_cta_complete = $_hp_cta_done >= 5;

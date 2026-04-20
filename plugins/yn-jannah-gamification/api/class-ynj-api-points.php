@@ -922,10 +922,11 @@ class YNJ_API_Points {
         $done = [];
 
         if ( is_user_logged_in() ) {
-            $ynj_uid = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
-            if ( $ynj_uid ) {
+            $done_json = get_user_meta( get_current_user_id(), 'ynj_dhikr_done_' . date( 'Y-m-d' ), true );
+            $done_arr  = $done_json ? json_decode( $done_json, true ) : [];
+            if ( is_array( $done_arr ) ) {
                 for ( $i = 0; $i < 5; $i++ ) {
-                    $done[ $i ] = (bool) get_transient( 'ynj_dhikr_' . $ynj_uid . '_' . date( 'Y-m-d' ) . '_' . $i );
+                    $done[ $i ] = in_array( $i, $done_arr );
                 }
             }
         }

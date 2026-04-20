@@ -588,10 +588,10 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
             if ( class_exists( 'YNJ_Streaks' ) ) {
                 $_cta_streak = YNJ_Streaks::get_user_streak( $_cta_uid );
             }
-            // Done count today (transient-based, no DB)
-            for ( $i = 0; $i < 5; $i++ ) {
-                if ( get_transient( 'ynj_dhikr_' . $_cta_uid . '_' . date( 'Y-m-d' ) . '_' . $i ) ) $_cta_done++;
-            }
+            // Done count today (from user meta — persistent)
+            $done_json = get_user_meta( get_current_user_id(), 'ynj_dhikr_done_' . date( 'Y-m-d' ), true );
+            $done_arr  = $done_json ? json_decode( $done_json, true ) : [];
+            $_cta_done = is_array( $done_arr ) ? count( $done_arr ) : 0;
         }
         $_cta_hours = 24 - (int) date( 'G' );
         $_cta_complete = $_cta_done >= 5;
