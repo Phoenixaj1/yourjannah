@@ -246,36 +246,53 @@ class YNJ_UC_API {
                 $interval_map = [ 'daily' => 'day', 'weekly' => 'week', 'monthly' => 'month' ];
                 $interval = $interval_map[ $freq ] ?? 'month';
 
-                $session = \Stripe\Checkout\Session::create( [
-                    'payment_method_types' => [ 'card' ],
-                    'mode'                 => 'subscription',
-                    'customer_email'       => $email,
-                    'line_items'           => [ [
-                        'price_data' => [
-                            'currency'     => $currency,
-                            'unit_amount'  => $recur_total_with_tip,
-                            'recurring'    => [ 'interval' => $interval ],
-                            'product_data' => [ 'name' => $primary_label ],
-                        ],
-                        'quantity' => 1,
-                    ] ],
-                    'metadata' => [
+                // Find or create Stripe customer
+                $customers = \Stripe\Customer::search( [ 'query' => "email:'" . $email . "'" ] );
+                if ( ! empty( $customers->data ) ) {
+                    $customer = $customers->data[0];
+                } else {
+                    $customer = \Stripe\Customer::create( [
+                        'email'    => $email,
+                        'name'     => $donor_name ?: null,
+                        'metadata' => [ 'source' => 'yourjannah_niyyah_bar' ],
+                    ] );
+                }
+
+                // Create inline price + subscription with incomplete payment
+                $price = \Stripe\Price::create( [
+                    'unit_amount'  => $recur_total_with_tip,
+                    'currency'     => $currency,
+                    'recurring'    => [ 'interval' => $interval ],
+                    'product_data' => [ 'name' => $primary_label ],
+                ] );
+
+                $sub = \Stripe\Subscription::create( [
+                    'customer'               => $customer->id,
+                    'items'                  => [ [ 'price' => $price->id ] ],
+                    'payment_behavior'       => 'default_incomplete',
+                    'payment_settings'       => [ 'save_default_payment_method' => 'on_subscription' ],
+                    'expand'                 => [ 'latest_invoice.payment_intent' ],
+                    'metadata'               => [
                         'transaction_id' => $txn_id,
                         'mosque_id'      => $primary_mosque,
                         'item_type'      => $primary_type,
                         'type'           => 'ynj_unified_checkout',
                     ],
-                    'success_url' => home_url( '/checkout/?success=1&txn=' . $txn_id ),
-                    'cancel_url'  => home_url( '/checkout/?cancelled=1' ),
                 ] );
 
-                $wpdb->update( $t, [ 'stripe_session_id' => $session->id ], [ 'transaction_id' => $txn_id ] );
+                $client_secret = $sub->latest_invoice->payment_intent->client_secret ?? '';
+                $pi_id = $sub->latest_invoice->payment_intent->id ?? '';
+
+                $wpdb->update( $t, [
+                    'stripe_payment_intent' => $pi_id,
+                ], [ 'transaction_id' => $txn_id ] );
 
                 return new \WP_REST_Response( [
                     'ok'             => true,
-                    'mode'           => 'redirect',
-                    'url'            => $session->url,
+                    'mode'           => 'elements',
+                    'client_secret'  => $client_secret,
                     'transaction_id' => $txn_id,
+                    'total_pence'    => $recur_total_with_tip,
                 ] );
             }
 
