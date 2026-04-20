@@ -12,6 +12,16 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class YNJ_UC_API {
 
     /**
+     * Check if current user has test mode enabled.
+     * Enable: update_user_meta( $user_id, 'ynj_payment_test_mode', 1 );
+     * Disable: delete_user_meta( $user_id, 'ynj_payment_test_mode' );
+     */
+    public static function is_test_mode() {
+        if ( ! is_user_logged_in() ) return false;
+        return (bool) get_user_meta( get_current_user_id(), 'ynj_payment_test_mode', true );
+    }
+
+    /**
      * POST /unified-checkout/create-intent
      *
      * v2 payload:
@@ -114,14 +124,55 @@ class YNJ_UC_API {
         $recur_total = 0;
         foreach ( $recurring_items as $it ) $recur_total += $it['amount_pence'];
 
+        global $wpdb;
+        $t = YNJ_DB::table( 'transactions' );
+
+        // ── TEST MODE: skip Stripe, instantly succeed ──
+        $test_mode = self::is_test_mode();
+        if ( $test_mode ) {
+            $txn_id = self::create_transaction( $t, $wpdb, [
+                'mosque_id'    => $primary_mosque,
+                'donor_name'   => $donor_name,
+                'donor_email'  => $email,
+                'donor_phone'  => $phone,
+                'item_type'    => $primary_type,
+                'item_id'      => $item_count === 1 ? $items[0]['item_id'] : 0,
+                'item_label'   => $primary_label,
+                'amount_pence' => $subtotal,
+                'tip_pence'    => $tip_pence,
+                'total_pence'  => $total_pence,
+                'currency'     => $currency,
+                'frequency'    => $item_count === 1 ? ( $items[0]['frequency'] ?? 'once' ) : 'once',
+                'fund_type'    => $item_count === 1 ? $items[0]['fund_type'] : 'mixed',
+                'items_json'   => wp_json_encode( $items ),
+                'source'       => $source,
+            ] );
+
+            // Immediately mark as succeeded
+            $wpdb->update( $t, [
+                'status'                => 'succeeded',
+                'completed_at'          => current_time( 'mysql' ),
+                'stripe_payment_intent' => 'test_' . $txn_id,
+            ], [ 'transaction_id' => $txn_id ] );
+
+            // Fire hooks
+            $txn = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t WHERE transaction_id = %s", $txn_id ) );
+            if ( $txn ) self::fire_item_hooks( $txn );
+
+            return new \WP_REST_Response( [
+                'ok'             => true,
+                'mode'           => 'test',
+                'transaction_id' => $txn_id,
+                'total_pence'    => $total_pence,
+                'test_mode'      => true,
+            ] );
+        }
+
         // ── Stripe init ──
         if ( ! class_exists( 'YNJ_Stripe' ) || ! method_exists( 'YNJ_Stripe', 'init' ) ) {
             return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Stripe not configured.' ], 500 );
         }
         YNJ_Stripe::init();
-
-        global $wpdb;
-        $t = YNJ_DB::table( 'transactions' );
 
         try {
             // ═══ ALL ONE-OFF ═══

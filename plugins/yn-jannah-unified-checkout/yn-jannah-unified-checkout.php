@@ -50,6 +50,28 @@ add_action( 'plugins_loaded', function() {
     }
 }, 10 );
 
+// ── Test mode toggle: ?ynj_test_mode=on / off (admin only) ──
+add_action( 'init', function() {
+    if ( ! is_user_logged_in() || ! current_user_can( 'manage_options' ) ) return;
+    $mode = sanitize_text_field( $_GET['ynj_test_mode'] ?? '' );
+    if ( $mode === 'on' ) {
+        update_user_meta( get_current_user_id(), 'ynj_payment_test_mode', 1 );
+        wp_safe_redirect( remove_query_arg( 'ynj_test_mode' ) );
+        exit;
+    } elseif ( $mode === 'off' ) {
+        delete_user_meta( get_current_user_id(), 'ynj_payment_test_mode' );
+        wp_safe_redirect( remove_query_arg( 'ynj_test_mode' ) );
+        exit;
+    }
+} );
+
+// ── Show test mode banner ──
+add_action( 'wp_footer', function() {
+    if ( ! is_user_logged_in() ) return;
+    if ( ! get_user_meta( get_current_user_id(), 'ynj_payment_test_mode', true ) ) return;
+    echo '<div style="position:fixed;top:40px;left:50%;transform:translateX(-50%);z-index:99999;background:#dc2626;color:#fff;padding:6px 20px;border-radius:20px;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(220,38,38,.3);">⚠️ PAYMENT TEST MODE — <a href="?ynj_test_mode=off" style="color:#fca5a5;text-decoration:underline;">Disable</a></div>';
+} );
+
 // ── Enqueue basket script globally (needed on every page for HUD badge) ──
 add_action( 'wp_enqueue_scripts', function() {
     wp_enqueue_script(

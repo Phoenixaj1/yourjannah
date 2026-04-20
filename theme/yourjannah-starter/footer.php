@@ -423,6 +423,12 @@ if ( $_nb_id && $_nb_pk ) :
                 return;
             }
 
+            if (data.mode === 'test') {
+                // Test mode — payment simulated, skip Stripe
+                nbSetStep(3);
+                return;
+            }
+
             if (data.mode === 'redirect') {
                 // Recurring → redirect to Stripe Checkout
                 window.location.href = data.url;

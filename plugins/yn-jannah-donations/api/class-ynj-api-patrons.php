@@ -94,16 +94,17 @@ class YNJ_API_Patrons {
         global $wpdb;
         $table = YNJ_DB::table( 'patrons' );
 
-        // Check existing active patron
+        // Check existing patron record (any status)
         $existing = $wpdb->get_row( $wpdb->prepare(
-            "SELECT id, status, stripe_subscription_id FROM $table WHERE mosque_id = %d AND user_id = %d",
+            "SELECT id, status, tier, stripe_subscription_id FROM $table WHERE mosque_id = %d AND user_id = %d",
             $mosque_id, $user->id
         ) );
 
-        if ( $existing && $existing->status === 'active' ) {
+        // If already active on the SAME tier, no action needed
+        if ( $existing && $existing->status === 'active' && $existing->tier === $tier ) {
             return new \WP_REST_Response( [
                 'ok'    => false,
-                'error' => 'You are already an active patron of this mosque. Cancel first to change tier.',
+                'error' => 'You are already a ' . ucfirst( $tier ) . ' patron of this mosque.',
             ], 409 );
         }
 
