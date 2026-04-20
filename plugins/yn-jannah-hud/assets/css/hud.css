@@ -140,60 +140,41 @@
 }
 
 /* ════════════════════════════════════════════
-   SACRED DHIKR POPUP — The doorway to the Divine
+   DHIKR POPUP — Clean, modern, focused
    ════════════════════════════════════════════ */
-.ynj-hud-popup{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10003;display:flex;align-items:flex-start;justify-content:center;padding-top:50px;background:rgba(10,22,40,.7);backdrop-filter:blur(6px);}
-.ynj-hud-popup__card{background:linear-gradient(180deg,#faf9f6 0%,#f5f0e8 100%);border-radius:24px;padding:24px 20px;max-width:420px;width:calc(100% - 24px);box-shadow:0 24px 80px rgba(0,0,0,.3);animation:ynj-popup-in .4s ease-out;position:relative;max-height:90vh;display:flex;flex-direction:column;}
-@keyframes ynj-popup-in{from{opacity:0;transform:translateY(-16px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);}}
-.ynj-hud-popup__close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:22px;color:#999;cursor:pointer;padding:6px;line-height:1;z-index:1;}
+.ynj-hud-popup{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10003;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,22,40,.6);backdrop-filter:blur(8px);}
+.ynj-hud-popup__card{background:#fff;border-radius:20px;padding:22px 20px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2);animation:ynj-popup-in .35s ease-out;position:relative;max-height:90vh;display:flex;flex-direction:column;}
+@keyframes ynj-popup-in{from{opacity:0;transform:translateY(12px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
+.ynj-hud-popup__close{position:absolute;top:10px;right:12px;background:none;border:none;font-size:20px;color:#ccc;cursor:pointer;padding:6px;line-height:1;z-index:1;transition:color .15s;}
+.ynj-hud-popup__close:hover{color:#666;}
 
-/* Header */
-.ynj-popup-header{padding-bottom:12px;border-bottom:1px solid rgba(0,0,0,.06);margin-bottom:12px;flex-shrink:0;}
-.ynj-popup-header__complete{text-align:center;padding:8px 0;}
-.ynj-popup-progress{height:4px;background:rgba(0,0,0,.06);border-radius:2px;overflow:hidden;}
-.ynj-popup-progress__fill{height:100%;background:linear-gradient(90deg,#287e61,#34d399);border-radius:2px;transition:width .6s ease-out;}
+/* Dhikr card */
+.ynj-dhikr-item{padding:20px 16px;border-radius:16px;background:#f8fafc;border:1px solid #e2e8f0;transition:all .4s;}
+.ynj-dhikr-item--legendary{background:linear-gradient(180deg,#fffbeb 0%,#fef3c7 100%);border-color:#fcd34d;}
 
-/* Scrollable content */
-.ynj-popup-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:4px;}
-.ynj-popup-scroll::-webkit-scrollbar{width:3px;}
-.ynj-popup-scroll::-webkit-scrollbar-thumb{background:rgba(0,0,0,.1);border-radius:2px;}
+/* Arabic */
+.ynj-dhikr-item__arabic{font-size:24px;line-height:1.9;text-align:center;color:#0f172a;margin:4px 0 14px;font-family:'Amiri','Traditional Arabic','Scheherazade New',serif;}
+.ynj-dhikr-item--legendary .ynj-dhikr-item__arabic{font-size:28px;}
 
-/* Individual dhikr item — sacred space */
-.ynj-dhikr-item{padding:20px 16px;margin-bottom:10px;border-radius:16px;background:#fff;border:1px solid rgba(0,0,0,.04);box-shadow:0 1px 4px rgba(0,0,0,.03);transition:all .4s;}
-.ynj-dhikr-item--done{opacity:.5;padding:12px 16px;background:rgba(40,126,97,.03);border-color:rgba(40,126,97,.1);}
-.ynj-dhikr-item--legendary{background:linear-gradient(180deg,#fffef5 0%,#fef9e7 100%);border:1.5px solid rgba(245,158,11,.25);box-shadow:0 2px 12px rgba(245,158,11,.06);}
+/* English */
+.ynj-dhikr-item__english{font-size:13px;color:#64748b;text-align:center;font-style:italic;line-height:1.6;margin-bottom:12px;}
 
-/* Arabic — let it BREATHE */
-.ynj-dhikr-item__arabic{font-size:22px;line-height:2;text-align:center;color:#1a1a1a;margin:8px 0 12px;font-family:'Amiri','Traditional Arabic','Scheherazade New',serif;}
-.ynj-dhikr-item--legendary .ynj-dhikr-item__arabic{font-size:26px;}
-
-/* English translation */
-.ynj-dhikr-item__english{font-size:13px;color:#5a4a3a;text-align:center;font-style:italic;line-height:1.6;margin-bottom:10px;}
-
-/* Hadith reward — the spiritual motivation */
-.ynj-dhikr-item__reward{font-size:11px;color:#78350f;text-align:center;line-height:1.5;margin-bottom:4px;padding:6px 10px;background:rgba(120,53,15,.03);border-radius:8px;}
+/* Reward */
+.ynj-dhikr-item__reward{font-size:11px;color:#0369a1;text-align:center;line-height:1.5;margin-bottom:4px;padding:8px 12px;background:#f0f9ff;border:1px solid #e0f2fe;border-radius:10px;}
 
 /* Source */
-.ynj-dhikr-item__source{font-size:9px;color:rgba(0,0,0,.3);text-align:center;margin-bottom:12px;}
+.ynj-dhikr-item__source{font-size:9px;color:#94a3b8;text-align:center;margin-bottom:14px;}
 
-/* Action button — says the dhikr phrase ONLY, no points */
-.ynj-dhikr-item__btn{display:block;width:100%;padding:16px;border:none;border-radius:14px;background:linear-gradient(135deg,#1a3a2a,#0a2418);color:#fff;font-size:18px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .25s;letter-spacing:.5px;}
-.ynj-dhikr-item__btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(10,36,24,.3);}
+/* Button */
+.ynj-dhikr-item__btn{display:block;width:100%;padding:16px;border:none;border-radius:14px;background:linear-gradient(135deg,#0a1628,#1a3a5c);color:#fff;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;letter-spacing:.3px;}
+.ynj-dhikr-item__btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(10,22,40,.25);}
 .ynj-dhikr-item__btn:active{transform:scale(.97);}
-.ynj-dhikr-item__btn--legendary{background:linear-gradient(135deg,#78350f,#5a2d0c);font-size:20px;}
-
-/* Reflecting state — the breath after the button */
-.ynj-dhikr-item--reflecting{background:linear-gradient(180deg,#f0fdf4,#e8f5e0);border-color:rgba(40,126,97,.15);}
-.ynj-dhikr-item--reflecting .ynj-dhikr-item__arabic{animation:ynj-arabic-glow 3s ease-in-out infinite;}
-@keyframes ynj-arabic-glow{0%,100%{text-shadow:0 0 0 transparent;}50%{text-shadow:0 0 20px rgba(40,126,97,.15);}}
-
-/* Footer */
-.ynj-popup-footer{flex-shrink:0;padding-top:12px;border-top:1px solid rgba(0,0,0,.06);margin-top:8px;text-align:center;font-size:11px;color:#6b8fa3;font-style:italic;line-height:1.4;}
+.ynj-dhikr-item__btn--legendary{background:linear-gradient(135deg,#92400e,#78350f);}
 
 @media(max-width:480px){
-    .ynj-hud-popup{padding-top:8px;}
-    .ynj-hud-popup__card{padding:18px 14px;border-radius:20px;max-height:95vh;}
-    .ynj-dhikr-item__arabic{font-size:20px;}
-    .ynj-dhikr-item--legendary .ynj-dhikr-item__arabic{font-size:24px;}
+    .ynj-hud-popup{padding:12px;}
+    .ynj-hud-popup__card{padding:18px 16px;border-radius:18px;max-height:95vh;}
+    .ynj-dhikr-item__arabic{font-size:22px;}
+    .ynj-dhikr-item--legendary .ynj-dhikr-item__arabic{font-size:26px;}
     .ynj-dhikr-item__btn{font-size:16px;padding:14px;}
 }
