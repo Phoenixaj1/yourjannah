@@ -298,7 +298,7 @@ if ( $_nb_id && $_nb_pk ) :
             <div class="ynj-nb-success">
                 <div class="ynj-nb-success__icon">✅</div>
                 <div class="ynj-nb-success__title">JazakAllah Khair!</div>
-                <p class="ynj-nb-success__sub">Your donation to <?php echo esc_html( $_nb_name ); ?> has been processed.</p>
+                <p class="ynj-nb-success__sub" id="nb-success-msg">Your contribution to <?php echo esc_html( $_nb_name ); ?> has been processed.</p>
             </div>
         </div>
     </div>
@@ -430,8 +430,8 @@ if ( $_nb_id && $_nb_pk ) :
             }
 
             if (data.mode === 'test') {
-                // Test mode — payment simulated, skip Stripe
-                nbSetStep(3);
+                // Cash mode — payment confirmed instantly
+                showSuccess();
                 return;
             }
 
@@ -467,6 +467,21 @@ if ( $_nb_id && $_nb_pk ) :
             else if (errEl) { errEl.style.display = 'none'; }
         });
         updatePayBtn();
+    }
+
+    function showSuccess() {
+        var msg = document.getElementById('nb-success-msg');
+        if (msg) {
+            var amt = '\u00A3' + (selectedAmount / 100).toFixed(2);
+            var label = currentItem ? (currentItem.item_label || '') : '';
+            var freq = selectedFreq === 'week' ? ' weekly' : (selectedFreq === 'month' ? ' monthly' : '');
+            if (label) {
+                msg.textContent = label + ' — ' + amt + freq + ' confirmed.';
+            } else {
+                msg.textContent = amt + freq + ' to <?php echo esc_js( $_nb_name ); ?> confirmed.';
+            }
+        }
+        nbSetStep(3);
     }
 
     function updatePayBtn() {
@@ -511,7 +526,7 @@ if ( $_nb_id && $_nb_pk ) :
             });
 
             // Success!
-            nbSetStep(3);
+            showSuccess();
             processing = false;
 
         } catch(e) {

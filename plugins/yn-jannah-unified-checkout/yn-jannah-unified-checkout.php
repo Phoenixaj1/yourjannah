@@ -41,6 +41,24 @@ add_action( 'plugins_loaded', function() {
             'callback' => [ 'YNJ_UC_API', 'confirm' ],
             'permission_callback' => '__return_true',
         ] );
+        register_rest_route( 'ynj/v1', '/unified-checkout/mosque-transactions', [
+            'methods'  => 'GET',
+            'callback' => function( $request ) {
+                $mosque_id = absint( $request->get_param( 'mosque_id' ) );
+                if ( ! $mosque_id ) return new \WP_REST_Response( [ 'ok' => false ], 400 );
+                global $wpdb;
+                $t = YNJ_DB::table( 'transactions' );
+                $txns = $wpdb->get_results( $wpdb->prepare(
+                    "SELECT * FROM $t WHERE mosque_id = %d AND status = 'succeeded' ORDER BY completed_at DESC LIMIT 100", $mosque_id
+                ) ) ?: [];
+                $total = (int) $wpdb->get_var( $wpdb->prepare(
+                    "SELECT COALESCE(SUM(total_pence),0) FROM $t WHERE mosque_id = %d AND status = 'succeeded'", $mosque_id
+                ) );
+                $count = count( $txns );
+                return new \WP_REST_Response( [ 'ok' => true, 'transactions' => $txns, 'total_pence' => $total, 'count' => $count ] );
+            },
+            'permission_callback' => function() { return is_user_logged_in(); },
+        ] );
     } );
 
     // WP Admin moved to yn-jannah-transactions plugin

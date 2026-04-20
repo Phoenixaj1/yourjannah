@@ -53,10 +53,30 @@ $sub_growth       = function_exists( 'ynj_get_subscriber_growth' ) ? ynj_get_sub
 $city_rank        = function_exists( 'ynj_get_mosque_ranking' ) ? ynj_get_mosque_ranking( $mosque_id, $mosque->city ?? '' ) : null;
 $activity_feed    = function_exists( 'ynj_get_activity_feed' ) ? ynj_get_activity_feed( $mosque_id, 10 ) : [];
 
-// Donations this week
-$donations_week = (int) $wpdb->get_var( $wpdb->prepare(
+// Donations this week (from old donations table)
+$donations_week_old = (int) $wpdb->get_var( $wpdb->prepare(
     "SELECT COALESCE(SUM(amount_pence),0) FROM $dt WHERE mosque_id=%d AND status='succeeded' AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)", $mosque_id
 ) );
+
+// Revenue this week from unified transactions (the real source)
+$txn_table = YNJ_DB::table( 'transactions' );
+$txn_week_total = (int) $wpdb->get_var( $wpdb->prepare(
+    "SELECT COALESCE(SUM(total_pence),0) FROM $txn_table WHERE mosque_id=%d AND status='succeeded' AND completed_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)", $mosque_id
+) );
+$txn_week_count = (int) $wpdb->get_var( $wpdb->prepare(
+    "SELECT COUNT(*) FROM $txn_table WHERE mosque_id=%d AND status='succeeded' AND completed_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)", $mosque_id
+) );
+$donations_week = $txn_week_total + $donations_week_old;
+
+// Revenue breakdown by type this week
+$txn_type_week = $wpdb->get_results( $wpdb->prepare(
+    "SELECT item_type, COUNT(*) as cnt, SUM(total_pence) as revenue FROM $txn_table WHERE mosque_id=%d AND status='succeeded' AND completed_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) GROUP BY item_type ORDER BY revenue DESC", $mosque_id
+) ) ?: [];
+
+// Recent transactions for this mosque
+$recent_txns = $wpdb->get_results( $wpdb->prepare(
+    "SELECT * FROM $txn_table WHERE mosque_id=%d AND status='succeeded' ORDER BY completed_at DESC LIMIT 10", $mosque_id
+) ) ?: [];
 
 // New subscribers this week
 $new_subs_week = (int) $wpdb->get_var( $wpdb->prepare(
@@ -150,12 +170,67 @@ foreach ( $nudges as $nudge ) : ?>
             <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;"><?php echo $s['subscribers']; ?> <?php esc_html_e( 'total', 'yourjannah' ); ?></div>
         </div>
         <div class="d-stat" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);">
-            <div class="d-stat__label" style="color:rgba(255,255,255,.5);"><?php esc_html_e( 'Donations', 'yourjannah' ); ?></div>
+            <div class="d-stat__label" style="color:rgba(255,255,255,.5);"><?php esc_html_e( 'Income', 'yourjannah' ); ?></div>
             <div class="d-stat__value" style="color:#4ade80;">£<?php echo number_format( $donations_week / 100, 0 ); ?></div>
-            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;"><?php esc_html_e( 'this week', 'yourjannah' ); ?></div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;"><?php echo $txn_week_count; ?> <?php esc_html_e( 'transactions', 'yourjannah' ); ?></div>
         </div>
     </div>
+
+    <?php if ( ! empty( $txn_type_week ) ) : ?>
+    <div style="margin-top:14px;">
+        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;"><?php esc_html_e( 'Revenue by Type', 'yourjannah' ); ?></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <?php
+            $type_icons = ['donation'=>'💝','sadaqah'=>'💰','patron'=>'🏅','store'=>'💬','event_ticket'=>'🎫','event_donation'=>'❤️','room_booking'=>'🏠','class_enrolment'=>'📚','business_sponsor'=>'⭐','sponsor'=>'⭐','service'=>'🔧'];
+            $type_names = ['donation'=>'Donations','sadaqah'=>'Sadaqah','patron'=>'Patrons','store'=>'Superchats','event_ticket'=>'Events','event_donation'=>'Event Donations','room_booking'=>'Bookings','class_enrolment'=>'Classes','business_sponsor'=>'Sponsors','sponsor'=>'Sponsors','service'=>'Services'];
+            foreach ( $txn_type_week as $tw ) :
+                $icon = $type_icons[ $tw->item_type ] ?? '📋';
+                $name = $type_names[ $tw->item_type ] ?? ucfirst( str_replace( '_', ' ', $tw->item_type ) );
+            ?>
+            <div style="padding:8px 12px;background:rgba(255,255,255,.08);border-radius:8px;border:1px solid rgba(255,255,255,.1);">
+                <div style="font-size:14px;font-weight:800;color:#4ade80;"><?php echo $icon; ?> £<?php echo number_format( $tw->revenue / 100, 0 ); ?></div>
+                <div style="font-size:10px;color:rgba(255,255,255,.4);"><?php echo esc_html( $name ); ?> (<?php echo (int) $tw->cnt; ?>)</div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
 </div>
+
+<!-- ═══ RECENT TRANSACTIONS ═══ -->
+<?php if ( ! empty( $recent_txns ) ) : ?>
+<div class="d-card">
+    <h3>💰 <?php esc_html_e( 'Recent Transactions', 'yourjannah' ); ?></h3>
+    <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+            <tr style="border-bottom:2px solid #e5e7eb;text-align:left;">
+                <th style="padding:8px 6px;font-size:11px;font-weight:700;color:#6b7280;">Type</th>
+                <th style="padding:8px 6px;font-size:11px;font-weight:700;color:#6b7280;">Item</th>
+                <th style="padding:8px 6px;font-size:11px;font-weight:700;color:#6b7280;">Donor</th>
+                <th style="padding:8px 6px;font-size:11px;font-weight:700;color:#6b7280;text-align:right;">Amount</th>
+                <th style="padding:8px 6px;font-size:11px;font-weight:700;color:#6b7280;">Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ( $recent_txns as $rtx ) :
+                $t_icon = $type_icons[ $rtx->item_type ] ?? '📋';
+                $t_name = $type_names[ $rtx->item_type ] ?? ucfirst( str_replace('_',' ', $rtx->item_type) );
+                $is_cash = strpos( $rtx->stripe_payment_intent ?? '', 'test_' ) === 0;
+            ?>
+            <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:8px 6px;white-space:nowrap;"><span style="padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#f3f4f6;"><?php echo $t_icon . ' ' . esc_html( $t_name ); ?></span></td>
+                <td style="padding:8px 6px;font-weight:600;"><?php echo esc_html( $rtx->item_label ?: '—' ); ?><?php if ( $rtx->frequency !== 'once' ) : ?> <span style="font-size:10px;color:#7c3aed;font-weight:700;"><?php echo esc_html( ucfirst( $rtx->frequency ) ); ?></span><?php endif; ?></td>
+                <td style="padding:8px 6px;color:#6b7280;"><?php echo esc_html( $rtx->donor_name ?: $rtx->donor_email ); ?></td>
+                <td style="padding:8px 6px;text-align:right;font-weight:800;color:#16a34a;">£<?php echo number_format( $rtx->total_pence / 100, 2 ); ?><?php if ( $is_cash ) : ?> <span style="font-size:9px;color:#92400e;">💵</span><?php endif; ?></td>
+                <td style="padding:8px 6px;font-size:11px;color:#9ca3b8;"><?php echo esc_html( date( 'j M H:i', strtotime( $rtx->completed_at ?: $rtx->created_at ) ) ); ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- ═══ TOP PERFORMING CONTENT ═══ -->
 <?php if ( ! empty( $top_content ) ) : ?>

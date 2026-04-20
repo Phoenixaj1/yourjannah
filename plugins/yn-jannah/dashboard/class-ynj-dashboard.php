@@ -172,6 +172,7 @@ function shell(content) {
         { path: '/campaigns', icon: '\u2764\ufe0f', label: 'Fundraising' },
         { path: '/madrassah', icon: '\ud83d\udcda', label: 'Madrassah' },
         { path: '/patrons', icon: '\ud83c\udfc5', label: 'Patrons' },
+        { path: '/transactions', icon: '\ud83d\udcb0', label: 'Transactions' },
         { path: '/settings', icon: '\u2699\ufe0f', label: 'Settings' },
     ];
     var isActive = function(p) { return p === '/' ? hash === '/' : hash.startsWith(p); };
@@ -235,6 +236,7 @@ function route() {
         '/madrassah/reports/new': renderMadReportForm,
         '/madrassah/fees': renderMadFees,
         '/patrons': renderPatrons,
+        '/transactions': renderTransactions,
         '/broadcast': renderBroadcast,
         '/settings': renderSettings,
         '/auth/login': renderLogin,
@@ -1830,6 +1832,49 @@ async function renderPatrons() {
         : '<p style="color:var(--text-dim)">No patrons yet. Share the patron page with your congregation to start receiving monthly support.</p>') +
         '</div>' +
         '<div class="d-card" style="margin-top:16px"><h3 style="margin-bottom:8px">Share Patron Page</h3><p style="color:var(--text-dim);font-size:13px">Members can become patrons at:</p><p style="margin-top:8px"><a href="/mosque/' + esc(mosque?.slug||'') + '/patron" target="_blank" style="color:var(--primary);font-weight:700">yourjannah.com/mosque/' + esc(mosque?.slug||'') + '/patron</a></p></div>'
+    ));
+}
+
+// ── Transactions ──
+async function renderTransactions() {
+    if (!mosque) await loadMosque();
+    render(shell('<div class="d-header"><h1>\ud83d\udcb0 Transactions</h1></div><div class="d-card">Loading...</div>'));
+
+    var res = await fetch(apiBase + 'unified-checkout/mosque-transactions?mosque_id=' + mosque.id, {
+        headers: { 'Authorization': 'Bearer ' + token }
+    }).then(function(r){ return r.json(); }).catch(function(){ return {ok:false}; });
+
+    var txns = res.transactions || [];
+    var total = res.total_pence || 0;
+    var count = res.count || 0;
+    var typeIcons = {donation:'\ud83d\udc9d',sadaqah:'\ud83d\udcb0',patron:'\ud83c\udfc5',store:'\ud83d\udcac',event_ticket:'\ud83c\udfab',event_donation:'\u2764\ufe0f',room_booking:'\ud83c\udfe0',class_enrolment:'\ud83d\udcda',business_sponsor:'\u2b50',sponsor:'\u2b50',service:'\ud83d\udd27'};
+    var typeNames = {donation:'Donation',sadaqah:'Sadaqah',patron:'Patron',store:'Superchat',event_ticket:'Event Ticket',event_donation:'Event Donation',room_booking:'Booking',class_enrolment:'Class',business_sponsor:'Sponsor',sponsor:'Sponsor',service:'Service'};
+
+    var rows = txns.map(function(t) {
+        var icon = typeIcons[t.item_type] || '\ud83d\udccb';
+        var name = typeNames[t.item_type] || t.item_type;
+        var isCash = (t.stripe_payment_intent || '').indexOf('test_') === 0;
+        var freq = t.frequency === 'once' ? '' : '<span style="font-size:10px;color:#7c3aed;font-weight:700;margin-left:4px">' + t.frequency + '</span>';
+        return '<tr>' +
+            '<td><span style="padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#f3f4f6">' + icon + ' ' + esc(name) + '</span></td>' +
+            '<td><strong>' + esc(t.item_label || '-') + '</strong>' + freq + '</td>' +
+            '<td>' + esc(t.donor_name || t.donor_email || '-') + '</td>' +
+            '<td style="text-align:right;font-weight:800;color:#16a34a">\u00a3' + (t.total_pence/100).toFixed(2) + (isCash ? ' <span style="font-size:9px;color:#92400e">\ud83d\udcb5</span>' : '') + '</td>' +
+            '<td style="font-size:11px;color:#9ca3b8">' + fmtDate(t.completed_at || t.created_at) + '</td>' +
+            '</tr>';
+    }).join('');
+
+    render(shell(
+        '<div class="d-header"><h1>\ud83d\udcb0 Transactions</h1></div>' +
+        '<div class="d-grid d-grid-3" style="margin-bottom:20px">' +
+        '<div class="d-card d-stat"><div class="d-stat__num">\u00a3' + (total/100).toFixed(2) + '</div><div class="d-stat__label">Total Revenue</div></div>' +
+        '<div class="d-card d-stat"><div class="d-stat__num">' + count + '</div><div class="d-stat__label">Transactions</div></div>' +
+        '<div class="d-card d-stat"><div class="d-stat__num">\u00a3' + (count > 0 ? (total/count/100).toFixed(2) : '0') + '</div><div class="d-stat__label">Avg Transaction</div></div>' +
+        '</div>' +
+        '<div class="d-card">' +
+        (rows ? '<table class="d-table"><thead><tr><th>Type</th><th>Item</th><th>Donor</th><th style="text-align:right">Amount</th><th>Date</th></tr></thead><tbody>' + rows + '</tbody></table>'
+        : '<p style="color:var(--text-dim)">No transactions yet.</p>') +
+        '</div>'
     ));
 }
 
