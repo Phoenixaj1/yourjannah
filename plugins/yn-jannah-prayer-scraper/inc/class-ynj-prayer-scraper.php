@@ -476,6 +476,17 @@ class YNJ_Prayer_Scraper {
             <h1>🕌 Prayer Times Scraper</h1>
             <p>Automatically scrape mosque websites for timetable PDFs and extract prayer times using Claude AI.</p>
 
+            <!-- STEP 1: Import mosques from OpenStreetMap -->
+            <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:20px;margin-bottom:20px;">
+                <h3 style="margin:0 0 8px;">🗺️ Step 1: Import Mosques from OpenStreetMap (FREE)</h3>
+                <p style="font-size:13px;color:#666;margin-bottom:16px;">Pull all UK mosques from OpenStreetMap — names, addresses, GPS, websites, phone numbers. Completely free, no API key needed.</p>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button type="button" id="osm-import-btn" class="button button-primary" onclick="importOSM()" style="padding:8px 20px;">🚀 Import All UK Mosques</button>
+                    <span id="osm-status" style="font-size:13px;color:#666;"></span>
+                </div>
+                <div id="osm-log" style="margin-top:12px;font-family:monospace;font-size:12px;background:#f9fafb;border-radius:8px;padding:12px;display:none;"></div>
+            </div>
+
             <?php if ( ! $has_key ) : ?>
             <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px;margin:16px 0;">
                 <strong style="color:#dc2626;">⚠️ Claude API Key Required</strong>
@@ -548,6 +559,38 @@ class YNJ_Prayer_Scraper {
         <script>
         var apiBase = '<?php echo esc_url_raw( rest_url( 'ynj/v1/' ) ); ?>';
         var nonce = '<?php echo wp_create_nonce( 'wp_rest' ); ?>';
+
+        async function importOSM() {
+            var btn = document.getElementById('osm-import-btn');
+            var status = document.getElementById('osm-status');
+            var log = document.getElementById('osm-log');
+            btn.disabled = true;
+            status.textContent = 'Querying OpenStreetMap for all UK mosques... (this may take 1-2 minutes)';
+            log.style.display = 'block';
+            log.innerHTML = 'Connecting to Overpass API...';
+
+            try {
+                var res = await fetch(apiBase + 'scraper/import-uk-mosques', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce }
+                }).then(function(r){ return r.json(); });
+
+                if (res.ok) {
+                    status.textContent = '✅ Done!';
+                    log.innerHTML = '<div style="color:#16a34a;font-weight:700;">Found ' + res.total_found + ' mosques on OpenStreetMap</div>'
+                        + '<div>Created: ' + res.created + ' new mosques</div>'
+                        + '<div>Updated: ' + res.updated + ' existing mosques</div>'
+                        + '<div>With websites: ' + res.with_website + '</div>'
+                        + '<div style="margin-top:8px;color:#666;">Refresh the page to see updated stats.</div>';
+                } else {
+                    status.textContent = '❌ Failed';
+                    log.innerHTML = '<div style="color:#dc2626;">' + (res.error || 'Unknown error') + '</div>';
+                }
+            } catch(e) {
+                status.textContent = '❌ Network error';
+                log.innerHTML = '<div style="color:#dc2626;">Request failed — the query may have timed out. Try again.</div>';
+            }
+            btn.disabled = false;
+        }
 
         async function testSingleMosque() {
             var id = document.getElementById('test-mosque-id').value;

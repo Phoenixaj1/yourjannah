@@ -14,6 +14,7 @@ add_action( 'plugins_loaded', function() {
     if ( ! class_exists( 'YNJ_DB' ) ) return;
 
     require_once YNJ_SCRAPER_DIR . 'inc/class-ynj-prayer-scraper.php';
+    require_once YNJ_SCRAPER_DIR . 'inc/class-ynj-mosque-enricher.php';
 
     // WP Admin page
     if ( is_admin() ) {
@@ -22,7 +23,7 @@ add_action( 'plugins_loaded', function() {
         } );
     }
 
-    // REST endpoint for AJAX processing
+    // REST endpoints
     add_action( 'rest_api_init', function() {
         register_rest_route( 'ynj/v1', '/scraper/process-mosque', [
             'methods'  => 'POST',
@@ -32,6 +33,17 @@ add_action( 'plugins_loaded', function() {
         register_rest_route( 'ynj/v1', '/scraper/batch-start', [
             'methods'  => 'POST',
             'callback' => [ 'YNJ_Prayer_Scraper', 'api_batch_start' ],
+            'permission_callback' => function() { return current_user_can( 'manage_options' ); },
+        ] );
+        // Mosque enricher: OpenStreetMap import
+        register_rest_route( 'ynj/v1', '/scraper/import-uk-mosques', [
+            'methods'  => 'POST',
+            'callback' => [ 'YNJ_Mosque_Enricher', 'api_import_all_uk' ],
+            'permission_callback' => function() { return current_user_can( 'manage_options' ); },
+        ] );
+        register_rest_route( 'ynj/v1', '/scraper/search-location', [
+            'methods'  => 'POST',
+            'callback' => [ 'YNJ_Mosque_Enricher', 'api_search_location' ],
             'permission_callback' => function() { return current_user_can( 'manage_options' ); },
         ] );
     } );
