@@ -50,8 +50,7 @@ $mosque_name = $mosque ? $mosque->name : '';
         <?php endif; ?>
 
         <div class="ynj-header__right">
-            <!-- Almsgiving icon -->
-            <button type="button" class="ynj-header__checkout" id="ynj-header-cart-btn" aria-label="Almsgiving" title="Almsgiving" onclick="if(typeof ynjCartDrawerToggle==='function'){ynjCartDrawerToggle();}else{window.location.href='<?php echo esc_url( home_url( '/checkout/' ) ); ?>';}" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:rgba(39,126,97,0.1);border:none;cursor:pointer;font-size:18px;transition:background .15s;position:relative;" onmouseover="this.style.background='rgba(39,126,97,0.2)'" onmouseout="this.style.background='rgba(39,126,97,0.1)'">🤲<span id="ynj-header-cart-badge" style="display:none;position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;line-height:16px;text-align:center;">0</span></button>
+            <!-- Removed: checkout/cart icon no longer needed -->
 
             <?php if ( is_user_logged_in() ) : ?>
             <!-- Notification bell -->
@@ -86,6 +85,22 @@ $mosque_name = $mosque ? $mosque->name : '';
         </div>
     </div>
 </header>
+
+<script>
+/* Intercept Donate/Almsgiving nav links → open niyyah bar */
+document.addEventListener('click', function(e) {
+    var link = e.target.closest('a');
+    if (!link) return;
+    var href = link.getAttribute('href') || '';
+    var text = (link.textContent || '').trim().toLowerCase();
+    if (text === 'donate' || text === 'almsgiving' || href.indexOf('donationformasjid') !== -1 || href.indexOf('/donate') !== -1) {
+        e.preventDefault();
+        if (typeof ynjNiyyahBarOpen === 'function') {
+            ynjNiyyahBarOpen({mode:'donation', icon:'\uD83D\uDC9D', frequency:'once'});
+        }
+    }
+});
+</script>
 
 <?php if ( is_user_logged_in() ) : ?>
 <script>
