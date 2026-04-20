@@ -1372,7 +1372,7 @@ function ynjCloseJoinModal() {
 .ynj-admin-edit:hover{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.2);}
 
 /* Admin floating toolbar */
-.ynj-admin-toolbar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;gap:8px;padding:10px 16px;background:#fff;border-top:1px solid #e5e7eb;z-index:900;padding-bottom:max(10px,env(safe-area-inset-bottom));}
+.ynj-admin-toolbar{position:fixed;bottom:12px;left:12px;display:flex;gap:6px;padding:8px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:900;}
 .ynj-admin-toolbar a,.ynj-admin-toolbar button{display:flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;border:none;cursor:pointer;min-height:44px;font-family:inherit;}
 .ynj-atb-primary{background:#287e61;color:#fff;}
 .ynj-atb-outline{background:#f3f4f6;color:#1a1a1a;border:1px solid #e5e7eb;}
@@ -1430,7 +1430,7 @@ function ynjCloseJoinModal() {
 </div>
 
 <!-- Admin Quick Menu (expandable) -->
-<div id="ynj-admin-menu" style="display:none;position:fixed;bottom:64px;left:50%;transform:translateX(-50%);background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:12px;z-index:901;width:90%;max-width:400px;">
+<div id="ynj-admin-menu" style="display:none;position:fixed;bottom:64px;left:12px;background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:12px;z-index:901;width:320px;max-width:90vw;">
     <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding:0 4px;">Quick Menu</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
         <a href="<?php echo esc_url( home_url( '/dashboard?section=announcements' ) ); ?>" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;background:#f9fafb;border-radius:10px;text-decoration:none;color:#333;font-size:11px;font-weight:600;text-align:center;">
