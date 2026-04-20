@@ -72,7 +72,7 @@ $slug = ynj_mosque_slug();
         <p id="sponsor-logged-in-note" style="margin-bottom:8px;font-size:12px;color:#166534;display:none;"><?php esc_html_e( 'Logged in — your details have been pre-filled.', 'yourjannah' ); ?></p>
         <button class="ynj-btn" id="sponsor-submit" type="button" style="width:100%;justify-content:center;margin-top:16px;"><?php esc_html_e( 'Continue to Payment', 'yourjannah' ); ?></button>
         <p class="ynj-text-muted" id="sponsor-error" style="margin-top:8px;color:#dc2626;"></p>
-        <p class="ynj-text-muted" style="margin-top:12px;text-align:center;font-size:11px;"><?php esc_html_e( 'You can cancel anytime. 90% goes directly to the masjid.', 'yourjannah' ); ?></p>
+        <p class="ynj-text-muted" style="margin-top:12px;text-align:center;font-size:11px;"><?php esc_html_e( 'You can cancel anytime. All proceeds go to the Masjid and Islamic Projects.', 'yourjannah' ); ?></p>
     </section>
 </main>
 

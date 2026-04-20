@@ -150,7 +150,7 @@ $editing_fee = (int) ( $_GET['edit_fee'] ?? 0 );
             <tr><td><strong>🤝 Service Listing</strong></td><td>£10/mo</td><td><?php esc_html_e( 'Professionals (plumber, tutor, imam) listed in directory', 'yourjannah' ); ?></td></tr>
         </tbody>
     </table>
-    <p style="font-size:12px;color:var(--text-dim);margin-top:8px;"><?php esc_html_e( '95% of all revenue goes directly to your mosque. YourJannah takes just 5%.', 'yourjannah' ); ?></p>
+    <p style="font-size:12px;color:var(--text-dim);margin-top:8px;"><?php esc_html_e( 'All proceeds go to the Masjid and Islamic Projects.', 'yourjannah' ); ?></p>
 </div>
 
 <!-- Pending Sponsors (require approval) -->

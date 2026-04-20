@@ -46,7 +46,7 @@ class YNJ_Store_Admin {
         ?>
         <div class="wrap">
             <h1>Masjid Store — Community Shout-Outs</h1>
-            <p>Manage purchasable items. 95% goes to the masjid, 5% to YourJannah. Each purchase auto-posts an announcement.</p>
+            <p>Manage purchasable items. All proceeds go to the Masjid and Islamic Projects. Each purchase auto-posts an announcement.</p>
 
             <div style="display:flex;gap:16px;margin:20px 0;">
                 <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px 24px;text-align:center;">
