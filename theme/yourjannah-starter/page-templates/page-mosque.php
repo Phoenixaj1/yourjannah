@@ -868,13 +868,13 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
     <div class="ynj-card" style="padding:16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
             <div>
-                <div style="font-size:15px;font-weight:800;color:#1a1a1a;">🎁 <?php esc_html_e( 'Community Store', 'yourjannah' ); ?></div>
-                <div style="font-size:12px;color:#666;"><?php esc_html_e( 'Send a message to the congregation — 95% supports the masjid', 'yourjannah' ); ?></div>
+                <div style="font-size:15px;font-weight:800;color:#1a1a1a;">💬 <?php esc_html_e( 'Superchats', 'yourjannah' ); ?></div>
+                <div style="font-size:12px;color:#666;"><?php esc_html_e( 'Send a message to the entire congregation — £5 each', 'yourjannah' ); ?></div>
             </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <?php foreach ( $_store_items as $si ) : ?>
-            <button type="button" onclick="ynjStoreAdd('<?php echo esc_js( $si->item_key ); ?>','<?php echo esc_js( $si->title ); ?>','<?php echo esc_js( $si->icon ); ?>')" style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#1a1a1a;transition:all .15s;background:#fff;cursor:pointer;font-family:inherit;text-align:left;width:100%;" onmouseover="this.style.borderColor='<?php echo esc_attr( $si->badge_color ); ?>';this.style.background='<?php echo esc_attr( $si->badge_color ); ?>10'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#fff'">
+            <button type="button" onclick="ynjSuperchat('<?php echo esc_js( $si->item_key ); ?>','<?php echo esc_js( $si->title ); ?>','<?php echo esc_js( $si->icon ); ?>')" style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #e5e7eb;border-radius:12px;color:#1a1a1a;transition:all .15s;background:#fff;cursor:pointer;font-family:inherit;text-align:left;width:100%;" onmouseover="this.style.borderColor='<?php echo esc_attr( $si->badge_color ); ?>';this.style.background='<?php echo esc_attr( $si->badge_color ); ?>10'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#fff'">
                 <?php if ( $si->image_url ) : ?>
                 <img src="<?php echo esc_url( $si->image_url ); ?>" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;">
                 <?php else : ?>
@@ -882,76 +882,24 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
                 <?php endif; ?>
                 <div>
                     <div style="font-size:13px;font-weight:700;"><?php echo esc_html( $si->title ); ?></div>
-                    <div style="font-size:11px;color:#666;"><?php esc_html_e( 'Set your amount', 'yourjannah' ); ?></div>
+                    <div style="font-size:11px;color:#16a34a;font-weight:600;">&pound;5</div>
                 </div>
             </button>
             <?php endforeach; ?>
         </div>
     </div>
-
-    <!-- Store item amount picker modal -->
-    <div id="ynj-store-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10004;background:rgba(10,22,40,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
-        <div style="background:#fff;border-radius:20px;padding:28px 24px;max-width:360px;width:calc(100% - 32px);box-shadow:0 24px 60px rgba(0,0,0,.2);text-align:center;">
-            <div id="ynj-store-modal-icon" style="font-size:40px;margin-bottom:8px;"></div>
-            <h3 id="ynj-store-modal-title" style="font-size:18px;font-weight:800;margin-bottom:4px;"></h3>
-            <p style="font-size:12px;color:#666;margin-bottom:16px;">95% goes directly to the masjid</p>
-            <div style="display:flex;gap:6px;margin-bottom:10px;justify-content:center;" id="ynj-store-presets">
-                <button type="button" onclick="ynjStoreSetAmt(300)" style="padding:8px 14px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">£3</button>
-                <button type="button" onclick="ynjStoreSetAmt(500)" style="padding:8px 14px;border:2px solid #287e61;border-radius:10px;background:#f0fdf4;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#287e61;">£5</button>
-                <button type="button" onclick="ynjStoreSetAmt(1000)" style="padding:8px 14px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">£10</button>
-                <button type="button" onclick="ynjStoreSetAmt(2000)" style="padding:8px 14px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">£20</button>
-            </div>
-            <input type="number" id="ynj-store-amount" min="1" step="1" placeholder="Or enter any amount (£)" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:15px;text-align:center;font-family:inherit;margin-bottom:12px;">
-            <textarea id="ynj-store-message" rows="2" placeholder="Add a personal message (optional)" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;font-size:13px;font-family:inherit;margin-bottom:14px;resize:vertical;"></textarea>
-            <button type="button" id="ynj-store-add-btn" onclick="ynjStoreConfirm()" style="width:100%;padding:14px;background:linear-gradient(135deg,#287e61,#1a5c43);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;">Add to Cart</button>
-            <button type="button" onclick="document.getElementById('ynj-store-modal').style.display='none'" style="width:100%;padding:10px;background:none;border:none;color:#999;font-size:13px;cursor:pointer;margin-top:6px;">Cancel</button>
-        </div>
-    </div>
     <script>
-    var _storeKey='', _storeTitle='', _storeAmt=500;
-    function ynjStoreAdd(key,title,icon){
-        _storeKey=key; _storeTitle=title; _storeAmt=500;
-        document.getElementById('ynj-store-modal-icon').textContent=icon;
-        document.getElementById('ynj-store-modal-title').textContent=title;
-        document.getElementById('ynj-store-amount').value='5';
-        document.getElementById('ynj-store-message').value='';
-        document.getElementById('ynj-store-modal').style.display='flex';
-        // Reset preset highlight
-        document.querySelectorAll('#ynj-store-presets button').forEach(function(b,i){
-            b.style.borderColor=i===1?'#287e61':'#e5e7eb';
-            b.style.background=i===1?'#f0fdf4':'#fff';
-            b.style.color=i===1?'#287e61':'';
-        });
-    }
-    function ynjStoreSetAmt(p){
-        _storeAmt=p;
-        document.getElementById('ynj-store-amount').value=(p/100);
-        document.querySelectorAll('#ynj-store-presets button').forEach(function(b){
-            var bp=parseInt(b.textContent.replace('£',''))*100;
-            b.style.borderColor=bp===p?'#287e61':'#e5e7eb';
-            b.style.background=bp===p?'#f0fdf4':'#fff';
-            b.style.color=bp===p?'#287e61':'';
-        });
-    }
-    document.getElementById('ynj-store-amount').addEventListener('input',function(){
-        var v=parseFloat(this.value);
-        if(v>0) _storeAmt=Math.round(v*100);
-        document.querySelectorAll('#ynj-store-presets button').forEach(function(b){
-            b.style.borderColor='#e5e7eb';b.style.background='#fff';b.style.color='';
-        });
-    });
-    function ynjStoreConfirm(){
-        if(_storeAmt<100){alert('Minimum is £1');return;}
-        var msg=document.getElementById('ynj-store-message').value.trim();
-        document.getElementById('ynj-store-modal').style.display='none';
-        if(typeof ynjNiyyahBarOpen==='function'){
+    function ynjSuperchat(key, title, icon) {
+        var msg = prompt(icon + ' ' + title + '\n\nAdd a personal message (optional):');
+        if (msg === null) return; // cancelled
+        if (typeof ynjNiyyahBarOpen === 'function') {
             ynjNiyyahBarOpen({
-                mode:'store', item_type:'store',
-                amount_pence:_storeAmt,
-                item_label:_storeTitle,
-                fund_type:_storeKey,
-                frequency:'once',
-                meta:{message:msg}
+                mode: 'store', item_type: 'store', icon: icon,
+                amount_pence: 500,
+                item_label: title,
+                fund_type: key,
+                frequency: 'once',
+                meta: { message: msg }
             });
         }
     }

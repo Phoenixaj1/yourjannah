@@ -1027,6 +1027,47 @@ $_hp_mosque_addr = $_ynj_mosque_for_prayer ? ( $_ynj_mosque_for_prayer->address 
     </div><!-- end left column -->
     <div class="ynj-desktop-grid__right">
 
+    <!-- Superchats -->
+    <?php if ( class_exists( 'YNJ_Store' ) ) :
+        $_hp_store_items = YNJ_Store::get_items();
+        if ( ! empty( $_hp_store_items ) ) :
+            $_hp_mosque_id = $_ynj_mosque_for_prayer ? (int) $_ynj_mosque_for_prayer->id : 0;
+    ?>
+    <section class="ynj-card" style="padding:16px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div>
+                <div style="font-size:15px;font-weight:800;color:#1a1a1a;">💬 <?php esc_html_e( 'Superchats', 'yourjannah' ); ?></div>
+                <div style="font-size:12px;color:#666;"><?php esc_html_e( 'Send a message to the entire congregation — £5 each', 'yourjannah' ); ?></div>
+            </div>
+        </div>
+        <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;">
+            <?php foreach ( $_hp_store_items as $si ) : ?>
+            <button type="button" onclick="ynjSuperchat('<?php echo esc_js( $si->item_key ); ?>','<?php echo esc_js( $si->title ); ?>','<?php echo esc_js( $si->icon ); ?>')" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid #e5e7eb;border-radius:12px;color:#1a1a1a;background:#fff;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;transition:all .15s;" onmouseover="this.style.borderColor='<?php echo esc_attr( $si->badge_color ); ?>';this.style.background='<?php echo esc_attr( $si->badge_color ); ?>10'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#fff'">
+                <span style="font-size:18px;"><?php echo esc_html( $si->icon ); ?></span>
+                <span style="font-size:12px;font-weight:700;"><?php echo esc_html( $si->title ); ?></span>
+                <span style="font-size:11px;color:#16a34a;font-weight:600;">&pound;5</span>
+            </button>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <script>
+    function ynjSuperchat(key, title, icon) {
+        var msg = prompt(icon + ' ' + title + '\n\nAdd a personal message (optional):');
+        if (msg === null) return;
+        if (typeof ynjNiyyahBarOpen === 'function') {
+            ynjNiyyahBarOpen({
+                mode: 'store', item_type: 'store', icon: icon,
+                amount_pence: 500,
+                item_label: title,
+                fund_type: key,
+                frequency: 'once',
+                meta: { message: msg }
+            });
+        }
+    }
+    </script>
+    <?php endif; endif; ?>
+
     <!-- Feed -->
     <section id="feed-section">
         <h3 id="feed-heading" style="font-size:16px;font-weight:700;margin:0 0 10px;"><?php esc_html_e( 'What\'s Happening', 'yourjannah' ); ?></h3>
