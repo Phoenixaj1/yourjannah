@@ -420,30 +420,11 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
     }
     $patron_tiers = class_exists( 'YNJ_API_Patrons' ) ? YNJ_API_Patrons::get_tiers() : [];
     ?>
-    <?php if ( $_patron_status ) : ?>
-    <div class="ynj-patron-bar" id="patron-hero" style="background:linear-gradient(135deg,#287e61,#1a5c43) !important;">
-        <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/patron' ) ); ?>" class="ynj-patron-bar__label">🏅 <strong><?php printf( esc_html__( 'You\'re a %s Patron — JazakAllah Khayr', 'yourjannah' ), esc_html( $patron_tiers[ $_patron_status->tier ]['label'] ?? ucfirst( $_patron_status->tier ) ) ); ?></strong></a>
-        <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/patron' ) ); ?>" class="ynj-patron-chip" style="background:rgba(255,255,255,.2);"><?php esc_html_e( 'Manage', 'yourjannah' ); ?></a>
-    </div>
-    <?php else : ?>
-    <div class="ynj-patron-bar" id="patron-hero">
-        <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/patron' ) ); ?>" class="ynj-patron-bar__label">🏅 <strong id="patron-bar-text"><?php printf( esc_html__( 'Become a Patron of %s', 'yourjannah' ), esc_html( $mosque_name ) ); ?></strong></a>
-        <div class="ynj-patron-bar__tiers">
-            <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/patron' ) ); ?>" class="ynj-patron-chip">£5</a>
-            <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/patron' ) ); ?>" class="ynj-patron-chip">£10</a>
-            <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/patron' ) ); ?>" class="ynj-patron-chip ynj-patron-chip--popular"><span class="ynj-patron-chip__pop"><?php esc_html_e( 'Popular', 'yourjannah' ); ?></span>£20</a>
-            <a href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/patron' ) ); ?>" class="ynj-patron-chip">£50</a>
-        </div>
-    </div>
-    <?php endif; ?>
+    <!-- Patron Membership (rendered by plugin) -->
+    <?php if ( class_exists( 'YNJ_UI' ) ) YNJ_UI::render_patron_bar( $slug, $mosque_name, $_patron_status ); ?>
 
-    <!-- Sponsor Ticker -->
-    <div class="ynj-ticker" id="sponsor-ticker" style="display:none;">
-        <span class="ynj-ticker__label">⭐ <?php esc_html_e( 'Sponsors', 'yourjannah' ); ?></span>
-        <div class="ynj-ticker__track">
-            <div class="ynj-ticker__slide" id="ticker-content"></div>
-        </div>
-    </div>
+    <!-- Sponsor Ticker (rendered by plugin) -->
+    <?php if ( class_exists( 'YNJ_UI' ) ) YNJ_UI::render_sponsor_ticker(); ?>
 
     <!-- Travel Settings -->
     <div class="ynj-travel-settings" id="travel-settings" style="display:none;">

@@ -64,6 +64,7 @@ spl_autoload_register(function($class) {
         'YNJ_API_Donations'        => 'api/class-ynj-api-donations.php',
         'YNJ_Social_Auth'          => 'inc/class-ynj-social-auth.php',
         'YNJ_Interest_Notify'      => 'inc/class-ynj-interest-notify.php',
+        'YNJ_UI'                   => 'inc/class-ynj-ui.php',
     ];
     if (isset($map[$class])) {
         require_once YNJ_DIR . $map[$class];
