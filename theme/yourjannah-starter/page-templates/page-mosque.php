@@ -669,9 +669,17 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
             $_grat_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $gt WHERE mosque_id = %d", $mosque->id ) );
             if ( is_user_logged_in() ) {
                 $ynj_uid_g = (int) get_user_meta( get_current_user_id(), 'ynj_user_id', true );
+                $wp_uid_g  = get_current_user_id();
+                // Check both ynj_user_id and wp_user_id for gratitude
                 if ( $ynj_uid_g ) {
                     $_grat_done_today = (bool) $wpdb->get_var( $wpdb->prepare(
                         "SELECT COUNT(*) FROM $gt WHERE user_id = %d AND DATE(created_at) = CURDATE()", $ynj_uid_g
+                    ) );
+                }
+                // Fallback: also check by WP user ID stored in user_id column (some older entries)
+                if ( ! $_grat_done_today && $wp_uid_g ) {
+                    $_grat_done_today = (bool) $wpdb->get_var( $wpdb->prepare(
+                        "SELECT COUNT(*) FROM $gt WHERE user_id = %d AND DATE(created_at) = CURDATE()", $wp_uid_g
                     ) );
                 }
             }
