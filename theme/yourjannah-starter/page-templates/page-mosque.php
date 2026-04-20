@@ -860,36 +860,8 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
     </script>
     <?php endif; ?>
 
-    <!-- ═══ MASJID STORE — Community Shout-Outs ═══ -->
-    <?php if ( $mosque && class_exists( 'YNJ_Store' ) ) :
-        $_store_items = YNJ_Store::get_items();
-        if ( ! empty( $_store_items ) ) :
-    ?>
-    <div class="ynj-card" style="padding:16px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-            <div>
-                <div style="font-size:15px;font-weight:800;color:#1a1a1a;">💬 <?php esc_html_e( 'Superchats', 'yourjannah' ); ?></div>
-                <div style="font-size:12px;color:#666;"><?php esc_html_e( 'Send a message to the entire congregation — £5 each', 'yourjannah' ); ?></div>
-            </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <?php foreach ( $_store_items as $si ) : ?>
-            <button type="button" onclick="ynjSuperchat('<?php echo esc_js( $si->item_key ); ?>','<?php echo esc_js( $si->title ); ?>','<?php echo esc_js( $si->icon ); ?>')" style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #e5e7eb;border-radius:12px;color:#1a1a1a;transition:all .15s;background:#fff;cursor:pointer;font-family:inherit;text-align:left;width:100%;" onmouseover="this.style.borderColor='<?php echo esc_attr( $si->badge_color ); ?>';this.style.background='<?php echo esc_attr( $si->badge_color ); ?>10'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#fff'">
-                <?php if ( $si->image_url ) : ?>
-                <img src="<?php echo esc_url( $si->image_url ); ?>" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;">
-                <?php else : ?>
-                <span style="font-size:22px;flex-shrink:0;"><?php echo esc_html( $si->icon ); ?></span>
-                <?php endif; ?>
-                <div>
-                    <div style="font-size:13px;font-weight:700;"><?php echo esc_html( $si->title ); ?></div>
-                    <div style="font-size:11px;color:#16a34a;font-weight:600;">&pound;5</div>
-                </div>
-            </button>
-            <?php endforeach; ?>
-        </div>
-    </div>
-    <!-- ynjSuperchat() provided by footer.php global modal -->
-    <?php endif; endif; ?>
+    <!-- Superchats (rendered by plugin) -->
+    <?php if ( class_exists( 'YNJ_Store' ) ) YNJ_Store::render_superchats( 'grid' ); ?>
 
     <!-- Hadith -->
     <p class="ynj-hadith" id="hadith-line">
