@@ -80,12 +80,12 @@ class YNJ_Mosque_Enricher {
      * Search for ALL UK mosques using Overpass (single query for entire country).
      */
     public static function search_all_uk() {
-        $query = '[out:json][timeout:120];'
-            . 'area["ISO3166-1"="GB"]->.uk;'
+        // Use bounding box for UK: SW corner (49.8,-8.2) to NE corner (60.9,1.8)
+        $bbox = '49.8,-8.2,60.9,1.8';
+        $query = '[out:json][timeout:180];'
             . '('
-            . 'node["amenity"="place_of_worship"]["religion"="muslim"](area.uk);'
-            . 'way["amenity"="place_of_worship"]["religion"="muslim"](area.uk);'
-            . 'relation["amenity"="place_of_worship"]["religion"="muslim"](area.uk);'
+            . 'node["amenity"="place_of_worship"]["religion"="muslim"](' . $bbox . ');'
+            . 'way["amenity"="place_of_worship"]["religion"="muslim"](' . $bbox . ');'
             . ');'
             . 'out center tags;';
 
