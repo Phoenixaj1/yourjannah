@@ -670,9 +670,9 @@ $_hp_mosque_addr = $_ynj_mosque_for_prayer ? ( $_ynj_mosque_for_prayer->address 
                 <?php esc_html_e( 'Follow This Masjid', 'yourjannah' ); ?>
             </button>
         <?php else : ?>
-            <a href="<?php echo esc_url( home_url( '/register/' ) ); ?>" class="ynj-btn" style="background:#27ae60;color:#fff;padding:8px 20px;border-radius:24px;font-size:13px;font-weight:700;border:none;cursor:pointer;text-decoration:none;">
+            <button onclick="if(typeof ynjAuthModalOpen==='function'){ynjAuthModalOpen({mosque_slug:'<?php echo esc_js($_hp_slug); ?>',mosque_name:'<?php echo esc_js($_hp_mosque_name); ?>'});}" class="ynj-btn" style="background:#27ae60;color:#fff;padding:8px 20px;border-radius:24px;font-size:13px;font-weight:700;border:none;cursor:pointer;">
                 <?php esc_html_e( 'Follow This Masjid', 'yourjannah' ); ?>
-            </a>
+            </button>
         <?php endif; ?>
     </div>
     <?php endif; ?>
