@@ -341,6 +341,7 @@ add_action('rest_api_init', function() {
     YNJ_API_Intentions::register();
     YNJ_API_Sponsor_YJ::register();
     YNJ_API_Donations::register();
+    YNJ_UI::register_bug_report_api();
 });
 
 // Admin menus

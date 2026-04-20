@@ -84,7 +84,7 @@ class YNJ_UI {
             <?php endif; ?>
             <a href="<?php echo esc_url( home_url( '/dashboard' ) ); ?>" class="ynj-atb-outline" title="Dashboard">📊</a>
             <button type="button" onclick="var m=document.getElementById('<?php echo esc_js( $menu_id ); ?>');m.style.display=m.style.display==='block'?'none':'block'" class="ynj-atb-outline" title="Quick Menu">⚡</button>
-            <a href="mailto:bugs@yourjannah.com?subject=Bug%20Report%20-%20<?php echo esc_attr( $mosque_slug ); ?>&body=Page:%20<?php echo esc_attr( home_url( $_SERVER['REQUEST_URI'] ?? '/' ) ); ?>%0A%0ADescribe the issue:%0A" class="ynj-atb-bug" title="Report a Bug">🐛</a>
+            <button type="button" onclick="ynjBugReportOpen()" class="ynj-atb-bug" title="Report a Bug">🐛</button>
         </div>
         <div id="<?php echo esc_attr( $menu_id ); ?>" style="display:none;position:fixed;right:56px;top:50%;transform:translateY(-50%);background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:12px;z-index:901;width:280px;">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -104,6 +104,97 @@ class YNJ_UI {
             }
         });
         </script>
+
+        <!-- Bug Report Popup -->
+        <div id="ynj-bug-popup" style="display:none;position:fixed;inset:0;z-index:10005;background:rgba(10,22,40,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)ynjBugReportClose()">
+            <div style="background:#fff;border-radius:20px;padding:24px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2);animation:ynj-popup-in .3s ease-out;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                    <h3 style="font-size:18px;font-weight:800;color:#1a1a2e;margin:0;">🐛 Report a Bug</h3>
+                    <button onclick="ynjBugReportClose()" style="background:none;border:none;font-size:20px;color:#999;cursor:pointer;">&times;</button>
+                </div>
+                <p style="font-size:12px;color:#666;margin-bottom:14px;">Describe what went wrong and we'll fix it.</p>
+                <textarea id="ynj-bug-desc" rows="4" placeholder="What happened? What did you expect?" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:12px;font-size:14px;font-family:inherit;resize:vertical;margin-bottom:10px;box-sizing:border-box;"></textarea>
+                <select id="ynj-bug-severity" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:inherit;margin-bottom:14px;box-sizing:border-box;">
+                    <option value="low">Low — cosmetic / minor</option>
+                    <option value="medium" selected>Medium — something doesn't work right</option>
+                    <option value="high">High — can't use a feature</option>
+                    <option value="critical">Critical — payments / data affected</option>
+                </select>
+                <button type="button" id="ynj-bug-submit" onclick="ynjBugReportSend()" style="width:100%;padding:14px;background:#dc2626;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Submit Bug Report</button>
+                <div id="ynj-bug-msg" style="font-size:12px;text-align:center;margin-top:8px;"></div>
+            </div>
+        </div>
+        <script>
+        window.ynjBugReportOpen = function(){
+            document.getElementById('ynj-bug-popup').style.display='flex';
+            document.getElementById('ynj-bug-desc').value='';
+            document.getElementById('ynj-bug-msg').textContent='';
+        };
+        window.ynjBugReportClose = function(){ document.getElementById('ynj-bug-popup').style.display='none'; };
+        window.ynjBugReportSend = function(){
+            var desc = document.getElementById('ynj-bug-desc').value.trim();
+            if(!desc){document.getElementById('ynj-bug-msg').textContent='Please describe the issue.';return;}
+            var btn = document.getElementById('ynj-bug-submit');
+            btn.disabled=true; btn.textContent='Sending...';
+            var nonce = typeof wpApiSettings !== 'undefined' ? wpApiSettings.nonce : '';
+            fetch('/wp-json/ynj/v1/bug-report', {
+                method:'POST', headers:{'Content-Type':'application/json','X-WP-Nonce':nonce}, credentials:'same-origin',
+                body:JSON.stringify({ description:desc, severity:document.getElementById('ynj-bug-severity').value, page_url:window.location.href, user_agent:navigator.userAgent })
+            }).then(function(r){return r.json();}).then(function(d){
+                if(d.ok){
+                    document.getElementById('ynj-bug-msg').innerHTML='<span style="color:#16a34a;">✅ Bug reported — JazakAllah Khayr!</span>';
+                    btn.textContent='Sent!';
+                    setTimeout(ynjBugReportClose,1500);
+                } else {
+                    document.getElementById('ynj-bug-msg').innerHTML='<span style="color:#dc2626;">'+(d.error||'Failed')+'</span>';
+                    btn.disabled=false; btn.textContent='Submit Bug Report';
+                }
+            }).catch(function(){ document.getElementById('ynj-bug-msg').innerHTML='<span style="color:#dc2626;">Network error</span>'; btn.disabled=false; btn.textContent='Submit Bug Report'; });
+        };
+        </script>
         <?php
+    }
+
+    /**
+     * Register bug report REST endpoint.
+     */
+    public static function register_bug_report_api() {
+        register_rest_route( 'ynj/v1', '/bug-report', [
+            'methods'             => 'POST',
+            'callback'            => [ __CLASS__, 'handle_bug_report' ],
+            'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
+        ] );
+    }
+
+    public static function handle_bug_report( \WP_REST_Request $request ) {
+        $d = $request->get_json_params();
+        $desc     = sanitize_textarea_field( $d['description'] ?? '' );
+        $severity = sanitize_text_field( $d['severity'] ?? 'medium' );
+        $page_url = esc_url_raw( $d['page_url'] ?? '' );
+        $ua       = sanitize_text_field( $d['user_agent'] ?? '' );
+
+        if ( ! $desc ) {
+            return new \WP_REST_Response( [ 'ok' => false, 'error' => 'Description required.' ], 400 );
+        }
+
+        global $wpdb;
+        $user = wp_get_current_user();
+
+        // Store as a WP option (simple — no new table needed)
+        $bugs = get_option( 'ynj_bug_reports', [] );
+        $bugs[] = [
+            'id'          => count( $bugs ) + 1,
+            'description' => $desc,
+            'severity'    => $severity,
+            'page_url'    => $page_url,
+            'user_agent'  => $ua,
+            'user_name'   => $user->display_name,
+            'user_email'  => $user->user_email,
+            'status'      => 'open',
+            'created_at'  => current_time( 'mysql' ),
+        ];
+        update_option( 'ynj_bug_reports', $bugs );
+
+        return new \WP_REST_Response( [ 'ok' => true ] );
     }
 }
