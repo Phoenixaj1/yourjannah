@@ -908,9 +908,9 @@ $_hp_mosque_addr = $_ynj_mosque_for_prayer ? ( $_ynj_mosque_for_prayer->address 
         </div>
         <div style="display:flex;gap:8px;">
             <?php foreach ( [ 100 => '£1', 300 => '£3', 500 => '£5' ] as $pence => $label ) : ?>
-            <a href="<?php echo esc_url( home_url( '/mosque/' . $_hp_slug . '/#purify-rizq' ) ); ?>" style="flex:1;padding:12px 0;border-radius:12px;border:2px solid #10b981;background:#fff;color:#065f46;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none;">
+            <button onclick="if(typeof ynjNiyyahBarOpen==='function'){ynjNiyyahBarOpen({mode:'donation',icon:'💰',amount_pence:<?php echo $pence; ?>,item_label:'Purify Your Rizq',fund_type:'sadaqah',frequency:'once'});}" style="flex:1;padding:12px 0;border-radius:12px;border:2px solid #10b981;background:#fff;color:#065f46;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;text-align:center;">
                 <?php echo esc_html( $label ); ?>
-            </a>
+            </button>
             <?php endforeach; ?>
         </div>
         <p style="font-size:11px;color:#047857;margin:8px 0 0;text-align:center;">
@@ -926,10 +926,10 @@ $_hp_mosque_addr = $_ynj_mosque_for_prayer ? ( $_ynj_mosque_for_prayer->address 
     </p>
 
     <!-- Almsgiving button -->
-    <a class="ynj-donate-btn" id="donate-btn" href="#" data-nav-mosque="/mosque/{slug}/fundraising">
+    <button type="button" class="ynj-donate-btn" id="donate-btn" onclick="if(typeof ynjNiyyahBarOpen==='function'){ynjNiyyahBarOpen({mode:'donation',icon:'💝',item_label:'Almsgiving — <?php echo esc_js($_hp_mosque_name); ?>',frequency:'once'});}">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
         <?php esc_html_e( 'Almsgiving', 'yourjannah' ); ?>
-    </a>
+    </button>
 
     <!-- Check-in + Points (logged-in users only) -->
     <div id="ynj-points-card" style="display:none;">
