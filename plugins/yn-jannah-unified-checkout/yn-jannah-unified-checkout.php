@@ -78,6 +78,53 @@ add_action( 'wp_footer', function() {
     echo '<div style="position:fixed;top:40px;left:50%;transform:translateX(-50%);z-index:99999;background:#f59e0b;color:#1a1a2e;padding:8px 24px;border-radius:20px;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(245,158,11,.3);">💵 CASH MODE ON — all payments bypass Stripe — <a href="?ynj_cash_mode=off" style="color:#92400e;text-decoration:underline;font-weight:800;">Turn Off</a></div>';
 } );
 
+// ── One-time: create masjid admin test user ──
+add_action( 'init', function() {
+    if ( get_option( 'ynj_test_admin_created' ) ) return;
+    if ( ! class_exists( 'YNJ_DB' ) ) return;
+
+    $email = 'masjidadmin@yourjannah.com';
+    if ( email_exists( $email ) ) {
+        update_option( 'ynj_test_admin_created', 1 );
+        return;
+    }
+
+    $wp_user_id = wp_create_user( 'masjidadmin', 'MasjidAdmin2026!', $email );
+    if ( is_wp_error( $wp_user_id ) ) return;
+
+    $user = new \WP_User( $wp_user_id );
+    $user->set_role( 'ynj_mosque_admin' );
+    wp_update_user( [ 'ID' => $wp_user_id, 'display_name' => 'Masjid Admin (Test)', 'first_name' => 'Masjid', 'last_name' => 'Admin' ] );
+
+    // Create YNJ user record
+    global $wpdb;
+    $wpdb->insert( YNJ_DB::table( 'users' ), [
+        'name'  => 'Masjid Admin (Test)',
+        'email' => $email,
+        'pin'   => wp_hash_password( '1234' ),
+    ] );
+    $ynj_uid = (int) $wpdb->insert_id;
+    if ( $ynj_uid ) {
+        update_user_meta( $wp_user_id, 'ynj_user_id', $ynj_uid );
+        // Link to all mosques as admin
+        $mosques = $wpdb->get_results( "SELECT id FROM " . YNJ_DB::table( 'mosques' ) . " LIMIT 50" );
+        $admin_table = YNJ_DB::table( 'mosque_admins' );
+        foreach ( $mosques as $m ) {
+            $wpdb->replace( $admin_table, [
+                'mosque_id' => (int) $m->id,
+                'user_id'   => $ynj_uid,
+                'role'      => 'admin',
+            ] );
+        }
+        // Set first mosque as favourite
+        if ( ! empty( $mosques ) ) {
+            $wpdb->update( YNJ_DB::table( 'users' ), [ 'favourite_mosque_id' => (int) $mosques[0]->id ], [ 'id' => $ynj_uid ] );
+        }
+    }
+
+    update_option( 'ynj_test_admin_created', 1 );
+} );
+
 // ── Enqueue basket script globally (needed on every page for HUD badge) ──
 add_action( 'wp_enqueue_scripts', function() {
     wp_enqueue_script(
