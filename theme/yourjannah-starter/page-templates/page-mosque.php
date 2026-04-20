@@ -841,9 +841,6 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
     </script>
     <?php endif; ?>
 
-    <!-- Superchats (rendered by plugin) -->
-    <?php if ( class_exists( 'YNJ_Store' ) ) YNJ_Store::render_superchats( 'grid' ); ?>
-
     <!-- Hadith -->
     <p class="ynj-hadith" id="hadith-line">
         <em>&ldquo;<?php esc_html_e( 'Prayer in congregation is twenty-seven times more virtuous than prayer offered alone.', 'yourjannah' ); ?>&rdquo;</em>
@@ -1102,6 +1099,9 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
         </div>
     </div>
     <?php endif; ?>
+
+    <!-- Superchats (rendered by plugin) -->
+    <?php if ( class_exists( 'YNJ_Store' ) ) YNJ_Store::render_superchats( 'scroll' ); ?>
 
     <!-- Feed -->
     <section id="feed-section">
