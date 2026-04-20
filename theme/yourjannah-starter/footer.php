@@ -249,6 +249,9 @@ if ( $_nb_id && $_nb_pk ) :
     var paymentElement = null;
     var processing = false;
 
+    // Current item context (set by ynjNiyyahBarOpen for non-donation flows)
+    var currentItem = null; // { mode, item_type, item_id, item_label, fund_type, meta }
+
     // Frequency toggle
     bar.querySelectorAll('.ynj-nb-freq__btn').forEach(function(btn){
         btn.addEventListener('click', function(){
@@ -300,20 +303,37 @@ if ( $_nb_id && $_nb_pk ) :
         var errEl = document.getElementById('nb-card-error');
         if (payBtn) { payBtn.disabled = true; payBtn.innerHTML = '<span class="ynj-nb-spinner"></span>Setting up...'; }
 
-        var payload = {
-            email: userEmail,
-            name: userName,
-            tip_pence: 0,
-            items: [{
+        var freq = selectedFreq === 'week' ? 'weekly' : (selectedFreq === 'month' ? 'monthly' : 'once');
+        var item;
+        if (currentItem) {
+            item = {
+                item_type:    currentItem.item_type || currentItem.mode || 'donation',
+                item_id:      currentItem.item_id || 0,
+                item_label:   currentItem.item_label || '',
+                mosque_id:    currentItem.mosque_id || mosqueId,
+                amount_pence: selectedAmount,
+                fund_type:    currentItem.fund_type || document.getElementById('nb-fund').value,
+                frequency:    currentItem.frequency || freq,
+                meta:         currentItem.meta || {}
+            };
+        } else {
+            item = {
                 item_type: 'donation',
                 item_id: 0,
                 item_label: document.getElementById('nb-fund').selectedOptions[0].text,
                 mosque_id: mosqueId,
                 amount_pence: selectedAmount,
                 fund_type: document.getElementById('nb-fund').value,
-                frequency: selectedFreq === 'week' ? 'weekly' : (selectedFreq === 'month' ? 'monthly' : 'once'),
+                frequency: freq,
                 meta: {}
-            }],
+            };
+        }
+
+        var payload = {
+            email: userEmail,
+            name: userName,
+            tip_pence: 0,
+            items: [item],
             source: 'niyyah_bar'
         };
 
@@ -418,19 +438,79 @@ if ( $_nb_id && $_nb_pk ) :
         }
     };
 
-    // Global: open niyyah bar with a specific item (for superchat, patron, etc.)
+    // Global: open niyyah bar for any payment flow
+    // opts: { mode, amount_pence, frequency, item_type, item_id, item_label, fund_type, meta, mosque_id }
     window.ynjNiyyahBarOpen = function(opts) {
         if (!opts) opts = {};
+
+        // Reset any previous Stripe elements
+        if (paymentElement) { paymentElement.destroy(); paymentElement = null; }
+        elements = null; stripe = null; txnId = '';
+        var errEl = document.getElementById('nb-card-error');
+        if (errEl) errEl.style.display = 'none';
+
+        // Store item context
+        currentItem = opts.mode && opts.mode !== 'donation' ? opts : null;
+
+        // Update bar label to show what they're paying for
+        var barLabel = document.querySelector('.ynj-niyyah__bar-label');
+        var mosqueLabel = document.querySelector('.ynj-niyyah__mosque');
+        var freqBar = bar.querySelector('.ynj-nb-freq');
+        var fundSelect = document.getElementById('nb-fund');
+        var fundBarSelect = document.querySelector('.ynj-niyyah__bar-fund');
+
+        if (opts.item_label) {
+            if (barLabel) barLabel.textContent = (opts.icon || '🛒') + ' ' + opts.item_label;
+            if (mosqueLabel) mosqueLabel.textContent = opts.item_label;
+        } else {
+            if (barLabel) barLabel.textContent = '🕌 Donate';
+            if (mosqueLabel) mosqueLabel.textContent = '🕌 <?php echo esc_js( $_nb_name ); ?>';
+        }
+
+        // Hide frequency for non-donation flows (store, patron, tickets, etc.)
+        var showFreq = !opts.mode || opts.mode === 'donation';
+        if (freqBar) freqBar.style.display = showFreq ? '' : 'none';
+
+        // Hide fund selector for non-donation flows
+        if (fundBarSelect) fundBarSelect.style.display = showFreq ? '' : 'none';
+
+        // Set frequency
+        if (opts.frequency) {
+            selectedFreq = opts.frequency === 'monthly' ? 'month' : (opts.frequency === 'weekly' ? 'week' : opts.frequency);
+        } else if (!showFreq) {
+            selectedFreq = 'once';
+        }
+
         // Open the bar
         bar.classList.add('ynj-niyyah--open');
-        // If amount provided, set it and skip to step 2
-        if (opts.amount_pence) {
+
+        if (opts.amount_pence && opts.amount_pence >= 100) {
+            // Amount known: skip to payment
             selectedAmount = opts.amount_pence;
             bar.querySelectorAll('.ynj-nb-amt').forEach(function(b){ b.classList.remove('ynj-nb-amt--active'); });
-            selectedFreq = opts.frequency || 'once';
             nbSetStep(2);
+        } else {
+            // Let user choose amount
+            selectedAmount = 0;
+            bar.querySelectorAll('.ynj-nb-amt').forEach(function(b){ b.classList.remove('ynj-nb-amt--active'); });
+            nbSetStep(1);
         }
     };
+
+    // Reset bar to default donation mode when closed
+    bar.querySelector('.ynj-niyyah__toggle').addEventListener('click', function(){
+        if (!bar.classList.contains('ynj-niyyah--open')) {
+            // Bar is closing — reset to donation mode
+            currentItem = null;
+            var barLabel = document.querySelector('.ynj-niyyah__bar-label');
+            if (barLabel) barLabel.textContent = '🕌 Donate';
+            var freqBar = bar.querySelector('.ynj-nb-freq');
+            if (freqBar) freqBar.style.display = '';
+            var fundBarSelect = document.querySelector('.ynj-niyyah__bar-fund');
+            if (fundBarSelect) fundBarSelect.style.display = '';
+            nbSetStep(1);
+        }
+    });
 })();
 </script>
 <?php endif; // $_nb_id && $_nb_pk ?>

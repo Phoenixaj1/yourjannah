@@ -173,7 +173,7 @@ $mosque_status = $mosque ? $mosque->status : '';
             });
             const data = await res.json();
             if (data.ok && data.cart_item) {
-                if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(data.cart_item);
+                if (typeof ynjNiyyahBarOpen === 'function') { ynjNiyyahBarOpen({ mode:'patron', item_type:'patron', icon:'🏅', amount_pence:data.cart_item.amount_pence, item_id:data.cart_item.item_id, item_label:data.cart_item.item_label, frequency:'monthly', meta:data.cart_item.meta||{} }); }
             } else {
                 alert(data.error || '<?php echo esc_js( __( 'Something went wrong.', 'yourjannah' ) ); ?>');
                 btn.disabled = false;

@@ -378,7 +378,7 @@ if ( is_user_logged_in() ) {
             var checkData = await checkResp.json();
 
             if (checkData.ok && checkData.cart_item) {
-                if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(checkData.cart_item);
+                if (typeof ynjNiyyahBarOpen === 'function') { ynjNiyyahBarOpen({ mode:'patron', item_type:'patron', icon:'🏅', amount_pence:checkData.cart_item.amount_pence, item_id:checkData.cart_item.item_id, item_label:checkData.cart_item.item_label, frequency:'monthly', meta:checkData.cart_item.meta||{} }); }
             } else {
                 errEl.textContent = checkData.error || <?php echo wp_json_encode( __( 'Checkout error. Your account was created — try upgrading from your profile.', 'yourjannah' ) ); ?>;
                 btn.disabled = false;

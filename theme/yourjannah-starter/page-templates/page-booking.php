@@ -286,7 +286,7 @@ if ( $mosque_id ) {
                 })
             });
             const data = await resp.json();
-            if (data.ok && data.cart_item) { if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(data.cart_item); }
+            if (data.ok && data.cart_item) { if (typeof ynjNiyyahBarOpen === 'function') { ynjNiyyahBarOpen({ mode:'room_booking', item_type:'room_booking', icon:'🏠', amount_pence:data.cart_item.amount_pence, item_id:data.cart_item.item_id, item_label:data.cart_item.item_label, frequency:'once', meta:data.cart_item.meta||{} }); } }
             else if (data.ok && data.free) { window.location.href = <?php echo wp_json_encode( home_url( '/mosque/' . $slug . '/rooms?payment=success' ) ); ?>; }
             else { document.getElementById('modal-error').textContent = data.error || 'Booking failed.'; btn.disabled = false; btn.textContent = 'Submit Booking Request'; }
         } catch(e) { document.getElementById('modal-error').textContent = 'Network error.'; btn.disabled = false; btn.textContent = 'Submit Booking Request'; }

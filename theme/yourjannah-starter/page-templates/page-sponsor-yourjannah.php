@@ -182,7 +182,7 @@ get_header();
             });
             var data = await res.json();
             if (data.ok && data.cart_item) {
-                if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(data.cart_item);
+                if (typeof ynjNiyyahBarOpen === 'function') { ynjNiyyahBarOpen({ mode:'sponsor', item_type:'sponsor', icon:'🤲', amount_pence:data.cart_item.amount_pence, item_id:data.cart_item.item_id, item_label:data.cart_item.item_label, frequency:'monthly', meta:data.cart_item.meta||{} }); }
             } else {
                 msg.style.display = ''; msg.style.color = '#dc2626';
                 msg.textContent = data.error || '<?php echo esc_js( __( 'Something went wrong.', 'yourjannah' ) ); ?>';

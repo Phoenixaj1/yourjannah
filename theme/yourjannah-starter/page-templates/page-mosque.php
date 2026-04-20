@@ -745,12 +745,10 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
 
     <script>
     function ynjPurifySadaqah(amountPence) {
-        if (typeof ynjBasket !== 'undefined') {
-            ynjBasket.addItem({
-                item_type: 'sadaqah',
+        if (typeof ynjNiyyahBarOpen === 'function') {
+            ynjNiyyahBarOpen({
+                mode: 'donation', icon: '💰',
                 amount_pence: amountPence,
-                mosque_id: <?php echo (int) $mosque->id; ?>,
-                mosque_name: <?php echo wp_json_encode( $mosque->name ); ?>,
                 item_label: 'Purify Your Rizq',
                 fund_type: 'sadaqah',
                 frequency: 'once'
@@ -945,19 +943,17 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
     function ynjStoreConfirm(){
         if(_storeAmt<100){alert('Minimum is £1');return;}
         var msg=document.getElementById('ynj-store-message').value.trim();
-        if(typeof ynjBasket!=='undefined'){
-            ynjBasket.addItem({
-                item_type:'store',
-                item_label:_storeTitle,
-                mosque_id:<?php echo (int) $mosque->id; ?>,
-                mosque_name:<?php echo wp_json_encode($mosque->name); ?>,
+        document.getElementById('ynj-store-modal').style.display='none';
+        if(typeof ynjNiyyahBarOpen==='function'){
+            ynjNiyyahBarOpen({
+                mode:'store', item_type:'store',
                 amount_pence:_storeAmt,
+                item_label:_storeTitle,
                 fund_type:_storeKey,
                 frequency:'once',
                 meta:{message:msg}
             });
         }
-        document.getElementById('ynj-store-modal').style.display='none';
     }
     </script>
     <?php endif; endif; ?>
@@ -969,10 +965,10 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
     </p>
 
     <!-- Donate button -->
-    <a class="ynj-donate-btn" id="donate-btn" href="<?php echo esc_url( home_url( '/mosque/' . $slug . '/fundraising' ) ); ?>">
+    <button type="button" class="ynj-donate-btn" id="donate-btn" onclick="if(typeof ynjNiyyahBarOpen==='function'){ynjNiyyahBarOpen({mode:'donation',icon:'💝',item_label:'Donate to <?php echo esc_js($mosque_name); ?>',frequency:'once'});}">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
         <?php esc_html_e( 'Donate to Masjid', 'yourjannah' ); ?>
-    </a>
+    </button>
 
     <!-- Check-in + Points (logged-in users only) -->
     <div id="ynj-points-card" style="display:none;">

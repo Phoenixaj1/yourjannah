@@ -150,14 +150,10 @@ if ( $event_data && (int) $event_data->max_capacity > 0 ) {
     ] ) : 'null'; ?>;
 
     window.donateEvent = function() {
-        const amt = document.getElementById('event-don-amt').value;
-        fetch(API + 'events/' + eventId + '/donate', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({amount_pence: parseInt(amt)})
-        }).then(r=>r.json()).then(data => {
-            if (data.ok && data.cart_item) { if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(data.cart_item); }
-            else alert(data.error || '<?php echo esc_js( __( 'Could not process.', 'yourjannah' ) ); ?>');
-        }).catch(() => alert('<?php echo esc_js( __( 'Network error.', 'yourjannah' ) ); ?>'));
+        const amt = parseInt(document.getElementById('event-don-amt').value);
+        if (typeof ynjNiyyahBarOpen === 'function') {
+            ynjNiyyahBarOpen({ mode:'event_donation', item_type:'event_donation', icon:'❤️', amount_pence:amt, item_id:eventId, item_label:'Donate to ' + (eventData ? eventData.title : 'Event'), fund_type:'event', frequency:'once', meta:{event_id:eventId} });
+        }
     };
 
     document.getElementById('rsvp-btn').addEventListener('click', async function() {
@@ -176,8 +172,9 @@ if ( $event_data && (int) $event_data->max_capacity > 0 ) {
                 })
             });
             const data = await resp.json();
-            if (data.ok && data.cart_item) { if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(data.cart_item); }
-            else if (data.ok && data.free) {
+            if (data.ok && data.cart_item) {
+                if (typeof ynjNiyyahBarOpen === 'function') { ynjNiyyahBarOpen({ mode:'event_ticket', item_type:'event_ticket', icon:'🎫', amount_pence:data.cart_item.amount_pence, item_id:data.cart_item.item_id, item_label:data.cart_item.item_label, fund_type:'event', frequency:'once', meta:data.cart_item.meta||{} }); }
+            } else if (data.ok && data.free) {
                 document.getElementById('rsvp-section').style.display = 'none';
                 document.getElementById('rsvp-success').style.display = '';
                 document.getElementById('rsvp-success-msg').textContent = data.message || '<?php echo esc_js( __( 'See you there!', 'yourjannah' ) ); ?>';

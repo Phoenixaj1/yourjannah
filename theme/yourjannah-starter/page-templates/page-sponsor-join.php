@@ -70,7 +70,7 @@ $slug = ynj_mosque_slug();
             <div class="ynj-field"><label><?php esc_html_e( 'Description', 'yourjannah' ); ?> *</label><textarea name="description" rows="3" required placeholder="<?php esc_attr_e( 'Tell the community about your business...', 'yourjannah' ); ?>"></textarea></div>
         </form>
         <p id="sponsor-logged-in-note" style="margin-bottom:8px;font-size:12px;color:#166534;display:none;"><?php esc_html_e( 'Logged in — your details have been pre-filled.', 'yourjannah' ); ?></p>
-        <button class="ynj-btn" id="sponsor-submit" type="button" style="width:100%;justify-content:center;margin-top:16px;"><?php esc_html_e( 'Add to Cart', 'yourjannah' ); ?></button>
+        <button class="ynj-btn" id="sponsor-submit" type="button" style="width:100%;justify-content:center;margin-top:16px;"><?php esc_html_e( 'Continue to Payment', 'yourjannah' ); ?></button>
         <p class="ynj-text-muted" id="sponsor-error" style="margin-top:8px;color:#dc2626;"></p>
         <p class="ynj-text-muted" style="margin-top:12px;text-align:center;font-size:11px;"><?php esc_html_e( 'You can cancel anytime. 90% goes directly to the masjid.', 'yourjannah' ); ?></p>
     </section>
@@ -130,14 +130,14 @@ $slug = ynj_mosque_slug();
             });
             var data = await resp.json();
             if (data.ok && data.cart_item) {
-                if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(data.cart_item);
+                if (typeof ynjNiyyahBarOpen === 'function') { ynjNiyyahBarOpen({ mode:'sponsor', item_type:'business_sponsor', icon:'⭐', amount_pence:data.cart_item.amount_pence, item_id:data.cart_item.item_id, item_label:data.cart_item.item_label, frequency:'monthly', meta:data.cart_item.meta||{} }); }
             } else {
                 document.getElementById('sponsor-error').textContent = data.error || 'Could not process. Please try again.';
-                btn.disabled = false; btn.textContent = 'Add to Cart';
+                btn.disabled = false; btn.textContent = 'Continue to Payment';
             }
         } catch(e) {
             document.getElementById('sponsor-error').textContent = 'Network error.';
-            btn.disabled = false; btn.textContent = 'Add to Cart';
+            btn.disabled = false; btn.textContent = 'Continue to Payment';
         }
     });
 })();
