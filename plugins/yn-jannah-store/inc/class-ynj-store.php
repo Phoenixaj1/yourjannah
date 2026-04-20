@@ -83,7 +83,7 @@ class YNJ_Store {
     }
 
     /** Private item keys — announcements for these go to admin only, not community feed. */
-    const PRIVATE_ITEMS = [ 'dua_request' ];
+    const PRIVATE_ITEMS = [ 'dua_request', 'condolence' ];
 
     /**
      * When a store item payment succeeds, auto-post announcement.

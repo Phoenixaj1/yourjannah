@@ -54,6 +54,12 @@ register_activation_hook( __FILE__, function() {
             [ 'new_baby', 'New Baby Mubarak', 'Share the joy of a new arrival', '👶', 500, 1000, 2000, 1000, '#059669', 'New Baby', '👶 MashaAllah! {name} has been blessed with a new baby! May Allah make the child a source of joy.' ],
             [ 'dua_request', 'Community Dua Request', 'Ask the entire congregation to make dua for you', '🤲', 300, 500, 1000, 500, '#1e40af', 'Dua Request', '🤲 {name} is asking the congregation of {mosque} for dua. {message}' ],
             [ 'thank_you', 'Thank You Message', 'Thank the masjid and its community publicly', '💖', 300, 500, 1000, 300, '#9d174d', 'Thank You', '💖 {name} says JazakAllah Khayr to the community of {mosque}. {message}' ],
+            [ 'umrah_mubarak', 'Umrah Mubarak', 'Congratulate someone who completed Umrah', '🕋', 500, 1000, 2000, 500, '#92400e', 'Umrah Mubarak', '🕋 Umrah Mubarak! {name} has completed Umrah. May Allah accept it and grant them ease.' ],
+            [ 'ramadan_mubarak', 'Ramadan Mubarak', 'Send Ramadan greetings to the congregation', '🌙', 300, 500, 1000, 500, '#7c3aed', 'Ramadan Mubarak', '🌙 Ramadan Mubarak from {name} to the entire congregation of {mosque}! May this blessed month bring you closer to Allah.' ],
+            [ 'condolence', 'Inna Lillahi', 'Send condolences to a family in the community', '🕊️', 500, 1000, 2000, 500, '#4b5563', 'Condolence', '🕊️ Inna lillahi wa inna ilayhi rajiun. {name} sends condolences. {message} May Allah grant patience and forgive the deceased.' ],
+            [ 'shahada', 'Welcome to Islam', 'Celebrate a revert joining the Muslim community', '☪️', 500, 1000, 2000, 500, '#16a34a', 'Shahada', '☪️ Allahu Akbar! {name} celebrates a new Muslim joining the community of {mosque}. {message} May Allah keep them steadfast.' ],
+            [ 'get_well', 'Get Well / Shifa', 'Send healing wishes and dua for recovery', '💚', 300, 500, 1000, 500, '#059669', 'Get Well', '💚 {name} is making dua for shifa (healing) for a member of {mosque}. {message} Ya Allah, grant them complete recovery.' ],
+            [ 'graduation', 'Graduation Mubarak', 'Celebrate an academic achievement', '🎓', 500, 1000, 2000, 500, '#7c3aed', 'Graduation', '🎓 MashaAllah! {name} celebrates a graduation from the community of {mosque}. {message} May Allah bless their knowledge.' ],
         ];
         foreach ( $defaults as $i => $d ) {
             $wpdb->insert( $t, [
@@ -67,6 +73,39 @@ register_activation_hook( __FILE__, function() {
 
     update_option( 'ynj_store_db_version', YNJ_STORE_DB_VERSION );
 } );
+
+// ── Seed new glad tidings for existing installs ──
+add_action( 'plugins_loaded', function() {
+    if ( ! class_exists( 'YNJ_DB' ) ) return;
+    if ( get_option( 'ynj_store_glad_tidings_v2' ) ) return;
+
+    global $wpdb;
+    $t = YNJ_DB::table( 'store_items' );
+    if ( ! $wpdb->get_var( "SHOW TABLES LIKE '$t'" ) ) return;
+
+    $new_items = [
+        [ 'umrah_mubarak', 'Umrah Mubarak', 'Congratulate someone who completed Umrah', '🕋', 500, '#92400e', 'Umrah Mubarak', '🕋 Umrah Mubarak! {name} has completed Umrah. May Allah accept it and grant them ease.' ],
+        [ 'ramadan_mubarak', 'Ramadan Mubarak', 'Send Ramadan greetings to the congregation', '🌙', 500, '#7c3aed', 'Ramadan Mubarak', '🌙 Ramadan Mubarak from {name} to the entire congregation of {mosque}! May this blessed month bring you closer to Allah.' ],
+        [ 'condolence', 'Inna Lillahi', 'Send condolences to a family in the community', '🕊️', 500, '#4b5563', 'Condolence', '🕊️ Inna lillahi wa inna ilayhi rajiun. {name} sends condolences. {message} May Allah grant patience and forgive the deceased.' ],
+        [ 'shahada', 'Welcome to Islam', 'Celebrate a revert joining the Muslim community', '☪️', 500, '#16a34a', 'Shahada', '☪️ Allahu Akbar! {name} celebrates a new Muslim joining the community of {mosque}. {message} May Allah keep them steadfast.' ],
+        [ 'get_well', 'Get Well / Shifa', 'Send healing wishes and dua for recovery', '💚', 500, '#059669', 'Get Well', '💚 {name} is making dua for shifa (healing) for a member of {mosque}. {message} Ya Allah, grant them complete recovery.' ],
+        [ 'graduation', 'Graduation Mubarak', 'Celebrate an academic achievement', '🎓', 500, '#7c3aed', 'Graduation', '🎓 MashaAllah! {name} celebrates a graduation from the community of {mosque}. {message} May Allah bless their knowledge.' ],
+    ];
+
+    $max_sort = (int) $wpdb->get_var( "SELECT MAX(sort_order) FROM $t" );
+    foreach ( $new_items as $i => $d ) {
+        $exists = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $t WHERE item_key = %s", $d[0] ) );
+        if ( ! $exists ) {
+            $wpdb->insert( $t, [
+                'item_key' => $d[0], 'title' => $d[1], 'description' => $d[2], 'icon' => $d[3],
+                'price_1' => $d[4], 'price_2' => $d[4], 'price_3' => $d[4], 'default_price' => $d[4],
+                'badge_color' => $d[5], 'badge_text' => $d[6], 'announcement_template' => $d[7],
+                'sort_order' => $max_sort + $i + 1,
+            ] );
+        }
+    }
+    update_option( 'ynj_store_glad_tidings_v2', 1 );
+}, 10 );
 
 add_action( 'plugins_loaded', function() {
     if ( ! class_exists( 'YNJ_DB' ) ) return;

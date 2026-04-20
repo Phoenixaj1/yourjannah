@@ -831,8 +831,11 @@
                             <button class="ynj-react-btn${intActive}" onclick="event.stopPropagation();ynjReact(this,'interested')" title="Interested">
                                 <span class="ynj-react-icon">❤️</span><span class="ynj-react-count" data-r="interested">${intCount||''}</span>
                             </button>
+                            <button class="ynj-react-btn ynj-react-superchat" onclick="event.stopPropagation();ynjReplySuperChat(this)" title="Reply with Superchat — £5 to the masjid" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#f59e0b;">
+                                <span class="ynj-react-icon">💬</span><span style="font-size:10px;font-weight:700;margin-left:2px;">£5</span>
+                            </button>
                             <a class="ynj-react-btn ynj-react-share" href="${waUrl}" target="_blank" onclick="event.stopPropagation();" title="Share on WhatsApp" style="background:#25D366;color:#fff;border-color:#25D366;">
-                                <span class="ynj-react-icon">💬</span>
+                                <span class="ynj-react-icon" style="font-size:11px;">↗</span>
                             </a>
                             ${viewCount > 0 ? `<span class="ynj-views-count">${viewCount}</span>` : ''}
                         </div>
@@ -890,6 +893,29 @@
                         });
                     }
                 }).catch(function(){});
+            };
+
+            // Reply with Superchat — tribe responds to glad tidings
+            window.ynjReplySuperChat = function(btn) {
+                var card = btn.closest('.ynj-feed-card');
+                if (!card) return;
+                var title = card.querySelector('h4');
+                var postTitle = title ? title.textContent.trim() : '';
+
+                // Prompt for a message
+                var msg = prompt('💬 Send a Superchat (£5 to the masjid)\n\nReply to: ' + postTitle + '\n\nYour message:');
+                if (msg === null) return;
+
+                if (typeof ynjNiyyahBarOpen === 'function') {
+                    ynjNiyyahBarOpen({
+                        mode: 'store', item_type: 'store', icon: '💬',
+                        amount_pence: 500,
+                        item_label: 'Reply: ' + (postTitle.length > 30 ? postTitle.slice(0,30) + '...' : postTitle),
+                        fund_type: 'thank_you',
+                        frequency: 'once',
+                        meta: { message: msg || ('MashaAllah! In reply to: ' + postTitle) }
+                    });
+                }
             };
 
             // Share via WhatsApp or native share
