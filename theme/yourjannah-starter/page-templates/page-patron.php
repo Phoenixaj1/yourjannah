@@ -75,45 +75,31 @@ $mosque_status = $mosque ? $mosque->status : '';
     <!-- Choose your level -->
     <h3 style="font-size:15px;font-weight:700;text-align:center;margin-bottom:12px;"><?php esc_html_e( 'Choose your level of support', 'yourjannah' ); ?></h3>
 
+    <?php
+    $is_logged_in = is_user_logged_in();
+    $pt_tiers = [
+        'supporter' => [ 500,  'Bronze',   '🥉', '#cd7f32' ],
+        'guardian'  => [ 1000, 'Silver',   '🥈', '#9ca3af' ],
+        'champion'  => [ 2000, 'Gold',     '🥇', '#f59e0b' ],
+        'platinum'  => [ 5000, 'Platinum', '💎', '#6b21a8' ],
+    ];
+    ?>
     <div id="tier-cards" style="display:flex;flex-direction:column;gap:8px;">
-        <div class="ynj-ptier" data-tier="supporter" onclick="selectTier('supporter')">
-            <div class="ynj-ptier__left" style="background:#cd7f32;"><span>🥉</span></div>
-            <div class="ynj-ptier__mid"><strong><?php esc_html_e( 'Bronze', 'yourjannah' ); ?></strong></div>
-            <div class="ynj-ptier__price">&pound;5<span>/mo</span></div>
-        </div>
-        <div class="ynj-ptier" data-tier="guardian" onclick="selectTier('guardian')">
-            <div class="ynj-ptier__left" style="background:#9ca3af;"><span>🥈</span></div>
-            <div class="ynj-ptier__mid"><strong><?php esc_html_e( 'Silver', 'yourjannah' ); ?></strong></div>
-            <div class="ynj-ptier__price">&pound;10<span>/mo</span></div>
-        </div>
-        <div class="ynj-ptier ynj-ptier--popular selected" data-tier="champion" onclick="selectTier('champion')">
-            <div class="ynj-ptier__pop"><?php esc_html_e( 'Most Popular', 'yourjannah' ); ?></div>
-            <div class="ynj-ptier__left" style="background:#f59e0b;"><span>🥇</span></div>
-            <div class="ynj-ptier__mid"><strong><?php esc_html_e( 'Gold', 'yourjannah' ); ?></strong></div>
-            <div class="ynj-ptier__price">&pound;20<span>/mo</span></div>
-        </div>
-        <div class="ynj-ptier" data-tier="platinum" onclick="selectTier('platinum')">
-            <div class="ynj-ptier__left" style="background:#6b21a8;"><span>💎</span></div>
-            <div class="ynj-ptier__mid"><strong><?php esc_html_e( 'Platinum', 'yourjannah' ); ?></strong></div>
-            <div class="ynj-ptier__price">&pound;50<span>/mo</span></div>
-        </div>
-    </div>
-
-    <div class="ynj-patron-cta" id="patron-cta">
-        <button class="ynj-patron-btn" id="patron-btn" onclick="becomePerson()">
-            🏅 <?php esc_html_e( 'Become a Gold Patron', 'yourjannah' ); ?> &mdash; &pound;20/mo
+        <?php foreach ( $pt_tiers as $tk => $tp ) :
+            $popular = $tk === 'champion';
+            if ( $is_logged_in ) {
+                $onclick = "if(typeof ynjNiyyahBarOpen==='function')ynjNiyyahBarOpen({mode:'patron',item_type:'patron',icon:'🏅',amount_pence:" . $tp[0] . ",item_label:'" . esc_js( $tp[1] . ' Patron — ' . $mosque_name ) . "',frequency:'monthly',meta:{tier:'" . esc_js( $tk ) . "'}})";
+            } else {
+                $onclick = "if(typeof ynjAuthModalOpen==='function')ynjAuthModalOpen({mosque_slug:'" . esc_js( $slug ) . "',mosque_name:'" . esc_js( $mosque_name ) . "'})";
+            }
+        ?>
+        <button type="button" class="ynj-ptier<?php echo $popular ? ' ynj-ptier--popular' : ''; ?>" onclick="<?php echo esc_attr( $onclick ); ?>" style="cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:inherit;">
+            <?php if ( $popular ) : ?><div class="ynj-ptier__pop"><?php esc_html_e( 'Most Popular', 'yourjannah' ); ?></div><?php endif; ?>
+            <div class="ynj-ptier__left" style="background:<?php echo $tp[3]; ?>;"><span><?php echo $tp[2]; ?></span></div>
+            <div class="ynj-ptier__mid"><strong><?php echo esc_html( $tp[1] ); ?></strong></div>
+            <div class="ynj-ptier__price">&pound;<?php echo $tp[0] / 100; ?><span>/mo</span></div>
         </button>
-        <div class="ynj-login-prompt" id="login-prompt" style="display:none;">
-            <p style="font-size:13px;font-weight:600;margin-bottom:10px;"><?php esc_html_e( 'Create an account to become a patron', 'yourjannah' ); ?></p>
-            <div style="display:flex;flex-direction:column;gap:8px;">
-                <input type="text" id="reg-name" placeholder="<?php esc_attr_e( 'Your name', 'yourjannah' ); ?>" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;">
-                <input type="email" id="reg-email" placeholder="<?php esc_attr_e( 'Email address', 'yourjannah' ); ?>" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;">
-                <input type="password" id="reg-pass" placeholder="<?php esc_attr_e( 'Password (6+ chars)', 'yourjannah' ); ?>" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:inherit;">
-                <button class="ynj-patron-btn" id="reg-and-patron-btn" onclick="registerAndPatron()" style="font-size:14px;padding:14px;"><?php esc_html_e( 'Create Account & Become a Patron', 'yourjannah' ); ?></button>
-                <p id="reg-error" style="font-size:12px;color:#dc2626;text-align:center;"></p>
-            </div>
-            <p style="font-size:12px;color:#6b8fa3;text-align:center;margin-top:8px;"><?php esc_html_e( 'Already have an account?', 'yourjannah' ); ?> <a href="<?php echo esc_url( home_url( '/login?redirect=' ) ); ?><?php echo esc_attr( '/mosque/' . $slug . '/patron' ); ?>" style="font-weight:700;color:#00ADEF;"><?php esc_html_e( 'Sign in', 'yourjannah' ); ?></a></p>
-        </div>
+        <?php endforeach; ?>
     </div>
 
     <!-- Patron wall -->
@@ -128,118 +114,9 @@ $mosque_status = $mosque ? $mosque->status : '';
     const slug = <?php echo wp_json_encode( $slug ); ?>;
     const API  = ynjData.restUrl;
     const token = localStorage.getItem('ynj_user_token') || '';
-    let selectedTier = sessionStorage.getItem('ynj_patron_tier') || 'champion';
     let mosqueId = <?php echo $mosque_id; ?>;
 
-    const tierPrices = { supporter: 5, guardian: 10, champion: 20, platinum: 50 };
-    const tierNames = { supporter: 'Bronze', guardian: 'Silver', champion: 'Gold', platinum: 'Platinum' };
-
-    function selectTier(tier) {
-        selectedTier = tier;
-        sessionStorage.setItem('ynj_patron_tier', tier);
-        document.querySelectorAll('.ynj-ptier').forEach(el => {
-            el.classList.toggle('selected', el.dataset.tier === tier);
-        });
-        const btn = document.getElementById('patron-btn');
-        if (btn) btn.textContent = '\uD83C\uDFC5 <?php echo esc_js( __( 'Become a', 'yourjannah' ) ); ?> ' + (tierNames[tier] || '') + ' <?php echo esc_js( __( 'Patron', 'yourjannah' ) ); ?> \u2014 \u00a3' + tierPrices[tier] + '/mo';
-    }
-    window.selectTier = selectTier;
-
-    // Apply saved selection on page load
-    selectTier(selectedTier);
-
-    async function becomePerson() {
-        <?php if ( ! is_user_logged_in() ) : ?>
-        // Guest: open auth modal instead of redirecting
-        if (typeof ynjAuthModalOpen === 'function') {
-            ynjAuthModalOpen({mosque_slug: slug, mosque_name: <?php echo wp_json_encode( $mosque_name ); ?>});
-        }
-        return;
-        <?php endif; ?>
-
-        const btn = document.getElementById('patron-btn');
-        btn.disabled = true;
-        btn.textContent = '<?php echo esc_js( __( 'Setting up...', 'yourjannah' ) ); ?>';
-
-        try {
-            // Try Bearer token first, fall back to WP nonce (cookie auth)
-            var headers = { 'Content-Type': 'application/json' };
-            if (token) {
-                headers['Authorization'] = 'Bearer ' + token;
-            } else {
-                headers['X-WP-Nonce'] = '<?php echo wp_create_nonce( "wp_rest" ); ?>';
-            }
-            const res = await fetch(API + 'patrons/checkout', {
-                method: 'POST',
-                headers: headers,
-                credentials: 'same-origin',
-                body: JSON.stringify({ mosque_slug: slug, tier: selectedTier })
-            });
-            const data = await res.json();
-            if (data.ok && data.cart_item) {
-                if (typeof ynjNiyyahBarOpen === 'function') { ynjNiyyahBarOpen({ mode:'patron', item_type:'patron', icon:'🏅', amount_pence:data.cart_item.amount_pence, item_id:data.cart_item.item_id, item_label:data.cart_item.item_label, frequency:'monthly', meta:data.cart_item.meta||{} }); }
-            } else {
-                alert(data.error || '<?php echo esc_js( __( 'Something went wrong.', 'yourjannah' ) ); ?>');
-                btn.disabled = false;
-                selectTier(selectedTier);
-            }
-        } catch (e) {
-            alert('<?php echo esc_js( __( 'Network error. Please try again.', 'yourjannah' ) ); ?>');
-            btn.disabled = false;
-            selectTier(selectedTier);
-        }
-    }
-    window.becomePerson = becomePerson;
-
-    // Register + become patron in one flow (for guests)
-    async function registerAndPatron() {
-        var name = document.getElementById('reg-name').value.trim();
-        var email = document.getElementById('reg-email').value.trim();
-        var pass = document.getElementById('reg-pass').value;
-        var errEl = document.getElementById('reg-error');
-        if (!name || !email || !pass) { errEl.textContent = '<?php echo esc_js( __( 'All fields required.', 'yourjannah' ) ); ?>'; return; }
-        if (pass.length < 6) { errEl.textContent = '<?php echo esc_js( __( 'Password must be 6+ characters.', 'yourjannah' ) ); ?>'; return; }
-
-        var btn = document.getElementById('reg-and-patron-btn');
-        btn.disabled = true; btn.textContent = '<?php echo esc_js( __( 'Creating account...', 'yourjannah' ) ); ?>';
-
-        try {
-            // Register
-            var regResp = await fetch(API + 'auth/register', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name: name, email: email, password: pass, mosque_slug: slug})
-            });
-            var regData = await regResp.json();
-            if (!regData.ok) {
-                errEl.textContent = regData.error || '<?php echo esc_js( __( 'Registration failed.', 'yourjannah' ) ); ?>';
-                btn.disabled = false; btn.textContent = '<?php echo esc_js( __( 'Create Account & Become a Patron', 'yourjannah' ) ); ?>';
-                return;
-            }
-            // Store token
-            localStorage.setItem('ynj_user_token', regData.token);
-
-            // Now checkout as patron (cookie will be set on next page load via autologin)
-            btn.textContent = '<?php echo esc_js( __( 'Redirecting to checkout...', 'yourjannah' ) ); ?>';
-            var checkResp = await fetch(API + 'patrons/checkout', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + regData.token},
-                body: JSON.stringify({mosque_slug: slug, tier: selectedTier})
-            });
-            var checkData = await checkResp.json();
-            if (checkData.ok && checkData.cart_item) {
-                if (typeof ynjBasket !== 'undefined') ynjBasket.addItem(checkData.cart_item);
-                window.location.href = '/checkout/';
-            } else {
-                errEl.textContent = checkData.error || '<?php echo esc_js( __( 'Checkout error.', 'yourjannah' ) ); ?>';
-                btn.disabled = false; btn.textContent = '<?php echo esc_js( __( 'Create Account & Become a Patron', 'yourjannah' ) ); ?>';
-            }
-        } catch(e) {
-            errEl.textContent = '<?php echo esc_js( __( 'Network error.', 'yourjannah' ) ); ?>';
-            btn.disabled = false; btn.textContent = '<?php echo esc_js( __( 'Create Account & Become a Patron', 'yourjannah' ) ); ?>';
-        }
-    }
-    window.registerAndPatron = registerAndPatron;
+    // Tier cards now open niyyah bar directly via onclick — no JS checkout logic needed
 
     async function cancelPatron() {
         if (!confirm('<?php echo esc_js( __( 'Cancel your patron membership? You can re-join anytime.', 'yourjannah' ) ); ?>')) return;

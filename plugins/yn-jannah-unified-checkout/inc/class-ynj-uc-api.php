@@ -415,9 +415,24 @@ class YNJ_UC_API {
                 $tier = $meta['tier'] ?? 'supporter';
                 $tiers = [ 'supporter' => 500, 'guardian' => 1000, 'champion' => 2000, 'platinum' => 5000 ];
                 $pt = YNJ_DB::table( 'patrons' );
+                $uid = get_current_user_id() ?: 0;
+                // Upsert: update existing record or create new
+                $existing = $uid ? $wpdb->get_row( $wpdb->prepare(
+                    "SELECT id FROM $pt WHERE mosque_id = %d AND user_id = %d", $mosque_id, $uid
+                ) ) : null;
+                if ( $existing ) {
+                    $wpdb->update( $pt, [
+                        'tier'         => $tier,
+                        'amount_pence' => $tiers[ $tier ] ?? $item['amount_pence'],
+                        'status'       => 'pending_payment',
+                        'user_name'    => $name,
+                        'user_email'   => $email,
+                    ], [ 'id' => $existing->id ] );
+                    return (int) $existing->id;
+                }
                 $wpdb->insert( $pt, [
                     'mosque_id'    => $mosque_id,
-                    'user_id'      => get_current_user_id() ?: 0,
+                    'user_id'      => $uid,
                     'user_name'    => $name,
                     'user_email'   => $email,
                     'tier'         => $tier,
