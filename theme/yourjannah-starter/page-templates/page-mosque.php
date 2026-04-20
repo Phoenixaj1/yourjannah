@@ -888,22 +888,7 @@ $_ynj_profile_url = get_option( 'ynj_mosque_profile_' . (int) $mosque->id, '' );
             <?php endforeach; ?>
         </div>
     </div>
-    <script>
-    function ynjSuperchat(key, title, icon) {
-        var msg = prompt(icon + ' ' + title + '\n\nAdd a personal message (optional):');
-        if (msg === null) return; // cancelled
-        if (typeof ynjNiyyahBarOpen === 'function') {
-            ynjNiyyahBarOpen({
-                mode: 'store', item_type: 'store', icon: icon,
-                amount_pence: 500,
-                item_label: title,
-                fund_type: key,
-                frequency: 'once',
-                meta: { message: msg }
-            });
-        }
-    }
-    </script>
+    <!-- ynjSuperchat() provided by footer.php global modal -->
     <?php endif; endif; ?>
 
     <!-- Hadith -->

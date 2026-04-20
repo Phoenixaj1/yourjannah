@@ -902,19 +902,8 @@
                 var title = card.querySelector('h4');
                 var postTitle = title ? title.textContent.trim() : '';
 
-                // Prompt for a message
-                var msg = prompt('💬 Send a Superchat (£5 to the masjid)\n\nReply to: ' + postTitle + '\n\nYour message:');
-                if (msg === null) return;
-
-                if (typeof ynjNiyyahBarOpen === 'function') {
-                    ynjNiyyahBarOpen({
-                        mode: 'store', item_type: 'store', icon: '💬',
-                        amount_pence: 500,
-                        item_label: 'Reply: ' + (postTitle.length > 30 ? postTitle.slice(0,30) + '...' : postTitle),
-                        fund_type: 'thank_you',
-                        frequency: 'once',
-                        meta: { message: msg || ('MashaAllah! In reply to: ' + postTitle) }
-                    });
+                if (typeof ynjSuperchatOpen === 'function') {
+                    ynjSuperchatOpen('thank_you', 'Reply to ' + (postTitle.length > 25 ? postTitle.slice(0,25) + '...' : postTitle), '💬', postTitle);
                 }
             };
 

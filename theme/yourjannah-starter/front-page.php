@@ -1050,22 +1050,7 @@ $_hp_mosque_addr = $_ynj_mosque_for_prayer ? ( $_ynj_mosque_for_prayer->address 
             <?php endforeach; ?>
         </div>
     </section>
-    <script>
-    function ynjSuperchat(key, title, icon) {
-        var msg = prompt(icon + ' ' + title + '\n\nAdd a personal message (optional):');
-        if (msg === null) return;
-        if (typeof ynjNiyyahBarOpen === 'function') {
-            ynjNiyyahBarOpen({
-                mode: 'store', item_type: 'store', icon: icon,
-                amount_pence: 500,
-                item_label: title,
-                fund_type: key,
-                frequency: 'once',
-                meta: { message: msg }
-            });
-        }
-    }
-    </script>
+    <!-- ynjSuperchat() provided by footer.php global modal -->
     <?php endif; endif; ?>
 
     <!-- Feed -->
