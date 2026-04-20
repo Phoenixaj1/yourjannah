@@ -107,26 +107,21 @@ if ( $_nb_id && class_exists( 'YNJ_DB' ) ) {
         <div id="ynj-sc-icon" style="font-size:48px;margin:8px 0 6px;"></div>
         <h3 id="ynj-sc-title" style="font-size:20px;font-weight:900;color:#1a1a2e;margin-bottom:4px;"></h3>
         <p style="font-size:12px;color:#666;margin-bottom:16px;">£5 — All proceeds go to the Masjid and Islamic Projects</p>
-        <textarea id="ynj-sc-message" rows="3" placeholder="Add a personal message (optional)" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:12px;font-size:14px;font-family:inherit;resize:vertical;margin-bottom:14px;box-sizing:border-box;"></textarea>
         <button type="button" id="ynj-sc-send" onclick="ynjSuperchatSend()" style="width:100%;padding:14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(245,158,11,.3);transition:all .15s;">💬 Send Superchat — £5</button>
     </div>
 </div>
 <script>
 var _scKey='',_scTitle='',_scIcon='';
-window.ynjSuperchatOpen = function(key, title, icon, replyTo) {
+window.ynjSuperchatOpen = function(key, title, icon) {
     _scKey = key; _scTitle = title; _scIcon = icon;
     document.getElementById('ynj-sc-icon').textContent = icon;
     document.getElementById('ynj-sc-title').textContent = title;
-    document.getElementById('ynj-sc-message').value = replyTo ? 'In reply to: ' + replyTo : '';
-    document.getElementById('ynj-sc-message').placeholder = replyTo ? 'Your congratulations...' : 'Add a personal message (optional)';
     document.getElementById('ynj-superchat-popup').style.display = 'flex';
-    setTimeout(function(){ document.getElementById('ynj-sc-message').focus(); }, 200);
 };
 window.ynjSuperchatClose = function() {
     document.getElementById('ynj-superchat-popup').style.display = 'none';
 };
 window.ynjSuperchatSend = function() {
-    var msg = document.getElementById('ynj-sc-message').value.trim();
     document.getElementById('ynj-superchat-popup').style.display = 'none';
     if (typeof ynjNiyyahBarOpen === 'function') {
         ynjNiyyahBarOpen({
@@ -135,7 +130,7 @@ window.ynjSuperchatSend = function() {
             item_label: _scTitle,
             fund_type: _scKey,
             frequency: 'once',
-            meta: { message: msg }
+            meta: {}
         });
     }
 };

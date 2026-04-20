@@ -897,13 +897,8 @@
 
             // Reply with Superchat — tribe responds to glad tidings
             window.ynjReplySuperChat = function(btn) {
-                var card = btn.closest('.ynj-feed-card');
-                if (!card) return;
-                var title = card.querySelector('h4');
-                var postTitle = title ? title.textContent.trim() : '';
-
                 if (typeof ynjSuperchatOpen === 'function') {
-                    ynjSuperchatOpen('thank_you', 'Reply to ' + (postTitle.length > 25 ? postTitle.slice(0,25) + '...' : postTitle), '💬', postTitle);
+                    ynjSuperchatOpen('thank_you', 'Thank You Message', '💖');
                 }
             };
 
