@@ -23,11 +23,26 @@ class YNJ_UI {
         $is_logged_in = is_user_logged_in();
 
         if ( $patron_status ) {
-            $tier_label = $patron_tiers[ $patron_status->tier ]['label'] ?? ucfirst( $patron_status->tier ?? 'supporter' );
+            $current_tier = $patron_status->tier ?? 'supporter';
+            $tier_label = $patron_tiers[ $current_tier ]['label'] ?? ucfirst( $current_tier );
+            $tiers_list = [
+                'supporter' => [ 500,  'Bronze', '£5' ],
+                'guardian'  => [ 1000, 'Silver', '£10' ],
+                'champion'  => [ 2000, 'Gold',   '£20' ],
+                'platinum'  => [ 5000, 'Platinum','£50' ],
+            ];
             echo '<div class="ynj-patron-bar" id="patron-hero" style="background:linear-gradient(135deg,#287e61,#1a5c43) !important;">';
-            echo '<a href="' . esc_url( $patron_url ) . '" class="ynj-patron-bar__label">🏅 <strong>' . sprintf( esc_html__( "You're a %s Patron — JazakAllah Khayr", 'yourjannah' ), esc_html( $tier_label ) ) . '</strong></a>';
-            echo '<a href="' . esc_url( $patron_url ) . '" class="ynj-patron-chip" style="background:rgba(255,255,255,.2);">' . esc_html__( 'Manage', 'yourjannah' ) . '</a>';
-            echo '</div>';
+            echo '<span class="ynj-patron-bar__label">🏅 <strong>' . sprintf( esc_html__( "You're a %s Patron", 'yourjannah' ), esc_html( $tier_label ) ) . '</strong></span>';
+            echo '<div class="ynj-patron-bar__tiers">';
+            foreach ( $tiers_list as $tk => $tp ) {
+                if ( $tk === $current_tier ) {
+                    echo '<span class="ynj-patron-chip" style="background:rgba(255,255,255,.3);opacity:.6;">' . $tp[2] . ' ✓</span>';
+                } else {
+                    $onclick = "if(typeof ynjNiyyahBarOpen==='function')ynjNiyyahBarOpen({mode:'patron',item_type:'patron',icon:'🏅',amount_pence:" . $tp[0] . ",item_label:'" . esc_js( $tp[1] . ' Patron — ' . $mosque_name ) . "',frequency:'monthly',meta:{tier:'" . esc_js( $tk ) . "'}})";
+                    echo '<button type="button" class="ynj-patron-chip" onclick="' . esc_attr( $onclick ) . '">' . $tp[2] . '</button>';
+                }
+            }
+            echo '</div></div>';
         } else {
             $tiers_list = [
                 'supporter' => [ 500,  'Bronze', '£5' ],
