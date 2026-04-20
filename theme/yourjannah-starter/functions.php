@@ -665,6 +665,9 @@ function ynj_plugin_active() {
 // WP LOGIN/LOGOUT BRANDING — YourJannah logo + styling
 // ================================================================
 
+// Remove WP site icon in favour of our SVG favicon
+add_action( 'wp_head', function() { remove_action( 'wp_head', 'wp_site_icon', 99 ); }, 1 );
+
 // Custom logo on login page
 add_action( 'login_enqueue_scripts', function() {
     $logo_url = YNJ_THEME_URI . '/assets/icons/logo2.png';

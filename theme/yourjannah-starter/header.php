@@ -4,6 +4,10 @@
 <meta charset="<?php bloginfo( 'charset' ); ?>">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <?php wp_head(); ?>
+<!-- YourJannah favicon: cloud + minaret -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<?php echo rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#5BC0EB"/><stop offset="100%" stop-color="#00ADEF"/></linearGradient></defs><ellipse cx="30" cy="42" rx="26" ry="16" fill="url(#g)"/><ellipse cx="18" cy="36" rx="14" ry="10" fill="url(#g)"/><ellipse cx="40" cy="38" rx="12" ry="9" fill="url(#g)"/><rect x="29" y="8" width="6" height="30" rx="1" fill="#fff"/><circle cx="32" cy="8" r="4" fill="#fff"/><path d="M30 6 L32 2 L34 6" fill="#fff"/><rect x="28" y="18" width="8" height="5" rx="2" fill="url(#g)"/><rect x="28" y="26" width="8" height="5" rx="2" fill="url(#g)"/></svg>'); ?>">
+<link rel="apple-touch-icon" href="<?php echo esc_url( YNJ_THEME_URI . '/assets/icons/logo2.png' ); ?>"><?php // Remove WP default site icon if set ?>
+<?php remove_action( 'wp_head', 'wp_site_icon', 99 ); ?>
 
 <!-- Force unregister old service workers that may cache stale pages -->
 <script>
