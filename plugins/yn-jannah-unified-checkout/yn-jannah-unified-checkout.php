@@ -43,11 +43,7 @@ add_action( 'plugins_loaded', function() {
         ] );
     } );
 
-    // WP Admin
-    if ( is_admin() ) {
-        require_once YNJ_UC_DIR . 'inc/class-ynj-uc-admin.php';
-        YNJ_UC_Admin::init();
-    }
+    // WP Admin moved to yn-jannah-transactions plugin
 }, 10 );
 
 // ── Cash Payment Mode (admin-controlled, site-wide) ──
