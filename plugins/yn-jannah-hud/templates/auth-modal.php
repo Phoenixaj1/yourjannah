@@ -69,8 +69,17 @@ if ( is_user_logged_in() ) return; // Only for guests
             <input type="hidden" id="ob-newpin2">
         </div>
 
-        <!-- PIN box auto-advance JS -->
+        <!-- PIN box auto-advance + auto-process JS -->
         <script>
+        function obPinAutoProcess(pinId, currentBox) {
+            if (pinId === 'ob-pin' || pinId === 'ob-newpin2') {
+                if (currentBox) currentBox.blur();
+                if (typeof window.obSubmitEmail === 'function') window.obSubmitEmail();
+            } else if (pinId === 'ob-newpin') {
+                var confirmFirst = document.querySelector('.ob-pin-box[data-pin="ob-newpin2"][data-idx="0"]');
+                if (confirmFirst) confirmFirst.focus();
+            }
+        }
         document.querySelectorAll('.ob-pin-box').forEach(function(box){
             box.addEventListener('input',function(){
                 var v = this.value.replace(/\D/g,'');
@@ -85,6 +94,8 @@ if ( is_user_logged_in() ) return; // Only for guests
                 if (v && parseInt(this.dataset.idx) < 3) {
                     var next = document.querySelector('.ob-pin-box[data-pin="'+pinId+'"][data-idx="'+(parseInt(this.dataset.idx)+1)+'"]');
                     if (next) next.focus();
+                } else if (v && combined.length === 4) {
+                    obPinAutoProcess(pinId, this);
                 }
             });
             box.addEventListener('keydown',function(e){
@@ -102,7 +113,8 @@ if ( is_user_logged_in() ) return; // Only for guests
                 for(var i=0;i<paste.length&&i<4;i++){ boxes[i].value=paste[i]; }
                 var combined=''; boxes.forEach(function(b){combined+=b.value;});
                 document.getElementById(pinId).value=combined;
-                if(paste.length>=4) boxes[3].focus(); else if(boxes[paste.length]) boxes[paste.length].focus();
+                if(paste.length>=4) obPinAutoProcess(pinId, boxes[3]);
+                else if(boxes[paste.length]) boxes[paste.length].focus();
             });
         });
         </script>
